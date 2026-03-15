@@ -7,6 +7,8 @@ from .exceptions import (
     ConfigurationError,
     TokenRefreshError,
 )
+from .websocket import TradeStationWebSocketClient, ConnectionState
+from .models import MarketData, WebSocketMessage
 
 __all__ = [
     "TradeStationAuth",
@@ -16,4 +18,8 @@ __all__ = [
     "AuthenticationError",
     "ConfigurationError",
     "TokenRefreshError",
+    "TradeStationWebSocketClient",
+    "ConnectionState",
+    "MarketData",
+    "WebSocketMessage",
 ]

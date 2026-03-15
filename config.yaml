@@ -1,0 +1,29 @@
+# Silver-Bullet-ML-BMAD Configuration
+# DO NOT commit actual credentials to this file
+# Use environment variables for sensitive data
+
+system:
+  environment: development  # development, testing, production
+  log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+data:
+  dollar_bar_threshold: 50000000  # $50M notional value
+  data_completeness_target: 0.9999  # 99.99%
+
+trading:
+  symbol: MNQ  # Micro E-mini Nasdaq-100
+  exchange: CME
+  timezone: America/New_York
+
+risk:
+  daily_loss_limit: 500  # USD
+  max_drawdown_percent: 12  # percent
+  max_position_size: 5  # contracts
+
+ml:
+  probability_threshold: 0.65  # P(Success) threshold
+  retraining_interval_days: 7  # Weekly retraining
+
+monitoring:
+  health_check_interval_seconds: 5
+  data_staleness_threshold_seconds: 30

@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "silver-bullet-ml-bmad"
+version = "0.1.0"
+description = "ICT + ML Meta-Labeling Trading System for MNQ Futures"
+authors = ["Bambam"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+# Core dependencies will be added in subsequent stories
+# For now, just the base Python version
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+flake8 = "^6.0.0"
+mypy = "^1.3.0"
+pre-commit = "^3.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true

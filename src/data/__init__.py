@@ -8,7 +8,8 @@ from .exceptions import (
     TokenRefreshError,
 )
 from .websocket import TradeStationWebSocketClient, ConnectionState
-from .models import MarketData, WebSocketMessage
+from .models import MarketData, WebSocketMessage, DollarBar
+from .transformation import DollarBarTransformer, BarBuilderState
 
 __all__ = [
     "TradeStationAuth",
@@ -22,4 +23,7 @@ __all__ = [
     "ConnectionState",
     "MarketData",
     "WebSocketMessage",
+    "DollarBar",
+    "DollarBarTransformer",
+    "BarBuilderState",
 ]

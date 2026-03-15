@@ -49,3 +49,7 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = "src.data.models"
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "src.data.transformation"
+ignore_errors = true

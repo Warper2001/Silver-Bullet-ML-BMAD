@@ -1,6 +1,7 @@
 """TradeStation WebSocket client for real-time market data."""
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timedelta
 from enum import Enum
@@ -42,6 +43,7 @@ class TradeStationWebSocketClient:
     STALENESS_THRESHOLD = 30  # seconds (no messages)
     MAX_RETRY_ATTEMPTS = 3
     RETRY_DELAYS = [1, 2, 4]  # Exponential backoff: 1s, 2s, 4s
+    MAX_QUEUE_SIZE = 10000  # Maximum messages in queue before backpressure
 
     def __init__(self, auth: TradeStationAuth) -> None:
         """Initialize WebSocket client.
@@ -52,7 +54,9 @@ class TradeStationWebSocketClient:
         self.auth = auth
         self._state = ConnectionState.DISCONNECTED
         self._websocket: Optional[Any] = None
-        self._data_queue: asyncio.Queue[MarketData] = asyncio.Queue()
+        self._data_queue: asyncio.Queue[MarketData] = asyncio.Queue(
+            maxsize=self.MAX_QUEUE_SIZE
+        )
         self._last_message_time: Optional[datetime] = None
         self._connection_task: Optional[asyncio.Task[None]] = None
         self._heartbeat_task: Optional[asyncio.Task[None]] = None
@@ -133,6 +137,16 @@ class TradeStationWebSocketClient:
                 ping_timeout=5,
             )
 
+            # Send subscription message for MNQ futures data
+            subscription_msg = {
+                "symbol": "MNQ",
+                "contract_type": "futures",
+                "fields": ["bid", "ask", "last", "volume"],
+                "interval": "tick",
+            }
+            await self._websocket.send(json.dumps(subscription_msg))
+            logger.info(f"WebSocket subscription sent: {subscription_msg}")
+
             self._state = ConnectionState.CONNECTED
             self._connection_start_time = datetime.now()
             self._message_count = 0
@@ -181,13 +195,19 @@ class TradeStationWebSocketClient:
 
                     # Validate required fields
                     if market_data.has_required_fields():
-                        await self._data_queue.put(market_data)
-                        logger.debug(
-                            f"Received market data: {market_data.symbol} "
-                            f"@ {market_data.timestamp} "
-                            f"(bid: {market_data.bid}, ask: {market_data.ask}, "
-                            f"last: {market_data.last}, vol: {market_data.volume})"
-                        )
+                        try:
+                            await self._data_queue.put(market_data)
+                            logger.debug(
+                                f"Received market data: {market_data.symbol} "
+                                f"@ {market_data.timestamp} "
+                                f"(bid: {market_data.bid}, ask: {market_data.ask}, "
+                                f"last: {market_data.last}, vol: {market_data.volume})"
+                            )
+                        except asyncio.QueueFull:
+                            logger.warning(
+                                f"Data queue full ({self._data_queue.qsize()}/{self.MAX_QUEUE_SIZE}), "
+                                f"dropping market data message"
+                            )
                     else:
                         logger.warning(
                             f"Market data missing required fields: {message}"

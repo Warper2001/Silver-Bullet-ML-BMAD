@@ -210,3 +210,9 @@ class TestTradeStationWebSocketClient:
         """Test max 3 retry attempts."""
         client = TradeStationWebSocketClient(auth=None)
         assert client.MAX_RETRY_ATTEMPTS == 3
+
+    def test_max_queue_size_configuration(self) -> None:
+        """Test max queue size is 10000."""
+        client = TradeStationWebSocketClient(auth=None)
+        assert client.MAX_QUEUE_SIZE == 10000
+        assert client._data_queue.maxsize == 10000

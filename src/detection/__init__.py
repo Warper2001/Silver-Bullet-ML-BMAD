@@ -37,6 +37,7 @@ from src.detection.confidence_scorer import (
     calculate_confidence_score,
     score_setup,
 )
+from src.detection.pipeline import DetectionPipeline, DetectionStatistics
 from src.detection.time_window_filter import (
     DEFAULT_TRADING_WINDOWS,
     LONDON_AM,
@@ -68,6 +69,8 @@ __all__ = [
     "detect_silver_bullet_setup",
     "calculate_confidence_score",
     "score_setup",
+    "DetectionPipeline",
+    "DetectionStatistics",
     "is_within_trading_hours",
     "check_time_window",
     "filter_setups_by_time_window",

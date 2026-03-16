@@ -3,6 +3,10 @@
 from datetime import datetime
 from typing import Literal, Optional
 
+import asyncio
+from datetime import datetime
+from typing import Literal, Optional
+
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
@@ -171,3 +175,43 @@ class ValidationResult(BaseModel):
                 "severity must be PASS or WARNING when validation succeeds"
             )
         return v
+
+
+class SwingPoint(BaseModel):
+    """Represents a pivot high or low in price structure.
+
+    Swing points are key levels in market structure that indicate
+    potential support/resistance zones and trend direction.
+    """
+
+    timestamp: datetime = Field(..., description="Swing point timestamp")
+    price: float = Field(..., gt=0, description="Swing point price level")
+    swing_type: Literal["swing_high", "swing_low"] = Field(
+        ..., description="Type of swing point"
+    )
+    bar_index: int = Field(..., ge=0, description="Position in Dollar Bar sequence")
+    confirmed: bool = Field(
+        default=True, description="Whether swing is confirmed (N bars on each side)"
+    )
+
+
+class MSSEvent(BaseModel):
+    """Represents a Market Structure Shift event.
+
+    MSS events occur when price breaks through a previous swing point
+    with volume confirmation, indicating a potential trend change.
+    """
+
+    timestamp: datetime = Field(..., description="MSS detection timestamp")
+    direction: Literal["bullish", "bearish"] = Field(
+        ..., description="MSS direction (bullish breakout or bearish breakdown)"
+    )
+    breakout_price: float = Field(..., gt=0, description="Price that broke swing level")
+    swing_point: SwingPoint = Field(..., description="The swing point that was broken")
+    volume_ratio: float = Field(
+        ..., ge=0, description="Breakout volume / avg volume(20 bars)"
+    )
+    bar_index: int = Field(..., ge=0, description="Bar index where MSS occurred")
+    confidence: float = Field(
+        default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
+    )

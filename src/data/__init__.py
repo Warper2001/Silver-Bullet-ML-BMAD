@@ -8,7 +8,14 @@ from .exceptions import (
     TokenRefreshError,
 )
 from .websocket import TradeStationWebSocketClient, ConnectionState
-from .models import MarketData, WebSocketMessage, DollarBar, ValidationResult
+from .models import (
+    MarketData,
+    WebSocketMessage,
+    DollarBar,
+    ValidationResult,
+    SwingPoint,
+    MSSEvent,
+)
 from .transformation import DollarBarTransformer, BarBuilderState
 from .validation import DataValidator
 from .gap_detection import GapDetector, GapStatistics
@@ -29,6 +36,8 @@ __all__ = [
     "WebSocketMessage",
     "DollarBar",
     "ValidationResult",
+    "SwingPoint",
+    "MSSEvent",
     "DollarBarTransformer",
     "BarBuilderState",
     "DataValidator",

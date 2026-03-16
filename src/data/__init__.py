@@ -19,6 +19,7 @@ from .models import (
     FVGEvent,
     LiquiditySweepEvent,
     SilverBulletSetup,
+    TimeWindow,
 )
 from .transformation import DollarBarTransformer, BarBuilderState
 from .validation import DataValidator
@@ -46,6 +47,7 @@ __all__ = [
     "FVGEvent",
     "LiquiditySweepEvent",
     "SilverBulletSetup",
+    "TimeWindow",
     "DollarBarTransformer",
     "BarBuilderState",
     "DataValidator",

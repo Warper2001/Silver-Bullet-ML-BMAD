@@ -33,6 +33,15 @@ from src.detection.swing_detection import (
     detect_swing_high,
     detect_swing_low,
 )
+from src.detection.time_window_filter import (
+    DEFAULT_TRADING_WINDOWS,
+    LONDON_AM,
+    NY_AM,
+    NY_PM,
+    check_time_window,
+    filter_setups_by_time_window,
+    is_within_trading_hours,
+)
 
 __all__ = [
     "MSSDetector",
@@ -53,4 +62,11 @@ __all__ = [
     "check_bearish_sweep",
     "check_silver_bullet_setup",
     "detect_silver_bullet_setup",
+    "is_within_trading_hours",
+    "check_time_window",
+    "filter_setups_by_time_window",
+    "DEFAULT_TRADING_WINDOWS",
+    "LONDON_AM",
+    "NY_AM",
+    "NY_PM",
 ]

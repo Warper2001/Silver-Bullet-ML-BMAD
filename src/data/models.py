@@ -334,3 +334,20 @@ class SilverBulletSetup(BaseModel):
     confidence: float = Field(
         default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
     )
+
+
+class TimeWindow(BaseModel):
+    """Represents a time window for filtering Silver Bullet signals.
+
+    Time windows define high-probability trading periods when signals
+    should be generated. Outside these windows, signals are suppressed.
+    """
+
+    name: str = Field(..., description="Window name (e.g., 'London AM', 'NY AM')")
+    start_hour: int = Field(..., ge=0, le=23, description="Start hour (0-23)")
+    start_minute: int = Field(..., ge=0, le=59, description="Start minute (0-59)")
+    end_hour: int = Field(..., ge=0, le=23, description="End hour (0-23)")
+    end_minute: int = Field(..., ge=0, le=59, description="End minute (0-59)")
+    timezone: str = Field(
+        ..., description="Timezone (e.g., 'EST', 'UTC')"
+    )  # Note: Could use Literal for validation

@@ -294,3 +294,43 @@ class LiquiditySweepEvent(BaseModel):
     confidence: float = Field(
         default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
     )
+
+
+class SilverBulletSetup(BaseModel):
+    """Represents a Silver Bullet setup (confluence of MSS, FVG, and liquidity sweep).
+
+    Silver Bullet setups are high-probability trading opportunities that occur when
+    multiple ICT patterns align in confluence within a short time window.
+    """
+
+    timestamp: datetime = Field(..., description="Setup detection timestamp")
+    direction: Literal["bullish", "bearish"] = Field(
+        ..., description="Setup direction (from MSS direction)"
+    )
+    mss_event: MSSEvent = Field(..., description="Market Structure Shift event")
+    fvg_event: FVGEvent = Field(..., description="Fair Value Gap event")
+    liquidity_sweep_event: LiquiditySweepEvent | None = Field(
+        default=None, description="Optional liquidity sweep event (3-pattern confluence)"
+    )
+    entry_zone_top: float = Field(
+        ..., gt=0, description="Top of entry zone (FVG gap top)"
+    )
+    entry_zone_bottom: float = Field(
+        ..., gt=0, description="Bottom of entry zone (FVG gap bottom)"
+    )
+    invalidation_point: float = Field(
+        ..., gt=0, description="Invalidation price level (opposite swing point)"
+    )
+    confluence_count: int = Field(
+        ...,
+        ge=2,
+        le=3,
+        description="Number of confluence patterns (2=MSS+FVG, 3=all three)",
+    )
+    priority: Literal["low", "medium", "high"] = Field(
+        ..., description="Setup priority based on confluence count"
+    )
+    bar_index: int = Field(..., ge=0, description="Bar index where setup detected")
+    confidence: float = Field(
+        default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
+    )

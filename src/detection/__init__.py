@@ -21,6 +21,11 @@ from src.detection.liquidity_sweep_detection import (
 )
 from src.detection.liquidity_sweep_detector import LiquiditySweepDetector
 from src.detection.mss_detector import MSSDetector
+from src.detection.silver_bullet_detection import (
+    check_silver_bullet_setup,
+    detect_silver_bullet_setup,
+)
+from src.detection.silver_bullet_detector import SilverBulletDetector
 from src.detection.swing_detection import (
     RollingVolumeAverage,
     detect_bearish_mss,
@@ -33,6 +38,7 @@ __all__ = [
     "MSSDetector",
     "FVGDetector",
     "LiquiditySweepDetector",
+    "SilverBulletDetector",
     "detect_swing_high",
     "detect_swing_low",
     "detect_bullish_mss",
@@ -45,4 +51,6 @@ __all__ = [
     "detect_bearish_liquidity_sweep",
     "check_bullish_sweep",
     "check_bearish_sweep",
+    "check_silver_bullet_setup",
+    "detect_silver_bullet_setup",
 ]

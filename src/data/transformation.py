@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional
@@ -63,6 +64,7 @@ class DollarBarTransformer:
         self._bars_created = 0
         self._total_trades_processed = 0
         self._transformation_start_time: Optional[datetime] = None
+        self._last_log_time = datetime.now()
 
     async def consume(self) -> None:
         """Consume MarketData stream and transform to Dollar Bars.
@@ -85,7 +87,17 @@ class DollarBarTransformer:
                 )
 
                 self._total_trades_processed += 1
+                transformation_start = time.perf_counter()
                 await self._process_market_data(market_data)
+                transformation_latency_ms = (
+                    time.perf_counter() - transformation_start
+                ) * 1000
+
+                # Log transformation latency if exceeds threshold
+                if transformation_latency_ms > 100:
+                    logger.warning(
+                        f"Transformation latency exceeded 100ms: {transformation_latency_ms:.2f}ms"
+                    )
 
                 # Check for timeout on current bar
                 await self._check_bar_timeout()
@@ -97,6 +109,9 @@ class DollarBarTransformer:
             except Exception as e:
                 logger.error(f"Transformation error: {e}")
                 # Continue processing - don't let one error stop the pipeline
+
+            # Log metrics periodically
+            self._log_metrics_periodically()
 
     async def _process_market_data(self, market_data: MarketData) -> None:
         """Process incoming market data and update bar accumulation.
@@ -115,6 +130,9 @@ class DollarBarTransformer:
 
         # Initialize new bar if idle
         if self._state == BarBuilderState.IDLE:
+            self._initialize_bar(price)
+        elif self._state == BarBuilderState.COMPLETED:
+            # Edge case: race condition - bar just completed, initialize new one
             self._initialize_bar(price)
 
         # Update bar OHLCV
@@ -169,6 +187,9 @@ class DollarBarTransformer:
         if self._state != BarBuilderState.ACCUMULATING:
             return
 
+        # Mark as completed to prevent race conditions
+        self._state = BarBuilderState.COMPLETED
+
         # Create DollarBar
         bar = DollarBar(
             timestamp=datetime.now(),
@@ -182,17 +203,29 @@ class DollarBarTransformer:
 
         # Publish to output queue
         try:
-            await self._output_queue.put(bar)
+            # Use put_nowait to avoid blocking if queue is full
+            self._output_queue.put_nowait(bar)
             self._bars_created += 1
 
+            # Log transformation metrics
             logger.info(
                 f"DollarBar created (#{self._bars_created}): "
                 f"O={bar.open:.2f} H={bar.high:.2f} L={bar.low:.2f} C={bar.close:.2f} "
                 f"V={bar.volume} notional=${bar.notional_value:.2f} "
-                f"reason={reason}"
+                f"reason={reason} "
+                f"queue_depth={self._input_queue.qsize()}->{self._output_queue.qsize()}"
             )
         except asyncio.QueueFull:
             logger.error("DollarBar output queue full, dropping bar")
+
+        # Reset accumulation state to prevent stale data leakage
+        self._bar_open = None
+        self._bar_high = None
+        self._bar_low = None
+        self._bar_close = None
+        self._bar_volume = 0
+        self._bar_notional = 0.0
+        self._bar_start_time = None
 
         # Reset for next bar
         self._state = BarBuilderState.IDLE
@@ -221,3 +254,29 @@ class DollarBarTransformer:
     def bars_created(self) -> int:
         """Get total bars created since start."""
         return self._bars_created
+
+    def _log_metrics_periodically(self) -> None:
+        """Log transformation metrics periodically (every 60 seconds)."""
+        now = datetime.now()
+        if (now - self._last_log_time).total_seconds() >= 60:
+            runtime = (
+                now - self._transformation_start_time
+                if self._transformation_start_time
+                else timedelta(0)
+            )
+            trades_per_bar = (
+                self._total_trades_processed / self._bars_created
+                if self._bars_created > 0
+                else 0
+            )
+
+            logger.info(
+                f"Transformation metrics: "
+                f"bars_created={self._bars_created} "
+                f"trades_processed={self._total_trades_processed} "
+                f"trades_per_bar={trades_per_bar:.1f} "
+                f"runtime={runtime} "
+                f"input_queue_depth={self._input_queue.qsize()} "
+                f"output_queue_depth={self._output_queue.qsize()}"
+            )
+            self._last_log_time = now

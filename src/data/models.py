@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, FieldValidationInfo, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class MarketData(BaseModel):
@@ -18,7 +18,9 @@ class MarketData(BaseModel):
 
     @field_validator("ask")
     @classmethod
-    def ask_must_be_greater_than_bid(cls, v: float | None, info) -> float | None:  # type: ignore[no-untyped-def]
+    def ask_must_be_greater_than_bid(
+        cls, v: float | None, info
+    ) -> float | None:  # type: ignore[no-untyped-def]
         """Validate ask price is greater than bid price."""
         if v is not None and info.data.get("bid") is not None:
             if v <= info.data["bid"]:
@@ -104,4 +106,24 @@ class DollarBar(BaseModel):
             raise ValueError("close must be <= high")
         if low_val is not None and v < low_val:
             raise ValueError("close must be >= low")
+        return v
+
+    @field_validator("notional_value")
+    @classmethod
+    def notional_value_sanity_check(
+        cls, v: float, info
+    ) -> float:  # type: ignore[no-untyped-def]
+        """Validate notional value is reasonable for Dollar Bars."""
+        # Notional should be positive
+        if v <= 0:
+            raise ValueError("notional_value must be positive")
+
+        # Sanity check: notional should not exceed $100M (2× threshold)
+        # This catches calculation errors or malformed data
+        max_reasonable = 100_000_000  # $100M
+        if v > max_reasonable:
+            raise ValueError(
+                f"notional_value ${v:.2f} exceeds reasonable maximum ${max_reasonable:.2f}"
+            )
+
         return v

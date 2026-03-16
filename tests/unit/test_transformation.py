@@ -85,6 +85,32 @@ class TestDollarBar:
                 notional_value=50_000_000,
             )
 
+    def test_dollar_bar_notional_value_positive(self) -> None:
+        """Test notional value must be positive."""
+        with pytest.raises(ValidationError, match="notional_value must be positive"):
+            DollarBar(
+                timestamp=datetime.now(),
+                open=4523.00,
+                high=4524.00,
+                low=4523.00,
+                close=4523.75,
+                volume=1000,
+                notional_value=0,  # Invalid: not positive
+            )
+
+    def test_dollar_bar_notional_value_sanity_check(self) -> None:
+        """Test notional value sanity check (max $100M)."""
+        with pytest.raises(ValidationError, match="exceeds reasonable maximum"):
+            DollarBar(
+                timestamp=datetime.now(),
+                open=4523.00,
+                high=4524.00,
+                low=4523.00,
+                close=4523.75,
+                volume=1000,
+                notional_value=150_000_000,  # Invalid: exceeds $100M
+            )
+
 
 class TestBarBuilderState:
     """Test BarBuilderState enum."""

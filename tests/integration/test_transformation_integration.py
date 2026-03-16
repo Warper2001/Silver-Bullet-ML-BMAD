@@ -319,7 +319,8 @@ class TestTransformationPipeline:
         full_queue = asyncio.Queue(maxsize=max_size)
 
         # Create transformer with full output queue
-        transformer_full = DollarBarTransformer(transformer._input_queue, full_queue)
+        input_queue = asyncio.Queue()
+        transformer_full = DollarBarTransformer(input_queue, full_queue)
 
         # Complete multiple bars to fill queue
         for _ in range(max_size):
@@ -337,6 +338,7 @@ class TestTransformationPipeline:
         assert full_queue.full()
 
         # Try to complete another bar (should handle gracefully)
+        # With put_nowait, the bar is dropped but processing continues
         market_data = MarketData(
             symbol="MNQ",
             timestamp=datetime.now(),
@@ -347,5 +349,7 @@ class TestTransformationPipeline:
         )
         await transformer_full._process_market_data(market_data)
 
-        # Transformer should still function
-        assert transformer_full.bars_created > max_size
+        # Queue should still be full (max_size bars)
+        assert full_queue.qsize() == max_size
+        # Transformer should have created max_size bars (11th bar dropped)
+        assert transformer_full.bars_created == max_size

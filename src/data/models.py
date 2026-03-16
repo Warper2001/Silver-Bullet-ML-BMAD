@@ -68,6 +68,9 @@ class DollarBar(BaseModel):
     low: float = Field(..., gt=0, description="Low price (min trade)")
     close: float = Field(..., gt=0, description="Close price (last trade)")
     volume: int = Field(..., ge=0, description="Total volume in bar")
+    is_forward_filled: bool = Field(
+        default=False, description="True if bar was forward-filled due to data gap"
+    )
     notional_value: float = Field(..., ge=0, description="Notional value ($)")
 
     @field_validator("high")
@@ -114,7 +117,12 @@ class DollarBar(BaseModel):
         cls, v: float, info
     ) -> float:  # type: ignore[no-untyped-def]
         """Validate notional value is reasonable for Dollar Bars."""
-        # Notional should be positive
+        # Allow zero for forward-filled bars
+        is_forward_filled = info.data.get("is_forward_filled", False)
+        if v == 0 and is_forward_filled:
+            return v
+
+        # Notional should be positive for real bars
         if v <= 0:
             raise ValueError("notional_value must be positive")
 

@@ -177,6 +177,28 @@ class ValidationResult(BaseModel):
         return v
 
 
+class GapRange(BaseModel):
+    """Represents the price range of a fair value gap.
+
+    For bullish FVG: top = candle 1 high, bottom = candle 3 low
+    For bearish FVG: top = candle 3 high, bottom = candle 1 low
+    """
+
+    top: float = Field(..., gt=0, description="Higher price level of the gap")
+    bottom: float = Field(..., gt=0, description="Lower price level of the gap")
+
+    @field_validator("top")
+    @classmethod
+    def top_must_be_greater_than_bottom(
+        cls, v: float, info: ValidationInfo
+    ) -> float:  # type: ignore[no-untyped-def]
+        """Validate top price is greater than bottom price."""
+        bottom = info.data.get("bottom")
+        if bottom is not None and v <= bottom:
+            raise ValueError("top must be greater than bottom")
+        return v
+
+
 class SwingPoint(BaseModel):
     """Represents a pivot high or low in price structure.
 
@@ -212,6 +234,37 @@ class MSSEvent(BaseModel):
         ..., ge=0, description="Breakout volume / avg volume(20 bars)"
     )
     bar_index: int = Field(..., ge=0, description="Bar index where MSS occurred")
+    confidence: float = Field(
+        default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
+    )
+
+
+class FVGEvent(BaseModel):
+    """Represents a Fair Value Gap event.
+
+    FVG events occur when price moves aggressively in one direction,
+    leaving a gap that often acts as a magnet for price to revisit.
+    """
+
+    timestamp: datetime = Field(..., description="FVG detection timestamp")
+    direction: Literal["bullish", "bearish"] = Field(
+        ..., description="FVG direction (bullish gap up, bearish gap down)"
+    )
+    gap_range: GapRange = Field(..., description="Price range of the gap")
+    gap_size_ticks: float = Field(
+        ..., ge=0, description="Gap size in futures contract ticks"
+    )
+    gap_size_dollars: float = Field(
+        ..., ge=0, description="Dollar value of the gap"
+    )
+    bar_index: int = Field(..., ge=0, description="Bar index where FVG detected")
+    filled: bool = Field(default=False, description="Whether gap has been filled")
+    fill_time: datetime | None = Field(
+        default=None, description="Timestamp when gap was filled"
+    )
+    fill_bar_index: int | None = Field(
+        default=None, ge=0, description="Bar index when gap was filled"
+    )
     confidence: float = Field(
         default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
     )

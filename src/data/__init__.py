@@ -15,6 +15,8 @@ from .models import (
     ValidationResult,
     SwingPoint,
     MSSEvent,
+    GapRange,
+    FVGEvent,
 )
 from .transformation import DollarBarTransformer, BarBuilderState
 from .validation import DataValidator
@@ -38,6 +40,8 @@ __all__ = [
     "ValidationResult",
     "SwingPoint",
     "MSSEvent",
+    "GapRange",
+    "FVGEvent",
     "DollarBarTransformer",
     "BarBuilderState",
     "DataValidator",

@@ -13,6 +13,7 @@ from .transformation import DollarBarTransformer, BarBuilderState
 from .validation import DataValidator
 from .gap_detection import GapDetector, GapStatistics
 from .persistence import HDF5DataSink
+from .orchestrator import DataPipelineOrchestrator
 
 __all__ = [
     "TradeStationAuth",
@@ -34,4 +35,5 @@ __all__ = [
     "GapDetector",
     "GapStatistics",
     "HDF5DataSink",
+    "DataPipelineOrchestrator",
 ]

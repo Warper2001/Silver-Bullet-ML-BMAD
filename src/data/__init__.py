@@ -12,6 +12,7 @@ from .models import MarketData, WebSocketMessage, DollarBar, ValidationResult
 from .transformation import DollarBarTransformer, BarBuilderState
 from .validation import DataValidator
 from .gap_detection import GapDetector, GapStatistics
+from .persistence import HDF5DataSink
 
 __all__ = [
     "TradeStationAuth",
@@ -32,4 +33,5 @@ __all__ = [
     "DataValidator",
     "GapDetector",
     "GapStatistics",
+    "HDF5DataSink",
 ]

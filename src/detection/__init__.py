@@ -33,6 +33,10 @@ from src.detection.swing_detection import (
     detect_swing_high,
     detect_swing_low,
 )
+from src.detection.confidence_scorer import (
+    calculate_confidence_score,
+    score_setup,
+)
 from src.detection.time_window_filter import (
     DEFAULT_TRADING_WINDOWS,
     LONDON_AM,
@@ -62,6 +66,8 @@ __all__ = [
     "check_bearish_sweep",
     "check_silver_bullet_setup",
     "detect_silver_bullet_setup",
+    "calculate_confidence_score",
+    "score_setup",
     "is_within_trading_hours",
     "check_time_window",
     "filter_setups_by_time_window",

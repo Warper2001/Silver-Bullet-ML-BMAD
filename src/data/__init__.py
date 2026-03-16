@@ -8,8 +8,9 @@ from .exceptions import (
     TokenRefreshError,
 )
 from .websocket import TradeStationWebSocketClient, ConnectionState
-from .models import MarketData, WebSocketMessage, DollarBar
+from .models import MarketData, WebSocketMessage, DollarBar, ValidationResult
 from .transformation import DollarBarTransformer, BarBuilderState
+from .validation import DataValidator
 
 __all__ = [
     "TradeStationAuth",
@@ -24,6 +25,8 @@ __all__ = [
     "MarketData",
     "WebSocketMessage",
     "DollarBar",
+    "ValidationResult",
     "DollarBarTransformer",
     "BarBuilderState",
+    "DataValidator",
 ]

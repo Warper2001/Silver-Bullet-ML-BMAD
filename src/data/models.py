@@ -1,9 +1,9 @@
 """Pydantic models for TradeStation market data."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class MarketData(BaseModel):
@@ -126,4 +126,40 @@ class DollarBar(BaseModel):
                 f"notional_value ${v:.2f} exceeds reasonable maximum ${max_reasonable:.2f}"
             )
 
+        return v
+
+
+class ValidationResult(BaseModel):
+    """Validation result for DollarBar data quality check."""
+
+    is_valid: bool = Field(..., description="Whether bar passed validation")
+    timestamp: datetime = Field(..., description="Validation timestamp")
+    errors: list[str] = Field(default_factory=list, description="Critical errors found")
+    warnings: list[str] = Field(default_factory=list, description="Warnings found")
+    severity: Literal["ERROR", "WARNING", "PASS"] = Field(
+        ..., description="Validation severity level"
+    )
+
+    @field_validator("severity")
+    @classmethod
+    def severity_matches_validation(
+        cls, v: str, info: ValidationInfo
+    ) -> str:  # type: ignore[no-untyped-def]
+        """Validate severity matches errors/warnings."""
+        errors = info.data.get("errors", [])
+        warnings = info.data.get("warnings", [])
+        is_valid = info.data.get("is_valid", True)
+
+        if not is_valid or errors:
+            if v != "ERROR":
+                raise ValueError("severity must be ERROR when validation fails")
+        elif warnings:
+            if v not in ("WARNING", "ERROR"):
+                raise ValueError(
+                    "severity must be WARNING or ERROR when warnings present"
+                )
+        elif v == "ERROR":
+            raise ValueError(
+                "severity must be PASS or WARNING when validation succeeds"
+            )
         return v

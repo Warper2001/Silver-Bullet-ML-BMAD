@@ -17,6 +17,7 @@ from .models import (
     MSSEvent,
     GapRange,
     FVGEvent,
+    LiquiditySweepEvent,
 )
 from .transformation import DollarBarTransformer, BarBuilderState
 from .validation import DataValidator
@@ -42,6 +43,7 @@ __all__ = [
     "MSSEvent",
     "GapRange",
     "FVGEvent",
+    "LiquiditySweepEvent",
     "DollarBarTransformer",
     "BarBuilderState",
     "DataValidator",

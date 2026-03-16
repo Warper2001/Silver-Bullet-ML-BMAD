@@ -268,3 +268,29 @@ class FVGEvent(BaseModel):
     confidence: float = Field(
         default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
     )
+
+
+class LiquiditySweepEvent(BaseModel):
+    """Represents a liquidity sweep (stop hunt) event.
+
+    Liquidity sweeps occur when price briefly trades beyond a swing point
+    (stopping out traders) then reverses, indicating potential trap and reversal.
+    """
+
+    timestamp: datetime = Field(..., description="Sweep detection timestamp")
+    direction: Literal["bullish", "bearish"] = Field(
+        ..., description="Sweep direction (bullish sweep of lows, bearish sweep of highs)"
+    )
+    swing_point_price: float = Field(
+        ..., gt=0, description="Price level of swing point that was swept"
+    )
+    sweep_depth_ticks: float = Field(
+        ..., ge=0, description="How far price extended beyond swing point (in ticks)"
+    )
+    sweep_depth_dollars: float = Field(
+        ..., ge=0, description="Sweep depth in dollar value"
+    )
+    bar_index: int = Field(..., ge=0, description="Bar index where sweep detected")
+    confidence: float = Field(
+        default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
+    )

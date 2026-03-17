@@ -11,8 +11,16 @@ from src.execution.order_type_selector import (
     OrderTypeDecision,
     OrderTypeSelector,
 )
+from src.execution.market_order_submitter import (
+    MarketOrderSubmitter,
+    OrderSubmissionError,
+    OrderSubmissionResult,
+)
 
 __all__ = [
     "OrderTypeSelector",
     "OrderTypeDecision",
+    "MarketOrderSubmitter",
+    "OrderSubmissionError",
+    "OrderSubmissionResult",
 ]

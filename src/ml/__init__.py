@@ -38,6 +38,12 @@ from src.ml.training_data import (
 )
 from src.ml.inference import MLInference
 from src.ml.signal_filter import SignalFilter
+from src.ml.walk_forward_optimizer import (
+    DataInsufficientError,
+    ModelTrainingError,
+    ValidationError,
+    WalkForwardOptimizer,
+)
 from src.ml.xgboost_trainer import (
     XGBoostTrainer,
     evaluate_model,
@@ -71,6 +77,10 @@ __all__ = [
     "evaluate_model",
     "MLInference",
     "SignalFilter",
+    "WalkForwardOptimizer",
+    "DataInsufficientError",
+    "ModelTrainingError",
+    "ValidationError",
     "PipelineSerializer",
     "validate_reproducibility",
 ]

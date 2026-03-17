@@ -409,7 +409,7 @@ class TestSelectFeatures:
 
     def test_select_features_removes_correlated(self, sample_features):
         """Verify highly correlated features are removed."""
-        selected = select_features(
+        selected, _ = select_features(
             features_df=sample_features,
             max_correlation=0.9,
             top_k=20,
@@ -421,7 +421,7 @@ class TestSelectFeatures:
 
     def test_select_features_handles_missing_values(self, sample_features):
         """Verify missing values are handled correctly."""
-        selected = select_features(
+        selected, _ = select_features(
             features_df=sample_features,
             max_correlation=0.9,
             top_k=20,
@@ -432,7 +432,7 @@ class TestSelectFeatures:
 
     def test_select_features_standardizes(self, sample_features):
         """Verify features are standardized (z-score)."""
-        selected = select_features(
+        selected, _ = select_features(
             features_df=sample_features,
             max_correlation=0.9,
             top_k=20,
@@ -449,11 +449,15 @@ class TestSelectFeatures:
 
     def test_select_features_returns_top_k(self, sample_features):
         """Verify top K features are selected."""
-        selected = select_features(
+        selected, metadata = select_features(
             features_df=sample_features,
             max_correlation=0.9,
             top_k=10,
         )
+
+        # Check metadata is returned
+        assert "selected_features" in metadata
+        assert "normalization" in metadata
 
         # Should have approximately 10 features (excluding label columns)
         feature_cols = [

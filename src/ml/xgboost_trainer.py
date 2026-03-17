@@ -4,6 +4,7 @@ This module implements XGBoost classifier training, hyperparameter tuning,
 model evaluation, and persistence for ML meta-labeling.
 """
 
+import hashlib
 import json
 import logging
 from datetime import datetime
@@ -20,6 +21,8 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from xgboost import XGBClassifier
+
+from src.ml.pipeline_serializer import PipelineSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -315,6 +318,11 @@ class XGBoostTrainer:
             # Save model
             self._save_model(horizon, model, params, metrics, importance)
 
+            # Save pipeline artifacts if preprocessing metadata available
+            preprocessing_metadata = data.get("preprocessing_metadata")
+            if preprocessing_metadata:
+                self._save_pipeline(horizon, model, preprocessing_metadata)
+
             elapsed = time.perf_counter() - start_time
             logger.info(
                 f"{horizon}-minute model trained in {elapsed:.2f}s - "
@@ -403,6 +411,61 @@ class XGBoostTrainer:
             json.dump(metadata, f, indent=2)
 
         logger.debug(f"Saved model for {horizon}-minute horizon")
+
+    def _save_pipeline(
+        self,
+        horizon: int,
+        model: XGBClassifier,
+        preprocessing_metadata: dict,
+    ) -> None:
+        """Save feature engineering pipeline artifacts.
+
+        Args:
+            horizon: Time horizon in minutes
+            model: Trained XGBoost model
+            preprocessing_metadata: Preprocessing metadata from TrainingDataPipeline
+        """
+        # Calculate model hash
+        model_hash = self._calculate_model_hash(model)
+
+        # Save pipeline using PipelineSerializer
+        serializer = PipelineSerializer(model_dir=self._model_dir)
+        serializer.save_pipeline(
+            horizon=horizon,
+            preprocessing_metadata=preprocessing_metadata,
+            model_hash=model_hash,
+        )
+
+        logger.debug(f"Saved pipeline for {horizon}-minute horizon")
+
+    def _calculate_model_hash(self, model: XGBClassifier) -> str:
+        """Calculate SHA256 hash of XGBoost model.
+
+        Args:
+            model: Trained XGBoost model
+
+        Returns:
+            SHA256 hash as hexadecimal string
+        """
+        import tempfile
+
+        # Save model to temporary file
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
+            tmp_path = tmp.name
+            model.save_model(tmp_path)
+
+        # Read file and calculate hash
+        with open(tmp_path, "rb") as f:
+            model_json = f.read()
+
+        # Clean up temp file
+        import os
+
+        os.unlink(tmp_path)
+
+        # Calculate hash
+        hash_obj = hashlib.sha256(model_json)
+        return hash_obj.hexdigest()
 
     def load_model(self, horizon: int) -> XGBClassifier:
         """Load trained model for specific time horizon.

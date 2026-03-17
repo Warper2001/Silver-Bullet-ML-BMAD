@@ -112,7 +112,7 @@ def select_features(
     features_df: pd.DataFrame,
     max_correlation: float = 0.9,
     top_k: int = 20,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, dict]:
     """Select and preprocess features for ML training.
 
     Performs:
@@ -127,7 +127,7 @@ def select_features(
         top_k: Number of top features to select (default: 20)
 
     Returns:
-        DataFrame with selected and preprocessed features
+        Tuple of (DataFrame with selected/preprocessed features, preprocessing metadata)
     """
     df = features_df.copy()
 
@@ -173,6 +173,10 @@ def select_features(
     selected_cols = top_features + label_cols
     df = df[selected_cols]
 
+    # Calculate normalization parameters BEFORE normalizing
+    means = {col: df[col].mean() for col in top_features}
+    stds = {col: df[col].std() for col in top_features}
+
     # Standardize features (z-score normalization)
     for col in top_features:
         if col in df.columns and pd.api.types.is_numeric_dtype(df[col]):
@@ -182,7 +186,20 @@ def select_features(
                 df[col] = (df[col] - mean) / std
 
     logger.info(f"Selected {len(top_features)} features: {top_features}")
-    return df
+
+    # Create preprocessing metadata
+    preprocessing_metadata = {
+        "selected_features": top_features,
+        "normalization": {
+            "means": means,
+            "stds": stds,
+        },
+        "correlation_matrix": corr_matrix.values,
+        "selected_feature_count": len(top_features),
+        "max_correlation": max_correlation,
+    }
+
+    return df, preprocessing_metadata
 
 
 # ============================================================================
@@ -331,7 +348,7 @@ class TrainingDataPipeline:
                 continue
 
             # Select and preprocess features
-            selected_data = select_features(
+            selected_data, preprocessing_metadata = select_features(
                 features_df=labeled_data,
                 max_correlation=max_correlation,
                 top_k=top_k,
@@ -352,6 +369,7 @@ class TrainingDataPipeline:
                 "val": val,
                 "test": test,
                 "metadata": metadata,
+                "preprocessing_metadata": preprocessing_metadata,
             }
 
             # Save to Parquet

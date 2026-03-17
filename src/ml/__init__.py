@@ -26,6 +26,10 @@ from src.ml.features import (
     extract_pattern_features,
     extract_time_features,
 )
+from src.ml.pipeline_serializer import (
+    PipelineSerializer,
+    validate_reproducibility,
+)
 from src.ml.training_data import (
     TrainingDataPipeline,
     calculate_labels,
@@ -63,4 +67,6 @@ __all__ = [
     "XGBoostTrainer",
     "train_xgboost",
     "evaluate_model",
+    "PipelineSerializer",
+    "validate_reproducibility",
 ]

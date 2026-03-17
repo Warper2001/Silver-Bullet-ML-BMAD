@@ -38,6 +38,11 @@ from src.ml.training_data import (
 )
 from src.ml.inference import MLInference
 from src.ml.signal_filter import SignalFilter
+from src.ml.drift_detector import (
+    DriftDetector,
+    InsufficientDataError,
+    InvalidHistoryError,
+)
 from src.ml.walk_forward_optimizer import (
     DataInsufficientError,
     ModelTrainingError,
@@ -77,6 +82,9 @@ __all__ = [
     "evaluate_model",
     "MLInference",
     "SignalFilter",
+    "DriftDetector",
+    "InvalidHistoryError",
+    "InsufficientDataError",
     "WalkForwardOptimizer",
     "DataInsufficientError",
     "ModelTrainingError",

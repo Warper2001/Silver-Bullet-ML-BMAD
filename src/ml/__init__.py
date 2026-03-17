@@ -37,6 +37,7 @@ from src.ml.training_data import (
     split_data,
 )
 from src.ml.inference import MLInference
+from src.ml.signal_filter import SignalFilter
 from src.ml.xgboost_trainer import (
     XGBoostTrainer,
     evaluate_model,
@@ -69,6 +70,7 @@ __all__ = [
     "train_xgboost",
     "evaluate_model",
     "MLInference",
+    "SignalFilter",
     "PipelineSerializer",
     "validate_reproducibility",
 ]

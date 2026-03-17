@@ -5,6 +5,9 @@ This package contains ML components for:
 - Training data preparation
 - XGBoost classifier training
 - Model evaluation and optimization
+- Live inference and signal filtering
+- Model drift detection
+- Pipeline orchestration
 """
 
 from src.ml.features import (
@@ -26,6 +29,7 @@ from src.ml.features import (
     extract_pattern_features,
     extract_time_features,
 )
+from src.ml.pipeline import MLPipeline, MLStatistics
 from src.ml.pipeline_serializer import (
     PipelineSerializer,
     validate_reproducibility,
@@ -91,4 +95,6 @@ __all__ = [
     "ValidationError",
     "PipelineSerializer",
     "validate_reproducibility",
+    "MLPipeline",
+    "MLStatistics",
 ]

@@ -32,6 +32,11 @@ from src.ml.training_data import (
     select_features,
     split_data,
 )
+from src.ml.xgboost_trainer import (
+    XGBoostTrainer,
+    evaluate_model,
+    train_xgboost,
+)
 
 __all__ = [
     "FeatureEngineer",
@@ -55,4 +60,7 @@ __all__ = [
     "calculate_labels",
     "select_features",
     "split_data",
+    "XGBoostTrainer",
+    "train_xgboost",
+    "evaluate_model",
 ]

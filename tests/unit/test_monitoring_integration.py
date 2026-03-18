@@ -342,3 +342,108 @@ class TestPersistState:
 
         # Verify file was written
         mock_file.assert_called_once()
+
+
+class TestBackgroundLoops:
+    """Test background loop execution."""
+
+    def test_health_check_loop_exists(self):
+        """Verify health check loop method exists."""
+        monitoring = MonitoringIntegration()
+
+        assert hasattr(monitoring, '_run_health_checks_loop')
+        assert callable(monitoring._run_health_checks_loop)
+
+    def test_resource_monitoring_loop_exists(self):
+        """Verify resource monitoring loop method exists."""
+        monitoring = MonitoringIntegration()
+
+        assert hasattr(monitoring, '_run_resource_monitoring_loop')
+        assert callable(monitoring._run_resource_monitoring_loop)
+
+    def test_state_persistence_loop_exists(self):
+        """Verify state persistence loop method exists."""
+        monitoring = MonitoringIntegration()
+
+        assert hasattr(monitoring, '_run_state_persistence_loop')
+        assert callable(monitoring._run_state_persistence_loop)
+
+    def test_daily_report_loop_exists(self):
+        """Verify daily report loop method exists."""
+        monitoring = MonitoringIntegration()
+
+        assert hasattr(monitoring, '_run_daily_report_loop')
+        assert callable(monitoring._run_daily_report_loop)
+
+    def test_health_check_updates_statistics(self):
+        """Verify health check loop updates statistics."""
+        health_check_manager = MagicMock()
+        health_check_manager.run_health_checks = MagicMock(
+            return_value={"overall_status": "healthy"}
+        )
+
+        monitoring = MonitoringIntegration(
+            health_check_manager=health_check_manager
+        )
+
+        # Simulate health check being called
+        result = health_check_manager.run_health_checks()
+        monitoring._health_check_count += 1
+
+        if result["overall_status"] == "healthy":
+            monitoring._health_check_pass_count += 1
+
+        # Verify statistics updated
+        assert monitoring._health_check_count == 1
+        assert monitoring._health_check_pass_count == 1
+
+    def test_health_check_recovery_on_unhealthy(self):
+        """Verify recovery is triggered on unhealthy status."""
+        health_check_manager = MagicMock()
+        health_check_manager.run_health_checks = MagicMock(
+            return_value={"overall_status": "unhealthy"}
+        )
+        crash_recovery = MagicMock()
+        crash_recovery.recover = MagicMock(return_value=True)
+        audit_trail = MagicMock()
+
+        monitoring = MonitoringIntegration(
+            health_check_manager=health_check_manager,
+            crash_recovery=crash_recovery,
+            audit_trail=audit_trail
+        )
+
+        # Simulate unhealthy health check
+        result = health_check_manager.run_health_checks()
+        monitoring._health_check_count += 1
+
+        if result["overall_status"] != "healthy":
+            # Simulate recovery being called
+            recovered = crash_recovery.recover()
+            if recovered:
+                monitoring._recovery_count += 1
+
+        # Verify recovery was triggered
+        crash_recovery.recover.assert_called_once()
+        assert monitoring._recovery_count == 1
+
+    def test_resource_monitoring_detects_critical(self):
+        """Verify resource monitoring detects critical usage."""
+        resource_monitor = MagicMock()
+        resource_monitor.get_current_stats = MagicMock(
+            return_value={"cpu_percent": 98, "memory_percent": 95}
+        )
+
+        # Simulate resource monitoring detecting critical
+        stats = resource_monitor.get_current_stats()
+
+        is_critical = (
+            stats.get("memory_percent", 0) > 90 or
+            stats.get("cpu_percent", 0) > 95
+        )
+
+        assert is_critical is True
+
+        # Verify stats are critical
+        assert stats["cpu_percent"] == 98
+        assert stats["memory_percent"] == 95

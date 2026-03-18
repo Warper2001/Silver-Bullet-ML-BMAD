@@ -131,14 +131,17 @@ class MonitoringIntegration:
         if self._daily_report_task:
             self._daily_report_task.cancel()
 
-        # Wait for tasks to complete
-        await asyncio.gather(
-            self._health_check_task,
-            self._resource_monitor_task,
-            self._state_persistence_task,
-            self._daily_report_task,
-            return_exceptions=True
-        )
+        # Wait for tasks to complete (filter None tasks)
+        tasks = [
+            task for task in [
+                self._health_check_task,
+                self._resource_monitor_task,
+                self._state_persistence_task,
+                self._daily_report_task
+            ] if task is not None
+        ]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def log_action(
         self,
@@ -391,11 +394,26 @@ class MonitoringIntegration:
                             trade_date
                         )
 
-                    # Wait until next day
-                    await asyncio.sleep(60)
+                    # Wait until next day (4 PM EST tomorrow)
+                    seconds_until_next = (
+                        (24 - 16) * 3600 + 16 * 3600
+                    )
+                    await asyncio.sleep(seconds_until_next)
+                else:
+                    # Calculate seconds until 4 PM EST today
+                    target_hour = 16
+                    target_minute = 0
+                    seconds_until_target = (
+                        (target_hour - est_now.hour) * 3600 +
+                        (target_minute - est_now.minute) * 60 -
+                        est_now.second
+                    )
 
-                # Wait 1 second and check again
-                await asyncio.sleep(1)
+                    # If already past 4 PM, wait until tomorrow
+                    if seconds_until_target < 0:
+                        seconds_until_target += 24 * 3600
+
+                    await asyncio.sleep(seconds_until_target)
 
             except asyncio.CancelledError:
                 break

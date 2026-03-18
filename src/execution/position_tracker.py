@@ -38,6 +38,9 @@ class Position:
         status: Position status
         initial_submission_time: First submission time for timeout tracking
         cumulative_fill_time_seconds: Total time from first submission to fill
+        upper_barrier_price: Upper barrier (take profit) price level
+        lower_barrier_price: Lower barrier (stop loss) price level
+        time_barrier_utc: Time barrier (max hold time) in UTC
     """
 
     order_id: str
@@ -53,6 +56,10 @@ class Position:
     status: str = "PENDING"
     initial_submission_time: Optional[datetime] = None
     cumulative_fill_time_seconds: float = 0.0
+    # NEW: Triple barrier fields
+    upper_barrier_price: Optional[float] = None
+    lower_barrier_price: Optional[float] = None
+    time_barrier_utc: Optional[datetime] = None
 
     def __post_init__(self):
         """Initialize derived fields after creation."""

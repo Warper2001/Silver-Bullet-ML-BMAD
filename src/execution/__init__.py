@@ -16,11 +16,15 @@ from src.execution.market_order_submitter import (
     OrderSubmissionError,
     OrderSubmissionResult,
 )
+from src.execution.limit_order_submitter import (
+    LimitOrderSubmitter,
+)
 
 __all__ = [
     "OrderTypeSelector",
     "OrderTypeDecision",
     "MarketOrderSubmitter",
+    "LimitOrderSubmitter",
     "OrderSubmissionError",
     "OrderSubmissionResult",
 ]

@@ -23,6 +23,8 @@ class TestCLIParsing:
         import argparse
 
         parser = argparse.ArgumentParser()
+        parser.add_argument('--start', required=True)
+        parser.add_argument('--end', required=True)
         parser.add_argument('--threshold', type=float, default=0.65)
         args = parser.parse_args(['--start', '2023-01-01', '--end', '2023-12-31'])
         assert args.threshold == 0.65
@@ -32,6 +34,8 @@ class TestCLIParsing:
         import argparse
 
         parser = argparse.ArgumentParser()
+        parser.add_argument('--start', required=True)
+        parser.add_argument('--end', required=True)
         parser.add_argument('--output', default='data/reports/')
         args = parser.parse_args(['--start', '2023-01-01', '--end', '2023-12-31'])
         assert args.output == 'data/reports/'
@@ -164,6 +168,7 @@ class TestRunBacktest:
 
     @patch('src.cli.backtest.EquityCurveVisualizer')
     @patch('src.cli.backtest.BacktestReportGenerator')
+    @patch('src.cli.backtest.MarketRegimeAnalyzer')
     @patch('src.cli.backtest.FeatureImportanceAnalyzer')
     @patch('src.cli.backtest.PerformanceMetricsCalculator')
     @patch('src.cli.backtest.MLMetaLabelingBacktester')
@@ -175,6 +180,7 @@ class TestRunBacktest:
         mock_sb,
         mock_ml,
         mock_metrics,
+        mock_regime,
         mock_features,
         mock_report,
         mock_visualizer
@@ -183,12 +189,20 @@ class TestRunBacktest:
         from src.cli.backtest import run_backtest
 
         # Setup mocks
-        mock_data = pd.DataFrame({'close': [100, 101, 102]})
+        mock_data = pd.DataFrame({
+            'open': [100, 101, 102],
+            'high': [101, 102, 103],
+            'low': [99, 100, 101],
+            'close': [100, 101, 102]
+        })
         mock_loader.return_value.load_data.return_value = mock_data
         mock_sb.return_value.run_backtest.return_value = pd.DataFrame()
         mock_ml.return_value.run_backtest.return_value = pd.DataFrame()
         mock_metrics.return_value.calculate_metrics.return_value = {}
         mock_visualizer.return_value.visualize.return_value = 'equity_curve.png'
+        mock_regime.return_value.analyze_regime_performance.return_value = {
+            'csv_path': 'regime_analysis.csv'
+        }
         mock_report.return_value.generate_backtest_report.return_value = {
             'csv_path': 'backtest.csv',
             'pdf_path': 'backtest.pdf'

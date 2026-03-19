@@ -124,9 +124,13 @@ def run_backtest(
     metrics = metrics_calculator.calculate_metrics(trades)
 
     if verbose:
-        print(f"[METRICS] Sharpe: {metrics.get('sharpe_ratio', 'N/A')}, "
-              f"Win Rate: {metrics.get('win_rate', 'N/A')}%, "
-              f"Return: ${metrics.get('total_return', 'N/A'):,.2f}")
+        sharpe = metrics.get('sharpe_ratio', 'N/A')
+        win_rate = metrics.get('win_rate', 'N/A')
+        total_return = metrics.get('total_return', 'N/A')
+        return_str = f"${total_return:,.2f}" if isinstance(total_return, (int, float)) else f"${total_return}"
+        print(f"[METRICS] Sharpe: {sharpe}, "
+              f"Win Rate: {win_rate}%, "
+              f"Return: {return_str}")
 
     results['metrics'] = metrics
 
@@ -171,9 +175,9 @@ def run_backtest(
         regime_analyzer = MarketRegimeAnalyzer(
             output_directory=str(output_path)
         )
-        regime_results = regime_analyzer.analyze(
-            data,
-            trades
+        regime_results = regime_analyzer.analyze_regime_performance(
+            price_data=data,
+            trades_df=trades
         )
 
         if verbose:

@@ -525,6 +525,31 @@ class FeatureEngineer:
 
         return features_df
 
+    def save_to_parquet(self, df: pd.DataFrame, path: str) -> None:
+        """Save engineered features to Parquet format with timestamp indexing.
+
+        Args:
+            df: DataFrame with engineered features
+            path: File path where Parquet file will be saved
+        """
+        # Ensure timestamp is the index for proper time-series storage
+        df_to_save = df.set_index("timestamp", drop=False)
+        df_to_save.to_parquet(path, index=True)
+        logger.info(f"Saved {len(df)} feature rows to {path}")
+
+    def load_from_parquet(self, path: str) -> pd.DataFrame:
+        """Load engineered features from Parquet format.
+
+        Args:
+            path: File path to load Parquet file from
+
+        Returns:
+            DataFrame with engineered features
+        """
+        df = pd.read_parquet(path)
+        logger.info(f"Loaded {len(df)} feature rows from {path}")
+        return df
+
     def _add_derived_features(self, df: pd.DataFrame) -> None:
         """Add additional derived features to reach 40+ total.
 

@@ -26,6 +26,28 @@ from src.ml.xgboost_trainer import XGBoostTrainer
 logger = logging.getLogger(__name__)
 
 
+class _MinimalPipeline:
+    """Minimal pipeline object for model deployment.
+
+    This is a placeholder until proper pipeline serialization is integrated
+    from Story 3.4. The actual feature pipeline should be created during
+    training and saved alongside the model for reproducible inference.
+    """
+
+    def __init__(self):
+        self.fitted = True
+        self.feature_names = []
+        self.normalization_params = {}
+
+    def transform(self, X):
+        """Identity transformation for placeholder pipeline."""
+        return X
+
+    def fit(self, X, y=None):
+        """No-op fit for placeholder pipeline."""
+        return self
+
+
 class DataInsufficientError(Exception):
     """Raised when training data is insufficient (< 95% completeness)."""
 
@@ -217,10 +239,21 @@ class WalkForwardOptimizer:
 
         Returns:
             DataFrame with Dollar Bars data
+
+        Note:
+            Integration with Epic 1 data pipeline is pending.
+            Currently generates synthetic data for testing.
         """
-        # TODO: Integrate with Epic 1 data pipeline
-        # For now, create dummy data
-        dates = pd.date_range(start=start_time, end=end_time, freq="H")
+        # INTEGRATION PENDING: Epic 1 data pipeline (Story 1.7)
+        # Once integrated, load from: data/processed/dollar_bars.h5
+        #
+        # Expected integration code:
+        # import h5py
+        # with h5py.File("data/processed/dollar_bars.h5", "r") as f:
+        #     bars_df = pd.DataFrame(f["bars"][start_time:end_time])
+
+        # For testing: generate synthetic hourly bars
+        dates = pd.date_range(start=start_time, end=end_time, freq="h")
         data = pd.DataFrame(
             {
                 "timestamp": dates,
@@ -243,9 +276,20 @@ class WalkForwardOptimizer:
 
         Returns:
             DataFrame with signals data
+
+        Note:
+            Integration with Epic 2 signal detection is pending.
+            Currently generates synthetic signals for testing.
         """
-        # TODO: Integrate with Epic 2 signal detection
-        # For now, create dummy signals
+        # INTEGRATION PENDING: Epic 2 signal detection (Story 2.7)
+        # Once integrated, load from: data/signals/silver_bullet_signals.csv
+        #
+        # Expected integration code:
+        # signals_df = pd.read_csv("data/signals/silver_bullet_signals.csv")
+        # signals_df = signals_df[(signals_df["timestamp"] >= start_time) &
+        #                          (signals_df["timestamp"] <= end_time)]
+
+        # For testing: generate synthetic daily signals
         dates = pd.date_range(start=start_time, end=end_time, freq="D")
         data = pd.DataFrame(
             {
@@ -323,14 +367,34 @@ class WalkForwardOptimizer:
         logger.info("Training new XGBoost model on 6-month window")
 
         try:
+            # Import the module-level train_xgboost function
+            from src.ml.xgboost_trainer import train_xgboost
+
             # Convert to pandas DataFrame if needed
             if isinstance(train_features, np.ndarray):
                 train_features = pd.DataFrame(train_features)
 
-            # Train model using XGBoostTrainer
-            model, pipeline, metadata = self._xgboost_trainer.train_xgboost(
-                train_features, train_labels
-            )
+            # Create a simple validation set from training data (20% split)
+            n_val = max(1, len(train_features) // 5)
+            X_train = train_features[:-n_val]
+            y_train = train_labels[:-n_val]
+            X_val = train_features[-n_val:]
+            y_val = train_labels[-n_val:]
+
+            # Train model using module-level train_xgboost function
+            model, metrics = train_xgboost(X_train, y_train, X_val, y_val)
+
+            # Create metadata dict with expected structure
+            has_booster = hasattr(model, "get_booster")
+            model_hash = self._xgboost_trainer._calculate_model_hash(model) if has_booster else "unknown"
+            metadata = {
+                "metrics": metrics,
+                "model_hash": model_hash,
+            }
+
+            # Create minimal pipeline object for deployment
+            # Note: Full pipeline integration pending (Story 3.4 pipeline serialization)
+            pipeline = _MinimalPipeline()
 
             logger.info(
                 f"Model training complete. ROC-AUC: {metadata['metrics']['roc_auc']:.4f}"
@@ -444,7 +508,15 @@ class WalkForwardOptimizer:
 
             # Copy new model to production location
             shutil.copy(str(new_model_path), str(current_model))
-            shutil.copy(str(new_pipeline_path), str(current_pipeline))
+
+            # Copy pipeline if it's a real file, otherwise create placeholder
+            if new_pipeline_path.exists():
+                shutil.copy(str(new_pipeline_path), str(current_pipeline))
+            else:
+                # Create placeholder pipeline file for minimal pipeline
+                import joblib
+
+                joblib.dump(_MinimalPipeline(), str(current_pipeline))
 
             # Save metadata
             if metadata:
@@ -629,9 +701,17 @@ class WalkForwardOptimizer:
             temp_model_path = temp_dir / "xgboost_model.json"
             temp_pipeline_path = temp_dir / "feature_pipeline.pkl"
 
+            # Save model
             new_model.save_model(str(temp_model_path))
-            # Note: Pipeline saving would use joblib
-            # joblib.dump(new_pipeline, temp_pipeline_path)
+
+            # Save pipeline (use joblib if it's a real pipeline object)
+            import joblib
+
+            if new_pipeline is not None:
+                joblib.dump(new_pipeline, str(temp_pipeline_path))
+            else:
+                # Create minimal pipeline as fallback
+                joblib.dump(_MinimalPipeline(), str(temp_pipeline_path))
 
             self.deploy_model(
                 temp_model_path,
@@ -699,11 +779,25 @@ class WalkForwardOptimizer:
         """Send alert notification for model events.
 
         Args:
-            alert_type: Type of alert
-            **kwargs: Additional context
+            alert_type: Type of alert (model_deployed, model_rejected, walk_forward_failure)
+            **kwargs: Additional context (roc_auc, improvement, degradation, error, etc.)
+
+        Note:
+            Integration with Epic 6 notification system (Story 6.6) is pending.
+            Currently logs notifications at appropriate severity levels.
+            Once integrated, will call: await notification_service.send_alert(...)
         """
-        # TODO: Integrate with notification system (Epic 6, Story 6.6)
-        # For now, just log the notification
+        # INTEGRATION PENDING: Epic 6 monitoring (Story 6.6)
+        # Once integrated, send push notifications for critical events:
+        #
+        # Expected integration code:
+        # from src.monitoring.notifications import send_alert
+        # await send_alert(
+        #     alert_type=alert_type,
+        #     message=notification_message,
+        #     severity="critical" if alert_type == "walk_forward_failure" else "info"
+        # )
+
         if alert_type == "model_deployed":
             logger.info(
                 f"NOTIFICATION: New ML model deployed. "

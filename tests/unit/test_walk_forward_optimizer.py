@@ -37,7 +37,7 @@ class TestWalkForwardOptimizerInit:
     def test_model_directory_created_on_init(self, tmp_path):
         """Verify model directory is created if it doesn't exist."""
         model_dir = tmp_path / "new_models"
-        optimizer = WalkForwardOptimizer(model_dir=model_dir)
+        WalkForwardOptimizer(model_dir=model_dir)  # noqa: F841
         assert model_dir.exists()
         assert (model_dir / "5_minute").exists()
 
@@ -48,8 +48,9 @@ class TestLoadTrainingWindow:
     @pytest.fixture
     def setup_test_data(self, tmp_path):
         """Create test Dollar Bars and signals data."""
-        # Create 6 months of dummy Dollar Bars (daily bars for simplicity)
-        dates = pd.date_range(start="2024-01-01", end="2024-06-30", freq="D")
+        # Create 6 months of dummy Dollar Bars (hourly bars to match expected granularity)
+        # 6 months * 30 days * 24 hours = ~4320 hours
+        dates = pd.date_range(start="2024-01-01", end="2024-06-30", freq="h")
         bars_data = pd.DataFrame(
             {
                 "timestamp": dates,
@@ -94,12 +95,14 @@ class TestLoadTrainingWindow:
         # Mock the data loading method
         with patch.object(optimizer, "_load_dollar_bars", return_value=bars_data):
             with patch.object(optimizer, "_load_signals", return_value=signals_data):
+                # Use end_date that matches the test data range
+                end_date = pd.Timestamp("2024-06-30")
                 (
                     train_data,
                     val_data,
                     train_signals,
                     val_signals,
-                ) = optimizer.load_training_window()
+                ) = optimizer.load_training_window(end_time=end_date)
 
         # Verify data was loaded
         assert len(train_data) > 0
@@ -115,13 +118,15 @@ class TestLoadTrainingWindow:
         # Mock the data loading method
         with patch.object(optimizer, "_load_dollar_bars", return_value=bars_data):
             with patch.object(optimizer, "_load_signals", return_value=signals_data):
+                # Use end_date that matches the test data range
+                end_date = pd.Timestamp("2024-06-30")
                 # Should not raise exception for complete data
                 (
                     train_data,
                     val_data,
                     train_signals,
                     val_signals,
-                ) = optimizer.load_training_window()
+                ) = optimizer.load_training_window(end_time=end_date)
                 assert True  # Test passes if no exception
 
     def test_load_training_window_raises_error_for_incomplete_data(self, tmp_path):
@@ -155,7 +160,7 @@ class TestFeatureEngineering:
         # Create dummy data
         train_data = pd.DataFrame(
             {
-                "timestamp": pd.date_range(start="2024-01-01", periods=100, freq="H"),
+                "timestamp": pd.date_range(start="2024-01-01", periods=100, freq="h"),
                 "open": np.random.uniform(11700, 11900, 100),
                 "high": np.random.uniform(11800, 12000, 100),
                 "low": np.random.uniform(11600, 11800, 100),
@@ -172,38 +177,26 @@ class TestFeatureEngineering:
             }
         )
 
-        # Mock FeatureEngineer
-        with patch(
-            "src.ml.walk_forward_optimizer.FeatureEngineer"
-        ) as MockFeatureEngineer:
-            mock_engineer = Mock()
-            mock_features_df = pd.DataFrame(
-                {
-                    "atr": np.random.uniform(1.0, 2.0, 100),
-                    "rsi": np.random.uniform(30, 70, 100),
-                }
+        # Create features DataFrame with timestamp index to match real behavior
+        feature_timestamps = train_data.index[:100]
+        mock_features_df = pd.DataFrame(
+            {
+                "atr": np.random.uniform(1.0, 2.0, 100),
+                "rsi": np.random.uniform(30, 70, 100),
+            },
+            index=feature_timestamps
+        )
+
+        # Mock the FeatureEngineer instance's engineer_features method
+        with patch.object(optimizer._feature_engineer, "engineer_features", return_value=mock_features_df):
+            # Call method
+            result = optimizer._prepare_features(
+                train_data, train_data, train_signals, train_signals
             )
-            mock_engineer.engineer_features.return_value = mock_features_df
-            MockFeatureEngineer.return_value = mock_engineer
 
-            # Mock TrainingDataPipeline
-            with patch(
-                "src.ml.walk_forward_optimizer.TrainingDataPipeline"
-            ) as MockPipeline:
-                mock_pipeline = Mock()
-                mock_pipeline.prepare_data.return_value = (
-                    mock_features_df,
-                    np.array([0, 1] * 50),
-                )
-                MockPipeline.return_value = mock_pipeline
-
-                # Call method
-                optimizer._prepare_features(
-                    train_data, train_data, train_signals, train_signals
-                )
-
-                # Verify FeatureEngineer was called
-                mock_engineer.engineer_features.assert_called()
+            # Verify method was called and returned expected structure
+            assert optimizer._feature_engineer.engineer_features.call_count == 2  # train + val
+            assert len(result) == 4  # train_features, val_features, train_labels, val_labels
 
 
 class TestModelTraining:
@@ -222,37 +215,25 @@ class TestModelTraining:
         )
         train_labels = np.array([0, 1] * 500)
 
-        # Mock XGBoostTrainer
-        with patch("src.ml.walk_forward_optimizer.XGBoostTrainer") as MockTrainer:
-            mock_trainer = Mock()
-            mock_model = Mock()
-            mock_pipeline = Mock()
-            mock_metadata = {
-                "metrics": {
-                    "roc_auc": 0.75,
-                    "precision": 0.70,
-                    "recall": 0.72,
-                    "f1": 0.71,
-                }
-            }
+        # Mock the module-level train_xgboost function
+        mock_model = Mock()
+        mock_metrics = {
+            "roc_auc": 0.75,
+            "precision": 0.70,
+            "recall": 0.72,
+            "f1": 0.71,
+        }
 
-            mock_trainer.train_xgboost.return_value = (
-                mock_model,
-                mock_pipeline,
-                mock_metadata,
-            )
-            MockTrainer.return_value = mock_trainer
+        with patch("src.ml.xgboost_trainer.train_xgboost", return_value=(mock_model, mock_metrics)):
+            # Mock _calculate_model_hash
+            with patch.object(optimizer._xgboost_trainer, "_calculate_model_hash", return_value="test_hash"):
+                # Call method
+                model, pipeline, metadata = optimizer._train_model(train_features, train_labels)
 
-            # Call method
-            result = optimizer._train_model(train_features, train_labels)
-
-            # Verify trainer was called
-            mock_trainer.train_xgboost.assert_called_once()
-
-            # Verify result structure
-            assert "model" in result
-            assert "pipeline" in result
-            assert "metadata" in result
+                # Verify result structure
+                assert model is not None
+                assert metadata is not None
+                assert metadata["metrics"]["roc_auc"] == 0.75
 
 
 class TestModelComparison:
@@ -305,9 +286,14 @@ class TestModelComparison:
         )
         val_labels = np.array([0, 1] * 50)
 
-        # Mock predictions (new model worse than current)
-        new_model.predict_proba.return_value = np.array([[0.5, 0.5]] * 100)
-        current_model.predict_proba.return_value = np.array([[0.3, 0.7]] * 100)
+        # Mock predictions with realistic probabilities
+        # New model: poorly calibrated (random predictions around 0.5)
+        new_probs = 0.4 + np.random.rand(100) * 0.2  # Random between 0.4 and 0.6
+        new_model.predict_proba.return_value = np.column_stack([1 - new_probs, new_probs])
+
+        # Current model: well calibrated (high probabilities for positive class)
+        current_probs = np.where(val_labels == 1, 0.8 + np.random.rand(100) * 0.1, 0.2 + np.random.rand(100) * 0.1)
+        current_model.predict_proba.return_value = np.column_stack([1 - current_probs, current_probs])
 
         # Call comparison
         result = optimizer.compare_models(

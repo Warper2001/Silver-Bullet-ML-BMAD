@@ -145,13 +145,17 @@ class MLPipeline:
         """Initialize the ML pipeline.
 
         Args:
-            input_queue: Queue consuming signals from DetectionPipeline. If None, creates new queue with MAX_QUEUE_SIZE.
-            output_queue: Queue publishing filtered signals to execution. If None, creates new queue with MAX_QUEUE_SIZE.
+            input_queue: Queue consuming signals from DetectionPipeline.
+                If None, creates new queue with MAX_QUEUE_SIZE.
+            output_queue: Queue publishing filtered signals to execution.
+                If None, creates new queue with MAX_QUEUE_SIZE.
             model_dir: Directory containing ML models and artifacts
         """
         # Create queues if not provided (enforces size limits for overflow protection)
         self._input_queue = (
-            input_queue if input_queue is not None else asyncio.Queue(maxsize=self.MAX_QUEUE_SIZE)
+            input_queue
+            if input_queue is not None
+            else asyncio.Queue(maxsize=self.MAX_QUEUE_SIZE)
         )
         self._output_queue = (
             output_queue if output_queue is not None else asyncio.Queue(maxsize=self.MAX_QUEUE_SIZE)

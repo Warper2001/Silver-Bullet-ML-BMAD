@@ -138,19 +138,24 @@ class MLPipeline:
 
     def __init__(
         self,
-        input_queue: asyncio.Queue[SilverBulletSetup],
-        output_queue: asyncio.Queue[SilverBulletSetup],
+        input_queue: asyncio.Queue[SilverBulletSetup] | None = None,
+        output_queue: asyncio.Queue[SilverBulletSetup] | None = None,
         model_dir: str | Path = "models/xgboost",
     ) -> None:
         """Initialize the ML pipeline.
 
         Args:
-            input_queue: Queue consuming signals from DetectionPipeline
-            output_queue: Queue publishing filtered signals to execution
+            input_queue: Queue consuming signals from DetectionPipeline. If None, creates new queue with MAX_QUEUE_SIZE.
+            output_queue: Queue publishing filtered signals to execution. If None, creates new queue with MAX_QUEUE_SIZE.
             model_dir: Directory containing ML models and artifacts
         """
-        self._input_queue = input_queue
-        self._output_queue = output_queue
+        # Create queues if not provided (enforces size limits for overflow protection)
+        self._input_queue = (
+            input_queue if input_queue is not None else asyncio.Queue(maxsize=self.MAX_QUEUE_SIZE)
+        )
+        self._output_queue = (
+            output_queue if output_queue is not None else asyncio.Queue(maxsize=self.MAX_QUEUE_SIZE)
+        )
         self._model_dir = Path(model_dir)
 
         # Initialize ML components
@@ -370,3 +375,48 @@ class MLPipeline:
         while True:
             signal = await self._input_queue.get()
             await self.process_signal(signal)
+
+    def health_check(self) -> dict[str, Any]:
+        """Check health status of ML pipeline.
+
+        Returns:
+            Dictionary containing health status with keys:
+            - healthy: bool - Overall health status
+            - inference_loaded: bool - Whether ML inference model is loaded
+            - optimizer_scheduler_running: bool - Whether optimizer scheduler is running
+            - queue_depth: dict - Current queue depths
+            - statistics: dict - Current statistics summary
+        """
+        # Check if inference model is loaded
+        inference_loaded = (
+            self._inference._model is not None
+            and self._inference._pipeline is not None
+        )
+
+        # Check if optimizer scheduler is running
+        optimizer_scheduler_running = (
+            self._optimizer._scheduler.running if self._optimizer._scheduler else False
+        )
+
+        # Get queue depths
+        queue_depth = {
+            "input_queue_size": self._input_queue.qsize(),
+            "output_queue_size": self._output_queue.qsize(),
+            "input_queue_full": self._input_queue.full(),
+            "output_queue_full": self._output_queue.full(),
+        }
+
+        # Determine overall health
+        healthy = (
+            inference_loaded
+            and not queue_depth["input_queue_full"]
+            and not queue_depth["output_queue_full"]
+        )
+
+        return {
+            "healthy": healthy,
+            "inference_loaded": inference_loaded,
+            "optimizer_scheduler_running": optimizer_scheduler_running,
+            "queue_depth": queue_depth,
+            "statistics": self._statistics.get_summary(),
+        }

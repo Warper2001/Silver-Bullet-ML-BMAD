@@ -405,3 +405,99 @@ class TestPerformanceRequirements:
 
         # Should be much faster than 50ms with mocked components
         assert elapsed_ms < 50.0, f"Processing took {elapsed_ms:.2f}ms, exceeds 50ms limit"
+
+
+class TestHealthCheck:
+    """Test health check functionality."""
+
+    @pytest.fixture
+    def mock_pipeline(self):
+        """Create mock MLPipeline for health check testing."""
+        with patch("src.ml.pipeline.MLInference") as MockInference, \
+             patch("src.ml.pipeline.SignalFilter"), \
+             patch("src.ml.pipeline.DriftDetector") as MockDrift, \
+             patch("src.ml.pipeline.WalkForwardOptimizer") as MockOptimizer:
+
+            input_queue = Mock()
+            input_queue.qsize.return_value = 5
+            input_queue.full.return_value = False
+
+            output_queue = Mock()
+            output_queue.qsize.return_value = 2
+            output_queue.full.return_value = False
+
+            pipeline = MLPipeline(
+                input_queue=input_queue,
+                output_queue=output_queue
+            )
+
+            # Mock inference as loaded
+            pipeline._inference._model = Mock()
+            pipeline._inference._pipeline = Mock()
+
+            # Mock optimizer scheduler
+            mock_scheduler = Mock()
+            mock_scheduler.running = True
+            pipeline._optimizer._scheduler = mock_scheduler
+
+            return pipeline
+
+    def test_health_check_returns_all_required_fields(self, mock_pipeline):
+        """Verify health_check() returns all required fields."""
+        result = mock_pipeline.health_check()
+
+        # Verify all required keys present
+        assert "healthy" in result
+        assert "inference_loaded" in result
+        assert "optimizer_scheduler_running" in result
+        assert "queue_depth" in result
+        assert "statistics" in result
+
+    def test_health_check_reports_healthy_when_all_systems_go(self, mock_pipeline):
+        """Verify health_check() reports healthy when all systems operational."""
+        result = mock_pipeline.health_check()
+
+        assert result["healthy"] is True
+        assert result["inference_loaded"] is True
+        assert result["optimizer_scheduler_running"] is True
+
+    def test_health_check_reports_unhealthy_when_inference_not_loaded(self, mock_pipeline):
+        """Verify health_check() reports unhealthy when inference not loaded."""
+        mock_pipeline._inference._model = None
+
+        result = mock_pipeline.health_check()
+
+        assert result["healthy"] is False
+        assert result["inference_loaded"] is False
+
+    def test_health_check_reports_queue_depths(self, mock_pipeline):
+        """Verify health_check() reports current queue depths."""
+        result = mock_pipeline.health_check()
+
+        assert result["queue_depth"]["input_queue_size"] == 5
+        assert result["queue_depth"]["output_queue_size"] == 2
+        assert result["queue_depth"]["input_queue_full"] is False
+        assert result["queue_depth"]["output_queue_full"] is False
+
+    def test_health_check_reports_unhealthy_when_queues_full(self, mock_pipeline):
+        """Verify health_check() reports unhealthy when queues full."""
+        mock_pipeline._input_queue.full.return_value = True
+
+        result = mock_pipeline.health_check()
+
+        assert result["healthy"] is False
+        assert result["queue_depth"]["input_queue_full"] is True
+
+    @pytest.mark.asyncio
+    async def test_process_signal_under_50ms(self, mock_pipeline):
+        """Verify process_signal() completes in < 50ms."""
+        import time
+
+        mock_signal = Mock()
+
+        start_time = time.perf_counter()
+        await mock_pipeline.process_signal(mock_signal)
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+        # Should be much faster than 50ms with mocked components
+        assert elapsed_ms < 50.0, f"Processing took {elapsed_ms:.2f}ms, exceeds 50ms limit"

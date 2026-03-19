@@ -125,14 +125,17 @@ class SilverBulletBacktester:
         bars = []
 
         for idx, row in df.iterrows():
+            # Calculate notional value if not provided
+            notional_val = row.get('notional_value', row.get('dollar_volume', row['volume'] * row['close']))
+
             bar = DollarBar(
                 timestamp=idx if isinstance(idx, pd.Timestamp) else pd.to_datetime(idx),
                 open=row['open'],
                 high=row['high'],
                 low=row['low'],
                 close=row['close'],
-                volume=row['volume'],
-                dollar_volume=row.get('dollar_volume', row['volume'] * row['close'])
+                volume=int(row['volume']),
+                notional_value=notional_val
             )
             bars.append(bar)
 

@@ -10,6 +10,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
@@ -63,7 +64,7 @@ def train_xgboost(
     Returns:
         Tuple of (trained_model, validation_metrics)
     """
-    # Initialize model
+    # Initialize model with proper XGBoost 2.x compatibility
     model = XGBClassifier(
         n_estimators=n_estimators,
         max_depth=max_depth,
@@ -73,7 +74,7 @@ def train_xgboost(
         colsample_bytree=colsample_bytree,
         random_state=random_state,
         eval_metric="logloss",
-        use_label_encoder=False,
+        enable_categorical=False,
     )
 
     # Train model
@@ -165,11 +166,11 @@ def tune_hyperparameters(
         "colsample_bytree": [0.6, 0.7, 0.8, 0.9, 1.0],
     }
 
-    # Initialize base model
+    # Initialize base model with XGBoost 2.x compatibility
     base_model = XGBClassifier(
         random_state=42,
         eval_metric="logloss",
-        use_label_encoder=False,
+        enable_categorical=False,
     )
 
     # Perform randomized search
@@ -378,9 +379,9 @@ class XGBoostTrainer:
         horizon_dir = self._model_dir / f"{horizon}_minute"
         horizon_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save model
-        model_file = horizon_dir / "xgboost_model.json"
-        model.save_model(str(model_file))
+        # Save model using joblib (workaround for XGBoost sklearn API issues)
+        model_file = horizon_dir / "xgboost_model.pkl"
+        joblib.dump(model, model_file)
 
         # Convert numpy arrays and types to JSON-serializable format
         metrics_copy = {}
@@ -448,15 +449,16 @@ class XGBoostTrainer:
             SHA256 hash as hexadecimal string
         """
         import tempfile
+        import pickle
 
-        # Save model to temporary file
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
+        # Save model to temporary bytes buffer using joblib
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp:
             tmp_path = tmp.name
-            model.save_model(tmp_path)
+            joblib.dump(model, tmp_path)
 
         # Read file and calculate hash
         with open(tmp_path, "rb") as f:
-            model_json = f.read()
+            model_bytes = f.read()
 
         # Clean up temp file
         import os
@@ -464,7 +466,7 @@ class XGBoostTrainer:
         os.unlink(tmp_path)
 
         # Calculate hash
-        hash_obj = hashlib.sha256(model_json)
+        hash_obj = hashlib.sha256(model_bytes)
         return hash_obj.hexdigest()
 
     def load_model(self, horizon: int) -> XGBClassifier:
@@ -476,13 +478,12 @@ class XGBoostTrainer:
         Returns:
             Loaded XGBoost model
         """
-        model_file = self._model_dir / f"{horizon}_minute" / "xgboost_model.json"
+        model_file = self._model_dir / f"{horizon}_minute" / "xgboost_model.pkl"
 
         if not model_file.exists():
             raise FileNotFoundError(f"No model found for {horizon}-minute horizon")
 
-        model = XGBClassifier()
-        model.load_model(str(model_file))
+        model = joblib.load(model_file)
 
         logger.debug(f"Loaded model for {horizon}-minute horizon")
         return model

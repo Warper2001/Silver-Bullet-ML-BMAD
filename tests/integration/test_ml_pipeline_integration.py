@@ -6,18 +6,20 @@ filtering under load, and background task execution.
 """
 
 import asyncio
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from datetime import datetime
+from unittest.mock import patch
 
-import numpy as np
-import pandas as pd
 import pytest
 
-from src.data.models import SilverBulletSetup
+from src.data.models import (
+    FVGEvent,
+    GapRange,
+    MSSEvent,
+    SilverBulletSetup,
+    SwingPoint,
+)
 from src.ml.drift_detector import DriftDetector
-from src.ml.inference import MLInference
 from src.ml.pipeline import MLPipeline
-from src.ml.signal_filter import SignalFilter
 from src.ml.walk_forward_optimizer import WalkForwardOptimizer
 
 
@@ -27,14 +29,48 @@ class TestEndToEndFlow:
     @pytest.fixture
     def real_signal(self):
         """Create real SilverBullet signal for integration testing."""
-        return SilverBulletSetup(
-            timestamp="2024-03-16T10:00:00",
+        base_time = datetime(2024, 3, 16, 10, 0, 0)
+
+        swing = SwingPoint(
+            timestamp=base_time,
+            price=11750.0,
+            swing_type="swing_low",
+            bar_index=100,
+            confirmed=True,
+        )
+
+        mss = MSSEvent(
+            timestamp=base_time,
             direction="bullish",
-            entry_price=11750.0,
-            stop_loss=11700.0,
-            take_profit=11850.0,
-            patterns=["mss", "fvg"],
-            confidence=0.80,
+            breakout_price=11750.0,
+            swing_point=swing,
+            volume_ratio=1.5,
+            bar_index=100,
+        )
+
+        gap_range = GapRange(top=11760.0, bottom=11740.0)
+
+        fvg = FVGEvent(
+            timestamp=base_time,
+            direction="bullish",
+            gap_range=gap_range,
+            gap_size_ticks=20.0,
+            gap_size_dollars=100.0,
+            bar_index=100,
+        )
+
+        return SilverBulletSetup(
+            timestamp=base_time,
+            direction="bullish",
+            mss_event=mss,
+            fvg_event=fvg,
+            entry_zone_top=11760.0,
+            entry_zone_bottom=11740.0,
+            invalidation_point=11750.0,
+            confluence_count=2,
+            priority="medium",
+            bar_index=100,
+            confidence=3,
         )
 
     @pytest.fixture
@@ -44,7 +80,7 @@ class TestEndToEndFlow:
         model_dir.mkdir(parents=True, exist_ok=True)
 
         # Create minimal model files
-        (model_dir / "xgboost_model.json").write_text("{}")
+        (model_dir / "xgboost_model.pkl").write_text("{}")
         (model_dir / "feature_pipeline.pkl").write_text("{}")
         (model_dir / "metadata.json").write_text('{"metrics": {"win_rate": 0.60}}')
 

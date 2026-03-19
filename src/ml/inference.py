@@ -4,6 +4,7 @@ This module implements live probability score generation for Silver Bullet
 signals using trained XGBoost models and feature engineering pipelines.
 """
 
+import joblib
 import logging
 import threading
 from datetime import datetime, timedelta
@@ -228,7 +229,7 @@ class MLInference:
         with self._load_lock:
             if horizon not in self._models:
                 model_file = (
-                    self._model_dir / f"{horizon}_minute" / "xgboost_model.json"
+                    self._model_dir / f"{horizon}_minute" / "xgboost_model.pkl"
                 )
 
                 if not model_file.exists():
@@ -237,8 +238,7 @@ class MLInference:
                     )
 
                 logger.debug(f"Loading model for {horizon}-minute horizon...")
-                model = xgb.XGBClassifier()
-                model.load_model(str(model_file))
+                model = joblib.load(model_file)
                 self._models[horizon] = model
                 logger.debug(f"Model loaded for {horizon}-minute horizon")
 

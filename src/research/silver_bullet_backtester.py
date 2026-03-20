@@ -346,29 +346,58 @@ class SilverBulletBacktester:
 
         sweep_events = []
 
-        # Detect sweep events
-        for i in range(self._sweep_lookback, len(bars)):
-            # Check for bullish sweep
-            bullish_sweep = detect_bullish_liquidity_sweep(
-                bars,
-                i,
-                lookback=self._sweep_lookback,
-                min_volume_ratio=self._sweep_min_volume_ratio,
-                min_depth=self._sweep_min_depth
-            )
-            if bullish_sweep:
-                sweep_events.append(bullish_sweep)
+        # Detect swing highs and lows for sweep detection
+        from src.detection.swing_detection import detect_swing_high, detect_swing_low
+        from src.data.models import SwingPoint
 
-            # Check for bearish sweep
-            bearish_sweep = detect_bearish_liquidity_sweep(
-                bars,
-                i,
-                lookback=self._sweep_lookback,
-                min_volume_ratio=self._sweep_min_volume_ratio,
-                min_depth=self._sweep_min_depth
-            )
-            if bearish_sweep:
-                sweep_events.append(bearish_sweep)
+        swing_highs = []
+        swing_lows = []
+
+        for i in range(self._sweep_lookback, len(bars)):
+            if detect_swing_high(bars, i, lookback=self._sweep_lookback):
+                swing_highs.append(SwingPoint(
+                    timestamp=bars[i].timestamp,
+                    price=bars[i].high,
+                    swing_type="swing_high",
+                    bar_index=i
+                ))
+            if detect_swing_low(bars, i, lookback=self._sweep_lookback):
+                swing_lows.append(SwingPoint(
+                    timestamp=bars[i].timestamp,
+                    price=bars[i].low,
+                    swing_type="swing_low",
+                    bar_index=i
+                ))
+
+        # Detect sweep events using swing points
+        for i in range(self._sweep_lookback, len(bars)):
+            current_bar_time = bars[i].timestamp
+
+            # Check for bullish sweep (needs swing low)
+            for swing_low in swing_lows:
+                if swing_low.bar_index < i and (i - swing_low.bar_index) <= self._sweep_lookback:
+                    bullish_sweep = detect_bullish_liquidity_sweep(
+                        bars,
+                        i,
+                        swing_low,
+                        min_sweep_ticks=5.0  # Default minimum tick sweep
+                    )
+                    if bullish_sweep:
+                        sweep_events.append(bullish_sweep)
+                        break  # Only one sweep per bar
+
+            # Check for bearish sweep (needs swing high)
+            for swing_high in swing_highs:
+                if swing_high.bar_index < i and (i - swing_high.bar_index) <= self._sweep_lookback:
+                    bearish_sweep = detect_bearish_liquidity_sweep(
+                        bars,
+                        i,
+                        swing_high,
+                        min_sweep_ticks=5.0  # Default minimum tick sweep
+                    )
+                    if bearish_sweep:
+                        sweep_events.append(bearish_sweep)
+                        break  # Only one sweep per bar
 
         logger.debug(f"Detected {len(sweep_events)} sweep events")
         return sweep_events

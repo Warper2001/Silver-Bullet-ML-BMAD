@@ -63,8 +63,8 @@ class TradeStationAuthWeb:
     5. Automatically refresh token every 10 minutes
     """
 
-    AUTH_ENDPOINT = "https://api.tradestation.com/v2/security/authorize"
-    TOKEN_ENDPOINT = "https://api.tradestation.com/v2/security/authorize"
+    AUTH_ENDPOINT = "https://signin.tradestation.com/authorize"
+    TOKEN_ENDPOINT = "https://signin.tradestation.com/oauth/token"
     REFRESH_INTERVAL_SECONDS = 600  # 10 minutes
     MAX_RETRY_ATTEMPTS = 3
     RETRY_DELAYS = [1, 2, 4]  # Exponential backoff: 1s, 2s, 4s
@@ -134,14 +134,14 @@ class TradeStationAuthWeb:
 
         # Open browser for user authentication
         print("\n" + "="*70)
-        print("🔐 TRADESTATION AUTHENTICATION REQUIRED")
+        print("TRADESTATION AUTHENTICATION REQUIRED")
         print("="*70)
         print("\n1. A browser window will open automatically")
         print("2. Log in with your TradeStation credentials")
         print("3. Authorize the application")
         print("4. You'll be redirected back to localhost")
         print("\n" + "="*70)
-        print(f"\n🌐 Opening browser to:\n   {auth_url}\n")
+        print(f"\nOpening browser to:\n   {auth_url}\n")
 
         import webbrowser
         webbrowser.open(auth_url)
@@ -172,7 +172,8 @@ class TradeStationAuthWeb:
             "response_type": "code",
             "client_id": self.settings.tradestation_client_id,
             "redirect_uri": self.settings.tradestation_redirect_uri,
-            "scope": "MarketData ReadAccount Trade offline_access",
+            "audience": "https://api.tradestation.com",
+            "scope": "openid profile offline_access MarketData ReadAccount Trade",
         }
 
         return f"{self.AUTH_ENDPOINT}?{urlencode(params)}"
@@ -181,7 +182,10 @@ class TradeStationAuthWeb:
         """Start HTTP server to handle OAuth callback.
 
         This server listens for the callback from TradeStation and extracts
-        the authorization code from the URL.
+        the authorization code from the URL query parameters.
+
+        The callback will be to the root path (e.g., http://localhost:8080?code=...),
+        not to a /callback path.
 
         Raises:
             AuthenticationError: If callback URL is invalid
@@ -206,38 +210,60 @@ class TradeStationAuthWeb:
         conn, addr = sock.accept()
         data = conn.recv(4096).decode("utf-8")
 
+        logger.debug(f"Received callback data: {data[:200]}...")
+
         # Parse authorization code from callback URL
+        # The callback comes to root path with code in query string
+        # Format: GET /?code=AUTH_CODE&state=STATE HTTP/1.1
         if "code=" in data:
-            # Extract code from URL
+            # Extract code from URL query string
             code_start = data.index("code=") + 5
             code_end = data.find("&", code_start)
             if code_end == -1:
-                code_end = len(data)
+                # Try to find the end of the query string (space before HTTP/)
+                code_end = data.find(" ", code_start)
+                if code_end == -1:
+                    code_end = len(data)
             self._auth_code = data[code_start:code_end]
+
+            logger.info(f"Authorization code received: {self._auth_code[:20]}...")
 
             # Send success response
             response = (
                 "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/html\r\n"
+                "Content-Type: text/html; charset=utf-8\r\n"
                 "\r\n"
-                "<html><body><h1>✅ Authentication Successful!</h1>"
+                "<html><body><h1>Authentication Successful!</h1>"
                 "<p>You can close this window and return to the terminal.</p>"
                 "</body></html>"
             )
             conn.sendall(response.encode("utf-8"))
-            logger.info("Received authorization code successfully")
         else:
             # Send error response
+            error_msg = "No authorization code received"
+            if "error=" in data:
+                # Extract error message
+                error_start = data.index("error=") + 6
+                error_end = data.find("&", error_start)
+                if error_end == -1:
+                    error_end = data.find(" ", error_start)
+                if error_end == -1:
+                    error_end = len(data)
+                error_msg = data[error_start:error_end]
+
+            logger.error(f"Authentication error: {error_msg}")
+
             response = (
                 "HTTP/1.1 400 Bad Request\r\n"
-                "Content-Type: text/html\r\n"
+                "Content-Type: text/html; charset=utf-8\r\n"
                 "\r\n"
-                "<html><body><h1>❌ Authentication Failed</h1>"
-                "<p>No authorization code received. Please try again.</p>"
-                "</body></html>"
+                f"<html><body><h1>Authentication Failed</h1>"
+                f"<p>Error: {error_msg}</p>"
+                f"<p>Please try again.</p>"
+                f"</body></html>"
             )
             conn.sendall(response.encode("utf-8"))
-            raise AuthenticationError("No authorization code in callback")
+            raise AuthenticationError(f"No authorization code in callback: {error_msg}")
 
         conn.close()
         sock.close()

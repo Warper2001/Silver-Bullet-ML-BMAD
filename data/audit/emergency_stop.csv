@@ -1,0 +1,3 @@
+timestamp,event_type,is_stopped,stop_reason,time_stopped_seconds
+2026-03-18T03:19:26.257175+00:00,ACTIVATE,True,Testing CLI,
+2026-03-18T03:19:45.036657+00:00,DEACTIVATE,False,,

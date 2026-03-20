@@ -1,78 +1,85 @@
 #!/usr/bin/env python3
-"""Test TradeStation authentication independently."""
+"""Test TradeStation Authorization Code Flow authentication."""
 
 import asyncio
-import httpx
-import os
-from dotenv import load_dotenv
+import sys
+from pathlib import Path
 
-load_dotenv()
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from src.data.auth_web import TradeStationAuthWeb
+from src.data.exceptions import AuthenticationError
+
 
 async def test_auth():
-    """Test TradeStation authentication."""
+    """Test TradeStation Authorization Code Flow authentication."""
 
-    client_id = os.getenv("TRADESTATION_CLIENT_ID")
-    client_secret = os.getenv("TRADESTATION_CLIENT_SECRET")
-    redirect_uri = os.getenv("TRADESTATION_REDIRECT_URI", "http://localhost:8080/callback")
+    print("="*70)
+    print("🔐 TRADESTATION AUTHENTICATION TEST")
+    print("="*70)
+    print("\nThis will test the Authorization Code Flow authentication.")
+    print("A browser window will open for you to log in.\n")
 
-    print(f"Client ID: {client_id[:10]}...{client_id[-10:] if client_id else 'None'}")
-    print(f"Client Secret: {client_secret[:10]}...{client_secret[-10:] if client_secret else 'None'}")
-    print(f"Redirect URI: {redirect_uri}")
+    try:
+        # Initialize authentication
+        auth = TradeStationAuthWeb(port=8080)
 
-    # Try authentication
-    url = "https://api.tradestation.com/v2/security/authorize"
+        # Get access token (will open browser)
+        print("Requesting access token...")
+        access_token = await auth.get_access_token()
 
-    # Test without redirect_uri first
-    data_without_redirect = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret,
-    }
+        print("\n" + "="*70)
+        print("✅ AUTHENTICATION SUCCESSFUL!")
+        print("="*70)
+        print(f"\nAccess Token (first 20 chars): {access_token[:20]}...")
+        print(f"Token Length: {len(access_token)} characters")
 
-    data_with_redirect = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri,
-    }
+        if auth._token_expires_at:
+            print(f"Expires At: {auth._token_expires_at}")
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        # Try without redirect_uri
-        print("\n--- Attempt 1: Without redirect_uri ---")
-        try:
-            response = await client.post(
-                url,
-                data=data_without_redirect,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            print(f"Status: {response.status_code}")
-            print(f"Response: {response.text[:200]}")
+        if auth._refresh_token:
+            print(f"Refresh Token: Available ({len(auth._refresh_token)} chars)")
 
-            if response.status_code == 200:
-                print("✅ Authentication successful!")
-                return
+        print("\n✅ Your TradeStation API credentials are working correctly!")
+        print("\nYou can now:")
+        print("  - Run: venv/bin/python collect_historical_data.py")
+        print("  - Run: venv/bin/python collect_realtime_data.py")
 
-        except Exception as e:
-            print(f"❌ Error: {e}")
+        # Clean up
+        await auth.cleanup()
 
-        # Try with redirect_uri
-        print("\n--- Attempt 2: With redirect_uri ---")
-        try:
-            response = await client.post(
-                url,
-                data=data_with_redirect,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            print(f"Status: {response.status_code}")
-            print(f"Response: {response.text[:200]}")
+        return True
 
-            if response.status_code == 200:
-                print("✅ Authentication successful!")
-            else:
-                print("❌ Authentication failed")
+    except AuthenticationError as e:
+        print("\n" + "="*70)
+        print("❌ AUTHENTICATION FAILED")
+        print("="*70)
+        print(f"\nError: {e}")
+        print("\nPossible issues:")
+        print("  1. Invalid API credentials in .env file")
+        print("  2. User cancelled authentication in browser")
+        print("  3. Callback URL not configured correctly in TradeStation")
+        print("  4. Network connectivity issues")
+        print("\nSolutions:")
+        print("  1. Verify credentials in .env file")
+        print("  2. Check callback URL: http://localhost:8080/callback")
+        print("  3. Ensure TradeStation account is active")
+        print("  4. Try authentication again")
 
-        except Exception as e:
-            print(f"❌ Error: {e}")
+        return False
+
+    except Exception as e:
+        print("\n" + "="*70)
+        print("❌ UNEXPECTED ERROR")
+        print("="*70)
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+
+        return False
+
 
 if __name__ == "__main__":
-    asyncio.run(test_auth())
+    success = asyncio.run(test_auth())
+    sys.exit(0 if success else 1)

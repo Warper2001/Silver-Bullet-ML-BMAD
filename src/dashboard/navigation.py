@@ -7,8 +7,25 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+# Initialize keyboard shortcuts integration
+from dashboard.shortcuts.integration import (
+    render_keyboard_shortcuts_ui,
+    get_keyboard_handler,
+    get_shortcut_registry,
+)
 from dashboard.shared_state import (
     Direction,
+    ManualTradeRequest,
+    OrderSubmissionResult,
+    TradePreview,
+    validate_password,
+    calculate_trade_preview,
+    submit_manual_trade,
+    validate_position_size,
+    validate_per_trade_risk,
+    validate_margin_requirement,
+    get_current_price,
+    get_current_atr,
     MarkerType,
     calculate_data_age,
     calculate_time_remaining,
@@ -975,16 +992,282 @@ def render_logs():
     st.info("Logs page coming in Story 8.7")
 
 
+def render_manual_trade():
+    """Render manual trade submission form with risk validation."""
+    st.header("💱 Manual Trade Submission")
+
+    try:
+        # Get system health to check if trading should be disabled
+        health = get_system_health()
+        metrics = get_account_metrics()
+
+        # Check system state
+        system_disabled = False
+        disable_reason = None
+
+        # Check for HALTED or SAFE_MODE
+        if hasattr(health, 'system_state') and health.system_state in ['HALTED', 'SAFE_MODE']:
+            system_disabled = True
+            disable_reason = f"System in {health.system_state} mode"
+
+        # Check for risk limit breaches
+        if metrics.daily_drawdown >= metrics.daily_loss_limit:
+            system_disabled = True
+            disable_reason = "Daily loss limit reached"
+
+        # Disable form if system state prevents trading
+        if system_disabled:
+            st.error(f"⚠️ Manual trading disabled: {disable_reason}")
+            st.info("Resolve the issue to enable manual trading.")
+            return
+
+        # Initialize session state for form
+        if 'manual_trade_preview' not in st.session_state:
+            st.session_state.manual_trade_preview = None
+        if 'manual_trade_submitted' not in st.session_state:
+            st.session_state.manual_trade_submitted = False
+        if 'manual_trade_error' not in st.session_state:
+            st.session_state.manual_trade_error = None
+
+        st.markdown("---")
+        st.subheader("Trade Parameters")
+
+        # Form controls
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Direction radio button
+            direction = st.radio(
+                "Direction:",
+                options=["Buy", "Sell"],
+                horizontal=True,
+                help="Trade direction (Buy = LONG, Sell = SHORT)"
+            )
+
+            # Quantity number input
+            quantity = st.number_input(
+                "Quantity (contracts):",
+                min_value=1,
+                max_value=5,
+                value=1,
+                step=1,
+                help="Number of contracts (1-5)"
+            )
+
+        with col2:
+            # Order Type selectbox
+            order_type = st.selectbox(
+                "Order Type:",
+                options=["Market", "Limit"],
+                help="Market orders execute immediately. Limit orders require a price."
+            )
+
+            # Limit Price number input (conditional)
+            limit_price = None
+            if order_type == "Limit":
+                current_price = get_current_price()
+                limit_price = st.number_input(
+                    "Limit Price ($):",
+                    min_value=10000.0,
+                    max_value=20000.0,
+                    value=current_price,
+                    step=0.25,
+                    help=f"Current price: ${current_price:.2f}"
+                )
+
+        # Calculate Preview button
+        st.markdown("---")
+        col_preview, col_reset = st.columns([1, 4])
+
+        with col_preview:
+            if st.button("🔍 Calculate Preview", type="secondary"):
+                # Create trade request
+                trade_request = ManualTradeRequest(
+                    direction=direction,
+                    quantity=quantity,
+                    order_type=order_type,
+                    limit_price=limit_price,
+                    submit_time=datetime.now(),
+                    submitted_by="dashboard_user"
+                )
+
+                # Calculate preview
+                preview = calculate_trade_preview(trade_request, metrics.equity)
+                st.session_state.manual_trade_preview = preview
+                st.session_state.manual_trade_submitted = False
+                st.session_state.manual_trade_error = None
+
+        with col_reset:
+            if st.button("🔄 Reset Form"):
+                st.session_state.manual_trade_preview = None
+                st.session_state.manual_trade_submitted = False
+                st.session_state.manual_trade_error = None
+                st.rerun()
+
+        # Display trade preview if calculated
+        if st.session_state.manual_trade_preview is not None:
+            preview = st.session_state.manual_trade_preview
+
+            st.markdown("---")
+            st.subheader("Trade Preview")
+
+            # Preview metrics
+            pcol1, pcol2, pcol3 = st.columns(3)
+
+            with pcol1:
+                st.metric(
+                    "Dollar Risk",
+                    f"${preview.dollar_risk:,.2f}",
+                    help="Risk amount based on 1.2x ATR stop loss"
+                )
+
+            with pcol2:
+                st.metric(
+                    "Margin Required",
+                    f"${preview.margin_required:,.2f}",
+                    delta="✅ Sufficient" if preview.margin_sufficient else "❌ Insufficient"
+                )
+
+            with pcol3:
+                st.metric(
+                    "Position Size",
+                    f"{quantity} contracts",
+                    delta="✅ Valid" if preview.position_size_valid else "❌ Invalid"
+                )
+
+            # Barrier information
+            st.markdown("### Exit Barriers (Triple Barrier)")
+
+            bcol1, bcol2, bcol3 = st.columns(3)
+
+            with bcol1:
+                st.metric(
+                    "Upper Barrier (2.5x ATR)",
+                    f"${preview.upper_barrier_price:,.2f}",
+                    delta="Take Profit",
+                    delta_color="normal"
+                )
+
+            with bcol2:
+                st.metric(
+                    "Lower Barrier (1.2x ATR)",
+                    f"${preview.lower_barrier_price:,.2f}",
+                    delta="Stop Loss",
+                    delta_color="inverse"
+                )
+
+            with bcol3:
+                st.metric(
+                    "Vertical Barrier",
+                    preview.vertical_barrier_time.strftime("%H:%M:%S"),
+                    delta="45 min timeout"
+                )
+
+            # Validation status
+            st.markdown("---")
+            st.subheader("Validation Status")
+
+            if preview.validation_errors:
+                st.error("❌ Validation Errors:")
+                for error in preview.validation_errors:
+                    st.write(f"• {error}")
+            else:
+                st.success("✅ All validations passed!")
+
+            # Submit Trade button (only if no validation errors)
+            if not preview.validation_errors and not st.session_state.manual_trade_submitted:
+                st.markdown("---")
+                st.subheader("Submit Trade")
+
+                # Password confirmation
+                with st.expander("⚠️ Confirm Trade Submission", expanded=False):
+                    st.warning("This action will submit a live order to TradeStation.")
+
+                    password = st.text_input(
+                        "Enter password to confirm:",
+                        type="password",
+                        key="manual_trade_password"
+                    )
+
+                    col_submit, col_cancel = st.columns(2)
+
+                    with col_submit:
+                        if st.button("🚀 Submit Trade", type="primary"):
+                            if password:
+                                # Validate password
+                                if validate_password(password):
+                                    # Submit trade
+                                    result = submit_manual_trade(
+                                        trade_request,
+                                        password
+                                    )
+
+                                    if result.success:
+                                        st.success(f"✅ Order submitted successfully! Order ID: {result.order_id}")
+                                        st.session_state.manual_trade_submitted = True
+                                        st.session_state.manual_trade_error = None
+                                        st.rerun()
+                                    else:
+                                        st.error(f"❌ Order submission failed: {result.error}")
+                                        st.session_state.manual_trade_error = result.error
+                                else:
+                                    st.error("❌ Invalid password")
+                            else:
+                                st.warning("Please enter a password")
+
+                    with col_cancel:
+                        if st.button("Cancel", key="cancel_manual_trade"):
+                            st.info("Trade submission cancelled")
+
+        # Display submission result
+        if st.session_state.manual_trade_submitted:
+            st.balloons()
+            st.info("📊 Check the Positions page for trade status.")
+
+    except Exception as e:
+        st.error(f"Failed to load manual trade form: {e}")
+        logger.error(f"Error loading manual trade form: {e}", exc_info=True)
+        return
+
+
+def render_help():
+    """Render help page with context-sensitive content."""
+    from dashboard.help.help_modal import show_help_modal
+
+    # Get current page from session state or default to Overview
+    current_page = st.session_state.get("help_page", "Overview")
+
+    # Show help modal
+    show_help_modal(current_page)
+
+
 def render_page(page: str):
     """Route to selected page."""
+    # Initialize keyboard shortcuts (inject JavaScript and handle events)
+    render_keyboard_shortcuts_ui()
+
+    # Check if help modal should be shown
+    if st.session_state.get("show_help", False):
+        from dashboard.help.help_modal import show_help_modal
+
+        # Get current page or default to Overview
+        current_page = st.session_state.get("help_page", "Overview")
+        show_help_modal(current_page)
+        return
+
     page_renderers = {
         "Overview": render_overview,
         "Positions": render_positions,
         "Signals": render_signals,
         "Charts": render_charts,
         "Settings": render_settings,
+        "Manual Trade": render_manual_trade,
+        "Help": render_help,
         "Logs": render_logs,
     }
+
+    # Store current page in session state for context-sensitive help
+    st.session_state["page"] = page
 
     renderer = page_renderers.get(page, render_overview)
     renderer()

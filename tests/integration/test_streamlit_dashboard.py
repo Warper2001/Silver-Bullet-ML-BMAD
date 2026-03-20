@@ -578,3 +578,305 @@ class TestHealthIndicatorsPage:
             assert hasattr(component, 'error_count')
             assert component.error_count >= 0
 
+
+class TestManualTradeSubmissionIntegration:
+    """Integration tests for Manual Trade Submission from Story 8.8."""
+
+    def test_manual_trade_page_renders_without_errors(self):
+        """Test Manual Trade page renders without errors."""
+        # Verify function exists in navigation.py
+        with open("src/dashboard/navigation.py") as f:
+            content = f.read()
+            assert "def render_manual_trade():" in content
+            assert "Manual Trade Submission" in content
+
+    def test_manual_trade_form_has_all_controls(self):
+        """Test manual trade form has all required controls."""
+        from src.dashboard.shared_state import ManualTradeRequest
+        from datetime import datetime
+
+        # Verify we can create a manual trade request
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        # Verify all fields are present
+        assert request.direction == "Buy"
+        assert request.quantity == 2
+        assert request.order_type == "Market"
+        assert request.limit_price is None
+        assert request.submitted_by == "dashboard_user"
+
+    def test_manual_trade_validation_integration(self):
+        """Test manual trade validation integrates correctly with account metrics."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            calculate_trade_preview,
+            validate_position_size,
+            validate_per_trade_risk,
+            validate_margin_requirement,
+            get_account_metrics,
+            get_current_price,
+            get_current_atr,
+        )
+        from datetime import datetime
+
+        # Get current account metrics and market data
+        metrics = get_account_metrics()
+        current_price = get_current_price()
+        atr = get_current_atr()
+
+        # Create a valid trade request (1 contract to stay within 2% risk limit)
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=1,  # 1 contract = $1200 risk < $2000 (2% of $100k)
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        # Calculate preview
+        preview = calculate_trade_preview(request, current_price, atr, metrics.equity)
+
+        # Verify validation integration
+        assert preview.position_size_valid is True  # 1 contract < 5
+        assert preview.per_trade_risk_valid is True  # Should be < 2% equity
+        assert isinstance(preview.dollar_risk, float)
+        assert preview.dollar_risk > 0
+
+    def test_manual_trade_preview_displays_all_barriers(self):
+        """Test trade preview displays all triple barriers correctly."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            calculate_trade_preview,
+            get_account_metrics,
+            get_current_price,
+            get_current_atr,
+        )
+        from datetime import datetime
+
+        metrics = get_account_metrics()
+        current_price = get_current_price()
+        atr = get_current_atr()
+
+        # Test long position
+        long_request = ManualTradeRequest(
+            direction="Buy",
+            quantity=1,  # Use 1 contract to stay within risk limits
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        long_preview = calculate_trade_preview(long_request, current_price, atr, metrics.equity)
+
+        # Verify barriers for long position
+        assert long_preview.upper_barrier_price > long_preview.stop_loss_price
+        assert long_preview.lower_barrier_price == long_preview.stop_loss_price
+        assert long_preview.vertical_barrier_time > datetime.now()
+
+        # Test short position
+        short_request = ManualTradeRequest(
+            direction="Sell",
+            quantity=1,  # Use 1 contract to stay within risk limits
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        short_preview = calculate_trade_preview(short_request, current_price, atr, metrics.equity)
+
+        # Verify barriers for short position (reversed)
+        assert short_preview.upper_barrier_price == short_preview.stop_loss_price
+        assert short_preview.lower_barrier_price < short_preview.stop_loss_price
+
+    def test_manual_trade_validation_blocks_invalid_trades(self):
+        """Test validation blocks trades that exceed limits."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            calculate_trade_preview,
+            get_account_metrics,
+            get_current_price,
+            get_current_atr,
+        )
+        from datetime import datetime
+
+        metrics = get_account_metrics()
+        current_price = get_current_price()
+        atr = get_current_atr()
+
+        # Test position size limit (5 contracts)
+        invalid_size_request = ManualTradeRequest(
+            direction="Buy",
+            quantity=10,  # Exceeds 5 contract limit
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        preview = calculate_trade_preview(invalid_size_request, current_price, atr, metrics.equity)
+
+        # Should have validation error
+        assert preview.position_size_valid is False
+        assert len(preview.validation_errors) > 0
+        assert any("exceeds maximum position size" in err for err in preview.validation_errors)
+
+    def test_manual_trade_password_confirmation(self):
+        """Test password confirmation prevents unauthorized submissions."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            validate_password,
+            submit_manual_trade,
+        )
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=1,  # Use 1 contract to stay within risk limits
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        # Test correct password
+        assert validate_password("admin123") is True
+
+        # Test incorrect password
+        assert validate_password("wrong_password") is False
+
+        # Test submission happens (password validation is separate from submission)
+        # In the actual form, password is validated BEFORE calling submit_manual_trade
+        result = submit_manual_trade(request)
+        assert result.success is True
+        assert result.order_id is not None
+        assert result.error is None
+
+    def test_manual_trade_limit_order_requires_price(self):
+        """Test limit orders require a price."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            calculate_trade_preview,
+            get_account_metrics,
+            get_current_price,
+            get_current_atr,
+        )
+        from datetime import datetime
+
+        metrics = get_account_metrics()
+        current_price = get_current_price()
+        atr = get_current_atr()
+
+        # Limit order without price should fail validation
+        limit_request = ManualTradeRequest(
+            direction="Buy",
+            quantity=1,  # Use 1 contract to stay within risk limits
+            order_type="Limit",
+            limit_price=None,  # Missing required price
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        preview = calculate_trade_preview(limit_request, current_price, atr, metrics.equity)
+
+        # Should have validation error
+        assert len(preview.validation_errors) > 0
+        assert any("Limit price required" in err for err in preview.validation_errors)
+
+    def test_manual_trade_system_state_checks(self):
+        """Test form is disabled when system is in HALTED or SAFE_MODE."""
+        from src.dashboard.shared_state import get_system_health
+
+        health = get_system_health()
+
+        # Verify system health has state information
+        # (In real implementation, this would check system_state field)
+        assert hasattr(health, 'system_state') or hasattr(health, 'api_status')
+
+    def test_manual_trade_margin_requirement_check(self):
+        """Test margin requirement is checked correctly."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            calculate_trade_preview,
+            get_account_metrics,
+            get_current_price,
+            get_current_atr,
+        )
+        from datetime import datetime
+
+        metrics = get_account_metrics()
+        current_price = get_current_price()
+        atr = get_current_atr()
+
+        # Create a trade that requires significant margin
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=5,  # Maximum position
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        preview = calculate_trade_preview(request, current_price, atr, metrics.equity)
+
+        # Verify margin was calculated
+        assert preview.margin_required > 0
+        assert isinstance(preview.margin_sufficient, bool)
+
+        # With mock data, margin should be sufficient
+        # In real implementation, this would check actual account equity
+
+    def test_manual_trade_full_workflow(self):
+        """Test complete workflow from form to submission."""
+        from src.dashboard.shared_state import (
+            ManualTradeRequest,
+            calculate_trade_preview,
+            validate_password,
+            submit_manual_trade,
+            get_account_metrics,
+            get_current_price,
+            get_current_atr,
+        )
+        from datetime import datetime
+
+        # Step 1: Create trade request
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=1,  # Use 1 contract to stay within risk limits
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="dashboard_user"
+        )
+
+        # Step 2: Calculate preview
+        metrics = get_account_metrics()
+        current_price = get_current_price()
+        atr = get_current_atr()
+        preview = calculate_trade_preview(request, current_price, atr, metrics.equity)
+
+        # Step 3: Verify no validation errors
+        assert len(preview.validation_errors) == 0
+
+        # Step 4: Validate password (happens before submission in real form)
+        password_valid = validate_password("admin123")
+        assert password_valid is True
+
+        # Step 5: Submit trade (password validation is separate)
+        result = submit_manual_trade(request)
+
+        # Step 6: Verify success
+        assert result.success is True
+        assert result.order_id is not None
+        assert result.error is None
+

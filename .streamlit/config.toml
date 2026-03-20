@@ -1,0 +1,17 @@
+# Streamlit Configuration for Silver-Bullet-ML-BMAD Dashboard
+
+[theme]
+base = "dark"
+primaryColor = "#0080FF"
+backgroundColor = "#1E1E1E"
+secondaryBackgroundColor = "#2D2D2D"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[client]
+showErrorDetails = false
+maxUploadSize = 200
+
+[runner]
+fastReruns = true
+magicEnabled = false

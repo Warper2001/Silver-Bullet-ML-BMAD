@@ -79,7 +79,7 @@ def run_backtest(
     if verbose:
         print("[LOAD] Loading historical data...")
 
-    loader = HistoricalDataLoader(data_directory="data/processed/")
+    loader = HistoricalDataLoader(data_directory="data/processed/dollar_bars/", min_completeness=1.0)
     data = loader.load_data(start_date, end_date)
 
     if verbose:

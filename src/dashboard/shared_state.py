@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -1058,4 +1058,237 @@ def calculate_data_age(last_ping_time: datetime) -> int:
         Age in seconds
     """
     return int((datetime.now() - last_ping_time).total_seconds())
+
+
+# ============================================================================
+# Story 8.8: Manual Trade Submission Form
+# ============================================================================
+
+
+@dataclass
+class ManualTradeRequest:
+    """Manual trade submission request."""
+
+    direction: str  # "Buy" or "Sell"
+    quantity: int  # Number of contracts (1-5)
+    order_type: str  # "Market" or "Limit"
+    limit_price: Optional[float]  # Required if order_type is "Limit"
+    submit_time: datetime  # When trade was submitted
+    submitted_by: str  # User identifier
+
+
+@dataclass
+class TradePreview:
+    """Trade risk and barrier preview."""
+
+    dollar_risk: float  # Risk amount in dollars
+    stop_loss_price: float  # Stop loss price (1.2x ATR)
+    upper_barrier_price: float  # Upper barrier (2.5x ATR)
+    lower_barrier_price: float  # Lower barrier (1.2x ATR)
+    vertical_barrier_time: datetime  # 45 minutes from entry
+    margin_required: float  # Margin requirement for trade
+    margin_sufficient: bool  # Whether account has sufficient margin
+    position_size_valid: bool  # Whether quantity < 5 contracts
+    per_trade_risk_valid: bool  # Whether risk < 2% equity
+    validation_errors: List[str]  # List of validation error messages
+
+
+@dataclass
+class OrderSubmissionResult:
+    """Result of order submission."""
+
+    success: bool
+    order_id: Optional[str] = None
+    error: Optional[str] = None
+
+
+def validate_position_size(quantity: int, max_position: int = 5) -> tuple[bool, str]:
+    """Validate position size limit.
+
+    Args:
+        quantity: Number of contracts
+        max_position: Maximum allowed position (default 5)
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if quantity <= 0:
+        return False, "Quantity must be greater than 0"
+    if quantity > max_position:
+        return False, f"Quantity exceeds maximum position size ({max_position} contracts)"
+    return True, ""
+
+
+def validate_per_trade_risk(
+    dollar_risk: float,
+    account_equity: float,
+    max_risk_percent: float = 0.02
+) -> tuple[bool, str]:
+    """Validate per-trade risk limit.
+
+    Args:
+        dollar_risk: Risk amount in dollars
+        account_equity: Total account equity
+        max_risk_percent: Maximum risk as fraction of equity (default 2%)
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    max_risk_dollars = account_equity * max_risk_percent
+    if dollar_risk > max_risk_dollars:
+        return False, f"Risk ${dollar_risk:.2f} exceeds 2% equity limit (${max_risk_dollars:.2f})"
+    return True, ""
+
+
+def validate_margin_requirement(
+    quantity: int,
+    account_equity: float,
+    margin_per_contract: float = 500.0  # MNQ margin approx $500/contract
+) -> tuple[bool, str, float]:
+    """Validate margin requirement.
+
+    Args:
+        quantity: Number of contracts
+        account_equity: Total account equity
+        margin_per_contract: Margin required per contract
+
+    Returns:
+        Tuple of (is_valid, error_message, margin_required)
+    """
+    margin_required = quantity * margin_per_contract
+    if margin_required > account_equity:
+        return False, f"Insufficient margin: need ${margin_required:.2f}, have ${account_equity:.2f}", margin_required
+    return True, "", margin_required
+
+
+def calculate_trade_preview(
+    request: ManualTradeRequest,
+    current_price: float,
+    atr: float,
+    account_equity: float
+) -> TradePreview:
+    """Calculate trade preview with risk and barriers.
+
+    Args:
+        request: Manual trade request
+        current_price: Current market price
+        atr: Average True Range for barrier calculations
+        account_equity: Total account equity
+
+    Returns:
+        Trade preview with risk and barrier levels
+    """
+    # Calculate stop loss (1.2x ATR)
+    if request.direction == "Buy":
+        stop_loss_price = current_price - (1.2 * atr)
+        upper_barrier_price = current_price + (2.5 * atr)
+        lower_barrier_price = stop_loss_price
+        dollar_risk = abs(current_price - stop_loss_price) * request.quantity * 20  # MNQ $20/tick
+    else:  # Sell
+        stop_loss_price = current_price + (1.2 * atr)
+        upper_barrier_price = stop_loss_price
+        lower_barrier_price = current_price - (2.5 * atr)
+        dollar_risk = abs(stop_loss_price - current_price) * request.quantity * 20
+
+    # Vertical barrier (45 minutes from now)
+    vertical_barrier_time = datetime.now() + timedelta(minutes=45)
+
+    # Validate position size
+    position_size_valid, position_error = validate_position_size(request.quantity)
+
+    # Validate per-trade risk
+    per_trade_risk_valid, risk_error = validate_per_trade_risk(dollar_risk, account_equity)
+
+    # Validate margin
+    margin_valid, margin_error, margin_required = validate_margin_requirement(request.quantity, account_equity)
+
+    # Validate limit price for limit orders
+    limit_price_valid = True
+    limit_price_error = None
+    if request.order_type == "Limit" and request.limit_price is None:
+        limit_price_valid = False
+        limit_price_error = "Limit price required for limit orders"
+
+    # Collect validation errors
+    validation_errors = []
+    if not position_size_valid:
+        validation_errors.append(position_error)
+    if not per_trade_risk_valid:
+        validation_errors.append(risk_error)
+    if not margin_valid:
+        validation_errors.append(margin_error)
+    if not limit_price_valid:
+        validation_errors.append(limit_price_error)
+
+    return TradePreview(
+        dollar_risk=dollar_risk,
+        stop_loss_price=stop_loss_price,
+        upper_barrier_price=upper_barrier_price,
+        lower_barrier_price=lower_barrier_price,
+        vertical_barrier_time=vertical_barrier_time,
+        margin_required=margin_required,
+        margin_sufficient=margin_valid,
+        position_size_valid=position_size_valid,
+        per_trade_risk_valid=per_trade_risk_valid,
+        validation_errors=validation_errors
+    )
+
+
+def submit_manual_trade(request: ManualTradeRequest) -> OrderSubmissionResult:
+    """Submit manual trade to execution system.
+
+    Args:
+        request: Validated manual trade request
+
+    Returns:
+        Order submission result
+
+    TODO: Connect to Epic 4 TradeExecutor for actual order submission
+    """
+    logger.warning("Using mock order submission - connect to Epic 4")
+
+    # Mock successful submission
+    return OrderSubmissionResult(
+        success=True,
+        order_id=f"MANUAL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    )
+
+
+def get_current_price() -> float:
+    """Get current MNQ price.
+
+    Returns:
+        Current market price
+
+    TODO: Connect to actual data pipeline
+    """
+    logger.warning("Using mock current price - connect to data pipeline")
+    return 11500.0  # Typical MNQ price
+
+
+def get_current_atr() -> float:
+    """Get current Average True Range.
+
+    Returns:
+        Current ATR value
+
+    TODO: Connect to actual ML pipeline for ATR calculation
+    """
+    logger.warning("Using mock ATR - connect to ML pipeline")
+    return 50.0  # Typical MNQ ATR
+
+
+def validate_password(password: str) -> bool:
+    """Validate system password.
+
+    Args:
+        password: Password to validate
+
+    Returns:
+        True if password is correct
+
+    TODO: Connect to actual password from Story 8.6
+    """
+    logger.warning("Using mock password validation - connect to Story 8.6")
+    return password == "admin123"  # Mock password
 

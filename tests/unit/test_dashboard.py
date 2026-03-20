@@ -1641,3 +1641,291 @@ class TestDataFreshnessLogic:
         age_60s = calculate_data_age(now - timedelta(seconds=60))
         assert age_60s == 60
 
+
+# ============================================================================
+# Story 8.8: Manual Trade Submission Form
+# ============================================================================
+
+
+class TestManualTradeDataModels:
+    """Test manual trade data models for Story 8.8."""
+
+    def test_manual_trade_request_dataclass_exists(self):
+        """Verify ManualTradeRequest dataclass is defined."""
+        from dataclasses import is_dataclass
+        from src.dashboard.shared_state import ManualTradeRequest
+
+        assert is_dataclass(ManualTradeRequest)
+
+    def test_manual_trade_request_has_required_fields(self):
+        """Verify ManualTradeRequest has all required fields."""
+        from src.dashboard.shared_state import ManualTradeRequest
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        assert hasattr(request, 'direction')
+        assert hasattr(request, 'quantity')
+        assert hasattr(request, 'order_type')
+        assert hasattr(request, 'limit_price')
+        assert hasattr(request, 'submit_time')
+        assert hasattr(request, 'submitted_by')
+        assert request.direction == "Buy"
+        assert request.quantity == 2
+
+    def test_trade_preview_dataclass_exists(self):
+        """Verify TradePreview dataclass is defined."""
+        from dataclasses import is_dataclass
+        from src.dashboard.shared_state import TradePreview
+
+        assert is_dataclass(TradePreview)
+
+    def test_trade_preview_has_required_fields(self):
+        """Verify TradePreview has all required fields."""
+        from src.dashboard.shared_state import TradePreview
+        from datetime import datetime, timedelta
+
+        preview = TradePreview(
+            dollar_risk=1200.00,
+            stop_loss_price=11440.0,
+            upper_barrier_price=11625.0,
+            lower_barrier_price=11440.0,
+            vertical_barrier_time=datetime.now() + timedelta(minutes=45),
+            margin_required=1000.00,
+            margin_sufficient=True,
+            position_size_valid=True,
+            per_trade_risk_valid=True,
+            validation_errors=[]
+        )
+
+        assert hasattr(preview, 'dollar_risk')
+        assert hasattr(preview, 'stop_loss_price')
+        assert hasattr(preview, 'upper_barrier_price')
+        assert hasattr(preview, 'lower_barrier_price')
+        assert hasattr(preview, 'vertical_barrier_time')
+        assert hasattr(preview, 'margin_required')
+        assert hasattr(preview, 'margin_sufficient')
+        assert hasattr(preview, 'position_size_valid')
+        assert hasattr(preview, 'per_trade_risk_valid')
+        assert hasattr(preview, 'validation_errors')
+        assert preview.dollar_risk == 1200.00
+
+
+class TestManualTradeValidation:
+    """Test manual trade validation functions for Story 8.8."""
+
+    def test_validate_position_size_enforces_5_contract_limit(self):
+        """Verify position size validation enforces 5 contract limit."""
+        from src.dashboard.shared_state import validate_position_size
+
+        # Valid: 1-5 contracts
+        assert validate_position_size(1)[0] is True
+        assert validate_position_size(5)[0] is True
+
+        # Invalid: > 5 contracts
+        assert validate_position_size(6)[0] is False
+        assert "exceeds maximum position size" in validate_position_size(6)[1]
+
+    def test_validate_position_size_rejects_zero_quantity(self):
+        """Verify position size validation rejects zero quantity."""
+        from src.dashboard.shared_state import validate_position_size
+
+        # Invalid: zero or negative
+        assert validate_position_size(0)[0] is False
+        assert "greater than 0" in validate_position_size(0)[1]
+        assert validate_position_size(-1)[0] is False
+
+    def test_validate_per_trade_risk_enforces_2_percent(self):
+        """Verify per-trade risk validation enforces 2% equity limit."""
+        from src.dashboard.shared_state import validate_per_trade_risk
+
+        account_equity = 10000.0
+        max_risk = 200.0  # 2% of $10,000
+
+        # Valid: < 2%
+        assert validate_per_trade_risk(150.0, account_equity)[0] is True
+
+        # Invalid: > 2%
+        result = validate_per_trade_risk(250.0, account_equity)
+        assert result[0] is False
+        assert "exceeds 2% equity limit" in result[1]
+
+    def test_validate_margin_requirement_checks_equity(self):
+        """Verify margin requirement validation checks equity sufficiency."""
+        from src.dashboard.shared_state import validate_margin_requirement
+
+        account_equity = 10000.0
+
+        # Valid: sufficient margin
+        is_valid, error_msg, margin = validate_margin_requirement(2, account_equity)
+        assert is_valid is True
+        assert error_msg == ""
+        assert margin == 1000.0  # 2 * 500
+
+        # Invalid: insufficient margin
+        is_valid, error_msg, margin = validate_margin_requirement(25, account_equity)
+        assert is_valid is False
+        assert "Insufficient margin" in error_msg
+        assert margin == 12500.0  # 25 * 500
+
+    def test_calculate_trade_preview_returns_valid_structure(self):
+        """Verify trade preview calculation returns valid structure."""
+        from src.dashboard.shared_state import (
+            calculate_trade_preview,
+            ManualTradeRequest,
+            TradePreview,
+        )
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        preview = calculate_trade_preview(request, current_price=11500.0, atr=50.0, account_equity=10000.0)
+
+        assert isinstance(preview, TradePreview)
+        assert preview.dollar_risk > 0
+        assert preview.stop_loss_price < 11500.0  # Below entry for long
+        assert preview.upper_barrier_price > 11500.0  # Above entry for long
+        assert preview.position_size_valid is True  # 2 contracts < 5
+        assert preview.vertical_barrier_time > datetime.now()
+
+    def test_calculate_trade_preview_long_position(self):
+        """Verify trade preview for long position."""
+        from src.dashboard.shared_state import calculate_trade_preview, ManualTradeRequest
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        preview = calculate_trade_preview(request, current_price=11500.0, atr=50.0, account_equity=10000.0)
+
+        # Stop loss should be 1.2x ATR below entry
+        assert preview.stop_loss_price == 11500.0 - (1.2 * 50.0)
+        # Upper barrier should be 2.5x ATR above entry
+        assert preview.upper_barrier_price == 11500.0 + (2.5 * 50.0)
+        # Lower barrier should be stop loss
+        assert preview.lower_barrier_price == preview.stop_loss_price
+
+    def test_calculate_trade_preview_short_position(self):
+        """Verify trade preview for short position."""
+        from src.dashboard.shared_state import calculate_trade_preview, ManualTradeRequest
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Sell",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        preview = calculate_trade_preview(request, current_price=11500.0, atr=50.0, account_equity=10000.0)
+
+        # Stop loss should be 1.2x ATR above entry (for short)
+        assert preview.stop_loss_price == 11500.0 + (1.2 * 50.0)
+        # Upper barrier should be stop loss (for short)
+        assert preview.upper_barrier_price == preview.stop_loss_price
+        # Lower barrier should be 2.5x ATR below entry
+        assert preview.lower_barrier_price == 11500.0 - (2.5 * 50.0)
+
+    def test_calculate_trade_preview_vertical_barrier_45_minutes(self):
+        """Verify vertical barrier is 45 minutes from entry."""
+        from src.dashboard.shared_state import calculate_trade_preview, ManualTradeRequest
+        from datetime import datetime, timedelta
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        preview = calculate_trade_preview(request, current_price=11500.0, atr=50.0, account_equity=10000.0)
+
+        # Vertical barrier should be ~45 minutes from now
+        time_diff = (preview.vertical_barrier_time - datetime.now()).total_seconds()
+        assert 44 * 60 <= time_diff <= 46 * 60  # Allow 1 second tolerance
+
+
+class TestManualTradeSubmission:
+    """Test manual trade submission functions for Story 8.8."""
+
+    def test_submit_manual_trade_returns_result(self):
+        """Verify submit_manual_trade returns OrderSubmissionResult."""
+        from src.dashboard.shared_state import (
+            submit_manual_trade,
+            ManualTradeRequest,
+            OrderSubmissionResult,
+        )
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        result = submit_manual_trade(request)
+
+        assert isinstance(result, OrderSubmissionResult)
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'order_id')
+        assert hasattr(result, 'error')
+
+    def test_submit_manual_trade_mock_success(self):
+        """Verify submit_manual_trade mock returns success."""
+        from src.dashboard.shared_state import submit_manual_trade, ManualTradeRequest
+        from datetime import datetime
+
+        request = ManualTradeRequest(
+            direction="Buy",
+            quantity=2,
+            order_type="Market",
+            limit_price=None,
+            submit_time=datetime.now(),
+            submitted_by="user"
+        )
+
+        result = submit_manual_trade(request)
+
+        # Mock implementation should succeed
+        assert result.success is True
+        assert result.order_id is not None
+        assert "MANUAL-" in result.order_id
+
+
+class TestManualTradeFormRendering:
+    """Test manual trade form rendering for Story 8.8."""
+
+    def test_render_manual_trade_exists(self):
+        """Verify render_manual_trade function exists in navigation.py."""
+        # Check if function is defined by reading the file
+        with open("src/dashboard/navigation.py") as f:
+            content = f.read()
+            assert "def render_manual_trade():" in content
+

@@ -1,17 +1,18 @@
-.PHONY: install dev test format lint clean help
+.PHONY: install dev test format lint clean terminal-ui help
 
 # Default target
 help:
 	@echo "Silver-Bullet-ML-BMAD Makefile"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  install    - Install dependencies with Poetry"
-	@echo "  dev        - Install development dependencies"
-	@echo "  test       - Run tests (implemented in later stories)"
-	@echo "  format     - Format code with black"
-	@echo "  lint       - Run flake8 and mypy"
-	@echo "  clean      - Clean up generated files"
-	@echo "  help       - Show this help message"
+	@echo "  install     - Install dependencies with Poetry"
+	@echo "  dev         - Install development dependencies"
+	@echo "  test        - Run tests (implemented in later stories)"
+	@echo "  format      - Format code with black"
+	@echo "  lint        - Run flake8 and mypy"
+	@echo "  terminal-ui - Launch Rich terminal UI"
+	@echo "  clean       - Clean up generated files"
+	@echo "  help        - Show this help message"
 
 # Install dependencies
 install:
@@ -51,4 +52,10 @@ clean:
 	rm -rf .pytest_cache/
 	rm -rf htmlcov/
 	rm -rf dist/
+
+# Launch terminal UI
+terminal-ui:
+	@echo "Launching Silver Bullet Terminal UI..."
+	@echo "Press Ctrl+C to exit"
+	venv/bin/python -m src.monitoring.terminal_ui
 	rm -rf build/

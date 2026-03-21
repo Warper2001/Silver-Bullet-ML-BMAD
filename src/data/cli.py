@@ -168,10 +168,10 @@ async def main_async(args: argparse.Namespace) -> int:
         else:
             logger.info("Using cached tokens")
 
-    # Create downloader
-    downloader = HistoricalDownloader(data_dir=args.data_dir, auth=auth)
-
+    # Create downloader (initialize to None for safe cleanup)
+    downloader = None
     try:
+        downloader = HistoricalDownloader(data_dir=args.data_dir, auth=auth)
         # Start download
         await downloader.download_all_contracts(
             months_back=args.months_back,
@@ -193,7 +193,8 @@ async def main_async(args: argparse.Namespace) -> int:
         return EXIT_NETWORK_ERROR
 
     finally:
-        await downloader.cleanup()
+        if downloader is not None:
+            await downloader.cleanup()
 
 
 def main() -> int:

@@ -283,14 +283,13 @@ class TradeStationClient:
             if response.status_code == 401:
                 logger.warning("Access token expired, refreshing...")
                 with self._refresh_lock:
-                    # Refresh token and retry
+                    # Refresh token and raise for retry by tenacity
                     self.auth.refresh_access_token()
-                # Retry once after refresh (outside retry decorator)
-                headers = await self._get_headers()
-                response = await client.get(
-                    f"{BARS_ENDPOINT}/{symbol}",
-                    headers=headers,
-                    params=params,
+                # Raise to trigger tenacity retry with proper backoff
+                raise httpx.HTTPStatusError(
+                    "Token refreshed, retrying request",
+                    request=response.request,
+                    response=response,
                 )
 
             response.raise_for_status()
@@ -418,10 +417,12 @@ class TradeStationClient:
             logger.warning("No bars to verify completeness")
             return
 
-        # Calculate expected bars (rough estimate: 1-min bars for trading days)
+        # Calculate expected bars using 252 trading days per year (US market average)
+        # 9:30 AM - 4:00 PM ET = 6.5 hours = 390 minutes per trading day
         total_days = (end_date - start_date).days
-        trading_days = total_days * 5 / 7  # Weekdays only
-        minutes_per_day = 6.5 * 60  # 6.5 hours trading day
+        trading_days_per_year = 252
+        trading_days = total_days * trading_days_per_year / 365
+        minutes_per_day = 6.5 * 60  # 9:30 AM - 4:00 PM ET
         expected_bars = int(trading_days * minutes_per_day)
 
         actual_bars = len(bars)
@@ -468,6 +469,18 @@ class TradeStationClient:
             logger.warning(f"Removed {removed} duplicate bars")
 
         return deduped
+
+    async def __aenter__(self) -> "TradeStationClient":
+        """Async context manager entry.
+
+        Returns:
+            Self for use in async with statements
+        """
+        return self
+
+    async def __aexit__(self, *args) -> None:
+        """Async context manager exit - cleanup resources."""
+        await self.close()
 
     async def close(self) -> None:
         """Close HTTP client and cleanup resources."""

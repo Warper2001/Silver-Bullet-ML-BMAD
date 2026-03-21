@@ -4,7 +4,6 @@ This module implements OAuth 2.0 authorization code flow with token caching,
 refresh token management, and concurrent access protection via file locking.
 """
 
-import fcntl
 import json
 import logging
 import os
@@ -18,6 +17,15 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Optional
+
+# Platform-specific file locking
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    # Windows: use msvcrt for file locking
+    import msvcrt
+    HAS_FCNTL = False
 from urllib.parse import parse_qs, urlencode
 
 import httpx
@@ -38,6 +46,36 @@ TOKEN_CACHE_FILE = TOKEN_CACHE_DIR / "token_cache.json"
 
 # OAuth callback timeout (seconds)
 CALLBACK_TIMEOUT = 300
+
+
+def _lock_file(f) -> None:
+    """Acquire exclusive lock on file (cross-platform).
+
+    Args:
+        f: File object to lock
+
+    Raises:
+        IOError: If lock cannot be acquired
+    """
+    if HAS_FCNTL:
+        fcntl.lockf(f.fileno(), fcntl.LOCK_EX)
+    else:
+        # Windows: msvcrt.locking requires file mode
+        # Lock entire file (LK_NBLCK = non-blocking lock)
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+
+def _unlock_file(f) -> None:
+    """Release lock on file (cross-platform).
+
+    Args:
+        f: File object to unlock
+    """
+    if HAS_FCNTL:
+        fcntl.lockf(f.fileno(), fcntl.LOCK_UN)
+    else:
+        # Windows: unlock
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -299,11 +337,12 @@ class TradeStationAuth:
         """
         return server.wait_for_callback(expected_state)
 
-    def exchange_code_for_tokens(self, code: str) -> OAuthTokenResponse:
+    def exchange_code_for_tokens(self, code: str, port: int = 8080) -> OAuthTokenResponse:
         """Exchange authorization code for access and refresh tokens.
 
         Args:
             code: Authorization code from OAuth callback
+            port: Port number used for callback redirect URI
 
         Returns:
             OAuth token response with access and refresh tokens
@@ -319,7 +358,7 @@ class TradeStationAuth:
             "code": code,
             "client_id": self.settings.tradestation_client_id,
             "client_secret": self.settings.tradestation_client_secret,
-            "redirect_uri": "http://localhost:8080/callback",
+            "redirect_uri": f"http://localhost:{port}/callback",
         }
 
         try:
@@ -442,7 +481,7 @@ class TradeStationAuth:
         try:
             with open(temp_file, "w") as f:
                 # Acquire exclusive lock
-                fcntl.lockf(f.fileno(), fcntl.LOCK_EX)
+                _lock_file(f)
 
                 try:
                     json.dump(tokens, f, indent=2)
@@ -450,7 +489,7 @@ class TradeStationAuth:
                     os.fsync(f.fileno())
                 finally:
                     # Release lock
-                    fcntl.lockf(f.fileno(), fcntl.LOCK_UN)
+                    _unlock_file(f)
 
             # Atomic rename (POSIX guarantees atomicity)
             temp_file.replace(TOKEN_CACHE_FILE)
@@ -474,14 +513,14 @@ class TradeStationAuth:
 
         try:
             with open(TOKEN_CACHE_FILE, "r") as f:
-                # Acquire shared lock for reading
-                fcntl.lockf(f.fileno(), fcntl.LOCK_SH)
+                # Acquire exclusive lock for reading (Windows lacks shared locks)
+                _lock_file(f)
 
                 try:
                     data = json.load(f)
                 finally:
                     # Release lock
-                    fcntl.lockf(f.fileno(), fcntl.LOCK_UN)
+                    _unlock_file(f)
 
             # Convert to TokenCache
             token_cache = TokenCache(
@@ -557,7 +596,7 @@ class TradeStationAuth:
             auth_code = self.wait_for_authorization_code(server, state)
 
             # Exchange code for tokens
-            token_response = self.exchange_code_for_tokens(auth_code)
+            token_response = self.exchange_code_for_tokens(auth_code, actual_port)
 
             # Cache tokens
             self._token_cache = TokenCache(
@@ -571,6 +610,18 @@ class TradeStationAuth:
 
         finally:
             server.stop()
+
+    def __enter__(self) -> "TradeStationAuth":
+        """Context manager entry.
+
+        Returns:
+            Self for use in with statements
+        """
+        return self
+
+    def __exit__(self, *args) -> None:
+        """Context manager exit - cleanup resources."""
+        self.cleanup()
 
     def cleanup(self) -> None:
         """Clean up resources."""

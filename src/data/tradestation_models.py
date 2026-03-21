@@ -4,7 +4,7 @@ This module defines data models for TradeStation OAuth and market data API respo
 All models follow Pydantic v2 patterns with field validators.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
@@ -37,7 +37,7 @@ class OAuthTokenResponse(BaseModel):
             raise ValueError("expires_in required to calculate expires_at")
 
         # Calculate expiration with 60-second buffer
-        return datetime.now(timezone.utc) + timezone.utc.dst()  # type: ignore[arg-type]
+        return datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))
 
     @property
     def is_valid(self) -> bool:

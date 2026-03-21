@@ -24,6 +24,7 @@ matplotlib = "^3.7.0"
 streamlit = "^1.31.0"
 plotly = "^5.18.0"
 rich = "^13.7.0"
+tenacity = "^8.2.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
@@ -34,6 +35,7 @@ pytest = "^7.4.0"
 pytest-asyncio = "^0.21.0"
 pytest-mock = "^3.11.0"
 pytest-cov = "^4.1.0"
+freezegun = "^1.4.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -67,6 +69,26 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = "src.ml.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "src.data.tradestation_auth"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "src.data.tradestation_client"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "src.data.tradestation_models"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "src.data.futures_symbols"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "src.data.historical_downloader"
 ignore_errors = true
 
 [tool.pytest.ini_options]

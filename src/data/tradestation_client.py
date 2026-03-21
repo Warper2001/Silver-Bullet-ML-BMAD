@@ -418,10 +418,12 @@ class TradeStationClient:
             logger.warning("No bars to verify completeness")
             return
 
-        # Calculate expected bars (rough estimate: 1-min bars for trading days)
+        # Calculate expected bars using 252 trading days per year (US market average)
+        # 9:30 AM - 4:00 PM ET = 6.5 hours = 390 minutes per trading day
         total_days = (end_date - start_date).days
-        trading_days = total_days * 5 / 7  # Weekdays only
-        minutes_per_day = 6.5 * 60  # 6.5 hours trading day
+        trading_days_per_year = 252
+        trading_days = total_days * trading_days_per_year / 365
+        minutes_per_day = 6.5 * 60  # 9:30 AM - 4:00 PM ET
         expected_bars = int(trading_days * minutes_per_day)
 
         actual_bars = len(bars)

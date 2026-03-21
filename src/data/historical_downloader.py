@@ -100,6 +100,7 @@ class HistoricalDownloader:
         self._start_time: float = 0
         self._bars_downloaded: int = 0
         self._current_contract_bars: int = 0
+        self._estimated_total_bars: int = 0
 
         # Shutdown flag
         self._shutdown_requested = False
@@ -147,6 +148,10 @@ class HistoricalDownloader:
             return
 
         logger.info(f"Downloading {len(symbols)} contracts: {symbols}")
+
+        # Estimate total bars for progress tracking (252 trading days/year, 390 minutes/day)
+        self._estimated_total_bars = len(symbols) * 252 * 390
+        logger.info(f"Estimated total bars to download: ~{self._estimated_total_bars:,}")
 
         # Initialize client and scheduler
         self.client = TradeStationClient(self.auth)
@@ -203,6 +208,14 @@ class HistoricalDownloader:
 
             # Save to HDF5
             self._save_to_hdf5(symbol, bars)
+
+            # Update counters
+            self._bars_downloaded += len(bars)
+            self._current_contract_bars += len(bars)
+
+            # Log progress every 100 bars
+            if self._bars_downloaded % 100 == 0:
+                self._log_progress(symbol, self._bars_downloaded, self._estimated_total_bars)
 
             # Update checkpoint
             self._downloaded_symbols.add(symbol)
@@ -509,21 +522,23 @@ class HistoricalDownloader:
         Args:
             symbol: Contract symbol
             current: Current bar count
-            total: Expected total bars
+            total: Expected total bars (estimated)
         """
         elapsed = time.time() - self._start_time
         rate = current / elapsed if elapsed > 0 else 0
 
         if current < 100:
             eta_str = "Calculating ETA..."
-        else:
+        elif rate > 0:
             remaining_bars = total - current
-            eta_seconds = remaining_bars / rate if rate > 0 else 0
+            eta_seconds = remaining_bars / rate
             eta_str = f"ETA: {timedelta(seconds=int(eta_seconds))}"
+        else:
+            eta_str = "Calculating ETA..."
 
         percent = current / total * 100 if total > 0 else 0
 
-        logger.info(f"  Progress: {current}/{total} ({percent:.1f}%) - {eta_str}")
+        logger.info(f"  Progress: {current:,}/{total:,} ({percent:.1f}%) - {eta_str} ({rate:.0f} bars/sec)")
 
     def _log_summary(self) -> None:
         """Log download summary."""

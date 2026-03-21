@@ -299,11 +299,12 @@ class TradeStationAuth:
         """
         return server.wait_for_callback(expected_state)
 
-    def exchange_code_for_tokens(self, code: str) -> OAuthTokenResponse:
+    def exchange_code_for_tokens(self, code: str, port: int = 8080) -> OAuthTokenResponse:
         """Exchange authorization code for access and refresh tokens.
 
         Args:
             code: Authorization code from OAuth callback
+            port: Port number used for callback redirect URI
 
         Returns:
             OAuth token response with access and refresh tokens
@@ -319,7 +320,7 @@ class TradeStationAuth:
             "code": code,
             "client_id": self.settings.tradestation_client_id,
             "client_secret": self.settings.tradestation_client_secret,
-            "redirect_uri": "http://localhost:8080/callback",
+            "redirect_uri": f"http://localhost:{port}/callback",
         }
 
         try:
@@ -557,7 +558,7 @@ class TradeStationAuth:
             auth_code = self.wait_for_authorization_code(server, state)
 
             # Exchange code for tokens
-            token_response = self.exchange_code_for_tokens(auth_code)
+            token_response = self.exchange_code_for_tokens(auth_code, actual_port)
 
             # Cache tokens
             self._token_cache = TokenCache(

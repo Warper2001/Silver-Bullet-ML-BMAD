@@ -1,0 +1,37 @@
+# Example MNQ CSV Data Format
+# This is a sample - replace with real data from your data source
+#
+# Required columns:
+#   - timestamp: Date and time of the bar
+#   - open: Opening price
+#   - high: Highest price
+#   - low: Lowest price
+#   - close: Closing price
+#   - volume: Trading volume
+#
+# Date format: ISO 8601 (YYYY-MM-DD HH:MM:SS) or any pandas-parsable format
+# Prices: Decimal numbers (MNQ typically 20000-25000 range)
+# Volume: Integer (number of contracts)
+
+timestamp,open,high,low,close,volume
+2026-03-15 09:30:00,24200.00,24250.00,24180.00,24220.00,1523
+2026-03-15 09:31:00,24220.00,24240.00,24200.00,24210.00,987
+2026-03-15 09:32:00,24210.00,24230.00,24190.00,24225.00,1156
+2026-03-15 09:33:00,24225.00,24245.00,24215.00,24230.00,1342
+2026-03-15 09:34:00,24230.00,24250.00,24220.00,24240.00,1089
+
+# Alternative column name variations that are recognized:
+# - Date, Time, DateTime, Timestamp → timestamp
+# - Open, O → open
+# - High, H → high
+# - Low, L → low
+# - Close, C, Last → close
+# - Volume, Vol, V → volume
+
+# The converter script will:
+# 1. Auto-detect delimiter (comma, semicolon, tab)
+# 2. Auto-map column names (case-insensitive)
+# 3. Parse timestamps with timezone handling
+# 4. Validate MNQ price ranges
+# 5. Calculate notional values
+# 6. Save in correct HDF5 format

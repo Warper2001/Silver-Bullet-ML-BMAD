@@ -57,6 +57,7 @@ class SilverBulletBacktester:
         enable_time_windows: bool = True,
         confluence_window: int | None = None,
         time_windows: list | None = None,
+        require_sweep: bool = False,
     ):  # noqa: E501
         """Initialize Silver Bullet backtester.
 
@@ -75,6 +76,7 @@ class SilverBulletBacktester:
                 max_bar_distance)
             time_windows: Custom time windows (list of dicts with
                 name/start_hour/end_hour)
+            require_sweep: Only accept setups with MSS+FVG+Sweep (3-pattern)
         """
         self._mss_lookback = mss_lookback
         self._mss_volume_ratio = mss_volume_ratio
@@ -91,6 +93,7 @@ class SilverBulletBacktester:
         )
         self._min_confidence = min_confidence
         self._enable_time_windows = enable_time_windows
+        self._require_sweep = require_sweep
 
         if time_windows is not None:
             self._time_windows = time_windows
@@ -196,7 +199,7 @@ class SilverBulletBacktester:
         # Filter by confidence threshold
         high_confidence_setups = [
             s for s in setups
-            if s.confidence_score >= self._min_confidence
+            if s.confidence >= self._min_confidence
         ]
 
         logger.info(
@@ -250,7 +253,8 @@ class SilverBulletBacktester:
                     swing_highs.append(SwingPoint(
                         timestamp=bars[i].timestamp,
                         price=bars[i].high,
-                        bar_index=i
+                        bar_index=i,
+                        swing_type="swing_high"
                     ))
 
                 if detect_swing_low(bars, i, lookback=self._mss_lookback):
@@ -258,7 +262,8 @@ class SilverBulletBacktester:
                     swing_lows.append(SwingPoint(
                         timestamp=bars[i].timestamp,
                         price=bars[i].low,
-                        bar_index=i
+                        bar_index=i,
+                        swing_type="swing_low"
                     ))
 
             # Calculate volume MA
@@ -487,15 +492,20 @@ class SilverBulletBacktester:
             setups: List of SilverBulletSetup objects
 
         Returns:
-            List of setups with confidence_score assigned
+            List of setups with confidence assigned
         """
         logger.debug("Assigning confidence scores...")
+
+        # Filter out setups without sweep if require_sweep is enabled
+        if self._require_sweep:
+            setups = [s for s in setups if s.liquidity_sweep_event is not None]
+            logger.debug(f"Filtered to {len(setups)} setups with sweep confirmation")
 
         for setup in setups:
             base_score = 60  # Base score for MSS + FVG
 
             # Add sweep bonus
-            if setup.sweep_event is not None:
+            if setup.liquidity_sweep_event is not None:
                 base_score += 20  # MSS + FVG + Sweep
 
             # Volume bonus (if available in MSS)
@@ -506,7 +516,7 @@ class SilverBulletBacktester:
                 base_score += 5
 
             # Cap at 100
-            setup.confidence_score = min(base_score, 100)
+            setup.confidence = min(base_score, 100)
 
         logger.debug(f"Assigned scores to {len(setups)} setups")
         return setups
@@ -602,8 +612,8 @@ class SilverBulletBacktester:
             if hasattr(setup, 'timestamp'):
                 timestamp = setup.timestamp
                 direction = setup.direction
-                confidence = getattr(setup, 'confidence_score', 60)
-                has_sweep = setup.sweep_event is not None
+                confidence = getattr(setup, 'confidence', 60)
+                has_sweep = setup.liquidity_sweep_event is not None
             else:
                 # Dict-like object (for test mocks)
                 timestamp = setup.get('timestamp')

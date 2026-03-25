@@ -10,6 +10,8 @@ Optimizations Applied:
 """
 
 import sys
+import argparse
+import json
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -259,17 +261,102 @@ def calculate_metrics(trades_df: pd.DataFrame) -> dict:
     }
 
 
+def save_ml_training_data(
+    signals_df: pd.DataFrame,
+    trades_df: pd.DataFrame,
+    date_start: str,
+    date_end: str,
+    filters_applied: list[str]
+) -> None:
+    """Save signals and trades for ML meta-labeling training.
+
+    Creates parquet files with signal data and trade outcomes for
+    training the meta-labeling model.
+
+    Args:
+        signals_df: DataFrame with signal metadata
+        trades_df: DataFrame with trade outcomes
+        date_start: Start date of backtest period
+        date_end: End date of backtest period
+        filters_applied: List of filter names applied
+    """
+    print(f"\n💾 Saving ML training data...")
+
+    # Create directory
+    ml_dir = Path("data/ml_training")
+    ml_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save signals
+    signals_path = ml_dir / "silver_bullet_signals.parquet"
+    signals_df.to_parquet(signals_path, index=True)
+    print(f"   ✅ Saved {len(signals_df)} signals to {signals_path}")
+
+    # Save trades
+    trades_path = ml_dir / "silver_bullet_trades.parquet"
+    trades_df.to_parquet(trades_path, index=False)
+    print(f"   ✅ Saved {len(trades_df)} trades to {trades_path}")
+
+    # Save metadata
+    metadata = {
+        "date_range": {
+            "start": date_start,
+            "end": date_end
+        },
+        "total_signals": int(len(signals_df)),
+        "total_trades": int(len(trades_df)),
+        "filters_applied": filters_applied,
+        "strategy": "silver_bullet_optimized",
+        "features": {
+            "signals": list(signals_df.columns),
+            "trades": list(trades_df.columns)
+        }
+    }
+
+    metadata_path = ml_dir / "metadata.json"
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    print(f"   ✅ Saved metadata to {metadata_path}")
+    print(f"\n   ML training data ready for train_meta_model.py")
+
+
 def main():
     """Run optimized Silver Bullet backtest with all filters."""
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='Optimized Silver Bullet Killzone Backtest')
+    parser.add_argument(
+        '--save-ml-data',
+        action='store_true',
+        help='Save signals and trades for ML meta-labeling training'
+    )
+    parser.add_argument(
+        '--date-start',
+        type=str,
+        default='2024-10-01',
+        help='Start date for backtest (default: 2024-10-01)'
+    )
+    parser.add_argument(
+        '--date-end',
+        type=str,
+        default='2025-03-05',
+        help='End date for backtest (default: 2025-03-05)'
+    )
+    args = parser.parse_args()
+
+    date_start = args.date_start
+    date_end = args.date_end
 
     print("🚀 OPTIMIZED SILVER BULLET KILLZONE BACKTEST")
     print("=" * 70)
     print("All Performance Improvements Applied")
     print("=" * 70)
+    print(f"\n📅 Date Range: {date_start} to {date_end}")
 
-    # Load data (6 months)
-    print("\n📊 Step 1: Loading 6-month time bar data...")
-    data = load_time_bars('2024-10-01', '2025-03-05')
+    # Track filters applied for metadata
+    filters_applied = ["daily_bias", "volatility"]
+
+    # Load data
+    print(f"\n📊 Step 1: Loading time bar data...")
+    data = load_time_bars(date_start, date_end)
 
     if data.empty:
         print("❌ No data available!")
@@ -389,6 +476,16 @@ def main():
     print(f"   - Win Rate: {'✅ GOOD' if metrics['win_rate'] >= 45 else '⚠️ IMPROVING' if metrics['win_rate'] >= 40 else '❌ NEEDS WORK'}")
     print(f"   - Max DD: {'✅ ACCEPTABLE' if metrics['max_drawdown'] > -30 else '⚠️ MODERATE' if metrics['max_drawdown'] > -50 else '❌ HIGH RISK'}")
     print(f"   - Sharpe: {'✅ EXCELLENT' if metrics['sharpe_ratio'] > 2 else '✅ GOOD' if metrics['sharpe_ratio'] > 1 else '⚠️ NEEDS WORK'}")
+
+    # Save ML training data if requested
+    if args.save_ml_data:
+        save_ml_training_data(
+            signals_df=signals_df,
+            trades_df=trades,
+            date_start=date_start,
+            date_end=date_end,
+            filters_applied=filters_applied
+        )
 
 
 if __name__ == '__main__':

@@ -141,6 +141,66 @@ class MLInference:
             logger.error(f"Inference failed for {horizon}-minute horizon: {e}")
             return self._error_response(horizon, error=str(e), latency_ms=0)
 
+    def predict_probability_from_features(
+        self, features_df: pd.DataFrame, horizon: int = 30
+    ) -> float:
+        """Generate probability score from feature DataFrame.
+
+        Simpler interface for meta-labeling backtest. Bypasses SilverBulletSetup
+        requirement and directly uses feature DataFrame.
+
+        Args:
+            features_df: DataFrame with engineered features (already preprocessed)
+                         Must match the feature pipeline used during training
+            horizon: Time horizon in minutes (default: 30)
+
+        Returns:
+            Probability score (0.0 to 1.0)
+
+        Raises:
+            FileNotFoundError: If model or pipeline doesn't exist for horizon
+            ValueError: If features DataFrame is invalid
+        """
+        try:
+            # Load model and pipeline if needed (lazy loading)
+            model = self._load_model_if_needed(horizon)
+            pipeline = self._load_pipeline_if_needed(horizon)
+
+            # Transform features using pipeline
+            transformed = self._pipeline_serializer.transform_features(
+                pipeline, features_df
+            )
+
+            # Get expected feature names from the model
+            expected_features = model.get_booster().feature_names
+
+            # Filter to only expected features (handle feature mismatch)
+            available_features = [f for f in expected_features if f in transformed.columns]
+
+            if len(available_features) < len(expected_features):
+                missing = set(expected_features) - set(available_features)
+                logger.warning(
+                    f"Missing {len(missing)} features: {missing}. "
+                    f"Using {len(available_features)}/{len(expected_features)} features."
+                )
+
+            # Use only available features
+            filtered = transformed[available_features]
+
+            # Predict probability
+            probability = self._predict_with_model(model, filtered)
+
+            logger.debug(
+                f"Direct inference complete for {horizon}-minute horizon: "
+                f"P(Success)={probability:.4f}"
+            )
+
+            return probability
+
+        except Exception as e:
+            logger.error(f"Direct inference failed for {horizon}-minute horizon: {e}")
+            raise
+
     def predict_all_horizons(
         self, signal: SilverBulletSetup
     ) -> dict[int, dict[str, object]]:

@@ -1,0 +1,29 @@
+{
+  "date_range": {
+    "start": "2024-10-01",
+    "end": "2025-03-05"
+  },
+  "total_signals": 146,
+  "total_trades": 146,
+  "filters_applied": [
+    "daily_bias",
+    "volatility"
+  ],
+  "strategy": "silver_bullet_optimized",
+  "features": {
+    "signals": [
+      "direction",
+      "confidence",
+      "mss_detected",
+      "fvg_detected",
+      "sweep_detected",
+      "time_window"
+    ],
+    "trades": [
+      "entry_time",
+      "direction",
+      "exit_reason",
+      "return_pct"
+    ]
+  }
+}

@@ -73,9 +73,22 @@ def main():
     # Step 1: Load training data
     print("\n📊 Step 1: Loading training data...")
 
+    # Try to load full dataset first, fall back to smaller dataset
+    signals_path_full = Path("data/ml_training/silver_bullet_signals_full.parquet")
+    trades_path_full = Path("data/ml_training/silver_bullet_trades_full.parquet")
+    metadata_path_full = Path("data/ml_training/metadata_full.json")
+
     signals_path = Path("data/ml_training/silver_bullet_signals.parquet")
     trades_path = Path("data/ml_training/silver_bullet_trades.parquet")
     metadata_path = Path("data/ml_training/metadata.json")
+
+    if signals_path_full.exists():
+        signals_path = signals_path_full
+        trades_path = trades_path_full
+        metadata_path = metadata_path_full
+        print("   Using full dataset (28 months)")
+    else:
+        print("   Using standard dataset (6 months)")
 
     if not signals_path.exists():
         print(f"❌ Signals file not found: {signals_path}")

@@ -1,0 +1,13 @@
+{
+  "date_range": {
+    "start": "2023-12-01",
+    "end": "2026-03-06"
+  },
+  "total_signals": 1182,
+  "total_trades": 1182,
+  "filters_applied": [
+    "daily_bias",
+    "volatility"
+  ],
+  "strategy": "silver_bullet_optimized_full"
+}

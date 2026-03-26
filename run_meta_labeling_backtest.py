@@ -223,7 +223,7 @@ def main():
 
     # Load data
     print("\n📊 Step 1: Loading data...")
-    data = base_module.load_time_bars('2024-10-01', '2025-03-05')
+    data = base_module.load_time_bars('2023-12-01', '2026-03-06')
 
     if data.empty:
         print("❌ No data available!")

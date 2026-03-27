@@ -1,0 +1,253 @@
+{
+  "scan_metadata": {
+    "scan_date": "2026-03-27",
+    "scan_level": "deep",
+    "scan_version": "1.0.0",
+    "project_root": "/root/Silver-Bullet-ML-BMAD"
+  },
+  "project_classification": {
+    "project_type": "data",
+    "type_confidence": 0.95,
+    "secondary_types": ["cli", "library"],
+    "classification_reasoning": "Primary project is a data-driven ML trading system with CLI interfaces for backtesting and data collection. Reuses ML components as library for research."
+  },
+  "technology_stack": {
+    "primary_language": "Python",
+    "language_version": "3.11+",
+    "dependency_manager": "Poetry",
+    "key_dependencies": {
+      "data_processing": ["pandas>=2.0.0", "numpy>=1.24.0", "scipy>=1.10.0"],
+      "machine_learning": ["xgboost>=2.0.0", "scikit-learn>=1.3.0"],
+      "api_clients": ["httpx>=0.24.0", "websockets>=12.0"],
+      "visualization": ["matplotlib>=3.7.0", "plotly>=5.18.0", "streamlit>=1.31.0"],
+      "config": ["pydantic>=2.0.0", "pydantic-settings>=2.0.0", "python-dotenv>=1.0.0"],
+      "scheduling": ["apscheduler>=3.10.0"],
+      "data_storage": ["h5py>=3.11.0"],
+      "testing": ["pytest>=7.4.0", "pytest-asyncio>=0.21.0", "pytest-mock>=3.11.0", "pytest-cov>=4.1.0", "freezegun>=1.4.0"],
+      "dev_tools": ["black>=23.3.0", "flake8>=6.0.0", "mypy>=1.3.0", "pre-commit>=3.3.0"]
+    }
+  },
+  "project_structure": {
+    "directories": {
+      "src/": {
+        "description": "Main source code organized by capability",
+        "subdirectories": {
+          "cli/": "Command-line interfaces (backtest, emergency stop)",
+          "dashboard/": "Streamlit-based monitoring dashboard",
+          "data/": "Data collection, validation, transformation, persistence",
+          "detection/": "Pattern detection algorithms (MSS, FVG, liquidity sweeps, Silver Bullet)",
+          "execution/": "Trade execution, order management, position monitoring",
+          "ml/": "Machine learning components (features, training, inference, meta-labeling)",
+          "monitoring/": "System monitoring, health checks, audit trails, notifications",
+          "research/": "Backtesting, performance analysis, market regime analysis",
+          "risk/": "Risk management (drawdown tracking, position sizing, circuit breakers)"
+        }
+      },
+      "tests/": {
+        "description": "Test suites",
+        "subdirectories": {
+          "unit/": "Unit tests (50+ test files)",
+          "integration/": "Integration tests (20+ test files)"
+        }
+      },
+      "data/": {
+        "description": "Data storage",
+        "subdirectories": {
+          "audit/": "Immutable audit trail",
+          "features/": "Extracted ML features",
+          "historical/": "Historical price data",
+          "logs/": "System logs",
+          "ml_training/": "ML training datasets",
+          "models/": "Trained ML models",
+          "processed/": "Processed data (dollar bars, time bars)",
+          "raw/": "Raw data from TradeStation",
+          "reports/": "Backtest and performance reports",
+          "state/": "System state persistence"
+        }
+      },
+      "docs/": {
+        "description": "Documentation",
+        "subdirectories": {
+          "research/": "Research reports and validation"
+        }
+      },
+      "_bmad/": {
+        "description": "BMAD framework configuration and workflows"
+      },
+      "_bmad-output/": {
+        "description": "BMAD planning and implementation artifacts"
+      }
+    }
+  },
+  "code_metrics": {
+    "total_lines_python": 33245,
+    "total_python_files": 87,
+    "largest_files": [
+      {"file": "src/dashboard/shared_state.py", "lines": 1294},
+      {"file": "src/dashboard/navigation.py", "lines": 1273},
+      {"file": "src/ml/walk_forward_optimizer.py", "lines": 839},
+      {"file": "src/execution/immutable_audit_trail.py", "lines": 798},
+      {"file": "src/research/silver_bullet_backtester.py", "lines": 646}
+    ],
+    "test_files": {
+      "unit": 50,
+      "integration": 23,
+      "total": 73
+    }
+  },
+  "key_capabilities": {
+    "pattern_detection": {
+      "description": "ICT (Inner Circle Trader) pattern recognition",
+      "patterns": ["Market Structure Shift (MSS)", "Fair Value Gap (FVG)", "Liquidity Sweeps", "Silver Bullet confluence"],
+      "implementation": "Combines multiple detectors with confidence scoring"
+    },
+    "ml_meta_labeling": {
+      "description": "XGBoost-based binary classification for signal filtering",
+      "features": "40+ technical indicators (RSI, ATR, volume, time-based)",
+      "performance": "93.60% win rate at probability threshold ≥ 0.70",
+      "time_horizons": [5, 10, 15, 30, 60]
+    },
+    "backtesting": {
+      "description": "Multiple backtest implementations for validation",
+      "scripts": [
+        "simple_backtest.py",
+        "run_optimized_silver_bullet.py",
+        "run_ml_backtest.py",
+        "run_meta_labeling_backtest.py",
+        "run_enhanced_baseline.py"
+      ]
+    },
+    "risk_management": {
+      "description": "Comprehensive risk controls",
+      "features": [
+        "Daily loss limits",
+        "Max drawdown protection",
+        "Position sizing",
+        "Circuit breakers",
+        "Emergency stop",
+        "Triple barrier exits"
+      ]
+    },
+    "data_collection": {
+      "description": "TradeStation API integration for MNQ futures data",
+      "features": [
+        "Historical data download",
+        "Real-time websocket streaming",
+        "Data validation",
+        "Dollar bar transformation",
+        "HDF5 storage"
+      ]
+    }
+  },
+  "documentation_status": {
+    "existing_docs": [
+      "README.md - Basic project overview",
+      "QUICK_START.md - Fast path for testing",
+      "DATA_COLLECTION_GUIDE.md - Data collection instructions",
+      "DATA_COLLECTION_COMPLETE.md - Data collection status",
+      "DEPLOYMENT_SUMMARY.md - Deployment guide",
+      "docs/epic-1-retrospective.md - Sprint retrospective",
+      "docs/research/validation_and_ml_enhancement_report.md - ML validation",
+      "docs/research/silver_bullet_optimization_recommendations.md - Strategy optimization",
+      "docs/research/alternative-data-sources.md - Data source research"
+    ],
+    "documentation_gaps": [
+      "Architecture overview missing",
+      "API documentation missing",
+      "Development guide missing",
+      "Contributing guide missing",
+      "Source tree documentation missing",
+      "Troubleshooting guide missing"
+    ]
+  },
+  "architecture_highlights": {
+    "pattern": "Event-driven architecture with pipeline-based processing",
+    "key_pipelines": [
+      "Data Collection: TradeStation API → Validation → Transformation → Storage",
+      "Pattern Detection: Price Data → MSS/FVG/Sweep Detectors → Confluence Check → Signal Generation",
+      "ML Pipeline: Signals → Feature Extraction → Probability Scoring → Filtering → Trades",
+      "Execution: Signals → Risk Check → Order Submission → Position Monitoring → Exit Execution",
+      "Monitoring: All Components → Events → Audit Trail → Dashboard/Alerts"
+    ],
+    "design_patterns": [
+      "Strategy Pattern (multiple detectors, order submitters)",
+      "Observer Pattern (event monitoring, notifications)",
+      "Pipeline Pattern (data processing, trade execution)",
+      "Repository Pattern (data persistence)",
+      "Factory Pattern (component creation)"
+    ]
+  },
+  "integration_points": {
+    "external_apis": [
+      {"name": "TradeStation API", "purpose": "MNQ futures data", "auth": "OAuth 2.0"}
+    ],
+    "data_formats": [
+      {"format": "HDF5", "purpose": "Time series storage"},
+      {"format": "Parquet", "purpose": "ML training data"},
+      {"format": "CSV", "purpose": "Backtest reports"}
+    ],
+    "internal_integrations": [
+      {"from": "Pattern Detection", "to": "ML Pipeline", "via": "Signal events"},
+      {"from": "ML Pipeline", "to": "Risk Management", "via": "Filtered signals"},
+      {"from": "Risk Management", "to": "Execution", "via": "Approved trades"},
+      {"from": "All Components", "to": "Monitoring", "via": "Event bus"}
+    ]
+  },
+  "testing_coverage": {
+    "unit_tests": "50+ test files covering core components",
+    "integration_tests": "20+ test files covering end-to-end workflows",
+    "test_frameworks": ["pytest", "pytest-asyncio", "pytest-mock", "pytest-cov", "freezegun"],
+    "coverage_areas": [
+      "Pattern detection algorithms",
+      "ML pipeline components",
+      "Risk management logic",
+      "Data validation",
+      "API clients",
+      "Order execution",
+      "Monitoring systems"
+    ]
+  },
+  "recent_development": {
+    "latest_commits": [
+      "feat: Retrain meta-model with full 28-month dataset",
+      "feat: Implement meta-labeling enhancement for Silver Bullet strategy",
+      "feat: Optimize Silver Bullet strategy with massive performance improvements",
+      "fix: Fix critical and high priority bugs in TradeStation downloader"
+    ],
+    "current_branch": "main",
+    "active_development": [
+      "Meta-labeling enhancement (completed)",
+      "Enhanced baseline investigation (completed - proven ineffective)",
+      "Performance optimization (ongoing)"
+    ]
+  },
+  "deployment_info": {
+    "environments": ["development", "testing", "production"],
+    "deployment_scripts": [
+      "deploy_demo_mode.sh",
+      "deploy_paper_trading.sh"
+    ],
+    "configuration": "config.yaml with environment-specific settings",
+    "secrets_management": ".env file (not committed)"
+  },
+  "research_findings": {
+    "meta_labeling_validation": {
+      "status": "VALIDATED",
+      "performance": "93.60% win rate at P ≥ 0.70",
+      "improvement_over_baseline": "+50 percentage points"
+    },
+    "enhanced_baseline_investigation": {
+      "status": "COMPLETED",
+      "finding": "Rule-based filters hit performance ceiling at ~37-40% win rate",
+      "conclusion": "ML meta-labeling is required to achieve 60%+ win rate target"
+    }
+  },
+  "next_steps_for_documentation": [
+    "Create comprehensive architecture overview",
+    "Document source code tree with descriptions",
+    "Add API documentation for key modules",
+    "Create development guide with contribution guidelines",
+    "Document deployment procedures in detail",
+    "Create troubleshooting guide for common issues"
+  ]
+}

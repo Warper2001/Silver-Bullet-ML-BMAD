@@ -152,3 +152,4 @@ poetry.lock
 _bmad/
 _bmad-output/
 .claude/
+mnq_historical.json

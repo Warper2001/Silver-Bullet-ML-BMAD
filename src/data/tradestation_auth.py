@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 # OAuth endpoints
 AUTHORIZATION_ENDPOINT = "https://signin.tradestation.com/authorize"
-TOKEN_ENDPOINT = "https://api.tradestation.com/v2/oauth/token"
+TOKEN_ENDPOINT = "https://signin.tradestation.com/oauth/token"
 
 # Token cache location
 TOKEN_CACHE_DIR = Path.home() / ".tradestation"
@@ -291,7 +291,8 @@ class TradeStationAuth:
         Returns:
             Full authorization URL for browser
         """
-        redirect_uri = f"http://localhost:{port}/callback"
+        # Use redirect URI from settings
+        redirect_uri = self.settings.tradestation_redirect_uri
 
         params = {
             "response_type": "code",
@@ -342,7 +343,7 @@ class TradeStationAuth:
 
         Args:
             code: Authorization code from OAuth callback
-            port: Port number used for callback redirect URI
+            port: Port number used for callback redirect URI (unused, kept for compatibility)
 
         Returns:
             OAuth token response with access and refresh tokens
@@ -358,7 +359,7 @@ class TradeStationAuth:
             "code": code,
             "client_id": self.settings.tradestation_client_id,
             "client_secret": self.settings.tradestation_client_secret,
-            "redirect_uri": f"http://localhost:{port}/callback",
+            "redirect_uri": self.settings.tradestation_redirect_uri,
         }
 
         try:
@@ -513,14 +514,22 @@ class TradeStationAuth:
 
         try:
             with open(TOKEN_CACHE_FILE, "r") as f:
-                # Acquire exclusive lock for reading (Windows lacks shared locks)
-                _lock_file(f)
+                # Try to acquire lock, but continue if it fails
+                try:
+                    _lock_file(f)
+                    locked = True
+                except (IOError, OSError):
+                    locked = False
 
                 try:
                     data = json.load(f)
                 finally:
-                    # Release lock
-                    _unlock_file(f)
+                    # Release lock if we acquired it
+                    if locked:
+                        try:
+                            _unlock_file(f)
+                        except (IOError, OSError):
+                            pass
 
             # Convert to TokenCache
             token_cache = TokenCache(

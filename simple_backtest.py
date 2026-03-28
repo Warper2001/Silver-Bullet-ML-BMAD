@@ -47,11 +47,12 @@ def main():
     print("📊 Loading historical data...")
     loader = HistoricalDataLoader(
         data_directory="data/processed/dollar_bars/",
-        min_completeness=1.0  # Allow low completeness for sample data
+        min_completeness=0.5  # Lower threshold for real data
     )
 
     try:
-        data = loader.load_data('2024-12-19', '2025-03-19')
+        # Use recent real data: 2025-01-01 to 2025-03-06
+        data = loader.load_data('2025-01-01', '2025-03-06')
         print(f"✅ Loaded {len(data)} bars")
         print(f"   Date range: {data.index.min()} to {data.index.max()}")
     except Exception as e:

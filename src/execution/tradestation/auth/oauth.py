@@ -254,6 +254,7 @@ class OAuth2Client:
         """
         params = {
             "grant_type": "refresh_token",
+            "client_id": self.client_id,
             "refresh_token": refresh_token,
         }
 
@@ -274,6 +275,11 @@ class OAuth2Client:
                 if response.status_code == 200:
                     token_data = response.json()
                     token_response = TokenResponse(**token_data)
+
+                    # Log if refresh token rotation occurred
+                    if token_response.refresh_token and token_response.refresh_token != refresh_token:
+                        self.logger.info("Token refreshed with new refresh token (rotation enabled)")
+
                     self.token_manager.set_token(token_response)
                     self.logger.info("Token refreshed successfully")
                     return token_response
@@ -288,6 +294,66 @@ class OAuth2Client:
         except httpx.HTTPError as e:
             self.logger.error(f"Network error during token refresh: {e}")
             raise AuthError(f"Network error during token refresh: {e}")
+
+    async def revoke_refresh_token(self, refresh_token: str) -> bool:
+        """
+        Revoke a refresh token for security.
+
+        WARNING: This will revoke ALL valid refresh tokens for this API key,
+        not just the one passed in.
+
+        Args:
+            refresh_token: Refresh token to revoke
+
+        Returns:
+            True if revocation was successful
+
+        Raises:
+            AuthError: If revocation fails
+
+        Example:
+            await client.revoke_refresh_token(refresh_token)
+            # Use this when tokens are compromised or user logs out
+        """
+        revoke_url = "https://signin.tradestation.com/oauth/revoke"
+
+        # Note: TradeStation docs show using JSON body for revoke endpoint
+        # even though other endpoints use form encoding
+        data = {
+            "client_id": self.client_id,
+            "token": refresh_token,
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        self.logger.warning("Revoking refresh token (this will revoke ALL tokens for this API key)")
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    revoke_url,
+                    json=data,
+                    headers=headers,
+                )
+
+                if response.status_code == 200:
+                    self.logger.info("Refresh token revoked successfully")
+                    # Clear token from manager as well
+                    self.token_manager.clear_token()
+                    return True
+                else:
+                    error_detail = response.json() if response.headers.get("content-type") == "application/json" else response.text
+                    self.logger.error(f"Token revocation failed: {error_detail}")
+                    raise AuthError(
+                        "Failed to revoke refresh token",
+                        details={"status_code": response.status_code, "error": error_detail},
+                    )
+
+        except httpx.HTTPError as e:
+            self.logger.error(f"Network error during token revocation: {e}")
+            raise AuthError(f"Network error during token revocation: {e}")
 
     async def get_access_token(self) -> str:
         """

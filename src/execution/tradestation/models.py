@@ -33,6 +33,7 @@ class TokenResponse(BaseModel):
         expires_in: Time until token expires (seconds)
         refresh_token: Token for refreshing access token (LIVE environment only)
         scope: Granted OAuth scopes
+        issued_at: Timestamp when token was issued (UTC)
     """
 
     access_token: str = Field(alias="access_token")
@@ -40,8 +41,7 @@ class TokenResponse(BaseModel):
     expires_in: int = Field(alias="expires_in")
     refresh_token: str | None = Field(default=None, alias="refresh_token")
     scope: str | None = Field(default=None, alias="scope")
-
-    model_config = ConfigDict(populate_by_name=True)
+    issued_at: datetime = Field(default_factory=lambda: datetime.now())
 
     @field_validator("token_type")
     @classmethod

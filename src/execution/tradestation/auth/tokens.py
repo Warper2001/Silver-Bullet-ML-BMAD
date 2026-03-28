@@ -133,10 +133,10 @@ class TokenManager:
         if self.token_data is None:
             return False
 
-        # Calculate token expiry time
+        # Calculate token expiry time from issued_at timestamp
         # TokenResponse.expires_in is seconds from issuance
-        # We don't have exact issuance time, so estimate from now
-        expires_at = datetime.now(timezone.utc).timestamp() + self.token_data.expires_in
+        issued_at = self.token_data.issued_at
+        expires_at = issued_at.timestamp() + self.token_data.expires_in
 
         # Check if we're within refresh buffer
         now = datetime.now(timezone.utc).timestamp()
@@ -177,8 +177,9 @@ class TokenManager:
         if self.token_data is None:
             return False
 
-        # Check expiry
-        expires_at = datetime.now(timezone.utc).timestamp() + self.token_data.expires_in
+        # Check expiry from issued_at timestamp
+        issued_at = self.token_data.issued_at
+        expires_at = issued_at.timestamp() + self.token_data.expires_in
         now = datetime.now(timezone.utc).timestamp()
 
         return expires_at > now
@@ -193,7 +194,8 @@ class TokenManager:
         if self.token_data is None:
             return None
 
-        # Calculate expiry as datetime
+        # Calculate expiry from issued_at timestamp
+        issued_at = self.token_data.issued_at
         expires_in_seconds = self.token_data.expires_in
-        expiry_timestamp = datetime.now(timezone.utc).timestamp() + expires_in_seconds
+        expiry_timestamp = issued_at.timestamp() + expires_in_seconds
         return datetime.fromtimestamp(expiry_timestamp, timezone.utc)

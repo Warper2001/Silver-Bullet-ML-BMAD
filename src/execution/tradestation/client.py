@@ -13,9 +13,20 @@ Key Features:
 - Rate limiting and retry logic
 
 Usage:
-    async with TradeStationClient(env="sim", config=config) as client:
+    # For paper trading (SIM environment):
+    async with TradeStationClient(
+        client_id="your_client_id",
+        env="sim"
+    ) as client:
         quotes = await client.get_quotes(["MNQH26"])
         print(quotes)
+
+    # For live trading:
+    async with TradeStationClient(
+        client_id="your_client_id",
+        env="live"
+    ) as client:
+        orders = await client.place_order(order_data)
 """
 
 import logging
@@ -69,6 +80,7 @@ class TradeStationClient:
     def __init__(
         self,
         client_id: str,
+        env: Literal["sim", "live"] = "live",
         redirect_uri: str = "http://localhost:8080",
         token_manager: TokenManager | None = None,
     ) -> None:
@@ -77,15 +89,20 @@ class TradeStationClient:
 
         Args:
             client_id: OAuth 2.0 client ID (API Key)
+            env: Environment ("sim" for paper trading or "live" for production)
             redirect_uri: Redirect URI for OAuth callback
             token_manager: Optional TokenManager instance
         """
         self.client_id = client_id
+        self.env = env
         self.redirect_uri = redirect_uri
         self.logger = setup_logger(f"{__name__}.TradeStationClient")
 
-        # TradeStation API base URL (production only, no separate SIM environment)
-        self.api_base_url = "https://api.tradestation.com/v3"
+        # TradeStation API base URL based on environment
+        if env == "sim":
+            self.api_base_url = "https://sim-api.tradestation.com/v3"
+        else:  # live
+            self.api_base_url = "https://api.tradestation.com/v3"
 
         # OAuth 2.0 client
         self.oauth_client = OAuth2Client(

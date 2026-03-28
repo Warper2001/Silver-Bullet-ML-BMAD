@@ -1,0 +1,63 @@
+# TradeStation SIM Environment Configuration
+# This is an example configuration file for integration testing
+# DO NOT commit actual credentials to version control
+
+# SIM API Credentials (load from environment variables in production)
+sim_environment:
+  env: "sim"  # Simulation environment
+  api_base_url: "https://sim-api.tradestation.com/v3"
+  auth_url: "https://sim-api.tradestation.com/oauth/token"
+
+# Credential Sources (priority: environment variables > this file)
+credentials:
+  # Method 1: Load from environment variables (RECOMMENDED)
+  # Set these in your shell before running tests:
+  # export TRADESTATION_SIM_CLIENT_ID="your_client_id"
+  # export TRADESTATION_SIM_CLIENT_SECRET="your_client_secret"
+
+  # Method 2: Hardcode for local testing only (NOT RECOMMENDED)
+  # client_id: "your_client_id_here"
+  # client_secret: "your_client_secret_here"
+
+# Test Configuration
+test_settings:
+  timeout: 30.0  # API request timeout in seconds
+  retry_attempts: 3  # Number of retry attempts for transient failures
+  retry_delay: 1.0  # Delay between retries in seconds
+  slow_down_duration: 2.0  # Duration to wait between test phases
+
+# Order Test Configuration
+order_tests:
+  enabled: true  # Enable order placement tests (WARNING: places real SIM orders)
+  test_quantity: 1  # Quantity for test orders
+  small_order_size: 1  # Small size for safety
+  price_buffer: 0.5  # Price buffer for limit orders (ticks away from market)
+  max_wait_time: 10.0  # Maximum wait time for order fills/cancellations
+  cancel_all_after_test: true  # Cancel all orders after each test
+
+# Data Test Configuration
+data_tests:
+  enabled: true  # Enable market data tests
+  test_symbols:  # Symbols to test (update quarterly when contracts roll)
+    - "MNQH26"  # Micro E-mini Nasdaq-100 March 2026
+    - "MESM26"  # Micro E-mini S&P 500 June 2026
+  bar_types_to_test:  # Bar types to test
+    - "minute"
+    - "minute5"
+    - "daily"
+  test_days_back: 7  # Number of days to fetch for historical data tests
+  streaming_test_duration: 5.0  # Duration for streaming tests in seconds
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_file: "integration_test_results.log"
+  log_api_calls: true  # Log all API calls
+  log_responses: true  # Log API responses (may be verbose)
+
+# Test Reporting
+reporting:
+  generate_report: true  # Generate test report
+  report_format: "json"  # json, html, text
+  save_failures: true  # Save detailed failure information
+  screenshot_on_failure: false  # Not applicable for API tests

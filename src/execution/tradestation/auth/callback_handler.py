@@ -81,11 +81,25 @@ class CallbackHandler(BaseHTTPRequestHandler):
 
         # Exchange code for token
         try:
-            # Run async operation in event loop
-            loop = asyncio.get_event_loop()
-            token_response = loop.run_until_complete(
-                oauth_client.exchange_code_for_token(authorization_code)
-            )
+            # Run async operation in a new thread with new event loop
+            import concurrent.futures
+            import threading
+
+            def run_async_in_thread():
+                """Run async operation in a new thread with its own event loop."""
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    return loop.run_until_complete(
+                        oauth_client.exchange_code_for_token(authorization_code)
+                    )
+                finally:
+                    loop.close()
+
+            # Execute in thread pool to avoid event loop conflicts
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(run_async_in_thread)
+                token_response = future.result(timeout=30)
 
             # Store result for retrieval
             setattr(self.server, "token_response", token_response)

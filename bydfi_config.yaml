@@ -1,0 +1,63 @@
+# BYDFI Configuration
+# Silver Bullet ML-BMAD - Crypto Variant
+
+bydfi_trading:
+  exchange: bydfi
+  trading_type: spot
+  symbol: BTC-USDT
+  environment: production  # Options: production, testnet
+
+risk:
+  # Daily loss limits
+  daily_loss_limit: 500  # USD
+
+  # Maximum drawdown percentage
+  max_drawdown_percent: 12
+
+  # Maximum position size
+  max_position_size: 0.001  # BTC
+
+  # Timing
+  daily_reset_time_utc: "00:00"
+  position_close_time_utc: "21:00"
+
+  # Circuit breaker thresholds (percent drawdown)
+  circuit_breaker_thresholds:
+    level_1_percent: 15
+    level_2_percent: 25
+    level_3_percent: 35
+
+  # Crypto-specific adjustments
+  dollar_bar_threshold: 10000000  # $10M (vs $50M for futures)
+  position_size_multiplier: 0.3  # 30% of futures size
+  allow_weekend_trading: true  # Crypto markets are 24/7
+
+market_data:
+  # Dollar bar aggregation
+  dollar_bar_threshold: 10000000  # $10M
+
+  # Kline intervals (supported: 1m, 5m, 15m, 1h, 4h, 1d)
+  primary_interval: 5m
+
+  # Volatility filter
+  atr_percentile_threshold: 75
+
+  # WebSocket settings
+  websocket_staleness_seconds: 30
+  websocket_reconnect_delay_seconds: 5
+
+orders:
+  # Order timeout
+  default_fill_timeout: 5  # seconds
+
+  # Circuit breaker
+  circuit_breaker_failure_threshold: 5
+  circuit_breaker_reset_seconds: 60
+
+  # Order validation
+  min_order_size: 0.001  # BTC
+  max_order_size: 1.0  # BTC
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

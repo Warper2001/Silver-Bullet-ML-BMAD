@@ -1,0 +1,51 @@
+# Silver-Bullet-ML-BMAD KuCoin Configuration
+# DO NOT commit actual credentials to this file
+# Use .env.kucoin file for sensitive data
+
+system:
+  environment: development  # development, testing, production
+  log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+kucoin_trading:
+  exchange: kucoin  # KuCoin exchange
+  trading_type: spot  # Spot trading (not futures/margin)
+  symbol: BTC-USDT  # Bitcoin / USDT (KuCoin format with dash)
+  environment: production  # KuCoin production (or sandbox for testing)
+  timezone: UTC  # All times in UTC for 24/7 markets
+
+data:
+  dollar_bar_threshold: 10000000  # $10M notional value (crypto-specific)
+  data_completeness_target: 0.9999  # 99.99%
+  allow_weekend_trading: true  # Crypto markets are 24/7
+
+risk:
+  daily_loss_limit: 500  # USD
+  max_drawdown_percent: 12  # percent
+  max_position_size: 0.001  # BTC (minimum testnet order size)
+  position_size_multiplier: 0.3  # 30% of futures size (crypto volatility adjustment)
+  daily_reset_time_utc: "00:00"  # Midnight UTC reset
+  position_close_time_utc: "21:00"  # Close positions at 21:00 UTC (5pm ET)
+  circuit_breaker_thresholds:
+    level_1_percent: 15  # Level 1: 15% decline (vs 7% for futures)
+    level_2_percent: 25  # Level 2: 25% decline (vs 13% for futures)
+    level_3_percent: 35  # Level 3: 35% decline (vs 20% for futures)
+
+ml:
+  probability_threshold: 0.65  # P(Success) threshold
+  retraining_interval_days: 7  # Weekly retraining
+  model_path: data/models/xgboost/crypto/btc-usdt/  # Separate model path for KuCoin
+  atr_percentile_threshold: 75  # 75th percentile for volatility filter
+
+monitoring:
+  health_check_interval_seconds: 5
+  data_staleness_threshold_seconds: 30
+  websocket_reconnect_timeout_seconds: 60
+  order_fill_timeout_seconds: 300  # 5 minutes to fill orders
+
+# Research placeholders (to be validated by Phase 0 research tasks)
+research:
+  dollar_bar_threshold_validated: false  # Task 0.1: Research optimal threshold
+  volatility_threshold_validated: false  # Task 0.2: Research ATR thresholds
+  circuit_breaker_thresholds_validated: false  # Task 0.3: Research crypto circuit breakers
+  feature_removal_validated: false  # Task 0.4: Validate ML feature changes
+  position_sizing_validated: false  # Task 0.5: Research position sizing for crypto volatility

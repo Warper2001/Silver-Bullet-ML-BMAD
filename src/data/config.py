@@ -1,6 +1,6 @@
 """Configuration loading from environment variables."""
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,6 +29,22 @@ class Settings(BaseSettings):
     # App Configuration
     app_env: str = Field(default="development", alias="APP_ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+
+    # Trading Configuration
+    streaming_symbols: list[str] = Field(
+        default=["MNQH26"],
+        alias="STREAMING_SYMBOLS",
+    )
+
+    @field_validator("streaming_symbols")
+    @classmethod
+    def validate_streaming_symbols(cls, v: list[str]) -> list[str]:
+        """Validate streaming symbols list is not empty."""
+        if not v or len(v) == 0:
+            raise ValueError("streaming_symbols cannot be empty")
+        if not all(isinstance(s, str) and len(s) > 0 for s in v):
+            raise ValueError("all symbols must be non-empty strings")
+        return v
 
 
 def load_settings() -> Settings:

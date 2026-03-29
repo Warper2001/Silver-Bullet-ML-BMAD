@@ -14,8 +14,8 @@ Features:
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Dict, Optional
+from datetime import datetime, timezone
+from typing import Dict, Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,10 @@ class Position:
         upper_barrier_price: Upper barrier (take profit) price level
         lower_barrier_price: Lower barrier (stop loss) price level
         time_barrier_utc: Time barrier (max hold time) in UTC
+        current_price: Current market price for mark-to-market P&L
+        unrealized_pnl: Unrealized P&L in USD
+        realized_pnl: Realized P&L in USD (after exit)
+        last_pnl_update: Timestamp of last P&L update
     """
 
     order_id: str
@@ -56,10 +60,15 @@ class Position:
     status: str = "PENDING"
     initial_submission_time: Optional[datetime] = None
     cumulative_fill_time_seconds: float = 0.0
-    # NEW: Triple barrier fields
+    # Triple barrier fields
     upper_barrier_price: Optional[float] = None
     lower_barrier_price: Optional[float] = None
     time_barrier_utc: Optional[datetime] = None
+    # Mark-to-market P&L fields
+    current_price: Optional[float] = None
+    unrealized_pnl: float = 0.0
+    realized_pnl: float = 0.0
+    last_pnl_update: Optional[datetime] = None
 
     def __post_init__(self):
         """Initialize derived fields after creation."""
@@ -69,6 +78,9 @@ class Position:
         # Set initial submission time if not provided
         if self.initial_submission_time is None:
             self.initial_submission_time = self.timestamp
+        # Initialize current price to entry price
+        if self.current_price is None:
+            self.current_price = self.entry_price
 
 
 class PositionTracker:
@@ -243,3 +255,141 @@ class PositionTracker:
                 order_id, status
             )
         )
+
+    def update_mark_to_market(
+        self,
+        order_id: str,
+        current_price: float,
+        timestamp: Optional[datetime] = None,
+    ) -> None:
+        """Update mark-to-market P&L for a position.
+
+        Args:
+            order_id: TradeStation order ID to update
+            current_price: Current market price
+            timestamp: Update timestamp (defaults to current time)
+
+        Raises:
+            ValueError: If order_id not found
+
+        Example:
+            >>> tracker = PositionTracker()
+            >>> tracker.update_mark_to_market("ORDER-123", current_price=11850.0)
+            >>> position = tracker.get_position("ORDER-123")
+            >>> position.unrealized_pnl
+            250.0
+        """
+        position = self._positions.get(order_id)
+        if position is None:
+            raise ValueError(
+                "Position not found: {}".format(order_id)
+            )
+
+        if current_price <= 0:
+            raise ValueError(
+                "Current price must be positive, got {}".format(current_price)
+            )
+
+        # Calculate P&L based on direction
+        if position.direction == "bullish":
+            # Long position: profit when current_price > entry_price
+            pnl_per_contract = current_price - position.entry_price
+        else:  # bearish
+            # Short position: profit when current_price < entry_price
+            pnl_per_contract = position.entry_price - current_price
+
+        # MNQ point value is $0.50 per point
+        # P&L = (price_change) * quantity * point_value
+        point_value = 0.5  # MNQ futures
+        position.unrealized_pnl = pnl_per_contract * position.filled_quantity * point_value
+
+        # Update current price and timestamp
+        position.current_price = current_price
+        position.last_pnl_update = timestamp if timestamp else datetime.now(timezone.utc)
+
+        logger.debug(
+            "Mark-to-market updated: order_id={}, current_price={}, unrealized_pnl={}".format(
+                order_id, current_price, position.unrealized_pnl
+            )
+        )
+
+    def get_total_unrealized_pnl(self) -> float:
+        """Get total unrealized P&L across all positions.
+
+        Returns:
+            Total unrealized P&L in USD
+
+        Example:
+            >>> tracker = PositionTracker()
+            >>> total_pnl = tracker.get_total_unrealized_pnl()
+        """
+        return sum(pos.unrealized_pnl for pos in self._positions.values())
+
+    def get_total_realized_pnl(self) -> float:
+        """Get total realized P&L across all closed positions.
+
+        Returns:
+            Total realized P&L in USD
+
+        Example:
+            >>> tracker = PositionTracker()
+            >>> total_pnl = tracker.get_total_realized_pnl()
+        """
+        return sum(pos.realized_pnl for pos in self._positions.values())
+
+    def realize_pnl(self, order_id: str, exit_price: float) -> None:
+        """Realize P&L when position is closed.
+
+        Args:
+            order_id: TradeStation order ID
+            exit_price: Exit price
+
+        Raises:
+            ValueError: If order_id not found
+
+        Example:
+            >>> tracker = PositionTracker()
+            >>> tracker.realize_pnl("ORDER-123", exit_price=11850.0)
+            >>> position = tracker.get_position("ORDER-123")
+            >>> position.realized_pnl
+            250.0
+        """
+        position = self._positions.get(order_id)
+        if position is None:
+            raise ValueError(
+                "Position not found: {}".format(order_id)
+            )
+
+        # Calculate final realized P&L
+        if position.direction == "bullish":
+            pnl_per_contract = exit_price - position.entry_price
+        else:  # bearish
+            pnl_per_contract = position.entry_price - exit_price
+
+        point_value = 0.5  # MNQ futures
+        position.realized_pnl = pnl_per_contract * position.filled_quantity * point_value
+
+        # Reset unrealized P&L
+        position.unrealized_pnl = 0.0
+
+        logger.info(
+            "P&L realized: order_id={}, exit_price={}, realized_pnl={}".format(
+                order_id, exit_price, position.realized_pnl
+            )
+        )
+
+    def get_open_positions(self) -> list[Position]:
+        """Get list of all open positions.
+
+        Returns:
+            List of Position objects with status PENDING, PARTIALLY_FILLED, or FULLY_FILLED
+
+        Example:
+            >>> tracker = PositionTracker()
+            >>> open_positions = tracker.get_open_positions()
+        """
+        open_statuses = ["PENDING", "PARTIALLY_FILLED", "FULLY_FILLED"]
+        return [
+            pos for pos in self._positions.values()
+            if pos.status in open_statuses
+        ]

@@ -1,6 +1,6 @@
 """Data Pipeline Orchestrator.
 
-Coordinates all data pipeline stages from WebSocket ingestion to HDF5 persistence.
+Coordinates all data pipeline stages from TradeStation SDK streaming to HDF5 persistence.
 Implements backpressure monitoring, failure recovery, and graceful shutdown.
 """
 
@@ -9,31 +9,32 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from src.data.auth import TradeStationAuth
 from src.data.config import Settings, load_settings
 from src.data.gap_detection import GapDetector
 from src.data.models import DollarBar, MarketData, ValidationResult
 from src.data.persistence import HDF5DataSink
 from src.data.transformation import DollarBarTransformer
 from src.data.validation import DataValidator
-from src.data.websocket import TradeStationWebSocketClient
+from src.execution.tradestation.client import TradeStationClient
+from src.execution.tradestation.market_data.streaming import QuoteStreamParser
+from src.execution.tradestation.models import TradeStationQuote
 
 
 logger = logging.getLogger(__name__)
 
 
 class DataPipelineOrchestrator:
-    """Orchestrates the entire data pipeline from WebSocket to HDF5.
+    """Orchestrates the entire data pipeline from TradeStation SDK streaming to HDF5.
 
     Pipeline Stages:
-    1. WebSocket Ingestion (TradeStationWebSocketClient)
+    1. TradeStation SDK Streaming (QuoteStreamParser for SIM environment)
     2. Dollar Bar Transformation (DollarBarTransformer)
     3. Data Validation (DataValidator)
     4. Gap Detection & Filling (GapDetector)
     5. HDF5 Persistence (HDF5DataSink)
 
     Queues:
-    - raw_queue: MarketData from WebSocket
+    - raw_queue: MarketData from TradeStation SDK
     - transform_queue: DollarBar from transformation
     - validated_queue: Validated DollarBar from validation
     - gap_filled_queue: Gap-filled DollarBar from gap detection
@@ -46,7 +47,7 @@ class DataPipelineOrchestrator:
 
     def __init__(
         self,
-        auth: TradeStationAuth,
+        client: TradeStationClient,
         data_directory: str,
         max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE,
         settings: Settings | None = None,
@@ -54,12 +55,12 @@ class DataPipelineOrchestrator:
         """Initialize the data pipeline orchestrator.
 
         Args:
-            auth: TradeStation authentication for WebSocket connection
+            client: TradeStation API client (SIM environment)
             data_directory: Root directory for HDF5 files
             max_queue_size: Maximum size for each pipeline queue
             settings: Application settings (optional, loads from env if None)
         """
-        self._auth = auth
+        self._client = client
         self._data_directory = Path(data_directory)
         self._max_queue_size = max_queue_size
         self._settings = settings or load_settings()
@@ -82,7 +83,7 @@ class DataPipelineOrchestrator:
         ] = asyncio.Queue(maxsize=max_queue_size)  # noqa: F821
 
         # Pipeline components
-        self._websocket_client: TradeStationWebSocketClient | None = None
+        self._stream_parser: QuoteStreamParser | None = None
         self._transformer: DollarBarTransformer | None = None
         self._validator: DataValidator | None = None
         self._gap_detector: GapDetector | None = None
@@ -106,7 +107,7 @@ class DataPipelineOrchestrator:
         """Start the data pipeline.
 
         Spawns async tasks for each pipeline stage and begins
-        WebSocket connection to receive market data.
+        TradeStation SDK streaming to receive market data.
         """
         if self._running:
             raise RuntimeError("Pipeline is already running")
@@ -119,18 +120,33 @@ class DataPipelineOrchestrator:
         # Initialize pipeline components
         self._initialize_components()
 
-        # Subscribe to WebSocket to get data queue
-        self._raw_queue = await self._websocket_client.subscribe()
+        # Verify TradeStation client is authenticated before starting streaming
+        if not self._client.is_authenticated():
+            raise RuntimeError(
+                "TradeStation client is not authenticated. "
+                "Complete OAuth flow before starting pipeline. "
+                "Run standard_auth_flow.py to authenticate."
+            )
+        logger.info("TradeStation client authenticated, ready to stream")
+
+        # Start TradeStation SDK streaming to raw queue
+        # Use symbols from configuration (defaults to ["MNQH26"])
+        symbols = self._settings.streaming_symbols
+        logger.info(f"Starting streaming for symbols: {symbols}")
+        streaming_task = asyncio.create_task(
+            self._stream_parser.stream_to_queue(symbols, self._raw_queue)
+        )
+        self._tasks.append(streaming_task)
 
         # Spawn async tasks for each pipeline stage
-        self._tasks = [
+        self._tasks.extend([
             asyncio.create_task(self._transformer.consume()),
             asyncio.create_task(self._validator.consume()),
             asyncio.create_task(self._gap_detector.consume()),
             asyncio.create_task(self._persistence.consume()),
             asyncio.create_task(self._monitor_pipeline_health()),
             asyncio.create_task(self._log_metrics_periodically()),
-        ]
+        ])
 
         logger.info(f"Data pipeline started with {len(self._tasks)} tasks")
 
@@ -144,9 +160,9 @@ class DataPipelineOrchestrator:
 
         logger.info("Stopping data pipeline orchestrator")
 
-        # Cleanup WebSocket connection
-        if self._websocket_client:
-            await self._websocket_client.cleanup()
+        # Stop streaming
+        if self._stream_parser:
+            self._stream_parser.stop_streaming()
 
         # Wait for queues to drain (timeout: 30 seconds)
         try:
@@ -174,8 +190,8 @@ class DataPipelineOrchestrator:
         Creates instances of each component with appropriate queues
         and configuration.
         """
-        # Stage 1: WebSocket Client
-        self._websocket_client = TradeStationWebSocketClient(auth=self._auth)
+        # Stage 1: TradeStation SDK Quote Stream Parser (SIM environment)
+        self._stream_parser = QuoteStreamParser(client=self._client)
 
         # Stage 2: Dollar Bar Transformer
         self._transformer = DollarBarTransformer(

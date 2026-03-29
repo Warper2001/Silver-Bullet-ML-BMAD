@@ -170,11 +170,14 @@ class TradeStationClient:
         """
         Ensure client is authenticated and return access token.
 
+        Automatically refreshes token if needed.
+
         Returns:
             Valid access token
 
         Raises:
             RuntimeError: If client is not initialized
+            InvalidCredentialsError: If refresh fails
         """
         if not self._is_initialized or not self.http_client:
             raise RuntimeError(
@@ -182,7 +185,29 @@ class TradeStationClient:
                 "Use 'async with TradeStationClient(...) as client:'"
             )
 
-        return await self.oauth_client.get_access_token()
+        try:
+            # Try to get current access token
+            return await self.oauth_client.get_access_token()
+        except RuntimeError as e:
+            # Token needs refresh
+            if "Token needs refresh" in str(e):
+                self.logger.warning("Access token expired, refreshing automatically...")
+
+                # Refresh the token using refresh token
+                token_manager = self.oauth_client.token_manager
+                if token_manager.token_data and token_manager.token_data.refresh_token:
+                    refresh_response = await self.oauth_client.refresh_token(
+                        token_manager.token_data.refresh_token
+                    )
+                    self.logger.info("✅ Token refreshed successfully")
+                    return refresh_response.access_token
+                else:
+                    raise RuntimeError(
+                        "Cannot refresh token: no refresh token available. "
+                        "Please re-authenticate using OAuth flow."
+                    )
+            else:
+                raise
 
     async def _request(
         self,

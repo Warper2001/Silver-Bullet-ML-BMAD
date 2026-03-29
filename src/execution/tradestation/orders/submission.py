@@ -9,6 +9,7 @@ Key Features:
 - Cancel individual orders
 - Cancel all orders for an account
 - Input validation and error handling
+- Integration with trade execution pipeline
 
 Usage:
     async with TradeStationClient(env="sim", ...) as client:
@@ -31,6 +32,11 @@ Usage:
 
         # Cancel the order
         await orders_client.cancel_order(order.order_id)
+
+Integration with Trade Execution Pipeline:
+    The OrdersClient integrates with trade_execution_pipeline.py to route
+    signals through risk validation to SIM order execution. All orders are
+    submitted to the SIM environment (env="sim") for paper trading.
 """
 
 import logging

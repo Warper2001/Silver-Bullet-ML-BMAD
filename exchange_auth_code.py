@@ -1,64 +1,106 @@
 #!/usr/bin/env python3
-"""Exchange OAuth authorization code for access/refresh tokens."""
+"""
+Exchange authorization code for access token using OAuth2Client.
+"""
 
-import httpx
-from urllib.parse import parse_qs
+import asyncio
+import sys
+from pathlib import Path
 
-# Your credentials
-CLIENT_ID = "8mpwDPxyviXzglA6xCGs7X9PXnl1TyFK"
-CLIENT_SECRET = "Ut3JTMUQoBcpIn7-8rUtB7tSm3Xi_GcrXl0QkpWhkgPIrueUtdRSho4gcHSeK7vc"
-REDIRECT_URI = "http://localhost:8080"
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-# Extract from your callback URL
-CALLBACK_URL = "http://localhost:8080/?code=GTDA4JqL9jvdzfibay3p7VX4mwesJ1_V7KMfagcbLKMnK&state=ty8Fc4J3JRuDVbcTAqEwRZGPioT_UDzZVNZF-PE010E"
+from src.data.config import load_settings
+from src.execution.tradestation.auth.oauth import OAuth2Client
+from src.execution.tradestation.auth.tokens import TokenManager
 
-TOKEN_ENDPOINT = "https://signin.tradestation.com/oauth/token"
 
-# Parse the callback URL to get the authorization code
-parsed = parse_qs(CALLBACK_URL.split("?", 1)[1])
-auth_code = parsed["code"][0]
-state = parsed["state"][0]
+async def exchange_code(auth_code: str):
+    """Exchange authorization code for access token."""
+    print("="*70)
+    print("🔄 Exchanging Authorization Code for Access Token")
+    print("="*70)
+    print()
 
-print(f"Authorization Code: {auth_code}")
-print(f"State: {state}")
-print()
-print("Exchanging code for tokens...")
+    settings = load_settings()
 
-# Exchange the authorization code for tokens
-data = {
-    "grant_type": "authorization_code",
-    "code": auth_code,
-    "client_id": CLIENT_ID,
-    "client_secret": CLIENT_SECRET,
-    "redirect_uri": REDIRECT_URI,
-}
-
-try:
-    response = httpx.post(
-        TOKEN_ENDPOINT,
-        data=data,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=30.0
+    # Create token manager and OAuth client
+    token_manager = TokenManager()
+    oauth_client = OAuth2Client(
+        client_id=settings.tradestation_client_id,
+        client_secret=settings.tradestation_client_secret,
+        redirect_uri=settings.tradestation_redirect_uri,
+        token_manager=token_manager,
     )
-    response.raise_for_status()
 
-    token_data = response.json()
+    print(f"Authorization Code: {auth_code[:30]}...")
+    print()
 
-    print("\n✅ SUCCESS! Tokens received:")
-    print("=" * 70)
-    print(f"Access Token: {token_data.get('access_token', '')[:50]}...")
-    print(f"Refresh Token: {token_data.get('refresh_token', '')[:50]}...")
-    print(f"Expires In: {token_data.get('expires_in', '')} seconds")
-    print(f"Token Type: {token_data.get('token_type', '')}")
-    print("=" * 70)
-    print("\nNow update your .env file with:")
-    print(f"TRADESTATION_REFRESH_TOKEN={token_data.get('refresh_token', '')}")
-    print("\nThen run the downloader in batch mode:")
-    print(".venv/bin/python -m src.data.cli --batch-mode")
+    try:
+        # Exchange code for token
+        print("📝 Exchanging code for token...")
+        token_response = await oauth_client.exchange_code_for_token(auth_code)
 
-except httpx.HTTPStatusError as e:
-    print(f"\n❌ ERROR: HTTP {e.response.status_code}")
-    print(f"Response: {e.response.text}")
+        print(f"✅ Access Token: {token_response.access_token[:30]}...")
+        print(f"✅ Refresh Token: {token_response.refresh_token[:30]}...")
+        print(f"✅ Expires In: {token_response.expires_in} seconds")
+        print()
 
-except Exception as e:
-    print(f"\n❌ ERROR: {e}")
+        # Token is automatically saved to token manager
+        print("✅ Tokens saved to token manager")
+        print()
+
+        # Verify token works
+        access_token = await oauth_client.get_access_token()
+        print(f"✅ Token verification: {access_token[:20]}...")
+        print()
+
+        # Save access token to file for easy use
+        token_file = Path(".access_token")
+        token_file.write_text(access_token)
+        print(f"✅ Access token saved to {token_file}")
+        print()
+
+        # Update .env with refresh token
+        env_file = Path(".env")
+        if env_file.exists():
+            content = env_file.read_text()
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                if line.startswith("TRADESTATION_REFRESH_TOKEN="):
+                    lines[i] = f"TRADESTATION_REFRESH_TOKEN={token_response.refresh_token}"
+                    break
+            else:
+                lines.append(f"TRADESTATION_REFRESH_TOKEN={token_response.refresh_token}")
+            env_file.write_text('\n'.join(lines))
+            print("✅ Refresh token saved to .env")
+            print()
+
+        print("="*70)
+        print("✅ AUTHENTICATION SUCCESSFUL!")
+        print("="*70)
+        print()
+        print("You can now restart the paper trading system:")
+        print()
+        print("  pkill -f 'start_paper_trading.py'")
+        print("  .venv/bin/python start_paper_trading.py")
+        print()
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Error exchanging code: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("❌ Error: No authorization code provided")
+        print()
+        print("Usage: .venv/bin/python exchange_auth_code.py <authorization_code>")
+        sys.exit(1)
+
+    auth_code = sys.argv[1]
+    success = asyncio.run(exchange_code(auth_code))
+    sys.exit(0 if success else 1)

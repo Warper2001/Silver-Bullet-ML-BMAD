@@ -58,10 +58,14 @@ class DollarBarTransformer:
         self._bar_close: Optional[float] = None
         self._bar_volume: int = 0
         self._bar_notional: float = 0.0
+
+        # Lock to prevent race conditions in state transitions
+        self._state_lock = asyncio.Lock()
         self._bar_start_time: Optional[datetime] = None
 
         # Metrics
         self._bars_created = 0
+        self._bars_dropped = 0
         self._total_trades_processed = 0
         self._transformation_start_time: Optional[datetime] = None
         self._last_log_time = datetime.now()
@@ -128,19 +132,22 @@ class DollarBarTransformer:
         volume = market_data.volume
         notional = price * volume * MNQ_MULTIPLIER
 
-        # Initialize new bar if idle
-        if self._state == BarBuilderState.IDLE:
-            self._initialize_bar(price)
-        elif self._state == BarBuilderState.COMPLETED:
-            # Edge case: race condition - bar just completed, initialize new one
-            self._initialize_bar(price)
+        # Use lock to prevent race conditions in state transitions
+        async with self._state_lock:
+            # Initialize new bar if idle
+            if self._state == BarBuilderState.IDLE:
+                self._initialize_bar(price)
+            elif self._state == BarBuilderState.COMPLETED:
+                # Edge case: bar just completed, initialize new one
+                # Lock ensures only one task can do this at a time
+                self._initialize_bar(price)
 
-        # Update bar OHLCV
-        self._update_bar(price, volume, notional)
+            # Update bar OHLCV
+            self._update_bar(price, volume, notional)
 
-        # Check if threshold reached
-        if self._bar_notional >= DOLLAR_THRESHOLD:
-            await self._complete_bar(reason="threshold")
+            # Check if threshold reached
+            if self._bar_notional >= DOLLAR_THRESHOLD:
+                await self._complete_bar(reason="threshold")
 
     def _initialize_bar(self, price: float) -> None:
         """Initialize a new Dollar Bar.
@@ -201,10 +208,14 @@ class DollarBarTransformer:
             notional_value=self._bar_notional,
         )
 
-        # Publish to output queue
+        # Publish to output queue with backpressure
         try:
-            # Use put_nowait to avoid blocking if queue is full
-            self._output_queue.put_nowait(bar)
+            # Use blocking put with timeout to implement backpressure
+            # If queue is full, wait up to 1 second before triggering emergency handling
+            await asyncio.wait_for(
+                self._output_queue.put(bar),
+                timeout=1.0
+            )
             self._bars_created += 1
 
             # Log transformation metrics
@@ -215,8 +226,22 @@ class DollarBarTransformer:
                 f"reason={reason} "
                 f"queue_depth={self._input_queue.qsize()}->{self._output_queue.qsize()}"
             )
-        except asyncio.QueueFull:
-            logger.error("DollarBar output queue full, dropping bar")
+        except asyncio.TimeoutError:
+            # Critical: queue is blocked - trigger backpressure alarm
+            logger.critical(
+                f"BACKPRESSURE: Output queue blocked for >1s - bar dropped. "
+                f"Queue depth: {self._output_queue.qsize()}. "
+                f"This indicates downstream validation is too slow. "
+                f"Consider increasing queue size or scaling consumers."
+            )
+            self._bars_dropped += 1
+
+            # Optional: Store to disk for recovery (could be implemented later)
+            # await self._emergency_store_bar(bar)
+
+            # Reset state even if dropped to prevent stale data
+            self._state = BarBuilderState.IDLE
+            return  # Exit early, don't reset state again at end of method
 
         # Reset accumulation state to prevent stale data leakage
         self._bar_open = None

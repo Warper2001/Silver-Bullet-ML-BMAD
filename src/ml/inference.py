@@ -14,11 +14,17 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
-from src.data.models import SilverBulletSetup
+from src.data.models import DollarBar, SilverBulletSetup
 from src.ml.features import FeatureEngineer
 from src.ml.pipeline_serializer import PipelineSerializer
 
 logger = logging.getLogger(__name__)
+
+
+class InsufficientDataError(Exception):
+    """Raised when insufficient data is available for reliable ML inference."""
+
+    pass
 
 
 class MLInference:
@@ -72,13 +78,17 @@ class MLInference:
         logger.info(f"MLInference initialized with model_dir: {self._model_dir}")
 
     def predict_probability(
-        self, signal: SilverBulletSetup, horizon: int
+        self,
+        signal: SilverBulletSetup,
+        horizon: int,
+        recent_bars: list[DollarBar] | None = None,
     ) -> dict[str, object]:
         """Generate success probability score for a signal.
 
         Args:
             signal: Silver Bullet setup with timestamp and features
             horizon: Time horizon in minutes (5, 15, 30, or 60)
+            recent_bars: Optional list of recent DollarBar objects for feature engineering
 
         Returns:
             Dictionary with probability score and metadata:
@@ -101,8 +111,8 @@ class MLInference:
             model = self._load_model_if_needed(horizon)
             pipeline = self._load_pipeline_if_needed(horizon)
 
-            # Engineer features from signal
-            features_df = self._engineer_features_for_signal(signal)
+            # Engineer features from signal and recent bars
+            features_df = self._engineer_features_for_signal(signal, recent_bars)
 
             # Transform features using pipeline
             transformed = self._pipeline_serializer.transform_features(
@@ -325,31 +335,59 @@ class MLInference:
 
             return self._pipelines[horizon]
 
-    def _engineer_features_for_signal(self, signal: SilverBulletSetup) -> pd.DataFrame:
+    def _engineer_features_for_signal(
+        self,
+        signal: SilverBulletSetup,
+        recent_bars: list[DollarBar] | None = None,
+    ) -> pd.DataFrame:
         """Engineer features for a Silver Bullet signal.
 
         Args:
             signal: Silver Bullet setup
+            recent_bars: List of recent DollarBar objects for feature engineering.
+                        Minimum 20 bars required for reliable feature engineering.
 
         Returns:
             DataFrame with engineered features
+
+        Raises:
+            InsufficientDataError: If fewer than 20 bars provided
+
+        Note:
+            Per spec constraints, ML inference requires real-time data from dollar bars.
+            Minimum 20 bars needed to calculate meaningful features. No fallback to
+            dummy data - trading decisions must be based on real market conditions.
         """
-        # TODO: Integrate with Epic 2 to get recent Dollar Bars
-        # For now, create dummy features
-        # This will be implemented when Epic 2 integration is complete
+        if recent_bars is None or len(recent_bars) < 20:
+            # Per spec: Generate 40+ features from dollar bars for ML inference
+            # Cannot use dummy data - must have real market data
+            bars_count = len(recent_bars) if recent_bars else 0
+            raise InsufficientDataError(
+                f"Insufficient dollar bars for feature engineering: {bars_count} bars. "
+                f"Minimum 20 bars required for reliable ML inference. "
+                f"Cannot make trading decisions on dummy data. "
+                f"Spec constraint: 'Generate 40+ features from dollar bars for ML inference'"
+            )
 
-        # Create dummy feature row
-        features = {
-            "atr": 1.0,
-            "rsi": 50.0,
-            "macd": 0.0,
-            "close_position": 0.5,
-            "volume_ratio": 1.0,
-            "hour": signal.timestamp.hour,
-            "day_of_week": signal.timestamp.weekday(),
-        }
+        # Convert DollarBar objects to DataFrame for feature engineering
+        bars_data = []
+        for bar in recent_bars:
+            bars_data.append({
+                "timestamp": bar.timestamp,
+                "open": bar.open,
+                "high": bar.high,
+                "low": bar.low,
+                "close": bar.close,
+                "volume": bar.volume,
+            })
 
-        return pd.DataFrame([features])
+        df = pd.DataFrame(bars_data)
+
+        # Engineer features using the FeatureEngineer
+        features_df = self._feature_engineer.engineer_features(df)
+
+        # Return only the last row (most recent features)
+        return features_df.iloc[[-1]].copy()
 
     def _predict_with_model(
         self, model: xgb.XGBClassifier, features: pd.DataFrame

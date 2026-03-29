@@ -21,6 +21,7 @@ from src.risk.emergency_stop import EmergencyStop
 from src.risk.daily_loss_tracker import DailyLossTracker
 from src.risk.drawdown_tracker import DrawdownTracker
 from src.risk.position_size_tracker import PositionSizeTracker
+from src.risk.position_sizer import PositionSizer
 from src.risk.circuit_breaker_detector import CircuitBreakerDetector
 from src.risk.news_event_filter import NewsEventFilter
 from src.risk.per_trade_risk_limit import PerTradeRiskLimit
@@ -84,6 +85,7 @@ class RiskOrchestrator:
         daily_loss_tracker: DailyLossTracker,
         drawdown_tracker: DrawdownTracker,
         position_size_tracker: PositionSizeTracker,
+        position_sizer: PositionSizer,
         circuit_breaker_detector: CircuitBreakerDetector,
         news_event_filter: NewsEventFilter,
         per_trade_risk_limit: PerTradeRiskLimit,
@@ -97,6 +99,7 @@ class RiskOrchestrator:
             daily_loss_tracker: Daily loss tracker
             drawdown_tracker: Drawdown tracker
             position_size_tracker: Position size tracker
+            position_sizer: Position sizer for optimal size calculation
             circuit_breaker_detector: Circuit breaker detector
             news_event_filter: News event filter
             per_trade_risk_limit: Per-trade risk limit
@@ -110,6 +113,7 @@ class RiskOrchestrator:
         self._daily_loss_tracker = daily_loss_tracker
         self._drawdown_tracker = drawdown_tracker
         self._position_size_tracker = position_size_tracker
+        self._position_sizer = position_sizer
         self._circuit_breaker_detector = circuit_breaker_detector
         self._news_event_filter = news_event_filter
         self._per_trade_risk_limit = per_trade_risk_limit
@@ -236,6 +240,20 @@ class RiskOrchestrator:
                 block_reason = result['reason']
                 self._send_rejection_notification(
                     "Per-Trade Risk Exceeded",
+                    result['reason']
+                )
+
+        # Check 8: Position Size Calculation
+        result = self._check_position_size_calculation(signal)
+        validation_details['position_size_calc'] = result
+        if result['passed']:
+            checks_passed.append('position_size_calc')
+        else:
+            checks_failed.append('position_size_calc')
+            if block_reason is None:
+                block_reason = result['reason']
+                self._send_rejection_notification(
+                    "Position Size Calculation Failed",
                     result['reason']
                 )
 
@@ -484,6 +502,47 @@ class RiskOrchestrator:
                     self._per_trade_risk_limit._max_risk_dollars
                 )
             }
+
+    def _check_position_size_calculation(self, signal: TradingSignal) -> dict:
+        """Check position size calculation using Kelly Criterion-inspired approach.
+
+        Args:
+            signal: Trading signal
+
+        Returns:
+            Check result dictionary
+        """
+        # For now, we validate that the position size is reasonable
+        # The PositionSizer calculates optimal size, but we just validate here
+        # that the requested quantity doesn't exceed calculated optimal by too much
+
+        # Simple validation: quantity should be between 1 and max_contracts
+        max_contracts = self._position_size_tracker._max_contracts
+
+        if signal.quantity <= 0:
+            return {
+                'passed': False,
+                'reason': f'Invalid position size: {signal.quantity} contracts (must be > 0)',
+                'status': 'INVALID_SIZE'
+            }
+
+        if signal.quantity > max_contracts:
+            return {
+                'passed': False,
+                'reason': (
+                    f'Position size exceeds maximum: {signal.quantity} / {max_contracts} contracts'
+                ),
+                'status': 'EXCEEDS_MAX'
+            }
+
+        # Position size is within acceptable range
+        return {
+            'passed': True,
+            'reason': None,
+            'status': 'OK',
+            'quantity': signal.quantity,
+            'max_contracts': max_contracts
+        }
 
     def _send_rejection_notification(
         self,

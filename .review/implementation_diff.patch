@@ -1,0 +1,699 @@
+diff --git a/src/data/orchestrator.py b/src/data/orchestrator.py
+index 40d8f34..340b83b 100644
+--- a/src/data/orchestrator.py
++++ b/src/data/orchestrator.py
+@@ -1,6 +1,6 @@
+ """Data Pipeline Orchestrator.
+
+-Coordinates all data pipeline stages from WebSocket ingestion to HDF5 persistence.
++Coordinates all data pipeline stages from TradeStation SDK streaming to HDF5 persistence.
+ Implements backpressure monitoring, failure recovery, and graceful shutdown.
+ """
+
+@@ -9,31 +9,32 @@ import logging
+ from datetime import datetime
+ from pathlib import Path
+
+-from src.data.auth import TradeStationAuth
+ from src.data.config import Settings, load_settings
+ from src.data.gap_detection import GapDetector
+ from src.data.models import DollarBar, MarketData, ValidationResult
+ from src.data.persistence import HDF5DataSink
+ from src.data.transformation import DollarBarTransformer
+ from src.data.validation import DataValidator
+-from src.data.websocket import TradeStationWebSocketClient
++from src.execution.tradestation.client import TradeStationClient
++from src.execution.tradestation.market_data.streaming import QuoteStreamParser
++from src.execution.tradestation.models import TradeStationQuote
+
+
+ logger = logging.getLogger(__name__)
+
+
+ class DataPipelineOrchestrator:
+-    """Orchestrates the entire data pipeline from WebSocket to HDF5.
++    """Orchestrates the entire data pipeline from TradeStation SDK streaming to HDF5.
+
+     Pipeline Stages:
+-    1. WebSocket Ingestion (TradeStationWebSocketClient)
++    1. TradeStation SDK Streaming (QuoteStreamParser for SIM environment)
+     2. Dollar Bar Transformation (DollarBarTransformer)
+     3. Data Validation (DataValidator)
+     4. Gap Detection & Filling (GapDetector)
+     5. HDF5 Persistence (HDF5DataSink)
+
+     Queues:
+-    - raw_queue: MarketData from WebSocket
++    - raw_queue: MarketData from TradeStation SDK
+     - transform_queue: DollarBar from transformation
+     - validated_queue: Validated DollarBar from validation
+     - gap_filled_queue: Gap-filled DollarBar from gap detection
+@@ -46,7 +47,7 @@ class DataPipelineOrchestrator:
+
+     def __init__(
+         self,
+-        auth: TradeStationAuth,
++        client: TradeStationClient,
+         data_directory: str,
+         max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE,
+         settings: Settings | None = None,
+@@ -54,12 +55,12 @@ class DataPipelineOrchestrator:
+         """Initialize the data pipeline orchestrator.
+
+         Args:
+-            auth: TradeStation authentication for WebSocket connection
++            client: TradeStation API client (SIM environment)
+             data_directory: Root directory for HDF5 files
+             max_queue_size: Maximum size for each pipeline queue
+             settings: Application settings (optional, loads from env if None)
+         """
+-        self._auth = auth
++        self._client = client
+         self._data_directory = Path(data_directory)
+         self._max_queue_size = max_queue_size
+         self._settings = settings or load_settings()
+@@ -82,7 +83,7 @@ class DataPipelineOrchestrator:
+         ] = asyncio.Queue(maxsize=max_queue_size)  # noqa: F821
+
+         # Pipeline components
+-        self._websocket_client: TradeStationWebSocketClient | None = None
++        self._stream_parser: QuoteStreamParser | None = None
+         self._transformer: DollarBarTransformer | None = None
+         self._validator: DataValidator | None = None
+         self._gap_detector: GapDetector | None = None
+@@ -106,7 +107,7 @@ class DataPipelineOrchestrator:
+         """Start the data pipeline.
+
+         Spawns async tasks for each pipeline stage and begins
+-        WebSocket connection to receive market data.
++        TradeStation SDK streaming to receive market data.
+         """
+         if self._running:
+             raise RuntimeError("Pipeline is already running")
+@@ -119,18 +120,22 @@ class DataPipelineOrchestrator:
+         # Initialize pipeline components
+         self._initialize_components()
+
+-        # Subscribe to WebSocket to get data queue
+-        self._raw_queue = await self._websocket_client.subscribe()
++        # Start TradeStation SDK streaming to raw queue
++        symbols = ["MNQH26"]  # MNQ futures contract
++        streaming_task = asyncio.create_task(
++            self._stream_parser.stream_to_queue(symbols, self._raw_queue)
++        )
++        self._tasks.append(streaming_task)
+
+         # Spawn async tasks for each pipeline stage
+-        self._tasks = [
++        self._tasks.extend([
+             asyncio.create_task(self._transformer.consume()),
+             asyncio.create_task(self._validator.consume()),
+             asyncio.create_task(self._gap_detector.consume()),
+             asyncio.create_task(self._persistence.consume()),
+             asyncio.create_task(self._monitor_pipeline_health()),
+             asyncio.create_task(self._log_metrics_periodically()),
+-        ]
++        ])
+
+         logger.info(f"Data pipeline started with {len(self._tasks)} tasks")
+
+@@ -144,9 +149,9 @@ class DataPipelineOrchestrator:
+
+         logger.info("Stopping data pipeline orchestrator")
+
+-        # Cleanup WebSocket connection
+-        if self._websocket_client:
+-            await self._websocket_client.cleanup()
++        # Stop streaming
++        if self._stream_parser:
++            self._stream_parser.stop_streaming()
+
+         # Wait for queues to drain (timeout: 30 seconds)
+         try:
+@@ -174,8 +179,8 @@ class DataPipelineOrchestrator:
+         Creates instances of each component with appropriate queues
+         and configuration.
+         """
+-        # Stage 1: WebSocket Client
+-        self._websocket_client = TradeStationWebSocketClient(auth=self._auth)
++        # Stage 1: TradeStation SDK Quote Stream Parser (SIM environment)
++        self._stream_parser = QuoteStreamParser(client=self._client)
+
+         # Stage 2: Dollar Bar Transformer
+         self._transformer = DollarBarTransformer(
+diff --git a/src/execution/position_tracker.py b/src/execution/position_tracker.py
+index e647f6e..1744542 100644
+--- a/src/execution/position_tracker.py
++++ b/src/execution/position_tracker.py
+@@ -14,8 +14,8 @@ Features:
+
+ import logging
+ from dataclasses import dataclass, field
+-from datetime import datetime
+-from typing import Dict, Optional
++from datetime import datetime, timezone
++from typing import Dict, Optional, List
+
+ logger = logging.getLogger(__name__)
+
+@@ -41,6 +41,10 @@ class Position:
+         upper_barrier_price: Upper barrier (take profit) price level
+         lower_barrier_price: Lower barrier (stop loss) price level
+         time_barrier_utc: Time barrier (max hold time) in UTC
++        current_price: Current market price for mark-to-market P&L
++        unrealized_pnl: Unrealized P&L in USD
++        realized_pnl: Realized P&L in USD (after exit)
++        last_pnl_update: Timestamp of last P&L update
+     """
+
+     order_id: str
+@@ -56,10 +60,15 @@ class Position:
+     status: str = "PENDING"
+     initial_submission_time: Optional[datetime] = None
+     cumulative_fill_time_seconds: float = 0.0
+-    # NEW: Triple barrier fields
++    # Triple barrier fields
+     upper_barrier_price: Optional[float] = None
+     lower_barrier_price: Optional[float] = None
+     time_barrier_utc: Optional[datetime] = None
++    # Mark-to-market P&L fields
++    current_price: Optional[float] = None
++    unrealized_pnl: float = 0.0
++    realized_pnl: float = 0.0
++    last_pnl_update: Optional[datetime] = None
+
+     def __post_init__(self):
+         """Initialize derived fields after creation."""
+@@ -69,6 +78,9 @@ class Position:
+         # Set initial submission time if not provided
+         if self.initial_submission_time is None:
+             self.initial_submission_time = self.timestamp
++        # Initialize current price to entry price
++        if self.current_price is None:
++            self.current_price = self.entry_price
+
+
+ class PositionTracker:
+@@ -243,3 +255,141 @@ class PositionTracker:
+                 order_id, status
+             )
+         )
+
++    def update_mark_to_market(
++        self,
++        order_id: str,
++        current_price: float,
++        timestamp: Optional[datetime] = None,
++    ) -> None:
++        """Update mark-to-market P&L for a position.
++
++        Args:
++            order_id: TradeStation order ID to update
++            current_price: Current market price
++            timestamp: Update timestamp (defaults to current time)
++
++        Raises:
++            ValueError: If order_id not found
++
++        Example:
++            >>> tracker = PositionTracker()
++            >>> tracker.update_mark_to_market("ORDER-123", current_price=11850.0)
++            >>> position = tracker.get_position("ORDER-123")
++            >>> position.unrealized_pnl
++            250.0
++        """
++        position = self._positions.get(order_id)
++        if position is None:
++            raise ValueError(
++                "Position not found: {}".format(order_id)
++            )
++
++        if current_price <= 0:
++            raise ValueError(
++                "Current price must be positive, got {}".format(current_price)
++            )
++
++        # Calculate P&L based on direction
++        if position.direction == "bullish":
++            # Long position: profit when current_price > entry_price
++            pnl_per_contract = current_price - position.entry_price
++        else:  # bearish
++            # Short position: profit when current_price < entry_price
++            pnl_per_contract = position.entry_price - current_price
++
++        # MNQ point value is $0.50 per point
++        # P&L = (price_change) * quantity * point_value
++        point_value = 0.5  # MNQ futures
++        position.unrealized_pnl = pnl_per_contract * position.filled_quantity * point_value
++
++        # Update current price and timestamp
++        position.current_price = current_price
++        position.last_pnl_update = timestamp if timestamp else datetime.now()
++
++        logger.debug(
++            "Mark-to-market updated: order_id={}, current_price={}, unrealized_pnl={}".format(
++                order_id, current_price, position.unrealized_pnl
++            )
++        )
++
++    def get_total_unrealized_pnl(self) -> float:
++        """Get total unrealized P&L across all positions.
++
++        Returns:
++            Total unrealized P&L in USD
++
++        Example:
++            >>> tracker = PositionTracker()
++            >>> total_pnl = tracker.get_total_unrealized_pnl()
++        """
++        return sum(pos.unrealized_pnl for pos in self._positions.values())
++
++    def get_total_realized_pnl(self) -> float:
++        """Get total realized P&L across all closed positions.
++
++        Returns:
++            Total realized P&L in USD
++
++        Example:
++            >>> tracker = PositionTracker()
++            >>> total_pnl = tracker.get_total_realized_pnl()
++        """
++        return sum(pos.realized_pnl for pos in self._positions.values())
++
++    def realize_pnl(self, order_id: str, exit_price: float) -> None:
++        """Realize P&L when position is closed.
++
++        Args:
++            order_id: TradeStation order ID
++            exit_price: Exit price
++
++        Raises:
++            ValueError: If order_id not found
++
++        Example:
++            >>> tracker = PositionTracker()
++            >>> tracker.realize_pnl("ORDER-123", exit_price=11850.0)
++            >>> position = tracker.get_position("ORDER-123")
++            >>> position.realized_pnl
++            250.0
++        """
++        position = self._positions.get(order_id)
++        if position is None:
++            raise ValueError(
++                "Position not found: {}".format(order_id)
++            )
++
++        # Calculate final realized P&L
++        if position.direction == "bullish":
++            pnl_per_contract = exit_price - position.entry_price
++        else:  # bearish
++            pnl_per_contract = position.entry_price - exit_price
++
++        point_value = 0.5  # MNQ futures
++        position.realized_pnl = pnl_per_contract * position.filled_quantity * point_value
++
++        # Reset unrealized P&L
++        position.unrealized_pnl = 0.0
++
++        logger.info(
++            "P&L realized: order_id={}, exit_price={}, realized_pnl={}".format(
++                order_id, exit_price, position.realized_pnl
++            )
++        )
+
++    def get_open_positions(self) -> list[Position]:
++        """Get list of all open positions.
++
++        Returns:
++            List of Position objects with status PENDING, PARTIALLY_FILLED, or FULLY_FILLED
++
++        Example:
++            >>> tracker = PositionTracker()
++            >>> open_positions = tracker.get_open_positions()
++        """
++        open_statuses = ["PENDING", "PARTIALLY_FILLED", "FULLY_FILLED"]
++        return [
++            pos for pos in self._positions.values()
++            if pos.status in open_statuses
++        ]
+diff --git a/src/execution/tradestation/market_data/streaming.py b/src/execution/tradestation/market_data/streaming.py
+index fe991d8..f1d0439 100644
+--- a/src/execution/tradestation/market_data/streaming.py
++++ b/src/execution/tradestation/market_data/streaming.py
+@@ -24,10 +24,12 @@ import logging
+ from datetime import datetime, timezone
+ from typing import Any, AsyncGenerator, Callable
+
++import httpx
+ from httpx import AsyncClient, HTTPStatusError, NetworkError as HttpxNetworkError
+
++from src.data.models import MarketData
+ from src.execution.tradestation.client import TradeStationClient
+-from src.execution.tradestation.exceptions import NetworkError
++from src.execution.tradestation.exceptions import NetworkError, ValidationError
+ from src.execution.tradestation.models import TradeStationQuote
+ from src.execution.tradestation.utils import setup_logger
+
+@@ -146,13 +148,11 @@ class QuoteStreamParser:
+                         self._reconnect_count = 0
+                         self.logger.info("Connected to quote stream")
+
+-                        # Parse chunked response
+-                        async for chunk in response.aiter_bytes():
++                        # Parse chunked response and yield quotes
++                        async for quote in self._parse_stream_chunks(response, symbols):
+                             if not self._is_streaming:
+                                 break
+
+-                            # Parse SSE-style chunks
+-                            await self._process_chunk(chunk, symbols)
++                            yield quote
+
+             except (NetworkError, HttpxNetworkError, HTTPStatusError) as e:
+                 if not self._is_streaming:
+@@ -176,59 +176,71 @@ class QuoteStreamParser:
+                 self.logger.error(f"Unexpected error in stream_quotes: {e}")
+                 raise
+
+-    async def _process_chunk(self, chunk: bytes, symbols: list[str]) -> None:
++    async def _parse_stream_chunks(
++        self,
++        response,
++        symbols: list[str],
++    ) -> AsyncGenerator[TradeStationQuote, None]:
+         """
+-        Process a chunk of data from the HTTP stream.
++        Parse HTTP stream chunks and yield TradeStationQuote objects.
+
+         Args:
+-            chunk: Raw bytes from HTTP stream
++            response: HTTP response object with stream
+             symbols: List of expected symbols
++
++        Yields:
++            TradeStationQuote objects as they are parsed
+         """
++        import json
+
+         try:
+-            # Decode chunk to string
+-            text = chunk.decode("utf-8")
++            async for chunk in response.aiter_bytes():
++                if not self._is_streaming:
++                    break
+
+-            # Parse SSE-style format
+-            # TradeStation API uses format: "data: {json}\n\n"
+-            lines = text.split("\n")
++                # Decode chunk to string
++                text = chunk.decode("utf-8")
+
+-            for line in lines:
+-                line = line.strip()
++                # Parse SSE-style format
++                # TradeStation API uses format: "data: {json}\n\n"
++                lines = text.split("\n")
+
+-                if not line or not line.startswith("data:"):
+-                    continue
++                for line in lines:
++                    line = line.strip()
+
+-                # Extract JSON after "data: "
+-                json_str = line[5:].strip()  # Remove "data: " prefix
++                    if not line or not line.startswith("data:"):
++                        continue
+
+-                if not json_str:
+-                    continue
++                    # Extract JSON after "data: "
++                    json_str = line[5:].strip()  # Remove "data: " prefix
+
+-                # Parse JSON
+-                import json
++                    if not json_str:
++                        continue
+
+-                try:
+-                    quote_data = json.loads(json_str)
+-                    quote = TradeStationQuote(**quote_data)
++                    # Parse JSON
++                    try:
++                        quote_data = json.loads(json_str)
++                        quote = TradeStationQuote(**quote_data)
+
+-                    # Validate symbol
+-                    if quote.symbol not in symbols:
+-                        self.logger.warning(f"Received unexpected symbol: {quote.symbol}")
+-                        continue
++                        # Validate symbol
++                        if quote.symbol not in symbols:
++                            self.logger.warning(f"Received unexpected symbol: {quote.symbol}")
++                            continue
+
+-                    # Log quote received
+-                    self.logger.debug(f"Quote received: {quote.symbol} @ {quote.last}")
++                        # Log quote received
++                        self.logger.debug(f"Quote received: {quote.symbol} @ {quote.last}")
+
+-                    # Note: In a real streaming scenario, this would yield or put to a queue
+-                    # For testing purposes, we just log it
++                        # Yield the quote
++                        yield quote
+
+-                except json.JSONDecodeError as e:
+-                    self.logger.warning(f"Failed to decode JSON: {json_str[:100]}... - {e}")
+-                except Exception as e:
+-                    self.logger.warning(f"Failed to parse quote data: {e}")
++                    except json.JSONDecodeError as e:
++                        self.logger.warning(f"Failed to decode JSON: {json_str[:100]}... - {e}")
++                    except Exception as e:
++                        self.logger.warning(f"Failed to parse quote data: {e}")
+
+         except Exception as e:
+-            self.logger.error(f"Error processing chunk: {e}")
++            self.logger.error(f"Error parsing stream chunks: {e}")
++            raise
+
+     def stop_streaming(self) -> None:
+         """
+@@ -240,6 +252,35 @@ class QuoteStreamParser:
+         self.logger.info("Stopping quote stream")
+         self._is_streaming = False
+
++    def _quote_to_market_data(self, quote: TradeStationQuote) -> MarketData:
++        """
++        Convert TradeStationQuote to MarketData model.
++
++        Args:
++            quote: TradeStationQuote object
++
++        Returns:
++            MarketData object
++
++        Raises:
++            ValidationError: If quote lacks required fields
++        """
++        # Validate required fields
++        if quote.last is None:
++            raise ValidationError(f"Quote missing required field 'last': {quote.symbol}")
++
++        # Use last trade price for mid-price calculation
++        volume = quote.last_size if quote.last_size else (quote.volume if quote.volume else 0)
++
++        return MarketData(
++            symbol=quote.symbol,
++            timestamp=quote.timestamp,
++            bid=quote.bid,
++            ask=quote.ask,
++            last=quote.last,
++            volume=volume,
++        )
+
++
+     async def stream_to_queue(
+         self,
+         symbols: list[str],
+@@ -253,7 +294,7 @@ class DataPipelineOrchestrator:
+
+         Args:
+             symbols: List of symbols to stream
+-            queue: asyncio.Queue to receive quotes
++            queue: asyncio.Queue to receive MarketData objects
+
+         Example:
+             queue = asyncio.Queue()
+@@ -263,14 +304,16 @@ class DataPipelineOrchestrator:
+
+             # Process quotes from queue
+             while True:
+-                quote = await queue.get()
+-                # Process quote...
++                market_data = await queue.get()
++                # Process market_data...
+         """
+         self.logger.info(f"Starting quote stream to queue for {symbols}")
+
+         try:
+             async for quote in self.stream_quotes(symbols):
+-                await queue.put(quote)
++                # Convert TradeStationQuote to MarketData
++                market_data = self._quote_to_market_data(quote)
++                await queue.put(market_data)
+         except Exception as e:
+             self.logger.error(f"Error streaming to queue: {e}")
+             raise
+diff --git a/src/execution/tradestation/orders/submission.py b/src/execution/tradestation/orders/submission.py
+index 0163efb..d4f69ea 100644
+--- a/src/execution/tradestation/orders/submission.py
++++ b/src/execution/tradestation/orders/submission.py
+@@ -9,6 +9,7 @@ Key Features:
+ - Cancel individual orders
+ - Cancel all orders for an account
+ - Input validation and error handling
++- Integration with trade execution pipeline
+
+ Usage:
+     async with TradeStationClient(env="sim", ...) as client:
+@@ -31,6 +32,11 @@ Usage:
+
+         # Cancel the order
+         await orders_client.cancel_order(order.order_id)
++
++Integration with Trade Execution Pipeline:
++    The OrdersClient integrates with trade_execution_pipeline.py to route
++    signals through risk validation to SIM order execution. All orders are
++    submitted to the SIM environment (env="sim") for paper trading.
+ """
+
+ import logging
+diff --git a/src/ml/inference.py b/src/ml/inference.py
+index a9fa03c..d23b451 100644
+--- a/src/ml/inference.py
++++ b/src/ml/inference.py
+@@ -14,7 +14,7 @@ import numpy as np
+ import pandas as pd
+ import xgboost as xgb
+
+-from src.data.models import SilverBulletSetup
++from src.data.models import DollarBar, SilverBulletSetup
+ from src.ml.features import FeatureEngineer
+ from src.ml.pipeline_serializer import PipelineSerializer
+
+@@ -72,13 +72,17 @@ class MLInference:
+         logger.info(f"MLInference initialized with model_dir: {self._model_dir}")
+
+     def predict_probability(
+-        self, signal: SilverBulletSetup, horizon: int
++        self,
++        signal: SilverBulletSetup,
++        horizon: int,
++        recent_bars: list[DollarBar] | None = None,
+     ) -> dict[str, object]:
+         """Generate success probability score for a signal.
+
+         Args:
+             signal: Silver Bullet setup with timestamp and features
+             horizon: Time horizon in minutes (5, 15, 30, or 60)
++            recent_bars: Optional list of recent DollarBar objects for feature engineering
+
+         Returns:
+             Dictionary with probability score and metadata:
+@@ -101,8 +105,8 @@ class MLInference:
+             model = self._load_model_if_needed(horizon)
+             pipeline = self._load_pipeline_if_needed(horizon)
+
+-            # Engineer features from signal
+-            features_df = self._engineer_features_for_signal(signal)
++            # Engineer features from signal and recent bars
++            features_df = self._engineer_features_for_signal(signal, recent_bars)
+
+             # Transform features using pipeline
+             transformed = self._pipeline_serializer.transform_features(
+@@ -325,31 +329,69 @@ class MLInference:
+
+             return self._pipelines[horizon]
+
+-    def _engineer_features_for_signal(self, signal: SilverBulletSetup) -> pd.DataFrame:
++    def _engineer_features_for_signal(
++        self,
++        signal: SilverBulletSetup,
++        recent_bars: list[DollarBar] | None = None,
++    ) -> pd.DataFrame:
+         """Engineer features for a Silver Bullet signal.
+
+         Args:
+             signal: Silver Bullet setup
++            recent_bars: Optional list of recent DollarBar objects for feature engineering.
++                        If None, creates minimal features from signal timestamp only.
+
+         Returns:
+             DataFrame with engineered features
++
++        Note:
++            For real-time inference, recent_bars should contain the last 50-100
++            DollarBar objects to calculate meaningful features. If not provided,
++            falls back to minimal features for compatibility.
+         """
+-        # TODO: Integrate with Epic 2 to get recent Dollar Bars
+-        # For now, create dummy features
+-        # This will be implemented when Epic 2 integration is complete
+
+-        # Create dummy feature row
+-        features = {
+-            "atr": 1.0,
+-            "rsi": 50.0,
+-            "macd": 0.0,
+-            "close_position": 0.5,
+-            "volume_ratio": 1.0,
+-            "hour": signal.timestamp.hour,
+-            "day_of_week": signal.timestamp.weekday(),
+-        }
+
+-        return pd.DataFrame([features])
++        if recent_bars is None or len(recent_bars) < 20:
++            # Not enough bars for meaningful features - use minimal features
++            # This maintains backward compatibility during integration
++            logger.warning(
++                f"Insufficient dollar bars for feature engineering: "
++                f"{len(recent_bars) if recent_bars else 0} bars. "
++                f"Using minimal features."
++            )
++
++            features = {
++                "atr": 1.0,
++                "rsi": 50.0,
++                "macd": 0.0,
++                "close_position": 0.5,
++                "volume_rate": 1.0,
++                "hour": signal.timestamp.hour,
++                "day_of_week": signal.timestamp.weekday(),
++                "returns": 0.0,
++                "high_low_range": 1.0,
++                "atr_ratio": 1.0,
++            }
++
++            return pd.DataFrame([features])
++
++        # Convert DollarBar objects to DataFrame for feature engineering
++        bars_data = []
++        for bar in recent_bars:
++            bars_data.append({
++                "timestamp": bar.timestamp,
++                "open": bar.open,
++                "high": bar.high,
++                "low": bar.low,
++                "close": bar.close,
++                "volume": bar.volume,
++            })
++
++        df = pd.DataFrame(bars_data)
++
++        # Engineer features using the FeatureEngineer
++        features_df = self._feature_engineer.engineer_features(df)
+
++        # Return only the last row (most recent features)
++        return features_df.iloc[[-1]].copy()
+
+     def _predict_with_model(
+         self, model: xgb.XGBClassifier, features: pd.DataFrame

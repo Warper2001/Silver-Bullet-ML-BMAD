@@ -152,3 +152,8 @@ poetry.lock
 _bmad/
 _bmad-output/
 .claude/
+.access_token
+auth_url.txt
+data/historical/
+*.json
+*.json

@@ -128,11 +128,11 @@ class TradeStationWebSocketClient:
             access_token = await self.auth.authenticate()
 
             # Establish WebSocket connection
-            extra_headers = {"Authorization": f"Bearer {access_token}"}
+            additional_headers = {"Authorization": f"Bearer {access_token}"}
 
             self._websocket = await websockets.connect(
                 self.WEBSOCKET_ENDPOINT,
-                extra_headers=extra_headers,
+                additional_headers=additional_headers,
                 ping_interval=self.HEARTBEAT_INTERVAL,
                 ping_timeout=5,
             )

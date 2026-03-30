@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.data.auth import TradeStationAuth
+from src.data.auth_v3 import TradeStationAuthV3
 from src.data.config import Settings, load_settings
 from src.data.gap_detection import GapDetector
 from src.data.models import DollarBar, MarketData, ValidationResult
@@ -46,7 +47,7 @@ class DataPipelineOrchestrator:
 
     def __init__(
         self,
-        auth: TradeStationAuth,
+        auth: TradeStationAuth | TradeStationAuthV3,
         data_directory: str,
         max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE,
         settings: Settings | None = None,
@@ -54,7 +55,8 @@ class DataPipelineOrchestrator:
         """Initialize the data pipeline orchestrator.
 
         Args:
-            auth: TradeStation authentication for WebSocket connection
+            auth: TradeStation authentication for WebSocket connection.
+                Accepts both TradeStationAuth (v2) and TradeStationAuthV3 (v3).
             data_directory: Root directory for HDF5 files
             max_queue_size: Maximum size for each pipeline queue
             settings: Application settings (optional, loads from env if None)

@@ -32,8 +32,6 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 DEFAULT_DATA_DIR = Path("data/historical/mnq")
-LOCK_FILE = DEFAULT_DATA_DIR / ".lock"
-CHECKPOINT_FILE = DEFAULT_DATA_DIR / ".checkpoint.json"
 
 # MNQ contract multiplier
 MNQ_MULTIPLIER = 0.5
@@ -88,6 +86,10 @@ class HistoricalDownloader:
         self.auth = auth or TradeStationAuth()
         self.client: Optional[TradeStationClient] = None
         self.symbol_generator = FuturesSymbolGenerator()
+
+        # Instance-specific paths for lock and checkpoint files
+        self.lock_file = self.data_dir / ".lock"
+        self.checkpoint_file = self.data_dir / ".checkpoint.json"
 
         # Scheduler for token refresh
         self.scheduler: Optional[BackgroundScheduler] = None
@@ -289,6 +291,9 @@ class HistoricalDownloader:
         Raises:
             ValueError: If file size exceeds maximum
         """
+        # Ensure data directory exists
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
         file_path = self.data_dir / f"{symbol}.h5"
 
         # Write to temp file first
@@ -360,11 +365,11 @@ class HistoricalDownloader:
 
     def _load_checkpoint(self) -> None:
         """Load checkpoint from disk."""
-        if not CHECKPOINT_FILE.exists():
+        if not self.checkpoint_file.exists():
             return
 
         try:
-            with open(CHECKPOINT_FILE, "r") as f:
+            with open(self.checkpoint_file, "r") as f:
                 self._checkpoint = json.load(f)
 
             self._downloaded_symbols = set(self._checkpoint.get("symbols", []))
@@ -379,7 +384,7 @@ class HistoricalDownloader:
     def _save_checkpoint(self) -> None:
         """Save checkpoint to disk atomically with retry."""
         # Ensure directory exists
-        CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
 
         checkpoint_data = {
             "symbols": list(self._downloaded_symbols),
@@ -387,7 +392,7 @@ class HistoricalDownloader:
         }
 
         # Write to temp file first
-        temp_file = CHECKPOINT_FILE.with_suffix(".tmp")
+        temp_file = self.checkpoint_file.with_suffix(".tmp")
 
         for attempt in range(3):
             try:
@@ -395,7 +400,7 @@ class HistoricalDownloader:
                     json.dump(checkpoint_data, f, indent=2)
 
                 # Atomic rename
-                temp_file.replace(CHECKPOINT_FILE)
+                temp_file.replace(self.checkpoint_file)
 
                 logger.debug(f"Saved checkpoint: {len(self._downloaded_symbols)} contracts")
                 return
@@ -433,10 +438,13 @@ class HistoricalDownloader:
         Raises:
             LockFileExistsError: If lock file exists
         """
-        if LOCK_FILE.exists():
+        # Ensure data directory exists
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
+        if self.lock_file.exists():
             # Check if PID is still running
             try:
-                with open(LOCK_FILE, "r") as f:
+                with open(self.lock_file, "r") as f:
                     pid = int(f.read().strip())
 
                 # Check if process exists
@@ -448,20 +456,20 @@ class HistoricalDownloader:
                 except OSError:
                     # Process not running, stale lock
                     logger.warning("Removing stale lock file")
-                    LOCK_FILE.unlink()
+                    self.lock_file.unlink()
 
             except (ValueError, IOError) as e:
                 logger.warning(f"Could not read lock file: {e}")
 
         # Create lock file with our PID
         try:
-            with open(LOCK_FILE, "w") as f:
+            with open(self.lock_file, "w") as f:
                 f.write(str(os.getpid()))
 
             # Set file permissions
-            LOCK_FILE.chmod(0o644)
+            self.lock_file.chmod(0o644)
 
-            logger.debug(f"Acquired lock file: {LOCK_FILE}")
+            logger.debug(f"Acquired lock file: {self.lock_file}")
 
         except IOError as e:
             raise LockFileExistsError(f"Failed to create lock file: {e}")
@@ -469,8 +477,8 @@ class HistoricalDownloader:
     def _release_lock(self) -> None:
         """Release lock file."""
         try:
-            if LOCK_FILE.exists():
-                LOCK_FILE.unlink()
+            if self.lock_file.exists():
+                self.lock_file.unlink()
                 logger.debug("Released lock file")
         except OSError as e:
             logger.warning(f"Failed to remove lock file: {e}")

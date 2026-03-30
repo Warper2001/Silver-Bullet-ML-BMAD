@@ -158,6 +158,20 @@ class PositionTracker:
         """
         return self._positions.get(order_id)
 
+    def get_all_positions(self) -> list[Position]:
+        """Retrieve all active positions.
+
+        Returns:
+            List of all Position objects
+
+        Example:
+            >>> tracker = PositionTracker()
+            >>> positions = tracker.get_all_positions()
+            >>> for pos in positions:
+            ...     print(f"{pos.symbol}: {pos.quantity}")
+        """
+        return list(self._positions.values())
+
     def update_fill(
         self,
         order_id: str,

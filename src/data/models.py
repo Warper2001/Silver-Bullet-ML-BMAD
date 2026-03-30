@@ -67,10 +67,11 @@ class DollarBar(BaseModel):
     """Dollar Bar with fixed $50M notional value threshold."""
 
     timestamp: datetime = Field(..., description="Bar completion timestamp")
-    open: float = Field(..., gt=0, description="Open price (first trade)")
-    high: float = Field(..., gt=0, description="High price (max trade)")
-    low: float = Field(..., gt=0, description="Low price (min trade)")
-    close: float = Field(..., gt=0, description="Close price (last trade)")
+    # ge=0 allows zeros for closed-market data
+    open: float = Field(..., ge=0, description="Open price (first trade)")
+    high: float = Field(..., ge=0, description="High price (max trade)")
+    low: float = Field(..., ge=0, description="Low price (min trade)")
+    close: float = Field(..., ge=0, description="Close price (last trade)")
     volume: int = Field(..., ge=0, description="Total volume in bar")
     is_forward_filled: bool = Field(
         default=False, description="True if bar was forward-filled due to data gap"
@@ -83,8 +84,10 @@ class DollarBar(BaseModel):
         cls, v: float, info
     ) -> float:  # type: ignore[no-untyped-def]
         """Validate high is >= open and close."""
-        # Only validate against open (close not set yet when high is validated)
+        # Skip validation for closed-market data (zero values)
         open_val = info.data.get("open")
+        if open_val is not None and open_val == 0:
+            return v  # Closed market, allow any high value
         if open_val is not None and v < open_val:
             raise ValueError("high must be >= open")
         return v
@@ -95,8 +98,10 @@ class DollarBar(BaseModel):
         cls, v: float, info
     ) -> float:  # type: ignore[no-untyped-def]
         """Validate low is <= open and close."""
-        # Only validate against open (close not set yet when low is validated)
+        # Skip validation for closed-market data (zero values)
         open_val = info.data.get("open")
+        if open_val is not None and open_val == 0:
+            return v  # Closed market, allow any low value
         if open_val is not None and v > open_val:
             raise ValueError("low must be <= open")
         return v
@@ -107,8 +112,13 @@ class DollarBar(BaseModel):
         cls, v: float, info
     ) -> float:  # type: ignore[no-untyped-def]
         """Validate close is within high and low."""
+        # Skip validation for closed-market data (zero values)
         high_val = info.data.get("high")
         low_val = info.data.get("low")
+        if high_val is not None and high_val == 0:
+            return v  # Closed market, allow any close value
+        if low_val is not None and low_val == 0:
+            return v  # Closed market, allow any close value
         if high_val is not None and v > high_val:
             raise ValueError("close must be <= high")
         if low_val is not None and v < low_val:
@@ -121,10 +131,16 @@ class DollarBar(BaseModel):
         cls, v: float, info
     ) -> float:  # type: ignore[no-untyped-def]
         """Validate notional value is reasonable for Dollar Bars."""
-        # Allow zero for forward-filled bars
+        # Allow zero for forward-filled bars or closed-market data
         is_forward_filled = info.data.get("is_forward_filled", False)
-        if v == 0 and is_forward_filled:
-            return v
+        # Check if all prices are zero (closed market)
+        open_val = info.data.get("open", 0)
+        high_val = info.data.get("high", 0)
+        low_val = info.data.get("low", 0)
+        close_val = info.data.get("close", 0)
+
+        if v == 0 and (is_forward_filled or (open_val == 0 and high_val == 0 and low_val == 0 and close_val == 0)):
+            return v  # Allow zero for forward-filled or closed-market data
 
         # Notional should be positive for real bars
         if v <= 0:

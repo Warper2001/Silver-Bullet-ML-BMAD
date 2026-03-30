@@ -9,7 +9,7 @@ import asyncio
 import logging
 from datetime import datetime
 
-from src.data.models import DollarBar, SilverBulletSetup
+from src.data.models import DollarBar, SilverBulletSetup, SwingPoint
 from src.detection.fvg_detector import FVGDetector
 from src.detection.liquidity_sweep_detector import LiquiditySweepDetector
 from src.detection.mss_detector import MSSDetector
@@ -278,12 +278,24 @@ class DetectionPipeline:
         if len(self._bar_history) >= 7:  # Need at least 7 bars for swing detection
             for i, bar_to_check in enumerate(self._bar_history):
                 if i >= 3 and i <= len(self._bar_history) - 4:
-                    swing_high = detect_swing_high(self._bar_history, i)
-                    swing_low = detect_swing_low(self._bar_history, i)
-                    if swing_high:
-                        swing_highs.append(swing_high)
-                    if swing_low:
-                        swing_lows.append(swing_low)
+                    is_swing_high = detect_swing_high(self._bar_history, i)
+                    is_swing_low = detect_swing_low(self._bar_history, i)
+                    if is_swing_high:
+                        # Create SwingPoint object
+                        swing_highs.append(SwingPoint(
+                            timestamp=bar_to_check.timestamp,
+                            price=bar_to_check.high,
+                            swing_type="swing_high",
+                            bar_index=i
+                        ))
+                    if is_swing_low:
+                        # Create SwingPoint object
+                        swing_lows.append(SwingPoint(
+                            timestamp=bar_to_check.timestamp,
+                            price=bar_to_check.low,
+                            swing_type="swing_low",
+                            bar_index=i
+                        ))
 
         # Detect MSS
         volume_ma = RollingVolumeAverage(window=20)
@@ -291,15 +303,15 @@ class DetectionPipeline:
             volume_ma.update(historical_bar.volume)
 
         bullish_mss = detect_bullish_mss(
-            self._bar_history,
-            len(self._bar_history) - 1,
-            volume_ma,
+            self._bar_history[-1],  # Current bar (most recent)
+            swing_highs,  # List of SwingPoint objects
+            volume_ma.average,  # Rolling average as float
             volume_confirmation_ratio=1.5,
         )
         bearish_mss = detect_bearish_mss(
-            self._bar_history,
-            len(self._bar_history) - 1,
-            volume_ma,
+            self._bar_history[-1],  # Current bar (most recent)
+            swing_lows,  # List of SwingPoint objects
+            volume_ma.average,  # Rolling average as float
             volume_confirmation_ratio=1.5,
         )
 
@@ -334,16 +346,17 @@ class DetectionPipeline:
 
         # Detect liquidity sweeps (need swing points)
         if swing_highs or swing_lows:
+            # Pass the most recent swing point, not the entire list
             bullish_sweep = detect_bullish_liquidity_sweep(
                 self._bar_history,
                 len(self._bar_history) - 1,
-                swing_lows,
+                swing_lows[-1] if swing_lows else None,  # Most recent swing low
                 min_sweep_depth_ticks=5,
             )
             bearish_sweep = detect_bearish_liquidity_sweep(
                 self._bar_history,
                 len(self._bar_history) - 1,
-                swing_highs,
+                swing_highs[-1] if swing_highs else None,  # Most recent swing high
                 min_sweep_depth_ticks=5,
             )
 

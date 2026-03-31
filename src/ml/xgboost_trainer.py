@@ -44,6 +44,8 @@ def train_xgboost(
     min_child_weight: int = 1,
     subsample: float = 0.8,
     colsample_bytree: float = 0.8,
+    reg_lambda: float = 1.0,
+    reg_alpha: float = 0.0,
     random_state: int = 42,
 ) -> tuple[XGBClassifier, dict]:
     """Train XGBoost classifier for binary classification.
@@ -59,6 +61,8 @@ def train_xgboost(
         min_child_weight: Minimum child weight (default: 1)
         subsample: Subsample ratio for training data (default: 0.8)
         colsample_bytree: Subsample ratio for columns (default: 0.8)
+        reg_lambda: L2 regularization (default: 1.0)
+        reg_alpha: L1 regularization (default: 0.0)
         random_state: Random seed (default: 42)
 
     Returns:
@@ -72,6 +76,8 @@ def train_xgboost(
         min_child_weight=min_child_weight,
         subsample=subsample,
         colsample_bytree=colsample_bytree,
+        reg_lambda=reg_lambda,
+        reg_alpha=reg_alpha,
         random_state=random_state,
         eval_metric="logloss",
         enable_categorical=False,

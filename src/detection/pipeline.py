@@ -351,13 +351,13 @@ class DetectionPipeline:
                 self._bar_history,
                 len(self._bar_history) - 1,
                 swing_lows[-1] if swing_lows else None,  # Most recent swing low
-                min_sweep_depth_ticks=5,
+                min_sweep_ticks=5,
             )
             bearish_sweep = detect_bearish_liquidity_sweep(
                 self._bar_history,
                 len(self._bar_history) - 1,
                 swing_highs[-1] if swing_highs else None,  # Most recent swing high
-                min_sweep_depth_ticks=5,
+                min_sweep_ticks=5,
             )
 
             if bullish_sweep:
@@ -416,13 +416,12 @@ class DetectionPipeline:
                     # Check for direction match
                     if mss.direction == fvg.direction:
                         # Create a setup (may also include sweep)
-                        setup = detect_silver_bullet_setup(
-                            mss_event=mss,
-                            fvg_event=fvg,
+                        setups = detect_silver_bullet_setup(
+                            mss_events=[mss],
+                            fvg_events=[fvg],
                             sweep_events=self._recent_sweeps,
                         )
-                        if setup:
-                            detected_setups.append(setup)
+                        detected_setups.extend(setups)
 
         setups.extend(detected_setups)
 

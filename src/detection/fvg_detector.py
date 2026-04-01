@@ -206,3 +206,106 @@ class FVGDetector:
             Count of unfilled FVGs
         """
         return len(self._unfilled_fvgs)
+
+
+# ============================================================
+# TRIPLE CONFLUENCE SCALPER FVG DETECTOR
+# ============================================================
+
+from src.detection.models import TripleConfluenceFVGEvent
+
+
+class SimpleFVGDetector:
+    """Simple synchronous FVG detector for Triple Confluence Scalper strategy.
+
+    This is a simplified version of the FVG detector that takes a list of
+    bars and returns detected FVG events synchronously. Designed for use
+    by the Triple Confluence Scalper strategy.
+
+    Attributes:
+        _min_gap_size: Minimum gap size in ticks
+        _tick_size: Tick size for futures contract (0.25 for MNQ)
+    """
+
+    DEFAULT_MIN_GAP_SIZE = 4  # Minimum gap size in ticks
+    DEFAULT_TICK_SIZE = 0.25  # MNQ tick size
+
+    def __init__(
+        self,
+        min_gap_size: int = DEFAULT_MIN_GAP_SIZE,
+        tick_size: float = DEFAULT_TICK_SIZE,
+    ) -> None:
+        """Initialize Simple FVG detector.
+
+        Args:
+            min_gap_size: Minimum gap size in ticks (default: 4)
+            tick_size: Tick size for futures contract (default: 0.25 for MNQ)
+        """
+        self._min_gap_size = min_gap_size
+        self._tick_size = tick_size
+
+    def detect_fvg(self, bars: list[DollarBar]) -> list[TripleConfluenceFVGEvent]:
+        """Detect FVG patterns from a list of Dollar Bars.
+
+        Args:
+            bars: List of Dollar Bars to analyze
+
+        Returns:
+            List of TripleConfluenceFVGEvent objects (may be empty)
+        """
+        if len(bars) < 3:
+            return []
+
+        detected_fvgs: list[TripleConfluenceFVGEvent] = []
+
+        # Scan through all 3-candle combinations
+        for i in range(len(bars) - 2):
+            bar1 = bars[i]  # First candle
+            bar2 = bars[i + 1]  # Second candle (middle)
+            bar3 = bars[i + 2]  # Third candle
+
+            # Check for bullish FVG: Bar 1 low > Bar 3 high
+            if bar1.low > bar3.high:
+                gap_size = bar1.low - bar3.high
+                gap_size_ticks = gap_size / self._tick_size
+
+                # Filter by minimum gap size
+                if gap_size_ticks >= self._min_gap_size:
+                    fvg = TripleConfluenceFVGEvent(
+                        timestamp=bar3.timestamp,
+                        fvg_type="bullish",
+                        gap_size_ticks=gap_size_ticks,
+                        gap_edge_high=bar1.low,  # Top of gap is bar 1 low
+                        gap_edge_low=bar3.high,  # Bottom of gap is bar 3 high
+                        third_candle_close=bar3.close,
+                    )
+                    detected_fvgs.append(fvg)
+                    logger.debug(
+                        f"Bullish FVG detected at {bar3.timestamp}: "
+                        f"gap {bar1.low:.2f} - {bar3.high:.2f} "
+                        f"({gap_size_ticks:.1f} ticks)"
+                    )
+
+            # Check for bearish FVG: Bar 1 high < Bar 3 low
+            if bar1.high < bar3.low:
+                gap_size = bar3.low - bar1.high
+                gap_size_ticks = gap_size / self._tick_size
+
+                # Filter by minimum gap size
+                if gap_size_ticks >= self._min_gap_size:
+                    fvg = TripleConfluenceFVGEvent(
+                        timestamp=bar3.timestamp,
+                        fvg_type="bearish",
+                        gap_size_ticks=gap_size_ticks,
+                        gap_edge_high=bar3.low,  # Top of gap is bar 3 low
+                        gap_edge_low=bar1.high,  # Bottom of gap is bar 1 high
+                        third_candle_close=bar3.close,
+                    )
+                    detected_fvgs.append(fvg)
+                    logger.debug(
+                        f"Bearish FVG detected at {bar3.timestamp}: "
+                        f"gap {bar3.low:.2f} - {bar1.high:.2f} "
+                        f"({gap_size_ticks:.1f} ticks)"
+                    )
+
+        return detected_fvgs

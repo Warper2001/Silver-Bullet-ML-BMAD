@@ -26,6 +26,9 @@ plotly = "^5.18.0"
 rich = "^13.7.0"
 tenacity = "^8.2.0"
 
+[tool.poetry.scripts]
+validate-data = "src.cli.validate_data:main"
+
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
 flake8 = "^6.0.0"

@@ -5,6 +5,7 @@ This package contains components for:
 - Market order submission
 - Limit order submission
 - Order tracking and management
+- Entry and exit logic models
 """
 
 from src.execution.order_type_selector import (
@@ -19,6 +20,10 @@ from src.execution.market_order_submitter import (
 from src.execution.limit_order_submitter import (
     LimitOrderSubmitter,
 )
+from src.execution.models import (
+    TradeOrder,
+    EntryDecision,
+)
 
 __all__ = [
     "OrderTypeSelector",
@@ -27,4 +32,6 @@ __all__ = [
     "LimitOrderSubmitter",
     "OrderSubmissionError",
     "OrderSubmissionResult",
+    "TradeOrder",
+    "EntryDecision",
 ]

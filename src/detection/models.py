@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class LevelSweepEvent(BaseModel):
@@ -329,3 +329,381 @@ class MomentumSignal(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+
+
+# Ensemble Signal Model
+
+
+class EnsembleSignal(BaseModel):
+    """Normalized signal format for ensemble processing.
+
+    This model provides a unified interface for signals from all 5 strategies:
+    - Triple Confluence Scalper
+    - Wolf Pack 3-Edge
+    - Adaptive EMA Momentum
+    - VWAP Bounce
+    - Opening Range Breakout
+
+    The normalization preserves all critical information while providing
+    a consistent format for ensemble weighting and decision-making.
+    """
+
+    strategy_name: str = Field(..., description="Name of the strategy generating the signal")
+    timestamp: datetime = Field(..., description="Signal generation timestamp")
+    direction: Literal["long", "short"] = Field(..., description="Trade direction")
+    entry_price: float = Field(..., gt=0, description="Entry price for the trade")
+    stop_loss: float = Field(..., gt=0, description="Stop loss price level")
+    take_profit: float = Field(..., gt=0, description="Take profit price level")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence score (0-1 scale)")
+    bar_timestamp: datetime = Field(..., description="Which bar triggered the signal")
+    metadata: dict = Field(default_factory=dict, description="Strategy-specific data for transparency")
+
+    @field_validator("confidence")
+    @classmethod
+    def confidence_must_be_in_valid_range(cls, v: float) -> float:
+        """Validate confidence is in valid range (0-1)."""
+        if v < 0 or v > 1:
+            raise ValueError("confidence must be between 0 and 1")
+        return v
+
+    @field_validator("direction")
+    @classmethod
+    def direction_must_be_valid(cls, v: str) -> str:
+        """Validate direction is either 'long' or 'short'."""
+        if v not in ["long", "short"]:
+            raise ValueError("direction must be 'long' or 'short'")
+        return v
+
+    @field_validator("stop_loss")
+    @classmethod
+    def stop_loss_must_respect_direction(cls, v: float, info) -> float:
+        """Validate stop loss position based on direction."""
+        direction = info.data.get("direction")
+        entry = info.data.get("entry_price")
+
+        if entry is not None and direction is not None:
+            if direction == "long" and v >= entry:
+                raise ValueError("stop_loss must be below entry_price for long trades")
+            if direction == "short" and v <= entry:
+                raise ValueError("stop_loss must be above entry_price for short trades")
+        return v
+
+    @field_validator("take_profit")
+    @classmethod
+    def take_profit_must_respect_2to1_ratio(cls, v: float, info) -> float:
+        """Validate take profit respects 2:1 reward-risk ratio."""
+        entry = info.data.get("entry_price")
+        stop_loss = info.data.get("stop_loss")
+
+        if entry is not None and stop_loss is not None:
+            risk = abs(entry - stop_loss)
+            reward = abs(v - entry)
+
+            # Allow small rounding errors but generally require 2:1
+            if risk > 0:
+                ratio = reward / risk
+                if ratio < 1.9:  # Allow small tolerance
+                    raise ValueError(
+                        f"take_profit must respect 2:1 ratio (current: {ratio:.2f}:1)"
+                    )
+        return v
+
+    def risk_reward_ratio(self) -> float:
+        """Calculate the risk-reward ratio.
+
+        Returns:
+            Ratio of reward to risk (e.g., 2.0 for 2:1)
+        """
+        risk = abs(self.entry_price - self.stop_loss)
+        reward = abs(self.take_profit - self.entry_price)
+        return reward / risk if risk > 0 else 0.0
+
+    def is_valid(self) -> bool:
+        """Validate signal integrity.
+
+        Returns:
+            True if signal passes all validation checks
+        """
+        # Check confidence range
+        if not (0 <= self.confidence <= 1):
+            return False
+
+        # Check stop loss direction
+        if self.direction == "long" and self.stop_loss >= self.entry_price:
+            return False
+        if self.direction == "short" and self.stop_loss <= self.entry_price:
+            return False
+
+        # Check take profit ratio (approximately 2:1)
+        risk = abs(self.entry_price - self.stop_loss)
+        reward = abs(self.take_profit - self.entry_price)
+        if risk > 0:
+            ratio = reward / risk
+            if ratio < 1.9:  # Allow small tolerance
+                return False
+
+        return True
+
+
+class EnsembleTradeSignal(BaseModel):
+    """Ensemble trade signal with weighted confidence scoring.
+
+    This model represents a composite trading signal generated by the
+    ensemble system when multiple strategies agree on direction and
+    meet the confidence threshold.
+
+    Attributes:
+        strategy_name: Name of ensemble strategy (fixed: "Ensemble-Weighted Confidence")
+        timestamp: Signal generation timestamp
+        direction: Trade direction (long or short)
+        entry_price: Weighted average entry price from contributing strategies
+        stop_loss: Recommended stop loss level
+        take_profit: Recommended take profit level (2:1 reward-risk ratio)
+        composite_confidence: Weighted average confidence (0-1 scale)
+        contributing_strategies: List of strategy names that contributed
+        strategy_confidences: Individual strategy confidence scores (for transparency)
+        strategy_weights: Weights applied to each strategy (for audit trail)
+        bar_timestamp: Which bar triggered the signal
+    """
+
+    strategy_name: str = Field(default="Ensemble-Weighted Confidence", description="Ensemble strategy name")
+    timestamp: datetime = Field(..., description="Signal generation timestamp")
+    direction: Literal["long", "short"] = Field(..., description="Trade direction")
+    entry_price: float = Field(..., gt=0, description="Entry price for the trade")
+    stop_loss: float = Field(..., gt=0, description="Stop loss price level")
+    take_profit: float = Field(..., gt=0, description="Take profit price level")
+    composite_confidence: float = Field(..., ge=0, le=1, description="Composite confidence score (0-1 scale)")
+    contributing_strategies: list[str] = Field(..., min_length=1, description="Strategies that contributed to signal")
+    strategy_confidences: dict[str, float] = Field(..., description="Individual strategy confidences")
+    strategy_weights: dict[str, float] = Field(..., description="Weights applied to each strategy")
+    bar_timestamp: datetime = Field(..., description="Which bar triggered the signal")
+
+    @model_validator(mode="after")
+    def validate_contributing_strategies(self) -> "EnsembleTradeSignal":
+        """Validate that all contributing strategies have confidence values."""
+        for strategy in self.contributing_strategies:
+            if strategy not in self.strategy_confidences:
+                raise ValueError(
+                    f"Contributing strategy '{strategy}' must have a confidence value in strategy_confidences"
+                )
+        return self
+
+    @field_validator("stop_loss")
+    @classmethod
+    def stop_loss_must_respect_direction(cls, v: float, info) -> float:
+        """Validate stop loss position based on direction."""
+        direction = info.data.get("direction")
+        entry = info.data.get("entry_price")
+
+        if entry is not None and direction is not None:
+            if direction == "long" and v >= entry:
+                raise ValueError("stop_loss must be below entry_price for long trades")
+            if direction == "short" and v <= entry:
+                raise ValueError("stop_loss must be above entry_price for short trades")
+        return v
+
+    @field_validator("take_profit")
+    @classmethod
+    def take_profit_must_respect_direction(cls, v: float, info) -> float:
+        """Validate take profit position based on direction."""
+        direction = info.data.get("direction")
+        entry = info.data.get("entry_price")
+
+        if entry is not None and direction is not None:
+            if direction == "long" and v <= entry:
+                raise ValueError("take_profit must be above entry_price for long trades")
+            if direction == "short" and v >= entry:
+                raise ValueError("take_profit must be below entry_price for short trades")
+        return v
+
+    def contributing_count(self) -> int:
+        """Return the number of contributing strategies.
+
+        Returns:
+            Number of strategies that contributed to this signal
+        """
+        return len(self.contributing_strategies)
+
+    def is_unanimous(self) -> bool:
+        """Check if all 5 strategies contributed to this signal.
+
+        Returns:
+            True if all 5 strategies signaled (unanimous)
+        """
+        return len(self.contributing_strategies) == 5
+
+    def get_weighted_entry(self) -> float:
+        """Return the weighted entry price.
+
+        For this model, the entry_price is already calculated as the weighted
+        average from all contributing strategies. This method returns it for
+        consistency and potential future enhancements.
+
+        Returns:
+            Weighted entry price
+        """
+        return self.entry_price
+
+
+# Performance Tracking Models for Dynamic Weight Optimization
+
+
+class StrategyPerformance(BaseModel):
+    """Performance metrics for a single strategy.
+
+    Tracks performance metrics over a rolling window (typically 4 weeks)
+    to inform dynamic weight optimization.
+
+    Attributes:
+        strategy_name: Name of the strategy
+        window_start: Start of performance tracking window
+        window_end: End of performance tracking window
+        total_trades: Total number of trades in window
+        winning_trades: Number of winning trades
+        losing_trades: Number of losing trades
+        win_rate: Win rate (0-1 scale)
+        gross_profit: Sum of all winning trade P&L
+        gross_loss: Sum of all losing trade P&L (absolute value)
+        profit_factor: Gross profit divided by gross loss
+        performance_score: Win rate × profit factor
+        data_quality: Data sufficiency flag
+    """
+
+    strategy_name: str = Field(..., description="Name of the strategy")
+    window_start: datetime = Field(..., description="Start of performance window")
+    window_end: datetime = Field(..., description="End of performance window")
+    total_trades: int = Field(..., ge=0, description="Total trades in window")
+    winning_trades: int = Field(..., ge=0, description="Number of winning trades")
+    losing_trades: int = Field(..., ge=0, description="Number of losing trades")
+    win_rate: float = Field(..., ge=0, le=1, description="Win rate (0-1)")
+    gross_profit: float = Field(..., ge=0, description="Sum of winning P&L")
+    gross_loss: float = Field(..., ge=0, description="Sum of losing P&L (absolute)")
+    profit_factor: float = Field(..., ge=0, description="Gross profit / gross loss")
+    performance_score: float = Field(..., ge=0, description="Win rate × profit factor")
+    data_quality: Literal["sufficient", "insufficient_4weeks", "insufficient_8weeks"] = Field(
+        ..., description="Data sufficiency flag"
+    )
+
+    def calculate_performance_score(self) -> float:
+        """Calculate performance score.
+
+        Returns:
+            Performance score (win_rate × profit_factor)
+        """
+        return self.win_rate * self.profit_factor
+
+    def is_data_sufficient(self) -> bool:
+        """Check if data is sufficient for weight optimization.
+
+        Returns:
+            True if data quality is "sufficient"
+        """
+        return self.data_quality == "sufficient"
+
+
+class WeightUpdate(BaseModel):
+    """Record of a weight update event.
+
+    Captures all information about a weight rebalancing event for
+    audit trail and analysis.
+
+    Attributes:
+        timestamp: When the update occurred
+        previous_weights: Weights before update (by strategy)
+        new_weights: Weights after update (by strategy)
+        performance_scores: Performance scores used for calculation
+        constraint_adjustments: Which strategies hit floor/ceiling
+        rebalancing_reason: Why rebalancing occurred
+    """
+
+    timestamp: datetime = Field(..., description="Update timestamp")
+    previous_weights: dict[str, float] = Field(..., description="Weights before update")
+    new_weights: dict[str, float] = Field(..., description="Weights after update")
+    performance_scores: dict[str, float] = Field(..., description="Performance scores used")
+    constraint_adjustments: dict[str, str] = Field(
+        default_factory=dict, description="Constraint adjustments (floor/ceiling hits)"
+    )
+    rebalancing_reason: str = Field(..., description="Reason for rebalancing")
+
+    @field_validator("previous_weights", "new_weights")
+    @classmethod
+    def weights_sum_to_one(cls, v: dict[str, float], info) -> dict[str, float]:
+        """Validate that weights sum to approximately 1.0."""
+        total = sum(v.values())
+        tolerance = 0.0001
+        if abs(total - 1.0) > tolerance:
+            raise ValueError(f"Weights must sum to 1.0 (got {total:.4f})")
+        return v
+
+    @field_validator("previous_weights", "new_weights")
+    @classmethod
+    def weights_within_bounds(cls, v: dict[str, float]) -> dict[str, float]:
+        """Validate that all weights are between 0 and 1."""
+        for strategy, weight in v.items():
+            if weight < 0 or weight > 1:
+                raise ValueError(f"Weight for {strategy} must be between 0 and 1 (got {weight})")
+        return v
+
+    def get_weight_change(self, strategy: str) -> float:
+        """Get weight change for a specific strategy.
+
+        Args:
+            strategy: Strategy name
+
+        Returns:
+            Weight change (new - previous)
+        """
+        if strategy not in self.previous_weights or strategy not in self.new_weights:
+            return 0.0
+        return self.new_weights[strategy] - self.previous_weights[strategy]
+
+
+class CompletedTrade(BaseModel):
+    """Record of a completed trade for performance tracking.
+
+    Captures essential information about completed trades for
+    performance analysis and weight optimization.
+
+    Attributes:
+        trade_id: Unique trade identifier
+        strategy_name: Strategy that generated the trade
+        direction: Trade direction (long or short)
+        entry_price: Entry price
+        exit_price: Exit price
+        entry_time: Entry timestamp
+        exit_time: Exit timestamp
+        pnl: Profit/loss in USD
+        exit_reason: Reason for exit (TP, SL, time_stop, etc.)
+        bars_held: Number of bars held
+    """
+
+    trade_id: str = Field(..., description="Unique trade identifier")
+    strategy_name: str = Field(..., description="Strategy that generated the trade")
+    direction: Literal["long", "short"] = Field(..., description="Trade direction")
+    entry_price: float = Field(..., gt=0, description="Entry price")
+    exit_price: float = Field(..., gt=0, description="Exit price")
+    entry_time: datetime = Field(..., description="Entry timestamp")
+    exit_time: datetime = Field(..., description="Exit timestamp")
+    pnl: float = Field(..., description="Profit/loss in USD")
+    exit_reason: Literal["take_profit", "stop_loss", "time_stop", "hybrid_partial", "hybrid_trail"] = Field(
+        ..., description="Reason for exit"
+    )
+    bars_held: int = Field(..., ge=0, description="Number of bars held")
+
+    def is_winner(self) -> bool:
+        """Check if trade was a winner.
+
+        Returns:
+            True if pnl > 0
+        """
+        return self.pnl > 0
+
+    def get_hold_time_minutes(self) -> float:
+        """Calculate hold time in minutes.
+
+        Returns:
+            Hold time in minutes
+        """
+        delta = self.exit_time - self.entry_time
+        return delta.total_seconds() / 60.0
+

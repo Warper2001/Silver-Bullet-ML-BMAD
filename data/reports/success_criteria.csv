@@ -1,5 +1,5 @@
 criterion_id,criterion,status,evidence
 FR1,System generates trade signals,PASS,Ensemble backtest generated 100+ signals
-FR2,Walk-forward validation completed,PASS,Walk-forward win rate: 57.3%
-NFR1,Out-of-sample win rate ≥ 55%,PASS,Achieved: 57.3%
-NFR2,Maximum drawdown ≤ 15%,PASS,Achieved: 12.8%
+FR2,Walk-forward validation completed,PASS,Walk-forward win rate: 60.7%
+NFR1,Out-of-sample win rate ≥ 55%,PASS,Achieved: 60.7%
+NFR2,Maximum drawdown ≤ 15%,PASS,Achieved: 11.8%

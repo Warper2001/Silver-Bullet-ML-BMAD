@@ -11,8 +11,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Placeholder for future implementation
-# Stories 8.2-8.11 will populate this with actual state reading logic
+# Import shared state database reader
+SHARED_STATE_AVAILABLE = False
+SHARED_STATE_ERROR = None
+try:
+    from src.data.shared_state_db import read_positions, read_signals, read_account_metrics
+    SHARED_STATE_AVAILABLE = True
+except ImportError as e:
+    SHARED_STATE_ERROR = f"Import error: {e}"
+    logger.warning(f"Shared state database not available - {SHARED_STATE_ERROR}")
+except Exception as e:
+    SHARED_STATE_ERROR = f"Initialization error: {e}"
+    logger.warning(f"Shared state database initialization failed - {SHARED_STATE_ERROR}")
 
 
 @dataclass
@@ -59,22 +69,46 @@ def get_last_update_time():
 
 def get_account_metrics() -> AccountMetrics:
     """Get current account metrics from shared state."""
-    # TODO: Connect to actual shared state from Epic 4 (positions)
-    # For now, return mock data
-    logger.warning("Using mock account data - connect to actual shared state")
+    if SHARED_STATE_AVAILABLE:
+        try:
+            metrics = read_account_metrics()
+            if metrics:
+                # Calculate daily change (previous equity was starting $50,000)
+                daily_change_usd = metrics["equity"] - 50000.0
+                daily_change_pct = (daily_change_usd / 50000.0) * 100
 
+                return AccountMetrics(
+                    equity=metrics["equity"],
+                    daily_change_pct=daily_change_pct,
+                    daily_change_usd=daily_change_usd,
+                    daily_pnl=metrics["daily_pnl"],
+                    open_positions_count=metrics["open_positions_count"],
+                    open_contracts=metrics["open_contracts"],
+                    trade_count=metrics["trade_count"],
+                    win_rate=metrics["win_rate"],
+                    daily_drawdown=metrics["daily_drawdown"],
+                    daily_loss_limit=metrics["daily_loss_limit"],
+                    system_uptime=metrics["system_uptime"],
+                    last_update=datetime.fromisoformat(metrics["last_update"])
+                )
+        except Exception as e:
+            logger.error(f"Failed to read account metrics: {e}")
+
+    # Fallback to error state (fixes F5 - misleading fallback)
+    # Use distinctive values to indicate error state
+    logger.warning(f"Shared state unavailable - {SHARED_STATE_ERROR}")
     return AccountMetrics(
-        equity=100000.00,
-        daily_change_pct=2.5,
-        daily_change_usd=2500.00,
-        daily_pnl=1500.00,
-        open_positions_count=2,
-        open_contracts=3,
-        trade_count=5,
-        win_rate=60.0,
-        daily_drawdown=200.00,
+        equity=0.0,  # Zero equity indicates error
+        daily_change_pct=0.0,
+        daily_change_usd=0.0,
+        daily_pnl=0.0,
+        open_positions_count=0,
+        open_contracts=0,
+        trade_count=0,
+        win_rate=0.0,
+        daily_drawdown=0.0,
         daily_loss_limit=500.00,
-        system_uptime="4h 23m",
+        system_uptime=f"ERROR: {SHARED_STATE_ERROR}",
         last_update=datetime.now()
     )
 
@@ -204,46 +238,38 @@ class OpenPosition:
 
 def get_open_positions() -> List[OpenPosition]:
     """Get open positions from shared state."""
-    # TODO: Connect to actual shared state from Epic 4 (positions)
-    # For now, return mock data
-    logger.warning("Using mock position data - connect to actual shared state")
+    if SHARED_STATE_AVAILABLE:
+        try:
+            positions = read_positions(status="OPEN")
+            result = []
+            for pos in positions:
+                direction = Direction.LONG if pos["direction"] == "bullish" else Direction.SHORT
+                entry_time = datetime.fromisoformat(pos["timestamp"])
 
-    return [
-        OpenPosition(
-            signal_id="SIGNAL-001",
-            direction=Direction.LONG,
-            entry_price=4500.00,
-            current_price=4525.00,
-            pnl_usd=125.00,
-            pnl_pct=2.78,
-            barriers=BarrierLevels(
-                upper_barrier=4600.00,
-                lower_barrier=4450.00,
-                vertical_barrier=datetime.now() + timedelta(minutes=15),
-                entry_price=4500.00
-            ),
-            confidence=4,
-            ml_probability=0.75,
-            entry_time=datetime.now() - timedelta(minutes=10)
-        ),
-        OpenPosition(
-            signal_id="SIGNAL-002",
-            direction=Direction.SHORT,
-            entry_price=4480.00,
-            current_price=4470.00,
-            pnl_usd=40.00,
-            pnl_pct=0.89,
-            barriers=BarrierLevels(
-                upper_barrier=4520.00,
-                lower_barrier=4420.00,
-                vertical_barrier=datetime.now() + timedelta(minutes=8),
-                entry_price=4480.00
-            ),
-            confidence=3,
-            ml_probability=0.65,
-            entry_time=datetime.now() - timedelta(minutes=5)
-        )
-    ]
+                result.append(OpenPosition(
+                    signal_id=pos["signal_id"],
+                    direction=direction,
+                    entry_price=pos["entry_price"],
+                    current_price=pos["current_price"],
+                    pnl_usd=pos["unrealized_pnl"],
+                    pnl_pct=pos["unrealized_pnl_percent"],
+                    barriers=BarrierLevels(
+                        upper_barrier=pos["entry_price"] * 1.02,  # 2% above
+                        lower_barrier=pos["entry_price"] * 0.98,  # 2% below
+                        vertical_barrier=entry_time + timedelta(minutes=30),
+                        entry_price=pos["entry_price"]
+                    ),
+                    confidence=int(pos["probability"] * 5),  # Convert probability to 1-5 scale
+                    ml_probability=pos["probability"],
+                    entry_time=entry_time
+                ))
+            return result
+        except Exception as e:
+            logger.error(f"Failed to read positions: {e}")
+
+    # Fallback to empty list
+    logger.warning("No positions available - shared state unreachable")
+    return []
 
 
 def calculate_barrier_progress(
@@ -323,75 +349,42 @@ def get_silver_bullet_signals() -> List[SilverBulletSignal]:
     """Get Silver Bullet signals from shared state.
 
     Returns last 50 signals in reverse chronological order (most recent first).
-
-    TODO: Connect to actual shared state from Epic 2 (signal detection)
-    TODO: Connect to actual shared state from Epic 3 (ML prediction)
     """
-    logger.warning("Using mock signal data - connect to actual shared state")
+    if SHARED_STATE_AVAILABLE:
+        try:
+            signals = read_signals(status="ACTIVE")
+            result = []
+            for sig in signals:
+                direction = Direction.LONG if sig["direction"] == "bullish" else Direction.SHORT
+                confidence = sig["confidence"]
 
-    now = datetime.now()
-    return [
-        SilverBulletSignal(
-            timestamp=now - timedelta(minutes=5),
-            direction=Direction.LONG,
-            confidence=4,
-            ml_probability=0.75,
-            mss_present=True,
-            fvg_present=True,
-            sweep_present=False,
-            time_window="09:30-16:00",
-            status=SignalStatus.EXECUTED,
-            signal_id="SIGNAL-001"
-        ),
-        SilverBulletSignal(
-            timestamp=now - timedelta(minutes=10),
-            direction=Direction.SHORT,
-            confidence=3,
-            ml_probability=0.65,
-            mss_present=False,
-            fvg_present=True,
-            sweep_present=True,
-            time_window="09:30-16:00",
-            status=SignalStatus.FILTERED,
-            signal_id="SIGNAL-002"
-        ),
-        SilverBulletSignal(
-            timestamp=now - timedelta(minutes=15),
-            direction=Direction.LONG,
-            confidence=5,
-            ml_probability=0.85,
-            mss_present=True,
-            fvg_present=True,
-            sweep_present=True,
-            time_window="09:30-16:00",
-            status=SignalStatus.EXECUTED,
-            signal_id="SIGNAL-003"
-        ),
-        SilverBulletSignal(
-            timestamp=now - timedelta(minutes=20),
-            direction=Direction.SHORT,
-            confidence=2,
-            ml_probability=0.45,
-            mss_present=False,
-            fvg_present=False,
-            sweep_present=True,
-            time_window="09:30-16:00",
-            status=SignalStatus.REJECTED,
-            signal_id="SIGNAL-004"
-        ),
-        SilverBulletSignal(
-            timestamp=now - timedelta(minutes=25),
-            direction=Direction.LONG,
-            confidence=4,
-            ml_probability=0.70,
-            mss_present=True,
-            fvg_present=False,
-            sweep_present=False,
-            time_window="09:30-16:00",
-            status=SignalStatus.FILTERED,
-            signal_id="SIGNAL-005"
-        )
-    ]
+                # Determine status based on probability
+                if sig["probability"] >= 0.65:
+                    status = SignalStatus.EXECUTED
+                elif sig["probability"] >= 0.50:
+                    status = SignalStatus.FILTERED
+                else:
+                    status = SignalStatus.REJECTED
+
+                result.append(SilverBulletSignal(
+                    timestamp=datetime.fromisoformat(sig["timestamp"]),
+                    direction=direction,
+                    confidence=confidence,
+                    ml_probability=sig["probability"],
+                    mss_present=True,  # Silver Bullet always has MSS
+                    fvg_present=True,  # Silver Bullet always has FVG
+                    sweep_present=True,  # Silver Bullet always has sweep
+                    time_window="09:30-16:00",
+                    status=status,
+                    signal_id=sig["signal_id"]
+                ))
+            return result[:50]  # Limit to 50 most recent
+        except Exception as e:
+            logger.error(f"Failed to read signals: {e}")
+
+    # Fallback to empty list
+    logger.warning("No signals available - shared state unreachable")
+    return []
 
 
 def filter_signals(

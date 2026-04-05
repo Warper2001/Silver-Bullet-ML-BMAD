@@ -1,13 +1,17 @@
 """Data Pipeline Orchestrator.
 
-Coordinates all data pipeline stages from WebSocket ingestion to HDF5 persistence.
+Coordinates all data pipeline stages from WebSocket/SK ingestion to HDF5 persistence.
 Implements backpressure monitoring, failure recovery, and graceful shutdown.
+
+Supports both legacy WebSocket client and new TradeStation SDK streaming for
+real-time market data ingestion.
 """
 
 import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from src.data.auth import TradeStationAuth
 from src.data.auth_v3 import TradeStationAuthV3
@@ -51,6 +55,9 @@ class DataPipelineOrchestrator:
         data_directory: str,
         max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE,
         settings: Settings | None = None,
+        use_sdk_streaming: bool = False,
+        symbols: list[str] | None = None,
+        environment: str = "sim",
     ) -> None:
         """Initialize the data pipeline orchestrator.
 
@@ -60,11 +67,23 @@ class DataPipelineOrchestrator:
             data_directory: Root directory for HDF5 files
             max_queue_size: Maximum size for each pipeline queue
             settings: Application settings (optional, loads from env if None)
+            use_sdk_streaming: Use TradeStation SDK streaming instead of WebSocket (default: False)
+            symbols: List of symbols to stream (required if use_sdk_streaming=True)
+            environment: TradeStation environment ('sim' or 'prod', default: 'sim')
         """
         self._auth = auth
         self._data_directory = Path(data_directory)
         self._max_queue_size = max_queue_size
         self._settings = settings or load_settings()
+
+        # SDK streaming configuration
+        self._use_sdk_streaming = use_sdk_streaming
+        self._symbols = symbols or []
+        self._environment = environment.lower()
+
+        # Validate SDK streaming parameters
+        if self._use_sdk_streaming and not self._symbols:
+            raise ValueError("symbols parameter is required when use_sdk_streaming=True")
 
         # Initialize queues for each pipeline stage
         self._raw_queue: asyncio.Queue[MarketData] = asyncio.Queue(
@@ -85,6 +104,7 @@ class DataPipelineOrchestrator:
 
         # Pipeline components
         self._websocket_client: TradeStationWebSocketClient | None = None
+        self._sdk_parser: object | None = None  # TradeStation SDK streaming parser
         self._transformer: DollarBarTransformer | None = None
         self._validator: DataValidator | None = None
         self._gap_detector: GapDetector | None = None
@@ -108,7 +128,7 @@ class DataPipelineOrchestrator:
         """Start the data pipeline.
 
         Spawns async tasks for each pipeline stage and begins
-        WebSocket connection to receive market data.
+        WebSocket/SK connection to receive market data.
         """
         if self._running:
             raise RuntimeError("Pipeline is already running")
@@ -121,8 +141,13 @@ class DataPipelineOrchestrator:
         # Initialize pipeline components
         self._initialize_components()
 
-        # Subscribe to WebSocket to get data queue
-        self._raw_queue = await self._websocket_client.subscribe()
+        # Start data source (WebSocket or SDK)
+        if self._use_sdk_streaming:
+            # Start SDK streaming
+            await self._start_sdk_streaming()
+        else:
+            # Subscribe to WebSocket to get data queue
+            self._raw_queue = await self._websocket_client.subscribe()
 
         # Spawn async tasks for each pipeline stage
         self._tasks = [
@@ -167,6 +192,10 @@ class DataPipelineOrchestrator:
         # Wait for tasks to complete cancellation
         await asyncio.gather(*self._tasks, return_exceptions=True)
 
+        # Stop SDK streaming if active
+        if self._sdk_parser and self._use_sdk_streaming:
+            await self._sdk_parser.stop()
+
         self._running = False
         logger.info("Data pipeline stopped")
 
@@ -174,10 +203,27 @@ class DataPipelineOrchestrator:
         """Initialize all pipeline components.
 
         Creates instances of each component with appropriate queues
-        and configuration.
+        and configuration. Supports both WebSocket and SDK streaming.
         """
-        # Stage 1: WebSocket Client
-        self._websocket_client = TradeStationWebSocketClient(auth=self._auth)
+        # Stage 1: Market Data Source (WebSocket or SDK)
+        if self._use_sdk_streaming:
+            # Import SDK streaming components
+            from src.execution.tradestation.market_data.streaming import QuoteStreamParser
+
+            # Initialize SDK streaming parser
+            self._sdk_parser = QuoteStreamParser(
+                auth=self._auth,
+                symbols=self._symbols,
+                environment=self._environment,
+            )
+            logger.info(
+                f"Initialized TradeStation SDK streaming for {self._environment} environment "
+                f"with symbols: {self._symbols}"
+            )
+        else:
+            # Use legacy WebSocket client
+            self._websocket_client = TradeStationWebSocketClient(auth=self._auth)
+            logger.info("Initialized legacy WebSocket client")
 
         # Stage 2: Dollar Bar Transformer
         self._transformer = DollarBarTransformer(
@@ -365,3 +411,93 @@ class DataPipelineOrchestrator:
             "validated": self._validated_queue.qsize(),
             "gap_filled": self._gap_filled_queue.qsize(),
         }
+
+    # ========== SDK Streaming Methods ==========
+
+    async def _start_sdk_streaming(self) -> None:
+        """Start TradeStation SDK streaming and process quotes.
+
+        Starts the SDK streaming parser and begins processing real-time
+        quotes into the raw data queue.
+        """
+        if not self._sdk_parser:
+            raise RuntimeError("SDK parser not initialized")
+
+        logger.info("Starting TradeStation SDK streaming")
+
+        # Start SDK streaming
+        await self._sdk_parser.start()
+
+        # Subscribe to quote stream
+        stream_queue = await self._sdk_parser.subscribe()
+
+        # Start background task to process stream positions
+        self._tasks.append(
+            asyncio.create_task(self._process_sdk_stream(stream_queue))
+        )
+
+        logger.info("SDK streaming started and subscribed")
+
+    async def _process_sdk_stream(self, stream_queue: asyncio.Queue) -> None:
+        """Process StreamPosition objects from SDK streaming.
+
+        Continuously receives StreamPosition objects from SDK streaming,
+        converts them to MarketData objects, and puts them in the raw queue.
+
+        Args:
+            stream_queue: Queue containing StreamPosition objects
+        """
+        logger.info("Processing SDK stream positions")
+
+        while self._running:
+            try:
+                # Get stream position from queue (with timeout to allow checking _running)
+                try:
+                    stream_position = await asyncio.wait_for(stream_queue.get(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    continue
+
+                # Convert StreamPosition to MarketData
+                market_data = self._stream_position_to_market_data(stream_position)
+
+                # Put in raw queue for processing
+                await self._raw_queue.put(market_data)
+
+                # Update metrics
+                self._total_messages_received += 1
+
+            except asyncio.CancelledError:
+                logger.info("SDK stream processing cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error processing SDK stream position: {e}", exc_info=True)
+                # Continue processing despite errors
+
+        logger.info("SDK stream processing ended")
+
+    def _stream_position_to_market_data(self, stream_position) -> MarketData:
+        """Convert StreamPosition from SDK to MarketData for pipeline.
+
+        Args:
+            stream_position: StreamPosition object from SDK streaming
+
+        Returns:
+            MarketData object for consumption by dollar bar transformer
+        """
+        # Import StreamPosition if needed for type checking
+        from src.execution.tradestation.market_data.streaming import StreamPosition
+
+        if not isinstance(stream_position, StreamPosition):
+            raise TypeError(f"Expected StreamPosition, got {type(stream_position)}")
+
+        # Convert StreamPosition to MarketData
+        market_data = MarketData(
+            symbol=stream_position.symbol,
+            timestamp=stream_position.timestamp,
+            last=stream_position.last_price,  # Use 'last' not 'price'
+            bid=stream_position.bid,
+            ask=stream_position.ask,
+            volume=stream_position.volume,
+        )
+
+        return market_data

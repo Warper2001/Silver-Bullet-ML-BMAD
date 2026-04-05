@@ -125,7 +125,8 @@ class TradeExecutionPipeline:
         exit_executor,
         position_monitoring_service,
         time_window_filter,
-        audit_trail
+        audit_trail,
+        risk_orchestrator=None
     ) -> None:
         """Initialize trade execution pipeline.
 
@@ -142,6 +143,7 @@ class TradeExecutionPipeline:
             position_monitoring_service: PositionMonitoringService instance
             time_window_filter: TimeWindowFilter instance
             audit_trail: ImmutableAuditTrail instance
+            risk_orchestrator: RiskOrchestrator instance (optional, for Story 4.2)
 
         Raises:
             ValueError: If required dependencies are None
@@ -189,7 +191,14 @@ class TradeExecutionPipeline:
         # Get position tracker from monitoring service
         self._position_tracker = position_monitoring_service._position_tracker
 
-        logger.info("TradeExecutionPipeline initialized")
+        # Initialize risk validator if risk orchestrator provided
+        self._risk_validator = None
+        if risk_orchestrator is not None:
+            from src.execution.risk_integration import RiskValidator
+            self._risk_validator = RiskValidator(risk_orchestrator)
+            logger.info("TradeExecutionPipeline initialized with risk validation")
+        else:
+            logger.info("TradeExecutionPipeline initialized without risk validation")
 
     def process_signal(
         self,
@@ -200,13 +209,14 @@ class TradeExecutionPipeline:
         Pipeline Flow:
             1. Validate signal
             2. Check time window (Story 4.8)
-            3. Calculate position size (Story 4.1)
-            4. Select order type (Story 4.2)
-            5. Submit order (Story 4.3 or 4.4)
-            6. Handle partial fills (Story 4.5)
-            7. Calculate barriers (Story 4.6)
-            8. Start position monitoring (Story 4.7)
-            9. Log all actions (Story 4.9)
+            3. Validate through risk management (Story 4.2)
+            4. Calculate position size (Story 4.1)
+            5. Select order type (Story 4.2)
+            6. Submit order (Story 4.3 or 4.4)
+            7. Handle partial fills (Story 4.5)
+            8. Calculate barriers (Story 4.6)
+            9. Start position monitoring (Story 4.7)
+            10. Log all actions (Story 4.9)
 
         Args:
             signal: TradingSignal with signal details
@@ -266,13 +276,64 @@ class TradeExecutionPipeline:
                     position_id=None
                 )
 
-            # Step 3: Calculate position size
+            # Step 3: Validate through risk management (Story 4.2)
+            if self._risk_validator is not None:
+                risk_result = self._validate_risk(signal)
+                if not risk_result['is_valid']:
+                    logger.info(
+                        "Signal blocked by risk validation: {} - {}".format(
+                            signal.signal_id, risk_result['block_reason']
+                        )
+                    )
+                    # Log to audit trail
+                    self._audit_trail.log_event(
+                        event_type="RISK_VALIDATION_FAILED",
+                        details={
+                            "signal_id": signal.signal_id,
+                            "block_reason": risk_result['block_reason'],
+                            "checks_failed": risk_result['checks_failed']
+                        }
+                    )
+                    return PipelineResult(
+                        success=False,
+                        order_id=None,
+                        filled=False,
+                        fill_price=None,
+                        block_reason=risk_result['block_reason'],
+                        error_message=None,
+                        position_id=None
+                    )
+
+            # Step 4: Calculate position size
             position_size = self._calculate_position_size(signal)
 
-            # Step 4: Select order type
+            # Step 5: Select order type
             order_type = self._select_order_type(position_size)
 
-            # Step 5: Submit order
+            # Step 6: Submit order
+            order_result = self._submit_order(
+                signal,
+                position_size,
+                order_type
+            )
+
+            if not order_result.success:
+                logger.error(
+                    "Order submission failed: {} - {}".format(
+                        signal.signal_id, order_result.error_message
+                    )
+                )
+                return PipelineResult(
+                    success=False,
+                    order_id=None,
+                    filled=False,
+                    fill_price=None,
+                    block_reason=None,
+                    error_message=order_result.error_message,
+                    position_id=None
+                )
+
+            # Step 7: Handle partial fills (for limit orders)
             order_result = self._submit_order(
                 signal,
                 position_size,
@@ -306,7 +367,7 @@ class TradeExecutionPipeline:
                 order_result.filled = fill_result.filled
                 order_result.filled_price = fill_result.fill_price
 
-            # Step 7: Initialize position monitoring
+            # Step 8: Initialize position monitoring
             if order_result.filled:
                 self._initialize_position_monitoring(
                     order_result.order_id,
@@ -473,6 +534,33 @@ class TradeExecutionPipeline:
             return True, None
         else:
             return False, time_window_result.reason
+
+    def _validate_risk(
+        self,
+        signal: TradingSignal
+    ) -> dict:
+        """Validate trading signal through risk management layers.
+
+        Args:
+            signal: TradingSignal to validate
+
+        Returns:
+            Dictionary with validation result from RiskValidator
+
+        Integration:
+            - Story 4.2: Risk Management Integration
+            - Validates through all 8 risk layers
+            - Blocks trades when risk limits exceeded
+
+        Example:
+            >>> result = self._validate_risk(signal)
+            >>> if not result['is_valid']:
+            ...     return PipelineResult(
+            ...         success=False,
+            ...         block_reason=result['block_reason']
+            ...     )
+        """
+        return self._risk_validator.validate_trade(signal)
 
     def _calculate_position_size(
         self,

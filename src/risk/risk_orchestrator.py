@@ -396,18 +396,19 @@ class RiskOrchestrator:
         Returns:
             Check result dictionary
         """
-        status = self._circuit_breaker_detector.get_status()
+        is_halted = self._circuit_breaker_detector.is_trading_halted()
 
-        if status['is_halted']:
+        if is_halted:
+            halt_level = self._circuit_breaker_detector.get_halt_level()
             return {
                 'passed': False,
                 'reason': (
                     'Circuit breaker Level {} halted trading'.format(
-                        status['halt_level']
+                        halt_level if halt_level else 'Unknown'
                     )
                 ),
                 'status': 'HALTED',
-                'halt_level': status['halt_level']
+                'halt_level': halt_level
             }
         else:
             return {

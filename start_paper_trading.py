@@ -94,12 +94,15 @@ async def start_paper_trading():
         active_contract = "MNQH26"
     print()
 
-    # Initialize orchestrator
+    # Initialize orchestrator with HTTP streaming enabled (recommended)
     orchestrator = DataPipelineOrchestrator(
         auth=auth,
         data_directory="data/processed",
+        use_http_streaming=True,  # Use HTTP streaming instead of deprecated WebSocket
+        symbols=[active_contract],  # Stream active contract
     )
     print("✅ Data Orchestrator initialized")
+    print(f"   Using HTTP streaming for {active_contract}")
 
     # Initialize ML inference
     ml_inference = MLInference(model_dir="models/xgboost")
@@ -133,6 +136,18 @@ async def start_paper_trading():
     try:
         # Start data orchestration
         await orchestrator.start()
+
+        # Keep the system running indefinitely
+        print("✅ Paper trading system is running!")
+        print("   Monitoring live market data and executing trades...")
+        print()
+
+        # Keep alive until interrupted
+        while True:
+            await asyncio.sleep(60)
+            # Log periodic status
+            if orchestrator.is_running:
+                logger.info(f"System uptime: {orchestrator.runtime_seconds:.0f}s | Queue depths: {orchestrator.queue_depths}")
 
     except KeyboardInterrupt:
         print("\n")

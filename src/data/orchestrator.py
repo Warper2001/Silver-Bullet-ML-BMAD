@@ -17,6 +17,7 @@ from src.data.auth import TradeStationAuth
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.config import Settings, load_settings
 from src.data.gap_detection import GapDetector
+from src.data.http_streaming import TradeStationHTTPStreamClient
 from src.data.models import DollarBar, MarketData, ValidationResult
 from src.data.persistence import HDF5DataSink
 from src.data.transformation import DollarBarTransformer
@@ -56,6 +57,7 @@ class DataPipelineOrchestrator:
         max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE,
         settings: Settings | None = None,
         use_sdk_streaming: bool = False,
+        use_http_streaming: bool = True,
         symbols: list[str] | None = None,
         environment: str = "sim",
     ) -> None:
@@ -68,6 +70,7 @@ class DataPipelineOrchestrator:
             max_queue_size: Maximum size for each pipeline queue
             settings: Application settings (optional, loads from env if None)
             use_sdk_streaming: Use TradeStation SDK streaming instead of WebSocket (default: False)
+            use_http_streaming: Use HTTP streaming instead of WebSocket (default: True, recommended)
             symbols: List of symbols to stream (required if use_sdk_streaming=True)
             environment: TradeStation environment ('sim' or 'prod', default: 'sim')
         """
@@ -76,12 +79,13 @@ class DataPipelineOrchestrator:
         self._max_queue_size = max_queue_size
         self._settings = settings or load_settings()
 
-        # SDK streaming configuration
+        # Streaming configuration
         self._use_sdk_streaming = use_sdk_streaming
-        self._symbols = symbols or []
+        self._use_http_streaming = use_http_streaming
+        self._symbols = symbols or ["MNQM26"]
         self._environment = environment.lower()
 
-        # Validate SDK streaming parameters
+        # Validate streaming parameters
         if self._use_sdk_streaming and not self._symbols:
             raise ValueError("symbols parameter is required when use_sdk_streaming=True")
 
@@ -104,6 +108,7 @@ class DataPipelineOrchestrator:
 
         # Pipeline components
         self._websocket_client: TradeStationWebSocketClient | None = None
+        self._http_stream_client: TradeStationHTTPStreamClient | None = None
         self._sdk_parser: object | None = None  # TradeStation SDK streaming parser
         self._transformer: DollarBarTransformer | None = None
         self._validator: DataValidator | None = None
@@ -141,22 +146,36 @@ class DataPipelineOrchestrator:
         # Initialize pipeline components
         self._initialize_components()
 
-        # Start data source (WebSocket or SDK)
+        # Start data source (WebSocket, HTTP streaming, or SDK)
         if self._use_sdk_streaming:
             # Start SDK streaming
             await self._start_sdk_streaming()
+        elif self._use_http_streaming:
+            # Start HTTP streaming
+            await self._start_http_streaming()
         else:
             # Subscribe to WebSocket to get data queue
             self._raw_queue = await self._websocket_client.subscribe()
 
-        # Spawn async tasks for each pipeline stage
+        # Spawn async tasks for each pipeline stage with error handling
+        async def run_task_safely(coro, name):
+            """Run a task with error handling to prevent crashes."""
+            try:
+                await coro
+            except asyncio.CancelledError:
+                logger.info(f"{name} task cancelled")
+                raise
+            except Exception as e:
+                logger.error(f"{name} task failed: {e}", exc_info=True)
+                # Don't re-raise - let other tasks continue
+
         self._tasks = [
-            asyncio.create_task(self._transformer.consume()),
-            asyncio.create_task(self._validator.consume()),
-            asyncio.create_task(self._gap_detector.consume()),
-            asyncio.create_task(self._persistence.consume()),
-            asyncio.create_task(self._monitor_pipeline_health()),
-            asyncio.create_task(self._log_metrics_periodically()),
+            asyncio.create_task(run_task_safely(self._transformer.consume(), "Transformer")),
+            asyncio.create_task(run_task_safely(self._validator.consume(), "Validator")),
+            asyncio.create_task(run_task_safely(self._gap_detector.consume(), "GapDetector")),
+            asyncio.create_task(run_task_safely(self._persistence.consume(), "Persistence")),
+            asyncio.create_task(run_task_safely(self._monitor_pipeline_health(), "HealthMonitor")),
+            asyncio.create_task(run_task_safely(self._log_metrics_periodically(), "MetricsLogger")),
         ]
 
         logger.info(f"Data pipeline started with {len(self._tasks)} tasks")
@@ -174,6 +193,10 @@ class DataPipelineOrchestrator:
         # Cleanup WebSocket connection
         if self._websocket_client:
             await self._websocket_client.cleanup()
+
+        # Cleanup HTTP streaming connection
+        if self._http_stream_client:
+            await self._http_stream_client.disconnect()
 
         # Wait for queues to drain (timeout: 30 seconds)
         try:
@@ -203,10 +226,25 @@ class DataPipelineOrchestrator:
         """Initialize all pipeline components.
 
         Creates instances of each component with appropriate queues
-        and configuration. Supports both WebSocket and SDK streaming.
+        and configuration. Supports WebSocket, HTTP streaming, and SDK streaming.
         """
-        # Stage 1: Market Data Source (WebSocket or SDK)
-        if self._use_sdk_streaming:
+        # Stage 1: Market Data Source (WebSocket, HTTP streaming, or SDK)
+        if self._use_http_streaming:
+            # Use HTTP streaming client (recommended for v3 API)
+            if isinstance(self._auth, TradeStationAuthV3):
+                self._http_stream_client = TradeStationHTTPStreamClient(
+                    auth=self._auth,
+                    symbols=self._symbols,
+                )
+                logger.info(
+                    f"Initialized HTTP streaming client for symbols: {self._symbols}"
+                )
+            else:
+                raise ValueError(
+                    "HTTP streaming requires TradeStationAuthV3. "
+                    "Please use TradeStationAuthV3 for authentication."
+                )
+        elif self._use_sdk_streaming:
             # Import SDK streaming components
             from src.execution.tradestation.market_data.streaming import QuoteStreamParser
 
@@ -474,6 +512,64 @@ class DataPipelineOrchestrator:
                 # Continue processing despite errors
 
         logger.info("SDK stream processing ended")
+
+    # ========== HTTP Streaming Methods ==========
+
+    async def _start_http_streaming(self) -> None:
+        """Start TradeStation HTTP streaming and process quotes.
+
+        Starts the HTTP streaming client and begins processing real-time
+        quotes into the raw data queue.
+        """
+        if not self._http_stream_client:
+            raise RuntimeError("HTTP streaming client not initialized")
+
+        logger.info("Starting TradeStation HTTP streaming")
+
+        # Subscribe to HTTP stream
+        self._raw_queue = await self._http_stream_client.subscribe()
+
+        # Start background task to monitor stream health
+        self._tasks.append(
+            asyncio.create_task(self._monitor_http_stream())
+        )
+
+        logger.info("HTTP streaming started and subscribed")
+
+    async def _monitor_http_stream(self) -> None:
+        """Monitor HTTP stream health and connection status.
+
+        Periodically checks stream statistics and logs connection health.
+        """
+        logger.info("Monitoring HTTP stream health")
+
+        while self._running:
+            try:
+                # Get stream statistics
+                stats = self._http_stream_client.get_stats()
+
+                # Log connection status
+                if stats["state"] == "connected":
+                    time_since_last = (
+                        datetime.now() - stats["last_message_time"]
+                    ).total_seconds() if stats["last_message_time"] else 0
+
+                    if time_since_last > 30:
+                        logger.warning(
+                            f"HTTP stream stale: {time_since_last:.0f}s since last message"
+                        )
+
+                # Wait before next check
+                await asyncio.sleep(10)
+
+            except asyncio.CancelledError:
+                logger.info("HTTP stream monitoring cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error monitoring HTTP stream: {e}", exc_info=True)
+                # Continue monitoring despite errors
+
+        logger.info("HTTP stream monitoring ended")
 
     def _stream_position_to_market_data(self, stream_position) -> MarketData:
         """Convert StreamPosition from SDK to MarketData for pipeline.

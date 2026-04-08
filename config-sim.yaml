@@ -1,0 +1,28 @@
+backtesting:
+  commission_per_contract: 0.85
+  end_date: '2026-03-31'
+  initial_account_size: 50000
+  slippage_ticks: 1
+  start_date: '2024-01-01'
+ensemble:
+  confidence_threshold: 0.5
+  minimum_strategies: 1
+  strategies:
+    adaptive_ema_momentum: 0.2
+    opening_range_breakout: 0.2
+    triple_confluence_scaler: 0.2
+    vwap_bounce: 0.2
+    wolf_pack_3_edge: 0.2
+logging:
+  console: true
+  file: logs/ensemble.log
+  level: INFO
+risk:
+  max_position_size: 5
+  max_risk_per_trade: 0.02
+  risk_reward_ratio: 2.0
+walk_forward:
+  minimum_steps: 12
+  step_forward_months: 1
+  testing_window_months: 1
+  training_window_months: 6

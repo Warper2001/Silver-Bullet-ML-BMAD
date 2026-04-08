@@ -45,10 +45,6 @@ class FixedSilverBulletTrader:
         """Initialize the fixed strategy trader."""
         self.access_token = access_token
         self.running = False
-        self.headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Accept": "application/json",
-        }
 
         # Initialize auth
         try:
@@ -96,8 +92,15 @@ class FixedSilverBulletTrader:
         url = f"https://api.tradestation.com/v3/marketdata/quotes/{symbol}"
 
         try:
+            # Get fresh token from auth object
+            current_token = await self.auth.authenticate()
+            headers = {
+                "Authorization": f"Bearer {current_token}",
+                "Accept": "application/json",
+            }
+
             async with httpx.AsyncClient(
-                headers=self.headers,
+                headers=headers,
                 timeout=httpx.Timeout(10.0)
             ) as client:
                 response = await client.get(url)
@@ -452,9 +455,15 @@ class FixedSilverBulletTrader:
         logger.info(f"Timeframe: 1-minute (matching winning backtest)")
         logger.info(f"Killzones: London AM (3-4am), NY AM (10-11am), NY PM (2-3pm EST)")
         logger.info(f"ML Threshold: 65% success probability")
+        logger.info(f"OAuth Refresh: Every 10 minutes")
         logger.info("=" * 80)
 
         self.running = True
+
+        # Start 10-minute OAuth token auto-refresh
+        if self.auth:
+            logger.info("🔑 Starting 10-minute OAuth token auto-refresh...")
+            await self.auth.start_auto_refresh(interval_minutes=10)
 
         while self.running:
             try:
@@ -526,6 +535,11 @@ class FixedSilverBulletTrader:
         """Stop the trading system."""
         logger.info("🛑 Stopping Fixed Silver Bullet ML Strategy...")
         self.running = False
+
+        # Stop OAuth auto-refresh
+        if self.auth:
+            await self.auth.cleanup()
+            logger.info("🔑 Stopped OAuth auto-refresh")
 
         # Print final performance
         logger.info("=" * 80)

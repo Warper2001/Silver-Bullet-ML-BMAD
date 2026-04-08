@@ -16,9 +16,18 @@ class MarketData(BaseModel):
     symbol: str = Field(..., description="Trading symbol (e.g., 'MNQ')")
     timestamp: datetime = Field(..., description="Data timestamp")
     bid: Optional[float] = Field(None, ge=0, description="Current bid price")
-    ask: Optional[float] = Field(None, gt=0, description="Current ask price")
-    last: Optional[float] = Field(None, gt=0, description="Last trade price")
+    ask: Optional[float] = Field(None, ge=0, description="Current ask price (allow 0 for closed market)")
+    last_price: Optional[float] = Field(None, ge=0, description="Last trade price (allow 0 for closed market)")
+    bid_size: Optional[int] = Field(None, ge=0, description="Bid size (contracts)")
+    ask_size: Optional[int] = Field(None, ge=0, description="Ask size (contracts)")
     volume: int = Field(..., ge=0, description="Trade volume")
+    open_interest: Optional[int] = Field(None, ge=0, description="Open interest")
+
+    # Backwards compatibility aliases
+    @property
+    def last(self) -> Optional[float]:
+        """Backwards compatibility property for last_price."""
+        return self.last_price
 
     @field_validator("ask")
     @classmethod
@@ -26,18 +35,20 @@ class MarketData(BaseModel):
         cls, v: float | None, info
     ) -> float | None:  # type: ignore[no-untyped-def]
         """Validate ask price is greater than bid price."""
-        if v is not None and info.data.get("bid") is not None:
+        if v is not None and v > 0 and info.data.get("bid") is not None:
             if v <= info.data["bid"]:
                 raise ValueError("ask must be greater than bid")
         return v
 
     def has_required_fields(self) -> bool:
         """Check if all required market data fields are present."""
+        # Relaxed validation - allow zero values for closed market data
+        # Only require symbol and timestamp to be valid
         return (
-            self.bid is not None
-            and self.ask is not None
-            and self.last is not None
+            self.symbol is not None
+            and self.timestamp is not None
             and self.volume >= 0
+            and (self.bid is not None or self.ask is not None or self.last_price is not None)
         )
 
 

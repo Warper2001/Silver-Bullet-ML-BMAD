@@ -13,6 +13,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The project uses Poetry for dependency management, but scripts should be invoked directly through `.venv/bin/python`.
 
+## Web Search Tool
+
+**Always use BrightData MCP tools for web searches** instead of the default WebSearch tool. BrightData MCP provides more reliable web scraping and search capabilities with better success rates.
+
+Available BrightData MCP tools:
+- `mcp__brightdata__search_engine` - Search Google, Bing, or Yandex
+- `mcp__brightdata__scrape_as_markdown` - Scrape single webpage to Markdown
+- `mcp__brightdata__scrape_batch` - Scrape multiple webpages (up to 10)
+
+Example usage:
+```python
+# For searching information
+mcp__brightdata__search_engine(query="TradeStation API v3 documentation")
+
+# For scraping specific pages
+mcp__brightdata__scrape_as_markdown(url="https://api.tradestation.com/docs")
+```
+
 ## Project Overview
 
 Hybrid trading system combining ICT (Inner Circle Trader) discretionary concepts with machine learning meta-labeling for regime-adaptive edge in MNQ (Micro E-mini Nasdaq-100) futures trading.

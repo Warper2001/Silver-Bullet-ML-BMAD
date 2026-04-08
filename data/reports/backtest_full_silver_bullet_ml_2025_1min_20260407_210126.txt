@@ -1,0 +1,40 @@
+================================================================================
+FULL SILVER BULLET ML STRATEGY BACKTEST (2025 - 1-MINUTE DATA)
+================================================================================
+
+Strategy Components:
+  ✓ MSS + FVG confluence detection
+  ✓ ML meta-labeling prediction
+  ✓ Killzone time filtering (London AM, NY AM, NY PM)
+  ✓ 65% probability threshold
+  ✓ 1-minute timeframe for precise entries
+
+📊 EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Total Trades: 44540
+Win Rate: 84.82%
+Total P&L: $91,652.62
+Return: 91.65%
+
+⚠️  RISK METRICS
+--------------------------------------------------------------------------------
+Sharpe Ratio: 44.540
+Max Drawdown: $-2,136.44
+Profit Factor: 1.82
+
+📈 KILLZONE ANALYSIS
+--------------------------------------------------------------------------------
+London AM: $50,693.19
+NY AM: $8,927.88
+NY PM: $32,031.56
+
+🏦 INSTITUTIONAL GRADE ASSESSMENT
+--------------------------------------------------------------------------------
+Sharpe Ratio: 44.540 (threshold: 1.0) ✅ PASS
+Max Drawdown: 2136.438 (threshold: 10000.0) ✅ PASS
+Win Rate: 0.848 (threshold: 0.55) ✅ PASS
+Profit Factor: 1.820 (threshold: 1.5) ✅ PASS
+
+🎯 INSTITUTIONAL GRADE: PASS (3+ metrics met threshold)
+
+================================================================================

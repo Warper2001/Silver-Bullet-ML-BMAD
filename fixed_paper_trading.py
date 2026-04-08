@@ -140,16 +140,27 @@ class FixedSilverBulletTrader:
             # Use best available price
             close_price = last or bid or ask
 
-            # Check for closed market (all zeros or very low volume)
-            if close_price == 0 or volume == 0:
-                logger.debug("Market closed (no price/volume data)")
+            # Check for closed market (no price data at all)
+            if close_price == 0:
+                logger.debug("Market closed (no price data)")
                 return None
 
-            # Handle cases where high/low might be 0
+            # Handle cases where high/low might be 0 (common in quote data)
             if high == 0:
-                high = max(close_price, bid, ask)
+                high = max(close_price, bid, ask) if max(close_price, bid, ask) > 0 else close_price
             if low == 0:
                 low = min(close_price, bid, ask) if min(close_price, bid, ask) > 0 else close_price
+
+            # For paper trading with quotes, estimate volume if not provided
+            if volume == 0:
+                volume = 100  # Minimum tradable volume for MNQ
+                logger.debug(f"No volume data, using minimum: {volume}")
+
+            # Calculate notional value correctly for MNQ futures
+            # MNQ = Micro E-mini Nasdaq-100, $20 per point
+            # Notional value = close_price * multiplier (NOT * volume)
+            # Volume is separate field for actual contracts traded
+            notional_value = close_price * 20.0  # MNQ multiplier
 
             # Create DollarBar
             bar = DollarBar(
@@ -159,10 +170,11 @@ class FixedSilverBulletTrader:
                 low=low,
                 close=close_price,
                 volume=volume,
-                notional_value=close_price * volume * 20.0,  # MNQ = $20/point
+                notional_value=notional_value,
                 is_forward_filled=False,
             )
 
+            logger.info(f"✅ Bar created: {close_price:.2f} (vol: {volume})")
             return bar
 
         except Exception as e:
@@ -175,12 +187,14 @@ class FixedSilverBulletTrader:
             return
 
         try:
-            idx = len(self.recent_bars) - 1
             lookback = 3
 
-            # Check for swing high
-            if idx >= lookback and idx < len(self.recent_bars) - lookback:
-                current_high = self.recent_bars[idx].high
+            # Check ALL recent bars for swing points (not just the last one!)
+            for idx in range(lookback, len(self.recent_bars) - lookback):
+                current_bar = self.recent_bars[idx]
+
+                # Check for swing high
+                current_high = current_bar.high
                 is_swing_high = True
 
                 for j in range(idx - lookback, idx + lookback + 1):
@@ -191,16 +205,15 @@ class FixedSilverBulletTrader:
                 if is_swing_high:
                     swing_high = {
                         'index': idx,
-                        'timestamp': self.recent_bars[idx].timestamp,
+                        'timestamp': current_bar.timestamp,
                         'price': current_high,
                         'type': 'swing_high'
                     }
                     self.swing_highs.append(swing_high)
-                    logger.info(f"🔺 Swing High: {current_high:.2f}")
+                    logger.info(f"🔺 Swing High: {current_high:.2f} at bar {idx}")
 
-            # Check for swing low
-            if idx >= lookback and idx < len(self.recent_bars) - lookback:
-                current_low = self.recent_bars[idx].low
+                # Check for swing low
+                current_low = current_bar.low
                 is_swing_low = True
 
                 for j in range(idx - lookback, idx + lookback + 1):
@@ -211,12 +224,12 @@ class FixedSilverBulletTrader:
                 if is_swing_low:
                     swing_low = {
                         'index': idx,
-                        'timestamp': self.recent_bars[idx].timestamp,
+                        'timestamp': current_bar.timestamp,
                         'price': current_low,
                         'type': 'swing_low'
                     }
                     self.swing_lows.append(swing_low)
-                    logger.info(f"🔻 Swing Low: {current_low:.2f}")
+                    logger.info(f"🔻 Swing Low: {current_low:.2f} at bar {idx}")
 
             # Keep only recent swing points (last 50)
             if len(self.swing_highs) > 50:
@@ -319,47 +332,50 @@ class FixedSilverBulletTrader:
             return
 
         try:
-            current_idx = len(self.recent_bars) - 1
-            current_bar = self.recent_bars[current_idx]
+            # Check MULTIPLE recent bars for MSS breaks (not just the last one!)
+            recent_bar_start = max(0, len(self.recent_bars) - 10)  # Check last 10 bars
 
-            # Check for bullish MSS (break above recent swing high)
-            for swing_high in self.swing_highs[-5:]:  # Check recent 5 swing highs
-                if current_bar.high > swing_high['price']:
-                    # Volume confirmation
-                    recent_bars = list(self.recent_bars)[-20:]
-                    avg_volume = sum(b.volume for b in recent_bars) / len(recent_bars)
-                    volume_ratio = current_bar.volume / avg_volume if avg_volume > 0 else 0
+            for idx in range(recent_bar_start, len(self.recent_bars)):
+                current_bar = self.recent_bars[idx]
 
-                    if volume_ratio >= 1.5:
-                        mss_event = {
-                            'index': current_idx,
-                            'timestamp': current_bar.timestamp,
-                            'direction': 'bullish',
-                            'breakout_price': current_bar.high,
-                            'swing_point': swing_high,
-                            'volume_ratio': volume_ratio,
-                        }
-                        self.mss_events.append(mss_event)
-                        logger.info(f"🚀 Bullish MSS: {current_bar.high:.2f} (vol ratio: {volume_ratio:.2f})")
-                        break
+                # Check for bullish MSS (break above recent swing high)
+                for swing_high in self.swing_highs[-5:]:  # Check recent 5 swing highs
+                    if current_bar.high > swing_high['price']:
+                        # Volume confirmation
+                        recent_bars = list(self.recent_bars)[-20:]
+                        avg_volume = sum(b.volume for b in recent_bars) / len(recent_bars)
+                        volume_ratio = current_bar.volume / avg_volume if avg_volume > 0 else 0
 
-            # Check for bearish MSS (break below recent swing low)
-            for swing_low in self.swing_lows[-5:]:
-                if current_bar.low < swing_low['price']:
-                    recent_bars = list(self.recent_bars)[-20:]
-                    avg_volume = sum(b.volume for b in recent_bars) / len(recent_bars)
-                    volume_ratio = current_bar.volume / avg_volume if avg_volume > 0 else 0
+                        if volume_ratio >= 1.5:
+                            mss_event = {
+                                'index': idx,
+                                'timestamp': current_bar.timestamp,
+                                'direction': 'bullish',
+                                'breakout_price': current_bar.high,
+                                'swing_point': swing_high,
+                                'volume_ratio': volume_ratio,
+                            }
+                            self.mss_events.append(mss_event)
+                            logger.info(f"🚀 Bullish MSS: {current_bar.high:.2f} at bar {idx} (vol ratio: {volume_ratio:.2f})")
+                            break
 
-                    if volume_ratio >= 1.5:
-                        mss_event = {
-                            'index': current_idx,
-                            'timestamp': current_bar.timestamp,
-                            'direction': 'bearish',
-                            'breakout_price': current_bar.low,
-                            'swing_point': swing_low,
-                            'volume_ratio': volume_ratio,
-                        }
-                        self.mss_events.append(mss_event)
+                # Check for bearish MSS (break below recent swing low)
+                for swing_low in self.swing_lows[-5:]:
+                    if current_bar.low < swing_low['price']:
+                        recent_bars = list(self.recent_bars)[-20:]
+                        avg_volume = sum(b.volume for b in recent_bars) / len(recent_bars)
+                        volume_ratio = current_bar.volume / avg_volume if avg_volume > 0 else 0
+
+                        if volume_ratio >= 1.5:
+                            mss_event = {
+                                'index': idx,
+                                'timestamp': current_bar.timestamp,
+                                'direction': 'bearish',
+                                'breakout_price': current_bar.low,
+                                'swing_point': swing_low,
+                                'volume_ratio': volume_ratio,
+                            }
+                            self.mss_events.append(mss_event)
                         logger.info(f"🔻 Bearish MSS: {current_bar.low:.2f} (vol ratio: {volume_ratio:.2f})")
                         break
 
@@ -447,7 +463,7 @@ class FixedSilverBulletTrader:
 
         return True
 
-    async def run_trading_loop(self, symbol: str = "MNQH26"):
+    async def run_trading_loop(self, symbol: str = "MNQM26"):
         """Main trading loop."""
         logger.info("🚀 Starting Fixed Silver Bullet ML Strategy")
         logger.info("=" * 80)
@@ -485,6 +501,7 @@ class FixedSilverBulletTrader:
 
                 # Add to recent bars
                 self.recent_bars.append(bar)
+                logger.info(f"📊 Bars collected: {len(self.recent_bars)} (need 7+ for swing detection)")
 
                 # Detect patterns
                 self.detect_swing_points()

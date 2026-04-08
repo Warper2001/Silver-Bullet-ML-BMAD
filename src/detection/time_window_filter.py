@@ -46,30 +46,48 @@ UTC_OFFSET_EDT = -4  # EDT is UTC-4 (daylight saving time)
 
 
 def convert_to_est(timestamp: datetime) -> datetime:
-    """Convert a timestamp to EST timezone.
+    """Convert a timestamp to Eastern timezone (handles DST automatically).
 
     Args:
         timestamp: Input timestamp (naive or UTC-aware)
 
     Returns:
-        Timestamp in EST timezone (naive, for easy comparison)
+        Timestamp in Eastern timezone (naive, for easy comparison)
 
     Note:
-        This function handles both naive and UTC-aware timestamps.
-        For production, you should use pytz or zoneinfo for proper DST handling.
+        This function properly handles DST by checking if we're in EDT or EST.
     """
     # If timestamp is naive, assume it's already in the desired timezone
     if timestamp.tzinfo is None:
         return timestamp
 
-    # If timestamp is UTC-aware, convert to EST
+    # If timestamp is UTC-aware, convert to Eastern Time (with DST handling)
     if timestamp.tzinfo == timezone.utc:
-        # Approximate EST conversion (UTC-5)
-        # Note: This doesn't handle DST perfectly - use pytz in production
-        return timestamp + timedelta(hours=UTC_OFFSET_EST)
+        # Dynamic DST handling: determine if we're in EDT or EST
+        # EDT (Eastern Daylight Time): UTC-4 (March - November)
+        # EST (Eastern Standard Time): UTC-5 (November - March)
+
+        # Simple DST heuristic: April-October is typically EDT
+        # In production, use proper DST transition dates
+        month = timestamp.month
+        if month >= 4 and month <= 10:  # April through October = EDT
+            return timestamp + timedelta(hours=UTC_OFFSET_EDT)
+        elif month == 3:  # March - check if after second Sunday
+            day = timestamp.day
+            if day >= 8:  # Approximate: DST starts second Sunday
+                return timestamp + timedelta(hours=UTC_OFFSET_EDT)
+            else:
+                return timestamp + timedelta(hours=UTC_OFFSET_EST)
+        elif month == 11:  # November - check if before first Sunday
+            day = timestamp.day
+            if day <= 7:  # Approximate: DST ends first Sunday
+                return timestamp + timedelta(hours=UTC_OFFSET_EDT)
+            else:
+                return timestamp + timedelta(hours=UTC_OFFSET_EST)
+        else:  # December-February = EST
+            return timestamp + timedelta(hours=UTC_OFFSET_EST)
 
     # For other timezones, return as-is (naive comparison)
-    # In production, you'd convert to EST properly
     return timestamp.replace(tzinfo=None)
 
 

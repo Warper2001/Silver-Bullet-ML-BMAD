@@ -24,6 +24,38 @@ ml:
   probability_threshold: 0.65  # P(Success) threshold
   retraining_interval_days: 7  # Weekly retraining
 
+silver_bullet_premium:
+  enabled: true
+  min_fvg_gap_size_dollars: 75  # Filter small FVGs
+  mss_volume_ratio_min: 2.0  # Increased from 1.5x (baseline)
+  max_bar_distance: 7  # Reduced from 20 bars (baseline)
+  ml_probability_threshold: 0.65  # Use baseline until premium model trained
+  # Note: require_killzone_alignment removed - baseline already filters to killzones only
+  max_trades_per_day: 20  # Maximum daily trade limit (optimized based on backtest)
+  min_quality_score: 70  # Minimum setup quality score (0-100)
+
+  # Phase 1 Optimizations
+  # Killzone quality weights - accept different % of signals by killzone
+  # This is MORE effective than a simple binary killzone filter
+  killzone_quality_weights:
+    London AM: 0.90   # Accept 90% of signals (highest quality - $2.67 avg return)
+    NY PM: 0.80       # Accept 80% of signals (good quality - $1.99 avg return)
+    NY AM: 0.60       # Accept 60% of signals (lowest quality - $0.94 avg return)
+
+  # Day of week multipliers - adjust daily limits by day
+  day_of_week_multipliers:
+    Monday: 1.2      # +20% max trades (best day - 85.75% win rate)
+    Tuesday: 0.6     # -40% max trades (worst day - 82.57% win rate)
+    Wednesday: 1.0   # Normal
+    Thursday: 1.1    # +10% max trades (good day - 85.74% win rate)
+    Friday: 1.0      # Normal
+
+  # Dynamic stop loss management
+  dynamic_stop_loss_enabled: true
+  early_exit_loss_threshold: 0.5  # Exit at 50% of initial risk (cuts losses from -$16.52 to ~-$8)
+  trailing_stop_enabled: true
+  trailing_stop_trigger: 0.5  # Move to breakeven at 50% of target
+
 monitoring:
   health_check_interval_seconds: 5
   data_staleness_threshold_seconds: 30

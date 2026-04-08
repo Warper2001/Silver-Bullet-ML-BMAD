@@ -3,9 +3,14 @@
 
 This script trains a binary classifier to predict which Silver Bullet signals
 will be profitable, enabling intelligent signal filtering.
+
+Supports both standard and premium model training:
+- Standard: Uses all training data
+- Premium: Uses premium-labeled training data (higher quality filters)
 """
 
 import sys
+import argparse
 from pathlib import Path
 import pandas as pd
 import json
@@ -67,32 +72,52 @@ def load_time_bars(date_start: str, date_end: str) -> pd.DataFrame:
 def main():
     """Train meta-labeling model."""
 
-    print("🚀 TRAINING META-LABELING MODEL")
+    parser = argparse.ArgumentParser(description='Train XGBoost meta-labeling model')
+    parser.add_argument('--premium', '-p', action='store_true',
+                        help='Train premium model using premium-labeled data')
+
+    args = parser.parse_args()
+
+    model_type = "PREMIUM" if args.premium else "STANDARD"
+    print(f"🚀 TRAINING {model_type} META-LABELING MODEL")
     print("=" * 70)
 
     # Step 1: Load training data
     print("\n📊 Step 1: Loading training data...")
 
-    # Try to load full dataset first, fall back to smaller dataset
-    signals_path_full = Path("data/ml_training/silver_bullet_signals_full.parquet")
-    trades_path_full = Path("data/ml_training/silver_bullet_trades_full.parquet")
-    metadata_path_full = Path("data/ml_training/metadata_full.json")
-
-    signals_path = Path("data/ml_training/silver_bullet_signals.parquet")
-    trades_path = Path("data/ml_training/silver_bullet_trades.parquet")
-    metadata_path = Path("data/ml_training/metadata.json")
-
-    if signals_path_full.exists():
-        signals_path = signals_path_full
-        trades_path = trades_path_full
-        metadata_path = metadata_path_full
-        print("   Using full dataset (28 months)")
+    # Determine which dataset to use based on --premium flag
+    if args.premium:
+        signals_path = Path("data/ml_training/silver_bullet_signals_premium.parquet")
+        trades_path = Path("data/ml_training/silver_bullet_trades_premium.parquet")
+        metadata_path = Path("data/ml_training/metadata_premium.json")
+        model_dir = 'models/xgboost/premium'
+        print("   Using PREMIUM dataset")
     else:
-        print("   Using standard dataset (6 months)")
+        # Try to load full dataset first, fall back to smaller dataset
+        signals_path_full = Path("data/ml_training/silver_bullet_signals_full.parquet")
+        trades_path_full = Path("data/ml_training/silver_bullet_trades_full.parquet")
+        metadata_path_full = Path("data/ml_training/metadata_full.json")
+
+        signals_path = Path("data/ml_training/silver_bullet_signals.parquet")
+        trades_path = Path("data/ml_training/silver_bullet_trades.parquet")
+        metadata_path = Path("data/ml_training/metadata.json")
+
+        if signals_path_full.exists():
+            signals_path = signals_path_full
+            trades_path = trades_path_full
+            metadata_path = metadata_path_full
+            print("   Using full dataset (28 months)")
+        else:
+            print("   Using standard dataset (6 months)")
+
+        model_dir = 'models/xgboost'
 
     if not signals_path.exists():
         print(f"❌ Signals file not found: {signals_path}")
-        print("   Run: python run_optimized_silver_bullet.py --save-ml-data")
+        if args.premium:
+            print("   Run: python generate_ml_training_data.py --premium")
+        else:
+            print("   Run: python run_optimized_silver_bullet.py --save-ml-data")
         return
 
     signals_df = pd.read_parquet(signals_path)
@@ -174,7 +199,7 @@ def main():
     # Step 6: Train model
     print("\n🤖 Step 6: Training XGBoost model...")
 
-    trainer = XGBoostTrainer(model_dir='data/models/xgboost')
+    trainer = XGBoostTrainer(model_dir=model_dir)
 
     # Prepare datasets for XGBoostTrainer (30-minute horizon)
     time_horizons = [30]
@@ -216,7 +241,7 @@ def main():
         print(f"   {i:2d}. {feat:40s} {imp:.4f}")
 
     # Validate performance
-    print(f"\n✅ Model saved to data/models/xgboost/30_minute/")
+    print(f"\n✅ Model saved to {model_dir}/30_minute/")
 
     # Check if performance meets criteria
     if metrics['roc_auc'] < 0.60:
@@ -229,12 +254,16 @@ def main():
         print(f"\n✅ Model performance acceptable (ROC-AUC >= 0.60)")
 
     print("\n" + "=" * 70)
-    print("✅ META-LABELING MODEL TRAINING COMPLETE")
+    print(f"✅ {model_type} META-LABELING MODEL TRAINING COMPLETE")
     print("=" * 70)
 
     print("\nNext steps:")
-    print("1. Run: python run_meta_labeling_backtest.py")
-    print("   This will test the model with A/B comparison")
+    if args.premium:
+        print("1. Run: python silver_bullet_premium.py")
+        print("   This will start the premium strategy paper trading")
+    else:
+        print("1. Run: python run_meta_labeling_backtest.py")
+        print("   This will test the model with A/B comparison")
 
 
 if __name__ == '__main__':

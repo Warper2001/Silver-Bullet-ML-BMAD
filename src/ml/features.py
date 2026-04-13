@@ -6,6 +6,8 @@ pattern-based features.
 """
 
 import logging
+from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -466,8 +468,15 @@ class FeatureEngineer:
     - Pattern-based (7 features)
     """
 
-    def __init__(self) -> None:
-        """Initialize feature engineer."""
+    def __init__(self, model_dir: str | Path = "models/xgboost", window_size: int = 100) -> None:
+        """Initialize feature engineer.
+
+        Args:
+            model_dir: Directory containing ML models (for feature metadata)
+            window_size: Window size for rolling calculations
+        """
+        self._model_dir = Path(model_dir)
+        self._window_size = window_size
         logger.info("FeatureEngineer initialized")
 
     def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -608,3 +617,73 @@ class FeatureEngineer:
         # Day of week cyclical encoding
         df["day_sin"] = np.sin(2 * np.pi * df["day_of_week"] / 7)
         df["day_cos"] = np.cos(2 * np.pi * df["day_of_week"] / 7)
+
+    def generate_features_bar(self, current_bar, historical_data: pd.DataFrame) -> np.ndarray:
+        """Generate features for a single bar using historical context.
+
+        This method is used for bar-by-bar evaluation in live trading.
+        It generates all 40+ features for the current bar based on
+        historical data context.
+
+        Args:
+            current_bar: DollarBar object for current bar
+            historical_data: DataFrame with historical bars (at least window_size)
+
+        Returns:
+            Feature vector as numpy array (shape: [n_features])
+        """
+        # Create a DataFrame with the current bar appended to historical data
+        current_df = pd.DataFrame({
+            'timestamp': [current_bar.timestamp],
+            'open': [current_bar.open],
+            'high': [current_bar.high],
+            'low': [current_bar.low],
+            'close': [current_bar.close],
+            'volume': [current_bar.volume],
+            'notional_value': [current_bar.notional_value]
+        })
+
+        # Combine historical data with current bar
+        combined = pd.concat([historical_data, current_df], ignore_index=True)
+
+        # Ensure we have enough data
+        if len(combined) < self._window_size:
+            logger.warning(f"Not enough historical data: {len(combined)} < {self._window_size}")
+            # Pad with zeros if insufficient data
+            combined = pd.concat([historical_data, current_df], ignore_index=True)
+
+        # Engineer all features
+        features_df = self.engineer_features(combined)
+
+        # Get the last row (current bar features)
+        current_features = features_df.iloc[-1]
+
+        # Convert to numpy array for ML prediction
+        # Select only numeric features (exclude timestamp, trading_session)
+        feature_columns = [
+            'open', 'high', 'low', 'close', 'volume', 'notional_value',
+            'atr', 'atr_ratio', 'returns', 'high_low_range', 'close_position',
+            'volume_ratio', 'vwap', 'rsi', 'macd', 'macd_signal', 'macd_histogram',
+            'stoch_k', 'stoch_d', 'roc', 'historical_volatility',
+            'parkinson_volatility', 'garman_klass_volatility',
+            'price_momentum_5', 'price_momentum_10',
+            'volume_ma_20', 'volume_std_20', 'range_ma_20', 'range_std_20',
+            'volatility_ma_20', 'volatility_std_20',
+            'rsi_ma_14', 'rsi_std_14', 'macd_ma_9', 'macd_std_9',
+            'stoch_k_ma_14', 'stoch_d_ma_14', 'atr_ma_14', 'atr_std_14',
+            'return_ma_10', 'return_std_10',
+            'close_position_ma_20', 'close_position_std_20',
+            'is_london_am', 'is_ny_am', 'is_ny_pm',
+            'hour_sin', 'hour_cos', 'day_sin', 'day_cos'
+        ]
+
+        # Filter to available columns
+        available_features = [col for col in feature_columns if col in current_features.index]
+
+        # Extract feature values
+        feature_vector = current_features[available_features].values
+
+        # Fill NaN values with 0
+        feature_vector = np.nan_to_num(feature_vector, nan=0.0)
+
+        return feature_vector

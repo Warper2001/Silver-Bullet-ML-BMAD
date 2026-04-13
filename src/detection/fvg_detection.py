@@ -15,7 +15,11 @@ MNQ_TICK_SIZE = 0.25  # 0.25 points per tick
 MNQ_POINT_VALUE = 20.0  # $20 per point
 
 
-def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | None:
+def detect_bullish_fvg(
+    bars: list[DollarBar],
+    current_index: int,
+    min_gap_size_dollars: float | None = None
+) -> FVGEvent | None:
     """Detect bullish FVG: price gap where candle 1 close > candle 3 open.
 
     A bullish FVG indicates aggressive buying pressure leaving a gap
@@ -24,6 +28,7 @@ def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     Args:
         bars: List of Dollar Bars (OHLCV data)
         current_index: Index of most recent bar (candle 3)
+        min_gap_size_dollars: Optional minimum gap size in dollars (default: None = no filter)
 
     Returns:
         FVGEvent if bullish FVG detected, None otherwise
@@ -60,6 +65,10 @@ def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     gap_size_ticks = gap_size_points / MNQ_TICK_SIZE
     gap_size_dollars = gap_size_points * MNQ_POINT_VALUE
 
+    # Apply minimum gap size filter if specified
+    if min_gap_size_dollars is not None and gap_size_dollars < min_gap_size_dollars:
+        return None
+
     # Bullish FVG detected!
     return FVGEvent(
         timestamp=candle_3.timestamp,
@@ -72,7 +81,11 @@ def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     )
 
 
-def detect_bearish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | None:
+def detect_bearish_fvg(
+    bars: list[DollarBar],
+    current_index: int,
+    min_gap_size_dollars: float | None = None
+) -> FVGEvent | None:
     """Detect bearish FVG: price gap where candle 1 close < candle 3 open.
 
     A bearish FVG indicates aggressive selling pressure leaving a gap
@@ -81,6 +94,7 @@ def detect_bearish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     Args:
         bars: List of Dollar Bars (OHLCV data)
         current_index: Index of most recent bar (candle 3)
+        min_gap_size_dollars: Optional minimum gap size in dollars (default: None = no filter)
 
     Returns:
         FVGEvent if bearish FVG detected, None otherwise
@@ -116,6 +130,10 @@ def detect_bearish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     gap_size_points = top - bottom
     gap_size_ticks = gap_size_points / MNQ_TICK_SIZE
     gap_size_dollars = gap_size_points * MNQ_POINT_VALUE
+
+    # Apply minimum gap size filter if specified
+    if min_gap_size_dollars is not None and gap_size_dollars < min_gap_size_dollars:
+        return None
 
     # Bearish FVG detected!
     return FVGEvent(

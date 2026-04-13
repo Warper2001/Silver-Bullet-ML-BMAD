@@ -127,6 +127,66 @@ def detect_swing_low(bars: list[DollarBar], index: int, lookback: int = 3) -> bo
     return True
 
 
+def score_swing_point(
+    bars: list[DollarBar],
+    swing_index: int,
+    swing_type: str
+) -> float:
+    """Score swing point strength (0-100).
+
+    Factors:
+    - How many bars away (fewer = stronger, max 10 bars)
+    - Price difference magnitude (larger = better)
+    - Volume at swing point (higher = better)
+
+    Args:
+        bars: List of DollarBar objects
+        swing_index: Index of swing point
+        swing_type: 'high' or 'low'
+
+    Returns:
+        Strength score 0-100
+    """
+    if swing_index < 0 or swing_index >= len(bars):
+        return 0.0
+
+    swing_bar = bars[swing_index]
+
+    # Score 1: How recent is the swing (fewer bars = stronger)
+    bars_away = len(bars) - 1 - swing_index
+    recency_score = max(0, 100 - (bars_away * 10))  # 0 bars = 100, 10+ bars = 0
+
+    # Score 2: Price magnitude (how pronounced is the swing)
+    lookback = min(10, len(bars))
+    if lookback < 3:
+        magnitude_score = 50.0
+    else:
+        recent_bars = bars[max(0, len(bars) - lookback):]
+        if swing_type == 'high':
+            avg_high = sum(b.high for b in recent_bars) / len(recent_bars)
+            price_diff = abs(swing_bar.high - avg_high)
+        else:
+            avg_low = sum(b.low for b in recent_bars) / len(recent_bars)
+            price_diff = abs(swing_bar.low - avg_low)
+
+        # Normalize: $50+ difference = max score
+        magnitude_score = min(100, (price_diff / 50.0) * 100)
+
+    # Score 3: Volume at swing point
+    avg_volume = sum(b.volume for b in recent_bars) / len(recent_bars)
+    volume_ratio = swing_bar.volume / avg_volume if avg_volume > 0 else 1.0
+    volume_score = min(100, volume_ratio * 40)  # 2.5x volume = max score
+
+    # Combine scores
+    total_score = (
+        recency_score * 0.4 +
+        magnitude_score * 0.3 +
+        volume_score * 0.3
+    )
+
+    return min(100.0, max(0.0, total_score))
+
+
 def detect_bullish_mss(
     current_bar: DollarBar,
     swing_highs: list[SwingPoint],

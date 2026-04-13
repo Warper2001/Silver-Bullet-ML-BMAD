@@ -21,8 +21,98 @@ risk:
   max_position_size: 5  # contracts
 
 ml:
-  probability_threshold: 0.65  # P(Success) threshold
+  # DEPLOYMENT CONFIGURATION (2026-04-13)
+  # Using Hybrid Regime-Aware System with 40% threshold
+  # See: DEPLOYMENT_CONFIGURATION_40PCT_THRESHOLD.md
+
+  probability_threshold: 0.40  # 40% threshold for hybrid regime-aware system
+  model_type: "regime_aware"  # Use hybrid regime-aware models
+  model_path: "models/xgboost/regime_aware_real_labels/"
+  use_regime_aware: true  # Enable HMM regime detection
+
+  # Regime detection settings
+  regime_detection:
+    enabled: true
+    model_path: "models/hmm/regime_model/"
+    n_regimes: 3
+    feature_window: 100  # Bars for HMM features
+
+  # Bar-by-bar evaluation settings
+  bar_evaluation:
+    enabled: true  # Evaluate every 5-minute bar (not signal-based)
+    min_bars_between_trades: 30  # 2.5 hours at 5-min bars
+    probability_threshold: 0.40  # 40% threshold
+
+  # Triple-barrier exit parameters
+  exits:
+    take_profit_pct: 0.003  # 0.3%
+    stop_loss_pct: 0.002  # 0.2%
+    max_hold_minutes: 30
+
   retraining_interval_days: 7  # Weekly retraining
+
+  # NEW: Time filters to avoid worst-performing periods
+  time_filters:
+    enabled: true
+    exclude_hours: [13, 14, 15, 16, 17]  # Exclude 1 PM - 5 PM (worst performance)
+    skip_thursday: true  # Skip Thursday trading (consistent underperformance)
+
+  # NEW: Statistical drift detection (Epic 5 Phase 2)
+  drift_detection:
+    enabled: true
+    check_interval_hours: 1  # Check for drift every hour
+    rolling_window_hours: 24  # Use last 24 hours for recent data
+    retention_days: 30  # Keep drift metrics for 30 days
+
+    # PSI (Population Stability Index) configuration
+    psi:
+      bins: 10  # Number of bins for PSI calculation (deciles)
+      threshold_moderate: 0.2  # PSI > 0.2 indicates moderate drift
+      threshold_severe: 0.5  # PSI > 0.5 indicates severe drift
+
+    # KS (Kolmogorov-Smirnov) test configuration
+    ks_test:
+      p_value_threshold: 0.05  # p-value < 0.05 indicates significant drift
+
+    # Baseline data paths (loaded from model metadata)
+    baseline:
+      training_data_path: "data/processed/dollar_bars/1_minute"
+      feature_columns: null  # Will be auto-detected from FeatureEngineer
+
+    # Alert configuration
+    alerts:
+      log_file: "logs/drift_events.csv"
+      dashboard_integration: true  # Will be used in Story 5.2.2
+
+  # NEW: Automated retraining triggers (Epic 5 Phase 2: Story 5.2.3)
+  retraining:
+    enabled: false  # Disabled by default (enable in production)
+    mode: "auto"  # "auto" or "manual"
+
+    # Trigger thresholds
+    trigger:
+      psi_threshold: 0.5  # Severe drift threshold (PSI > 0.5)
+      ks_p_value_threshold: 0.01  # Highly significant threshold (p-value < 0.01)
+      min_interval_hours: 24  # Minimum time between retrainings
+      min_samples: 1000  # Minimum new samples required
+
+    # Validation criteria
+    validation:
+      brier_score_max: 0.2  # Maximum Brier score (calibration quality)
+      win_rate_min_delta: 0.0  # Minimum win rate change (no degradation)
+      feature_stability_threshold: 0.3  # Max feature importance change
+
+    # Execution settings
+    execution:
+      async_enabled: true  # Run retraining in background
+      timeout_minutes: 60  # Maximum retraining time
+      max_concurrent_retrainings: 1  # Prevent overlapping retrainings
+
+    # Model versioning
+    model_versioning:
+      backup_count: 5  # Number of old models to keep
+      models_dir: "models/xgboost/1_minute"
+      metadata_file: "models/model_lineage.json"
 
 silver_bullet_premium:
   enabled: true
@@ -31,8 +121,15 @@ silver_bullet_premium:
   max_bar_distance: 7  # Reduced from 20 bars (baseline)
   ml_probability_threshold: 0.65  # Use baseline until premium model trained
   # Note: require_killzone_alignment removed - baseline already filters to killzones only
-  max_trades_per_day: 20  # Maximum daily trade limit (optimized based on backtest)
-  min_quality_score: 70  # Minimum setup quality score (0-100)
+  max_trades_per_day: 20  # Maximum daily trade limit
+
+  # FINAL OPTIMIZED PARAMETERS (2025 validated)
+  # INVERTED QUALITY: 0-85 range (lower quality = better performance)
+  min_quality_score: 0  # NO MINIMUM (inverted from 70)
+  max_quality_score: 85  # MAXIMUM to avoid worst quality
+
+  # OPTIMIZED STOP PLACEMENT
+  stop_multiplier: 1.5  # Wider stops (reduce premature exits)
 
   # Phase 1 Optimizations
   # Killzone quality weights - accept different % of signals by killzone
@@ -56,6 +153,16 @@ silver_bullet_premium:
   trailing_stop_enabled: true
   trailing_stop_trigger: 0.5  # Move to breakeven at 50% of target
 
+  # NEW: Asymmetric stop multipliers for different market conditions
+  # Addresses 2025 uptrending market creating distant swing highs
+  bullish_stop_multiplier: 0.75  # Tighter stops for bullish (fixes 77% wider stop issue)
+  bearish_stop_multiplier: 1.50  # Standard stops for bearish
+
 monitoring:
   health_check_interval_seconds: 5
   data_staleness_threshold_seconds: 30
+
+execution:
+  tradestation:
+    sim_account: "SIM_ACCOUNT"  # TradeStation SIM environment account ID
+    environment: "sim"  # sim or production

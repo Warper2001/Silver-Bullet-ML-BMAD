@@ -72,6 +72,10 @@ class PremiumConfig(BaseModel):
     trailing_stop_enabled: bool = True
     trailing_stop_trigger: float = 0.5  # Move to breakeven at 50% of target
 
+    # NEW: Asymmetric stop multipliers for different market conditions
+    bullish_stop_multiplier: float = 0.75  # Tighter stops for uptrending markets
+    bearish_stop_multiplier: float = 1.50  # Standard stops
+
     @field_validator('min_fvg_gap_size_dollars')
     @classmethod
     def validate_gap_size(cls, v: float) -> float:
@@ -692,22 +696,41 @@ class SilverBulletPremiumEnhancedTrader:
         # Execute paper trade
         logger.info(f"💰 EXECUTING PAPER TRADE")
         logger.info(f"   Direction: {setup['direction'].upper()}")
-        logger.info(f"   Entry: ${setup['entry_zone_bottom']:.2f}")
-        logger.info(f"   Stop: ${setup['invalidation_point']:.2f}")
-        logger.info(f"   Target: ${setup['entry_zone_top']:.2f}")
+
+        # Calculate entry price (middle of FVG)
+        entry_price = (setup['entry_zone_top'] + setup['entry_zone_bottom']) / 2
+        logger.info(f"   Entry: ${entry_price:.2f}")
+
+        # Calculate DYNAMIC STOP based on direction and swing point distance
+        invalidation_point = setup['invalidation_point']
+
+        if setup['direction'] == 'bullish':
+            # BULLISH: Use 0.75x multiplier (tighter stops for uptrending market)
+            stop_distance = abs(entry_price - invalidation_point) * self.config.bullish_stop_multiplier
+            stop_loss = entry_price - stop_distance
+            target = entry_price + stop_distance * 2  # 1:2 R:R based on stop distance
+        else:
+            # BEARISH: Use 1.5x multiplier (standard stops)
+            stop_distance = abs(invalidation_point - entry_price) * self.config.bearish_stop_multiplier
+            stop_loss = entry_price + stop_distance
+            target = entry_price - stop_distance * 2  # 1:2 R:R based on stop distance
+
+        logger.info(f"   Stop: ${stop_loss:.2f} (dynamic multiplier: {self.config.bullish_stop_multiplier if setup['direction'] == 'bullish' else self.config.bearish_stop_multiplier}x)")
+        logger.info(f"   Target: ${target:.2f}")
+        logger.info(f"   Stop Distance: ${stop_distance:.2f}")
 
         # Calculate potential profit with dynamic stop loss
         if setup['direction'] == 'bullish':
-            initial_risk = setup['entry_zone_bottom'] - setup['invalidation_point']
-            potential_profit = (setup['entry_zone_top'] - setup['entry_zone_bottom']) * 0.5
+            initial_risk = entry_price - stop_loss
+            potential_profit = target - entry_price
 
             # Dynamic stop loss: limit loss to 50% of initial risk
             if self.config.dynamic_stop_loss_enabled:
                 max_loss = initial_risk * self.config.early_exit_loss_threshold
                 logger.info(f"   🛡️ Dynamic Stop: Max loss = ${abs(max_loss):.2f} (50% of initial risk)")
         else:
-            initial_risk = setup['invalidation_point'] - setup['entry_zone_top']
-            potential_profit = (setup['entry_zone_top'] - setup['entry_zone_bottom']) * 0.5
+            initial_risk = stop_loss - entry_price
+            potential_profit = entry_price - target
 
             if self.config.dynamic_stop_loss_enabled:
                 max_loss = initial_risk * self.config.early_exit_loss_threshold

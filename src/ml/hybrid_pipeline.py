@@ -25,7 +25,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from src.data.models import DollarBar, SilverBulletSetup
+from src.data.models import DollarBar
+from src.execution.trade_execution_pipeline import TradingSignal
 from src.ml.features import FeatureEngineer
 from src.ml.regime_detection import HMMRegimeDetector, HMMFeatureEngineer
 
@@ -64,14 +65,14 @@ class HybridMLPipeline:
 
     def __init__(
         self,
-        output_queue: asyncio.Queue[SilverBulletSetup],
+        output_queue: asyncio.Queue[TradingSignal],
         model_dir: str | Path = "models/xgboost",
         hmm_dir: str | Path = "models/hmm/regime_model",
     ) -> None:
         """Initialize the hybrid ML pipeline.
 
         Args:
-            output_queue: Queue publishing signals to execution pipeline
+            output_queue: Queue publishing TradingSignal to execution pipeline
             model_dir: Directory containing ML models
             hmm_dir: Directory containing HMM regime detector
         """
@@ -269,48 +270,56 @@ class HybridMLPipeline:
             historical_data: Historical bars for momentum calculation
 
         Returns:
-            "LONG" or "SHORT"
+            "bullish" or "bearish"
         """
         # Calculate 5-bar momentum
         recent_close = historical_data['close'].iloc[-1]
         momentum_5 = recent_close - historical_data['close'].iloc[-6]
 
-        return "LONG" if momentum_5 > 0 else "SHORT"
+        return "bullish" if momentum_5 > 0 else "bearish"
 
     def _create_signal(
         self, bar: DollarBar, direction: str, probability: float
-    ) -> SilverBulletSetup:
-        """Create SilverBulletSetup signal from bar evaluation.
+    ) -> TradingSignal:
+        """Create TradingSignal from bar evaluation.
 
         Args:
             bar: Current dollar bar
-            direction: Trade direction ("LONG" or "SHORT")
+            direction: Trade direction ("bullish" or "bearish")
             probability: ML-predicted success probability
 
         Returns:
-            SilverBulletSetup signal with triple-barrier exits
+            TradingSignal with triple-barrier exits
         """
         # Calculate entry, stop loss, take profit
         entry_price = bar.close
 
-        if direction == "LONG":
+        if direction == "bullish":
             stop_loss = entry_price * (1 - self.STOP_LOSS_PCT)
             take_profit = entry_price * (1 + self.TAKE_PROFIT_PCT)
-        else:  # SHORT
+        else:  # bearish
             stop_loss = entry_price * (1 + self.STOP_LOSS_PCT)
             take_profit = entry_price * (1 - self.TAKE_PROFIT_PCT)
 
-        # Create signal
-        signal = SilverBulletSetup(
-            timestamp=bar.timestamp,
-            symbol=bar.symbol or "MNQ",
+        # Create unique signal ID
+        signal_id = f"hybrid_{int(bar.timestamp.timestamp())}"
+
+        # Create TradingSignal
+        signal = TradingSignal(
+            signal_id=signal_id,
+            symbol="MNQ",
             direction=direction,
+            confidence_score=probability,
+            timestamp=bar.timestamp,
             entry_price=entry_price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            confidence=probability,
-            regime=self._current_regime or 1,
-            setup_type="hybrid_ml",
+            patterns=[f"hybrid_ml_regime_{self._current_regime or 1}"],
+            prediction={
+                "probability": probability,
+                "regime": self._current_regime or 1,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
+                "setup_type": "hybrid_ml"
+            }
         )
 
         return signal

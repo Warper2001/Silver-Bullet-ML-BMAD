@@ -1,0 +1,2 @@
+timestamp,win_rate_uncalibrated,win_rate_calibrated,win_rate_improvement,mean_prob_uncalibrated,mean_prob_calibrated,brier_score_uncalibrated,brier_score_calibrated,brier_score_improvement,trade_count_uncalibrated,trade_count_calibrated
+2026-04-12T00:52:05.263380,0.4755949979830577,0.4755949979830577,0.0,0.6,0.5499999999999999,0.26488100040338847,0.25494050020169423,0.009940500201694236,2479,2479

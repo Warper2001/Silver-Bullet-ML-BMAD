@@ -1,0 +1,33 @@
+======================================================================
+BAR-BY-BAR ML BACKTEST REPORT
+======================================================================
+
+Generated: 2026-04-12 21:41:04
+Period: 2024-01-01 to 2025-03-31 (15 months)
+Trading Days: ~390
+Approach: Evaluate EVERY bar (not just signals)
+Probability Threshold: 40.0%
+
+======================================================================
+RESULTS
+======================================================================
+
+Total Trades: 1527
+Trades per Day: 3.92
+Trades per Month: 82.2
+Win Rate: 51.80%
+Total P&L: 11.42%
+Avg Trade: 0.007%
+Sharpe Ratio: 0.74
+Profit Factor: 1.12
+Max Drawdown: -2.78%
+
+======================================================================
+TARGET VALIDATION
+======================================================================
+
+Target: 1-20 trades per day
+Actual: 3.92 trades per day
+Status: ✅ MEETS TARGET
+
+✅ System ready for paper trading deployment

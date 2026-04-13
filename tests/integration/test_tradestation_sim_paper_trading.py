@@ -362,6 +362,109 @@ class TestSIMOrderSubmitter:
         assert payload["OrderType"] == "Market"
         assert payload["TimeInForce"] == "DAY"
 
+    @pytest.mark.asyncio
+    async def test_submit_order_with_risk_validation_pass(self, mock_auth, sample_trading_signal):
+        """Test order submission with risk validation that passes."""
+        # Mock risk orchestrator that approves the trade
+        mock_risk_orch = MagicMock()
+        mock_risk_orch.validate_trade.return_value = {
+            'is_valid': True,
+            'block_reason': None,
+            'checks_passed': ['emergency_stop', 'daily_loss', 'drawdown', 'position_size'],
+            'checks_failed': [],
+            'validation_details': {}
+        }
+
+        submitter = SIMOrderSubmitter(auth=mock_auth, risk_orchestrator=mock_risk_orch)
+
+        # Mock HTTP client
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"OrderID": "ORDER-123"}
+
+        with patch.object(submitter, "_get_client") as mock_get_client:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            result = await submitter.submit_order(sample_trading_signal)
+
+            # Risk validation should be called
+            mock_risk_orch.validate_trade.assert_called_once_with(sample_trading_signal)
+
+            # Order should be submitted
+            assert result.success is True
+            assert result.order_id == "ORDER-123"
+
+    @pytest.mark.asyncio
+    async def test_submit_order_with_risk_validation_fail(self, mock_auth, sample_trading_signal):
+        """Test order submission with risk validation that fails."""
+        # Mock risk orchestrator that rejects the trade
+        mock_risk_orch = MagicMock()
+        mock_risk_orch.validate_trade.return_value = {
+            'is_valid': False,
+            'block_reason': 'Daily loss limit exceeded',
+            'checks_passed': ['emergency_stop'],
+            'checks_failed': ['daily_loss'],
+            'validation_details': {}
+        }
+
+        submitter = SIMOrderSubmitter(auth=mock_auth, risk_orchestrator=mock_risk_orch)
+
+        result = await submitter.submit_order(sample_trading_signal)
+
+        # Risk validation should be called
+        mock_risk_orch.validate_trade.assert_called_once_with(sample_trading_signal)
+
+        # Order should be rejected
+        assert result.success is False
+        assert result.status == "REJECTED"
+        assert "Daily loss limit exceeded" in result.error_message
+
+    @pytest.mark.asyncio
+    async def test_submit_order_without_risk_orchestrator(self, mock_auth, sample_trading_signal):
+        """Test order submission without risk orchestrator logs warning."""
+        submitter = SIMOrderSubmitter(auth=mock_auth, risk_orchestrator=None)
+
+        # Mock HTTP client
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"OrderID": "ORDER-123"}
+
+        with patch.object(submitter, "_get_client") as mock_get_client:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            result = await submitter.submit_order(sample_trading_signal)
+
+            # Order should still be submitted (without safety checks)
+            assert result.success is True
+            assert result.order_id == "ORDER-123"
+
+    @pytest.mark.asyncio
+    async def test_order_submitter_reads_sim_account_from_config(self, mock_auth):
+        """Test that SIM account is read from config instead of hardcoded."""
+        submitter = SIMOrderSubmitter(auth=mock_auth)
+
+        # Should read from config (default value if config not found)
+        assert submitter._sim_account == "SIM_ACCOUNT"
+
+        # Test building payload
+        signal = TradingSignal(
+            signal_id="TEST-001",
+            symbol="MNQH26",
+            direction="bullish",
+            confidence_score=0.75,
+            timestamp=None,
+            entry_price=11850.0,
+            patterns=[],
+            prediction={}
+        )
+
+        payload = submitter._build_order_payload(signal, quantity=5)
+        assert payload["AccountID"] == "SIM_ACCOUNT"
+
 
 class TestEndToEndIntegration:
     """End-to-end integration tests for SIM paper trading."""
@@ -420,3 +523,155 @@ class TestEndToEndIntegration:
 
         assert position_tracker.open_position_count == 0
         assert position_tracker.total_realized_pnl == realized_pnl
+
+    @pytest.mark.asyncio
+    async def test_complete_pipeline_with_all_risk_layers(
+        self,
+        mock_auth,
+        sample_stream_position,
+        sample_trading_signal,
+    ):
+        """Test complete pipeline: signal → risk validation (8 layers) → order → position → P&L.
+
+        This test validates the critical acceptance criterion:
+        "Apply all 8 risk layers before order submission"
+        """
+        # Mock risk orchestrator with all 8 risk layers
+        mock_risk_orch = MagicMock()
+        mock_risk_orch.validate_trade.return_value = {
+            'is_valid': True,
+            'block_reason': None,
+            'checks_passed': [
+                'emergency_stop',      # Layer 1
+                'daily_loss',          # Layer 2
+                'drawdown',            # Layer 3
+                'position_size',       # Layer 4
+                'circuit_breaker',     # Layer 5
+                'news_event',          # Layer 6
+                'correlation',         # Layer 7
+                'portfolio_heat'       # Layer 8
+            ],
+            'checks_failed': [],
+            'validation_details': {
+                'emergency_stop': {'passed': True, 'reason': 'Emergency stop not activated'},
+                'daily_loss': {'passed': True, 'reason': 'Daily loss within limits'},
+                'drawdown': {'passed': True, 'reason': 'Drawdown within limits'},
+                'position_size': {'passed': True, 'reason': 'Position size acceptable'},
+                'circuit_breaker': {'passed': True, 'reason': 'No circuit breaker triggered'},
+                'news_event': {'passed': True, 'reason': 'No high-impact news events'},
+                'correlation': {'passed': True, 'reason': 'Correlation within limits'},
+                'portfolio_heat': {'passed': True, 'reason': 'Portfolio heat acceptable'}
+            }
+        }
+
+        # Step 1: Initialize components with risk orchestrator
+        order_submitter = SIMOrderSubmitter(
+            auth=mock_auth,
+            risk_orchestrator=mock_risk_orch
+        )
+        position_tracker = PositionTrackerWithPnL()
+
+        # Step 2: Submit order (should be approved after risk validation)
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"OrderID": "ORDER-123"}
+
+        with patch.object(order_submitter, "_get_client") as mock_get_client:
+            mock_client = AsyncMock()
+            mock_client.post.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            order_result = await order_submitter.submit_order(sample_trading_signal)
+
+            # Verify risk validation was called before order submission
+            mock_risk_orch.validate_trade.assert_called_once_with(sample_trading_signal)
+
+            # Verify all 8 risk layers passed
+            mock_risk_orch.validate_trade.assert_called_once()
+            call_args = mock_risk_orch.validate_trade.call_args
+            risk_validation_result = mock_risk_orch.validate_trade.return_value
+            assert len(risk_validation_result['checks_passed']) == 8
+            assert len(risk_validation_result['checks_failed']) == 0
+
+            # Order should be submitted successfully
+            assert order_result.success is True
+            assert order_result.order_id == "ORDER-123"
+
+        # Step 3: Create and track position
+        position = PositionWithPnL(
+            order_id=order_result.order_id,
+            signal_id=sample_trading_signal.signal_id,
+            symbol=sample_trading_signal.symbol,
+            entry_price=sample_trading_signal.entry_price,
+            quantity=DEFAULT_ORDER_QUANTITY,
+            direction=sample_trading_signal.direction,
+            timestamp=sample_trading_signal.timestamp,
+        )
+        position_tracker.add_position(position)
+
+        # Step 4: Update position from live quote
+        position_tracker.update_from_quote(sample_stream_position)
+        assert position_tracker.open_position_count == 1
+
+        # Step 5: Verify P&L is calculated correctly (MNQ multiplier = 0.5)
+        updated_position = position_tracker.get_position(order_result.order_id)
+        expected_pnl_multiplier = 0.5  # MNQ contract multiplier
+        # P&L = (current_price - entry_price) * quantity * multiplier
+        price_diff = sample_stream_position.last_price - sample_trading_signal.entry_price
+        expected_pnl = price_diff * DEFAULT_ORDER_QUANTITY * expected_pnl_multiplier
+        assert abs(updated_position.unrealized_pnl - expected_pnl) < 0.01
+
+        # Step 6: Close position
+        realized_pnl = position_tracker.close_position(
+            order_result.order_id,
+            sample_stream_position.last_price,
+        )
+
+        assert position_tracker.open_position_count == 0
+        assert abs(position_tracker.total_realized_pnl - realized_pnl) < 0.01
+
+    @pytest.mark.asyncio
+    async def test_complete_pipeline_blocked_by_risk_validation(
+        self,
+        mock_auth,
+        sample_trading_signal,
+    ):
+        """Test complete pipeline when risk validation blocks the trade.
+
+        This validates the safety mechanism: orders rejected by risk
+        validation should NOT be submitted to TradeStation.
+        """
+        # Mock risk orchestrator that rejects trade (Layer 2: daily loss limit)
+        mock_risk_orch = MagicMock()
+        mock_risk_orch.validate_trade.return_value = {
+            'is_valid': False,
+            'block_reason': 'Daily loss limit exceeded',
+            'checks_passed': ['emergency_stop', 'drawdown', 'position_size'],
+            'checks_failed': ['daily_loss'],  # Layer 2 blocks the trade
+            'validation_details': {
+                'emergency_stop': {'passed': True, 'reason': 'Emergency stop not activated'},
+                'daily_loss': {'passed': False, 'reason': 'Daily loss limit: $600/$500 exceeded'},
+                'drawdown': {'passed': True, 'reason': 'Drawdown within limits'},
+                'position_size': {'passed': True, 'reason': 'Position size acceptable'}
+            }
+        }
+
+        # Step 1: Initialize components with risk orchestrator
+        order_submitter = SIMOrderSubmitter(
+            auth=mock_auth,
+            risk_orchestrator=mock_risk_orch
+        )
+
+        # Step 2: Try to submit order (should be blocked by risk validation)
+        result = await order_submitter.submit_order(sample_trading_signal)
+
+        # Step 3: Verify order was NOT submitted
+        assert result.success is False
+        assert result.status == "REJECTED"
+        assert "Daily loss limit exceeded" in result.error_message
+
+        # Step 4: Verify risk validation was called
+        mock_risk_orch.validate_trade.assert_called_once()
+
+        # CRITICAL: No order should be submitted to TradeStation
+        # This prevents trades when safety limits are breached

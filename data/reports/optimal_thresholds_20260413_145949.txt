@@ -1,0 +1,32 @@
+======================================================================
+OPTIMAL THRESHOLDS FOR 1 AND 2 TRADES PER DAY
+======================================================================
+
+Target: 2.30 trades/day
+Optimal Threshold: 70.0%
+
+Performance:
+  Trades/Day: 2.30
+  Trades/Month: 48.2
+  Win Rate: 49.33%
+  Total P&L: -2.03%
+  Sharpe Ratio: -0.22
+  Profit Factor: 0.97
+  Max Drawdown: -4.98%
+
+----------------------------------------------------------------------
+
+Target: 2.30 trades/day
+Optimal Threshold: 70.0%
+
+Performance:
+  Trades/Day: 2.30
+  Trades/Month: 48.2
+  Win Rate: 49.33%
+  Total P&L: -2.03%
+  Sharpe Ratio: -0.22
+  Profit Factor: 0.97
+  Max Drawdown: -4.98%
+
+----------------------------------------------------------------------
+

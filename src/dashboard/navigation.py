@@ -1,7 +1,7 @@
 """Page routing logic for Streamlit dashboard."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -1241,6 +1241,349 @@ def render_help():
     show_help_modal(current_page)
 
 
+def render_drift_monitoring():
+    """Render drift monitoring page with PSI/KS metrics and historical timeline."""
+    st.header("📊 Drift Monitoring")
+
+    # Initialize session state for filters
+    if 'drift_severity_filter' not in st.session_state:
+        st.session_state.drift_severity_filter = 'All'
+    if 'drift_feature_filter' not in st.session_state:
+        st.session_state.drift_feature_filter = 'All'
+    if 'drift_days' not in st.session_state:
+        st.session_state.drift_days = 30
+
+    # Auto-refresh timer (30 seconds)
+    if 'last_drift_refresh' not in st.session_state:
+        st.session_state.last_drift_refresh = 0
+
+    import time
+    current_time = time.time()
+    auto_refresh = st.checkbox("🔄 Auto-refresh (30s)", value=True)
+
+    # FIXED: Only rerun if enough time has elapsed AND we haven't just rerun
+    # Use Streamlit's built-in auto-refresh mechanism instead of manual rerun
+    if auto_refresh:
+        time_until_refresh = max(0, 30 - (current_time - st.session_state.last_drift_refresh))
+        if time_until_refresh == 0:
+            st.session_state.last_drift_refresh = current_time
+            st.rerun()
+
+    # Load drift events
+    drift_events = load_drift_events(days=int(st.session_state.drift_days))
+
+    if drift_events.empty:
+        st.warning("⚠️ No drift events found. Ensure drift detection is running.")
+        st.info("Drift events are logged to `logs/drift_events/drift_events.csv`")
+        return
+
+    # Display severe drift alert if present
+    latest_event = drift_events.iloc[-1]
+    if latest_event.get("drift_detected", False):
+        drifting_features = latest_event.get("drifting_features", "")
+        if drifting_features:
+            features_list = drifting_features.split(",") if isinstance(drifting_features, str) else []
+            if len(features_list) >= 5:  # Severe drift threshold
+                st.error(f"🚨 **SEVERE DRIFT DETECTED**")
+                st.warning(f"**{len(features_list)} features drifting**: {drifting_features}")
+                st.info("💡 **Recommended Action**: Consider model retraining")
+                st.markdown("---")
+
+    # Summary metrics section
+    st.subheader("📈 Drift Summary")
+
+    # Calculate metrics
+    last_check_time = pd.to_datetime(latest_event["timestamp"])
+    time_since_check = (datetime.now() - last_check_time).total_seconds()
+
+    # FIXED: Use 24-hour window, not 1-hour window
+    events_24h = drift_events[drift_events["timestamp"] > (datetime.now() - timedelta(hours=24))]
+    events_7d = drift_events[drift_events["timestamp"] > (datetime.now() - timedelta(days=7))]
+    events_30d = drift_events[drift_events["timestamp"] > (datetime.now() - timedelta(days=30))]
+
+    # Status indicator
+    drift_detected = latest_event.get("drift_detected", False)
+    status_emoji = "🟢" if not drift_detected else "🟡" if not drift_detected else "🔴"
+    status_text = "No Drift" if not drift_detected else f"{len(latest_event.get('drifting_features', '').split(','))} Features Drifting"
+
+    # Display metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("System Status", f"{status_emoji} {status_text}")
+
+    with col2:
+        st.metric("Last Check", f"{int(time_since_check)}s ago")
+
+    with col3:
+        st.metric("Drift Events (24h)", f"{len(events_24h)}")
+
+    with col4:
+        st.metric("Drift Events (7d)", f"{len(events_7d)}")
+
+    st.markdown("---")
+
+    # PSI Scores section
+    st.subheader("🔬 PSI Scores - Top Drifting Features")
+
+    # Extract PSI scores from latest event
+    # FIXED: Show 10 features instead of 5 (as per spec)
+    psi_data = []
+    for i in range(10):  # psi_feature_0 to psi_feature_9
+        feature = latest_event.get(f"psi_feature_{i}")
+        score = latest_event.get(f"psi_score_{i}")
+        severity = latest_event.get(f"psi_severity_{i}")
+
+        if feature and pd.notna(score):
+            color = "🟢" if severity == "none" else "🟡" if severity == "moderate" else "🔴"
+            psi_data.append({
+                "Feature": feature,
+                "PSI Score": score,
+                "Severity": severity,
+                "Indicator": color
+            })
+
+    if psi_data:
+        psi_df = pd.DataFrame(psi_data)
+        psi_df = psi_df.sort_values("PSI Score", ascending=False)
+
+        # Display as bar chart
+        fig_psi = go.Figure(data=[
+            go.Bar(
+                x=psi_df["PSI Score"],
+                y=psi_df["Feature"],
+                orientation='h',
+                marker=dict(
+                    color=['#FF4444' if s == "severe" else '#FFAA00' if s == "moderate" else '#44FF44' for s in psi_df["Severity"]]
+                ),
+                text=psi_df["Indicator"],
+                textposition='outside',
+            )
+        ])
+
+        fig_psi.update_layout(
+            title="Top Features by PSI Score",
+            xaxis_title="PSI Score",
+            yaxis_title="Feature",
+            height=400,
+            margin=dict(l=20, r=20, t=40, b=20),
+        )
+
+        # Add threshold lines
+        fig_psi.add_vline(x=0.2, line_dash="dash", line_color="orange",
+                         annotation_text="Moderate (0.2)")
+        fig_psi.add_vline(x=0.5, line_dash="dash", line_color="red",
+                         annotation_text="Severe (0.5)")
+
+        st.plotly_chart(fig_psi, use_container_width=True)
+
+        # Display PSI table
+        with st.expander("📋 PSI Score Details"):
+            st.dataframe(psi_df, hide_index=True, use_container_width=True)
+    else:
+        st.info("No PSI data available")
+
+    st.markdown("---")
+
+    # KS Test Results section
+    st.subheader("🧪 KS Test Results")
+
+    ks_statistic = latest_event.get("ks_statistic", 0)
+    ks_p_value = latest_event.get("ks_p_value", 1.0)
+    ks_drift_detected = latest_event.get("ks_drift_detected", False)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # KS Statistic gauge
+        st.metric("KS Statistic", f"{ks_statistic:.4f}" if pd.notna(ks_statistic) else "N/A")
+
+    with col2:
+        # P-value badge
+        if pd.notna(ks_p_value):
+            if ks_p_value < 0.05:
+                st.error(f"**P-Value**: {ks_p_value:.4f} ❌")
+                if ks_drift_detected:
+                    st.warning("Significant Drift Detected")
+            else:
+                st.success(f"**P-Value**: {ks_p_value:.4f} ✅")
+                st.info("No Significant Drift")
+        else:
+            st.info("**P-Value**: N/A")
+
+    # Historical KS trend
+    if len(drift_events) > 1:
+        st.subheader("📈 KS Test Historical Trend")
+
+        drift_events_sorted = drift_events.sort_values("timestamp")
+
+        fig_ks = go.Figure()
+
+        # KS statistic line
+        fig_ks.add_trace(go.Scatter(
+            x=drift_events_sorted["timestamp"],
+            y=drift_events_sorted["ks_statistic"],
+            mode='lines+markers',
+            name='KS Statistic',
+            line=dict(color='#636EFA', width=2),
+        ))
+
+        # P-value line (secondary y-axis)
+        fig_ks.add_trace(go.Scatter(
+            x=drift_events_sorted["timestamp"],
+            y=drift_events_sorted["ks_p_value"],
+            mode='lines+markers',
+            name='P-Value',
+            yaxis='y2',
+            line=dict(color='#EF553B', width=2, dash='dot'),
+        ))
+
+        # Add significance threshold line
+        fig_ks.add_hline(y=0.05, line_dash="dash", line_color="red",
+                        annotation_text="Significance Threshold (0.05)")
+
+        fig_ks.update_layout(
+            title="KS Statistic and P-Value Over Time",
+            xaxis_title="Timestamp",
+            yaxis_title="KS Statistic",
+            yaxis2=dict(
+                title="P-Value",
+                overlaying="y",
+                side="right"
+            ),
+            height=400,
+            hovermode='x unified',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
+        )
+
+        st.plotly_chart(fig_ks, use_container_width=True)
+
+    st.markdown("---")
+
+    # Historical Timeline section
+    st.subheader("📅 Drift Events Timeline")
+
+    # Filters
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.selectbox(
+            "Severity Filter:",
+            options=["All", "Moderate", "Severe"],
+            key="drift_severity_filter"
+        )
+
+    with col2:
+        st.selectbox(
+            "Time Range:",
+            options=[1, 7, 14, 30],
+            format_func=lambda x: f"Last {x} days",
+            key="drift_days"
+        )
+
+    with col3:
+        if st.button("🔄 Refresh Now"):
+            st.rerun()
+
+    # Create timeline plot
+    drift_events_sorted = drift_events.sort_values("timestamp")
+
+    fig_timeline = go.Figure()
+
+    # Color events by severity
+    colors = []
+    for _, event in drift_events_sorted.iterrows():
+        drifting_features = event.get("drifting_features", "")
+        num_features = len(drifting_features.split(",")) if drifting_features else 0
+
+        if num_features >= 5:
+            colors.append('#FF4444')  # Severe - Red
+        elif num_features >= 2:
+            colors.append('#FFAA00')  # Moderate - Orange
+        else:
+            colors.append('#44FF44')  # None - Green
+
+    fig_timeline.add_trace(go.Scatter(
+        x=drift_events_sorted["timestamp"],
+        y=drift_events_sorted["drifting_features_count"],
+        mode='lines+markers',
+        marker=dict(
+            color=colors,
+            size=8,
+            line=dict(width=1)
+        ),
+        line=dict(color='#636EFA', width=1),
+        name='Drifting Features Count',
+        hovertemplate='<b>%{x}</b><br>Drifting Features: %{y}<extra></extra>'
+    ))
+
+    fig_timeline.update_layout(
+        title="Drift Events Timeline",
+        xaxis_title="Timestamp",
+        yaxis_title="Number of Drifting Features",
+        height=400,
+        hovermode='x',
+        xaxis_rangeslider_visible=True
+    )
+
+    st.plotly_chart(fig_timeline, use_container_width=True)
+
+    # Detailed events table
+    with st.expander("📋 Drift Events Log"):
+        # Display columns
+        display_cols = ["timestamp", "drift_detected", "drifting_features_count",
+                       "drifting_features", "ks_statistic", "ks_p_value"]
+
+        # Format for display
+        display_df = drift_events_sorted[display_cols].copy()
+        display_df["timestamp"] = pd.to_datetime(display_df["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+
+
+def load_drift_events(days: int = 30) -> pd.DataFrame:
+    """Load drift events from CSV audit trail.
+
+    Args:
+        days: Number of days to load (default: 30)
+
+    Returns:
+        DataFrame with drift events
+    """
+    from pathlib import Path
+
+    csv_file = Path("logs/drift_events/drift_events.csv")
+
+    if not csv_file.exists():
+        return pd.DataFrame()
+
+    try:
+        df = pd.read_csv(csv_file)
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+        # Filter to last N days
+        from datetime import timedelta
+        cutoff = datetime.now() - timedelta(days=days)
+        df = df[df["timestamp"] >= cutoff]
+
+        # Add drifting features count
+        df["drifting_features_count"] = df["drifting_features"].apply(
+            lambda x: len(x.split(",")) if isinstance(x, str) and x else 0
+        )
+
+        return df
+
+    except Exception as e:
+        logger.error(f"Error loading drift events: {e}")
+        return pd.DataFrame()
+
+
 def render_page(page: str):
     """Route to selected page."""
     # Initialize keyboard shortcuts (inject JavaScript and handle events)
@@ -1260,6 +1603,7 @@ def render_page(page: str):
         "Positions": render_positions,
         "Signals": render_signals,
         "Charts": render_charts,
+        "Drift Monitoring": render_drift_monitoring,
         "Settings": render_settings,
         "Manual Trade": render_manual_trade,
         "Help": render_help,

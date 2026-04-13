@@ -1,0 +1,132 @@
+======================================================================
+THRESHOLD SENSITIVITY ANALYSIS REPORT
+======================================================================
+
+Generated: 2026-04-12 21:21:32
+Period: 2024-01-01 to 2025-03-31 (15 months)
+Trading Days: ~390
+Thresholds Tested: 13
+
+======================================================================
+OPTIMAL THRESHOLD RECOMMENDATION
+======================================================================
+
+⚠️  NO THRESHOLD MEETS MINIMUM REQUIREMENTS
+
+Requirements:
+  - Minimum 1 trade/day
+  - Minimum 50% win rate
+
+Recommendations:
+  1. Expand signal generation (lower volatility/volume thresholds)
+  2. Use regime-specific thresholds
+  3. Accept lower win rate (45-50%)
+
+======================================================================
+FULL THRESHOLD COMPARISON
+======================================================================
+
+Threshold: 40.0% ❌
+  Trades/Day: 0.66 (13.8/month)
+  Win Rate: 51.36% ✅
+  Sharpe: 0.19
+  P&L: 0.49%
+  Profit Factor: 1.03
+  Max DD: -2.66%
+
+Threshold: 42.5% ❌
+  Trades/Day: 0.57 (12.0/month)
+  Win Rate: 50.90% ✅
+  Sharpe: -0.17
+  P&L: -0.37%
+  Profit Factor: 0.98
+  Max DD: -2.48%
+
+Threshold: 45.0% ❌
+  Trades/Day: 0.50 (10.5/month)
+  Win Rate: 51.28% ✅
+  Sharpe: 0.33
+  P&L: 0.63%
+  Profit Factor: 1.05
+  Max DD: -1.78%
+
+Threshold: 47.5% ❌
+  Trades/Day: 0.44 (9.2/month)
+  Win Rate: 50.88% ✅
+  Sharpe: 0.15
+  P&L: 0.25%
+  Profit Factor: 1.02
+  Max DD: -1.67%
+
+Threshold: 50.0% ❌
+  Trades/Day: 0.38 (8.0/month)
+  Win Rate: 49.32% ❌
+  Sharpe: -0.14
+  P&L: -0.21%
+  Profit Factor: 0.98
+  Max DD: -1.92%
+
+Threshold: 52.5% ❌
+  Trades/Day: 0.32 (6.7/month)
+  Win Rate: 48.39% ❌
+  Sharpe: -0.24
+  P&L: -0.30%
+  Profit Factor: 0.96
+  Max DD: -1.88%
+
+Threshold: 55.0% ❌
+  Trades/Day: 0.27 (5.8/month)
+  Win Rate: 50.47% ✅
+  Sharpe: 0.06
+  P&L: 0.06%
+  Profit Factor: 1.01
+  Max DD: -1.66%
+
+Threshold: 57.5% ❌
+  Trades/Day: 0.25 (5.2/month)
+  Win Rate: 50.00% ✅
+  Sharpe: 0.03
+  P&L: 0.03%
+  Profit Factor: 1.00
+  Max DD: -1.59%
+
+Threshold: 60.0% ❌
+  Trades/Day: 0.20 (4.2/month)
+  Win Rate: 46.15% ❌
+  Sharpe: -1.01
+  P&L: -0.81%
+  Profit Factor: 0.86
+  Max DD: -1.64%
+
+Threshold: 62.5% ❌
+  Trades/Day: 0.15 (3.2/month)
+  Win Rate: 45.00% ❌
+  Sharpe: -0.80
+  P&L: -0.51%
+  Profit Factor: 0.89
+  Max DD: -1.68%
+
+Threshold: 65.0% ❌
+  Trades/Day: 0.11 (2.2/month)
+  Win Rate: 41.46% ❌
+  Sharpe: -1.19
+  P&L: -0.53%
+  Profit Factor: 0.84
+  Max DD: -1.34%
+
+Threshold: 67.5% ❌
+  Trades/Day: 0.09 (1.8/month)
+  Win Rate: 38.24% ❌
+  Sharpe: -3.83
+  P&L: -1.31%
+  Profit Factor: 0.58
+  Max DD: -1.61%
+
+Threshold: 70.0% ❌
+  Trades/Day: 0.06 (1.2/month)
+  Win Rate: 47.83% ❌
+  Sharpe: 0.03
+  P&L: 0.01%
+  Profit Factor: 1.00
+  Max DD: -0.58%
+

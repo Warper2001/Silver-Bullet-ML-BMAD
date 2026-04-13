@@ -36,7 +36,7 @@ def main() -> None:
     # Navigation
     page = st.sidebar.radio(
         "Navigate to:",
-        ["Overview", "Positions", "Signals", "Charts", "Settings", "Logs"],
+        ["Overview", "Positions", "Signals", "Charts", "Drift Monitoring", "Settings", "Logs"],
         label_visibility="collapsed",
     )
 

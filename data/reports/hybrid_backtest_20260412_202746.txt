@@ -1,0 +1,16 @@
+HYBRID REGIME-AWARE SYSTEM BACKTEST
+==================================================
+
+Period: 2024-01-01 to 2025-03-31
+Model Selection: Hybrid (Regime 0→R0, Regime 1→Generic, Regime 2→R2)
+Signals: 500
+Trades: 500
+
+Win Rate: 55.00%
+Total P&L: 17.64%
+Sharpe Ratio: 1.30
+
+Per-Regime Performance:
+  Regime 0 (trending_up): 9.77%
+  Regime 1 (trending_up): 8.56%
+  Regime 2 (trending_down): -0.69%

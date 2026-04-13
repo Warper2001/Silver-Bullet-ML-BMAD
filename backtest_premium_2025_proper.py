@@ -242,20 +242,25 @@ for i in range(lookback, len(bars_list) - lookback):
                                 quality_threshold = 100.0 - (kz_weight * 50.0)
 
                                 if quality_score >= quality_threshold:
-                                    # Add to detected setups
-                                    detected_setups.append({
-                                        'index': i,
-                                        'timestamp': current_bar['timestamp'],
-                                        'direction': 'bullish',
-                                        'entry': (top + bottom) / 2,
-                                        'stop': mss['swing_point']['price'],
-                                        'target': ((top + bottom) / 2) + ((top + bottom) / 2 - mss['swing_point']['price']) * 2,
-                                        'quality_score': quality_score,
-                                        'killzone_window': kz_window,
-                                        'volume_ratio': mss['volume_ratio'],
-                                        'fvg_size': gap_size_dollars,
-                                        'bar_diff': bar_diff,
-                                    })
+                                    # Validate swing point is below entry (support for bullish)
+                                    entry_price = (top + bottom) / 2
+                                    swing_price = mss['swing_point']['price']
+
+                                    if swing_price < entry_price:  # Support must be below entry
+                                        # Add to detected setups
+                                        detected_setups.append({
+                                            'index': i,
+                                            'timestamp': current_bar['timestamp'],
+                                            'direction': 'bullish',
+                                            'entry': entry_price,
+                                            'stop': swing_price,
+                                            'target': entry_price + (entry_price - swing_price) * 2,
+                                            'quality_score': quality_score,
+                                            'killzone_window': kz_window,
+                                            'volume_ratio': mss['volume_ratio'],
+                                            'fvg_size': gap_size_dollars,
+                                            'bar_diff': bar_diff,
+                                        })
                                 break
 
         # Bearish FVG
@@ -292,20 +297,25 @@ for i in range(lookback, len(bars_list) - lookback):
                                 quality_threshold = 100.0 - (kz_weight * 50.0)
 
                                 if quality_score >= quality_threshold:
-                                    # Add to detected setups
-                                    detected_setups.append({
-                                        'index': i,
-                                        'timestamp': current_bar['timestamp'],
-                                        'direction': 'bearish',
-                                        'entry': (top + bottom) / 2,
-                                        'stop': mss['swing_point']['price'],
-                                        'target': ((top + bottom) / 2) - ((top + bottom) / 2 - mss['swing_point']['price']) * 2,
-                                        'quality_score': quality_score,
-                                        'killzone_window': kz_window,
-                                        'volume_ratio': mss['volume_ratio'],
-                                        'fvg_size': gap_size_dollars,
-                                        'bar_diff': bar_diff,
-                                    })
+                                    # Validate swing point is above entry (resistance for bearish)
+                                    entry_price = (top + bottom) / 2
+                                    swing_price = mss['swing_point']['price']
+
+                                    if swing_price > entry_price:  # Resistance must be above entry
+                                        # Add to detected setups
+                                        detected_setups.append({
+                                            'index': i,
+                                            'timestamp': current_bar['timestamp'],
+                                            'direction': 'bearish',
+                                            'entry': entry_price,
+                                            'stop': swing_price,
+                                            'target': entry_price - (swing_price - entry_price) * 2,
+                                            'quality_score': quality_score,
+                                            'killzone_window': kz_window,
+                                            'volume_ratio': mss['volume_ratio'],
+                                            'fvg_size': gap_size_dollars,
+                                            'bar_diff': bar_diff,
+                                        })
                                 break
 
 print(f"\n   Detected {len(detected_setups)} premium setups")
@@ -382,7 +392,7 @@ for date, day_setups in detected_setups_df.groupby('date'):
             'entry': entry,
             'stop': stop,
             'target': target,
-            'pnl': pnl * 0.5,  # Convert points to dollars
+            'pnl': pnl * 20.0,  # Convert points to dollars (MNQ = $20/point)
             'exit_reason': exit_reason,
             'quality_score': setup['quality_score'],
             'killzone_window': setup['killzone_window'],

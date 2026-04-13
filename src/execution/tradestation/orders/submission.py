@@ -13,12 +13,15 @@ Features:
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 import httpx
+import yaml
 
 from src.data.tradestation_auth import TradeStationAuth
 from src.execution.trade_execution_pipeline import TradingSignal
+from src.risk.risk_orchestrator import RiskOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -92,24 +95,43 @@ class SIMOrderSubmitter:
 
     Attributes:
         _auth: TradeStation authentication manager
+        _risk_orchestrator: Risk management orchestrator (optional)
         _http_client: HTTP client for API requests
 
     Example:
-        >>> submitter = SIMOrderSubmitter(auth=auth)
+        >>> submitter = SIMOrderSubmitter(auth=auth, risk_orchestrator=risk_orch)
         >>> signal = TradingSignal(...)
         >>> result = await submitter.submit_order(signal)
         >>> if result.success:
         ...     print(f"Order {result.order_id} submitted")
     """
 
-    def __init__(self, auth: TradeStationAuth) -> None:
+    def __init__(
+        self,
+        auth: TradeStationAuth,
+        risk_orchestrator: Optional[RiskOrchestrator] = None,
+        config_path: str = "config.yaml"
+    ) -> None:
         """Initialize SIMOrderSubmitter.
 
         Args:
             auth: TradeStation authentication manager
+            risk_orchestrator: Risk management orchestrator (optional, for safety)
+            config_path: Path to configuration file
         """
         self._auth = auth
+        self._risk_orchestrator = risk_orchestrator
         self._http_client: Optional[httpx.AsyncClient] = None
+
+        # Load configuration
+        self._config = self._load_config(config_path)
+        self._sim_account = self._config.get(
+            "execution", {}
+        ).get(
+            "tradestation", {}
+        ).get(
+            "sim_account", "SIM_ACCOUNT"
+        )
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create async HTTP client.
@@ -147,6 +169,32 @@ class SIMOrderSubmitter:
         Raises:
             httpx.HTTPStatusError: If API request fails
         """
+        # CRITICAL: Validate risk before order submission
+        if self._risk_orchestrator is not None:
+            logger.info("Validating signal against all risk layers...")
+            risk_result = self._risk_orchestrator.validate_trade(signal)
+
+            if not risk_result['is_valid']:
+                logger.error(
+                    f"Order REJECTED by risk validation: {risk_result['block_reason']}"
+                )
+                logger.error(f"Failed checks: {risk_result['checks_failed']}")
+                return OrderResult(
+                    success=False,
+                    order_id=None,
+                    status="REJECTED",
+                    fill_price=None,
+                    error_message=f"Risk validation failed: {risk_result['block_reason']}",
+                )
+
+            logger.info(
+                f"Risk validation passed. Checks passed: {risk_result['checks_passed']}"
+            )
+        else:
+            logger.warning(
+                "No risk orchestrator configured - skipping risk validation (SAFETY ISSUE)"
+            )
+
         try:
             # Get access token
             token = self._auth.get_valid_access_token()
@@ -246,7 +294,7 @@ class SIMOrderSubmitter:
             "OrderType": "Market",  # Use market orders for SIM
             "Side": direction,
             "TimeInForce": "DAY",  # Day order
-            "AccountID": "SIM_ACCOUNT",  # SIM environment account
+            "AccountID": self._sim_account,  # SIM environment account from config
         }
 
         return payload
@@ -257,3 +305,26 @@ class SIMOrderSubmitter:
             await self._http_client.aclose()
             self._http_client = None
             logger.info("HTTP client closed")
+
+    def _load_config(self, config_path: str) -> dict:
+        """Load configuration from YAML file.
+
+        Args:
+            config_path: Path to config file
+
+        Returns:
+            Configuration dictionary
+        """
+        try:
+            config_file = Path(config_path)
+            if config_file.exists():
+                with open(config_file, "r") as f:
+                    config = yaml.safe_load(f)
+                logger.debug(f"Loaded configuration from {config_path}")
+                return config or {}
+            else:
+                logger.warning(f"Config file not found: {config_path}, using defaults")
+                return {}
+        except Exception as e:
+            logger.error(f"Failed to load config: {e}, using defaults")
+            return {}

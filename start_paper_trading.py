@@ -229,23 +229,18 @@ async def start_paper_trading():
         """Process signals from hybrid pipeline output queue."""
         while True:
             try:
-                # Wait for signal from hybrid pipeline
+                # Wait for signal from hybrid pipeline (already a TradingSignal)
                 signal = await signal_queue.get()
 
-                # Convert to TradingSignal format
-                trading_signal = TradingSignal(
-                    signal_id=f"hybrid_{signal.timestamp.timestamp()}",
-                    symbol=signal.symbol,
-                    direction=signal.direction,
-                    entry_price=signal.entry_price,
-                    stop_loss=signal.stop_loss,
-                    take_profit=signal.take_profit,
-                    timestamp=signal.timestamp,
-                    confidence=signal.confidence,
-                )
+                # Log signal received
+                logger.info(f"🎯 Signal received: {signal.signal_id}")
+                logger.info(f"   Symbol: {signal.symbol}")
+                logger.info(f"   Direction: {signal.direction}")
+                logger.info(f"   Entry: ${signal.entry_price:.2f}")
+                logger.info(f"   Confidence: {signal.confidence_score:.2%}")
 
-                # Handle the signal
-                await handle_trading_signal(trading_signal)
+                # Handle the signal directly
+                await handle_trading_signal(signal)
 
             except asyncio.CancelledError:
                 logger.info("Signal processing task cancelled")
@@ -256,6 +251,7 @@ async def start_paper_trading():
     # Start signal processor as background task
     signal_processor_task = asyncio.create_task(process_signals())
     print("✅ Signal processor started (background task)")
+    print("   Pipeline: HybridML → Risk → Order")
 
     # Start bar processor for hybrid pipeline
     async def process_dollar_bars():

@@ -1,0 +1,44 @@
+======================================================================
+PROPER ML BACKTEST - GENERIC VS HYBRID REGIME-AWARE
+======================================================================
+
+Generated: 2026-04-12 20:36:44
+Period: 2024-01-01 to 2025-03-31
+Probability Threshold: 65.00%
+Total Signals: 200
+
+----------------------------------------------------------------------
+GENERIC MODEL RESULTS
+----------------------------------------------------------------------
+No trades generated (all filtered by threshold)
+
+----------------------------------------------------------------------
+HYBRID REGIME-AWARE RESULTS
+----------------------------------------------------------------------
+Signals Evaluated: 200
+Passed Threshold: 3
+Failed Threshold: 197
+Filter Rate: 98.5%
+Trades Taken: 3
+
+Win Rate: 66.67%
+Total P&L: +0.40%
+Avg Trade: 0.133%
+Sharpe Ratio: 7.33
+Profit Factor: 3.00
+Max Drawdown: 0.00%
+
+Exit Reasons:
+  take_profit: 2
+  stop_loss: 1
+
+Per-Regime Performance:
+  Regime 0 (trending_up):
+    Trades: 3
+    Win Rate: 66.67%
+    P&L: +0.40%
+
+----------------------------------------------------------------------
+COMPARISON
+----------------------------------------------------------------------
+No comparison available

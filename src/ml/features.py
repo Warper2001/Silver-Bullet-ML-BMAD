@@ -660,12 +660,14 @@ class FeatureEngineer:
 
         # Convert to numpy array for ML prediction
         # Select only numeric features (exclude timestamp, trading_session)
+        # IMPORTANT: Must match the 52 features the model was trained with
         feature_columns = [
             'open', 'high', 'low', 'close', 'volume', 'notional_value',
             'atr', 'atr_ratio', 'returns', 'high_low_range', 'close_position',
             'volume_ratio', 'vwap', 'rsi', 'macd', 'macd_signal', 'macd_histogram',
             'stoch_k', 'stoch_d', 'roc', 'historical_volatility',
             'parkinson_volatility', 'garman_klass_volatility',
+            'hour', 'day_of_week',  # Raw time features (required by model)
             'price_momentum_5', 'price_momentum_10',
             'volume_ma_20', 'volume_std_20', 'range_ma_20', 'range_std_20',
             'volatility_ma_20', 'volatility_std_20',

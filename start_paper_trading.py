@@ -183,7 +183,7 @@ async def start_paper_trading():
         logger.info(f"   Direction: {signal.direction}")
         logger.info(f"   Entry Price: ${signal.entry_price:.2f}")
         logger.info(f"   Confidence: {signal.confidence_score:.2%}")
-        logger.info(f"   Regime: {signal.regime}")
+        logger.info(f"   Regime: {signal.prediction.get('regime', 'N/A')}")
 
         # Step 1: Risk Validation - All 8 safety layers
 

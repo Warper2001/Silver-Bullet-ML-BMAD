@@ -36,6 +36,7 @@ class TradingSignal:
         entry_price: Desired entry price
         patterns: List of detected patterns
         prediction: ML prediction details
+        quantity: Number of contracts to trade
     """
 
     signal_id: str
@@ -46,6 +47,7 @@ class TradingSignal:
     entry_price: float
     patterns: list[str]
     prediction: dict
+    quantity: int = 5  # Default quantity
 
 
 @dataclass

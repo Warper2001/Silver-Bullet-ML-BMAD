@@ -88,6 +88,7 @@ class TradeStationHTTPStreamClient:
         self._message_count = 0
         self._connection_start_time: Optional[datetime] = None
         self._should_stop = False
+        self._force_reconnect = False  # Flag to force reconnection from health monitor
 
     async def connect(self) -> None:
         """Establish HTTP streaming connection.
@@ -259,12 +260,13 @@ class TradeStationHTTPStreamClient:
                         retry_count = 0  # Reset retry count on successful connection
                         self._last_message_time = datetime.now()  # Reset stale timer
 
-                        # Process chunked response with stale detection
+                        # Process chunked response with stale detection and timeout
                         buffer = ""
                         chunk_count = 0
                         last_health_check = datetime.now()
+                        last_chunk_time = datetime.now()
 
-                        async for chunk in response.aiter_bytes():
+                        async for chunk in self._timeout_aiter(response.aiter_bytes(), timeout=60.0):
                             if self._should_stop:
                                 logger.info("Stream stopped by user request")
                                 break
@@ -406,12 +408,23 @@ class TradeStationHTTPStreamClient:
                 if await self._is_connection_stale():
                     logger.warning(
                         "⚠️  Health monitor detected stale connection - "
-                        "stream loop should auto-reconnect"
+                        "forcing reconnection"
                     )
 
                     # Log detailed stats
                     stats = self.get_stats()
                     logger.warning(f"Connection stats: {stats}")
+
+                    # Force reconnection by setting flag and cancelling stream task
+                    self._force_reconnect = True
+                    logger.info("Health monitor forcing stream reconnection")
+
+                    # Cancel the stream task to trigger reconnection
+                    if self._stream_task and not self._stream_task.done():
+                        logger.info("Cancelling stale stream task...")
+                        self._stream_task.cancel()
+                    else:
+                        logger.warning("Stream task not running or already done")
 
         except asyncio.CancelledError:
             logger.info("Health monitor loop cancelled")
@@ -419,6 +432,43 @@ class TradeStationHTTPStreamClient:
             logger.error(f"Health monitor loop error: {e}", exc_info=True)
 
         logger.info("Health monitor loop ended")
+
+    async def _timeout_aiter(self, async_iterator, timeout):
+        """Wrapper for async iterator that adds timeout to detect stale connections.
+
+        Args:
+            async_iterator: The async iterator to wrap
+            timeout: Timeout in seconds
+
+        Yields:
+            Items from the iterator, or raises ConnectionError if no item received within timeout
+        """
+        try:
+            while True:
+                try:
+                    item = await asyncio.wait_for(async_iterator.__anext__(), timeout=timeout)
+                    yield item
+                except asyncio.TimeoutError:
+                    # Check if we should force a reconnection
+                    if self._force_reconnect:
+                        logger.info("Health monitor triggered forced reconnection")
+                        self._force_reconnect = False
+                        raise ConnectionError("Forced reconnection by health monitor")
+
+                    # Timeout but no forced reconnect - check if connection is actually stale
+                    if await self._is_connection_stale():
+                        logger.warning("Stream timeout due to stale connection")
+                        raise ConnectionError("Connection stale - no data received")
+
+                    # Connection might be alive, just quiet - continue waiting
+                    logger.debug("Stream timeout but connection not stale, continuing...")
+                    # Continue the loop to keep checking
+                    continue
+
+        except StopAsyncIteration:
+            # Stream ended normally
+            logger.debug("Stream iterator ended")
+            raise
 
     async def _process_market_data(self, data: dict[str, Any]) -> None:
         """Process market data from stream.

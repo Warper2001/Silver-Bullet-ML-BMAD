@@ -363,6 +363,36 @@ class TradeStationAuthV3:
                     with open(".access_token", "w") as f:
                         f.write(self._access_token)
                     logger.debug("Updated .access_token file with refreshed token")
+
+                    # Update .env file with new refresh token if it changed
+                    if self._refresh_token:
+                        try:
+                            # Read current .env file
+                            env_path = Path(".env")
+                            if env_path.exists():
+                                env_content = env_path.read_text()
+
+                                # Update or add refresh token line
+                                lines = env_content.split('\n')
+                                updated_lines = []
+                                refresh_token_found = False
+
+                                for line in lines:
+                                    if line.startswith('TRADESTATION_REFRESH_TOKEN='):
+                                        updated_lines.append(f'TRADESTATION_REFRESH_TOKEN={self._refresh_token}')
+                                        refresh_token_found = True
+                                    else:
+                                        updated_lines.append(line)
+
+                                if not refresh_token_found:
+                                    updated_lines.append(f'TRADESTATION_REFRESH_TOKEN={self._refresh_token}')
+
+                                # Write back to .env
+                                env_path.write_text('\n'.join(updated_lines))
+                                logger.debug("Updated .env file with new refresh token")
+                        except Exception as env_error:
+                            logger.warning(f"Failed to update .env file: {env_error}")
+
                 except Exception as e:
                     logger.error(f"Failed to update token file: {e}")
 

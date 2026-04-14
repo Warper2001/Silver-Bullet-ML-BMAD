@@ -73,11 +73,20 @@ async def start_paper_trading():
     # Initialize components
     print("📋 Step 3: Initializing system components...")
 
-    # Initialize authentication (load v3 token)
+    # Initialize authentication (load v3 token with refresh token support)
     with open(".access_token", "r") as f:
         access_token = f.read().strip()
-    auth = TradeStationAuthV3(access_token=access_token)
-    print("✅ V3 Authentication initialized")
+
+    # Load refresh token from settings
+    refresh_token = settings.tradestation_refresh_token if hasattr(settings, 'tradestation_refresh_token') else ""
+
+    if refresh_token:
+        print(f"✅ V3 Authentication initialized with refresh token support")
+    else:
+        print(f"⚠️  V3 Authentication initialized WITHOUT refresh token (token refresh will fail)")
+        print(f"   Run exchange_token_simple.py to fix this")
+
+    auth = TradeStationAuthV3(access_token=access_token, refresh_token=refresh_token)
 
     # Start automatic token refresh every 10 minutes
     await auth.start_auto_refresh(interval_minutes=10)

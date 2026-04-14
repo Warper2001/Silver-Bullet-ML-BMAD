@@ -166,3 +166,10 @@ execution:
   tradestation:
     sim_account: "SIM_ACCOUNT"  # TradeStation SIM environment account ID
     environment: "sim"  # sim or production
+    # OAuth credentials (for authentication)
+    client_id: "8mpwDPxyviXzglA6xCGs7X9PXnl1TyFK"
+    client_secret: "Ut3JTMUQoBcpIn7-8rUtB7tSm3Xi_GcrXl0QkpWhkgPIrueUtdRSho4gcHSeK7vc"
+    redirect_uri: "http://localhost:8080"
+    # Note: refresh_token is loaded from .env file (TRADESTATION_REFRESH_TOKEN)
+    # This is set during OAuth flow via exchange_token_simple.py
+    refresh_token: ""  # Loaded from environment variable

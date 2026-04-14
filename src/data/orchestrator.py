@@ -263,31 +263,9 @@ class DataPipelineOrchestrator:
             self._websocket_client = TradeStationWebSocketClient(auth=self._auth)
             logger.info("Initialized legacy WebSocket client")
 
-        # Stage 2: Dollar Bar Transformer
-        self._transformer = DollarBarTransformer(
-            input_queue=self._raw_queue,
-            output_queue=self._transform_queue,
-        )
-
-        # Stage 3: Data Validator
-        self._validator = DataValidator(
-            input_queue=self._transform_queue,
-            validated_queue=self._validated_queue,
-            error_queue=self._error_queue,
-        )
-
-        # Stage 4: Gap Detector
-        self._gap_detector = GapDetector(
-            validated_queue=self._validated_queue,
-            gap_filled_queue=self._gap_filled_queue,
-        )
-
-        # Stage 5: HDF5 Persistence
-        self._persistence = HDF5DataSink(
-            gap_filled_queue=self._gap_filled_queue,
-            data_directory=str(self._data_directory),
-            compression_level=1,  # Balance speed and size
-        )
+        # Note: DollarBarTransformer and downstream components are initialized
+        # AFTER the data source queue is properly set (in start() method)
+        # This prevents queue reference mismatch bugs
 
     async def _wait_for_queues_to_drain(self) -> None:
         """Wait for all queues to drain.
@@ -529,12 +507,59 @@ class DataPipelineOrchestrator:
         # Subscribe to HTTP stream
         self._raw_queue = await self._http_stream_client.subscribe()
 
+        # CRITICAL FIX: Initialize pipeline components AFTER raw_queue is set
+        # This prevents queue reference mismatch where components read from old empty queue
+        # while HTTP streaming publishes to new queue
+        self._initialize_data_pipeline_components()
+
         # Start background task to monitor stream health
         self._tasks.append(
             asyncio.create_task(self._monitor_http_stream())
         )
 
         logger.info("HTTP streaming started and subscribed")
+
+    def _initialize_data_pipeline_components(self) -> None:
+        """Initialize data pipeline components AFTER raw_queue is properly set.
+
+        This method is called after the HTTP streaming queue is set to ensure
+        that all components reference the correct queue. This fixes a critical
+        bug where components were initialized with a reference to an empty queue
+        before the HTTP streaming queue was assigned.
+
+        The order matters: HTTP streaming queue must be set FIRST.
+        """
+        logger.info("Initializing data pipeline components")
+
+        # Stage 2: Dollar Bar Transformer
+        self._transformer = DollarBarTransformer(
+            input_queue=self._raw_queue,
+            output_queue=self._transform_queue,
+        )
+        logger.info("DollarBarTransformer initialized")
+
+        # Stage 3: Data Validator
+        self._validator = DataValidator(
+            input_queue=self._transform_queue,
+            validated_queue=self._validated_queue,
+            error_queue=self._error_queue,
+        )
+        logger.info("DataValidator initialized")
+
+        # Stage 4: Gap Detector
+        self._gap_detector = GapDetector(
+            validated_queue=self._validated_queue,
+            gap_filled_queue=self._gap_filled_queue,
+        )
+        logger.info("GapDetector initialized")
+
+        # Stage 5: HDF5 Persistence
+        self._persistence = HDF5DataSink(
+            gap_filled_queue=self._gap_filled_queue,
+            data_directory=str(self._data_directory),
+            compression_level=1,  # Balance speed and size
+        )
+        logger.info("HDF5DataSink initialized")
 
     async def _monitor_http_stream(self) -> None:
         """Monitor HTTP stream health and connection status.

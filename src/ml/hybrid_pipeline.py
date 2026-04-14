@@ -319,7 +319,10 @@ class HybridMLPipeline:
                 "stop_loss": stop_loss,
                 "take_profit": take_profit,
                 "setup_type": "hybrid_ml"
-            }
+            },
+            quantity=5,  # Default quantity
+            stop_loss_price=stop_loss,  # Add stop loss price
+            take_profit_price=take_profit  # Add take profit price
         )
 
         return signal

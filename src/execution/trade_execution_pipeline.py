@@ -37,6 +37,8 @@ class TradingSignal:
         patterns: List of detected patterns
         prediction: ML prediction details
         quantity: Number of contracts to trade
+        stop_loss_price: Stop loss price for risk validation
+        take_profit_price: Take profit price for risk validation
     """
 
     signal_id: str
@@ -48,6 +50,8 @@ class TradingSignal:
     patterns: list[str]
     prediction: dict
     quantity: int = 5  # Default quantity
+    stop_loss_price: float | None = None  # Calculated from prediction
+    take_profit_price: float | None = None  # Calculated from prediction
 
 
 @dataclass

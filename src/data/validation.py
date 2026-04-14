@@ -11,7 +11,7 @@ from .models import DollarBar, ValidationResult
 logger = logging.getLogger(__name__)
 
 # Validation thresholds
-MAX_REASONABLE_NOTIONAL = 100_000_000  # $100M
+MAX_REASONABLE_NOTIONAL = 2_000_000_000  # $2B (adjusted for actual dollar bar notional values)
 MAX_PRICE_CHANGE_PCT = 10.0  # 10% change from previous bar
 MAX_VOLUME_MULTIPLIER = 10.0  # 10× average volume
 

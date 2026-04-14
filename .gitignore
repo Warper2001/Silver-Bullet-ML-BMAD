@@ -135,6 +135,7 @@ data/processed/*
 data/features/*
 data/logs/*
 data/models/*
+data/state/*
 logs/*
 models/*
 !data/raw/.gitkeep
@@ -142,6 +143,7 @@ models/*
 !data/features/.gitkeep
 !data/logs/.gitkeep
 !data/models/.gitkeep
+!data/state/.gitkeep
 !logs/.gitkeep
 !models/.gitkeep
 

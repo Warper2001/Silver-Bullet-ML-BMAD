@@ -20,7 +20,7 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
-VENV_DIR="$PROJECT_ROOT/venv"
+VENV_DIR="$PROJECT_ROOT/.venv"
 PYTHON="$VENV_DIR/bin/python"
 PIP="$VENV_DIR/bin/pip"
 LOG_DIR="$PROJECT_ROOT/logs"
@@ -120,116 +120,11 @@ start_paper_trading() {
     print_info "Symbol: $TRADING_SYMBOL"
     print_info "Log Level: $LOG_LEVEL"
 
-    # Activate virtual environment
-    source "$VENV_DIR/bin/activate"
+    # Change to project directory
+    cd "$PROJECT_ROOT"
 
-    # Set environment for paper trading
-    export APP_ENV="$TRADING_ENV"
-    export LOG_LEVEL="$LOG_LEVEL"
-    export TRADING_MODE="paper"
-
-    print_info "Starting system components..."
-
-    # Check if TradeStation authentication is needed
-    python -c "
-from src.data.config import load_settings
-from src.data.auth import TradeStationAuth
-from src.ml.pipeline import MLPipeline
-import asyncio
-
-async def initialize_system():
-    print('Initializing authentication...')
-    auth = TradeStationAuth()
-
-    # Test authentication
-    print('Testing TradeStation API connection...')
-    token = await auth.authenticate()
-    print(f'✅ Authentication successful')
-
-    # Initialize ML pipeline
-    print('Initializing ML pipeline...')
-    pipeline = MLPipeline(
-        model_dir='models/xgboost',
-        probability_threshold=0.65
-    )
-
-    print('✅ System initialization complete')
-    return True
-
-# Run initialization
-try:
-    asyncio.run(initialize_system())
-except Exception as e:
-    print(f'❌ Initialization failed: {e}')
-    exit(1)
-" || {
-        print_error "System initialization failed"
-        exit 1
-    }
-
-    # Start the orchestrator
-    print_info "Starting data pipeline orchestrator..."
-    python -c "
-import asyncio
-import logging
-from datetime import datetime
-from pathlib import Path
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('$LOG_DIR/paper_trading.log'),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger(__name__)
-
-async def run_paper_trading():
-    from src.data.orchestrator import DataPipelineOrchestrator
-    from src.data.auth import TradeStationAuth
-    from src.data.config import load_settings
-
-    logger.info('Starting paper trading deployment')
-
-    # Load settings
-    settings = load_settings()
-    auth = TradeStationAuth()
-
-    # Initialize orchestrator
-    orchestrator = DataPipelineOrchestrator(
-        auth=auth,
-        data_directory='$DATA_DIR',
-        max_queue_size=1000,
-        settings=settings
-    )
-
-    # Start the pipeline
-    await orchestrator.start()
-
-    logger.info('Paper trading system started successfully')
-    logger.info('Press Ctrl+C to stop the system')
-
-    # Keep running until interrupted
-    try:
-        while True:
-            await asyncio.sleep(60)
-            logger.debug('System running normally')
-    except KeyboardInterrupt:
-        logger.info('Shutting down paper trading system...')
-        await orchestrator.stop()
-        logger.info('Paper trading system stopped')
-
-# Run the system
-try:
-    asyncio.run(run_paper_trading())
-except Exception as e:
-    logger.error(f'Paper trading failed: {e}')
-    import traceback
-    traceback.print_exc()
-" &
+    print_info "Starting hybrid trading system..."
+    nohup .venv/bin/python start_paper_trading.py > "$LOG_DIR/paper_trading.log" 2>&1 &
 
     ORCHESTRATOR_PID=$!
 

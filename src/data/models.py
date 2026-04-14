@@ -157,10 +157,10 @@ class DollarBar(BaseModel):
         if v <= 0:
             raise ValueError("notional_value must be positive")
 
-        # Sanity check: notional should not exceed $10B (200× threshold)
+        # Sanity check: notional should not exceed $20B (400× threshold)
         # This catches calculation errors or malformed data
-        # Increased limit for actual market data with high notional values ($5.6B+)
-        max_reasonable = 10_000_000_000  # $10B
+        # Increased limit for actual market data with high notional values ($14.4B+)
+        max_reasonable = 20_000_000_000  # $20B
         if v > max_reasonable:
             raise ValueError(
                 f"notional_value ${v:.2f} exceeds reasonable maximum ${max_reasonable:.2f}"

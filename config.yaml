@@ -30,6 +30,18 @@ ml:
   model_path: "models/xgboost/regime_aware_real_labels/"
   use_regime_aware: true  # Enable HMM regime detection
 
+  # Tier 1 Model Configuration (2026-04-15)
+  # Advanced 1-minute models with order flow, volatility, microstructure features
+  # See: 1minute_migration_completion_summary.md
+  tier1_models:
+    enabled: false  # Master toggle for Tier 1 models (experimental)
+    model_path: "models/xgboost/regime_aware_tier1/"
+    feature_count: 17  # Tier 1 uses 17 features vs 52 baseline (auto-detected)
+    description: "Order flow, volatility, microstructure features for 1-minute data"
+    # Safety thresholds - models below these values won't be used
+    min_precision_threshold: 0.60  # Minimum 60% precision required
+    min_win_rate_threshold: 0.50   # Minimum 50% win rate required
+
   # Regime detection settings
   regime_detection:
     enabled: true

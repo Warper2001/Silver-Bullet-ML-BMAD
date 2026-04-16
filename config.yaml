@@ -24,6 +24,18 @@ ml:
   probability_threshold: 0.65  # P(Success) threshold
   retraining_interval_days: 7  # Weekly retraining
 
+tier1:
+  fvg:
+    enabled: true  # Enable TIER 1 FVG quality filters
+    atr_threshold: 0.5  # Minimum gap size as multiple of ATR
+    volume_ratio: 1.5  # Minimum directional volume ratio (UpVol/DownVol or DownVol/UpVol)
+    fibonacci_pairs:
+      - [5, 21]  # 5-min inside 21-min (ratio ≈ 1:4.2)
+      - [8, 34]  # 8-min inside 34-min (ratio ≈ 1:4.25)
+      - [13, 55]  # 13-min inside 55-min (ratio ≈ 1:4.23)
+    atr_lookback_period: 14  # ATR calculation lookback (bars)
+    volume_lookback_period: 20  # Volume ratio calculation lookback (bars)
+
 monitoring:
   health_check_interval_seconds: 5
   data_staleness_threshold_seconds: 30

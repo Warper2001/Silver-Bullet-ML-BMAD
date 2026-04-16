@@ -2,11 +2,17 @@
 
 This module implements the core algorithms for identifying Fair Value Gaps
 (3-candle patterns), calculating gap sizes, and detecting when gaps are filled.
+
+Enhanced with TIER 1 quality filtering:
+- ATR-based gap size filtering (noise reduction)
+- Volume directional ratio confirmation (conviction validation)
 """
 
 import logging
 
 from src.data.models import DollarBar, FVGEvent, GapRange
+from src.detection.atr_filter import ATRFilter
+from src.detection.volume_confirmer import VolumeConfirmer
 
 logger = logging.getLogger(__name__)
 
@@ -15,18 +21,29 @@ MNQ_TICK_SIZE = 0.25  # 0.25 points per tick
 MNQ_POINT_VALUE = 20.0  # $20 per point
 
 
-def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | None:
+def detect_bullish_fvg(
+    bars: list[DollarBar],
+    current_index: int,
+    atr_filter: ATRFilter | None = None,
+    volume_confirmer: VolumeConfirmer | None = None,
+) -> FVGEvent | None:
     """Detect bullish FVG: price gap where candle 1 close > candle 3 open.
 
     A bullish FVG indicates aggressive buying pressure leaving a gap
     that price often revisits (fills) before continuing higher.
 
+    Enhanced with TIER 1 quality filtering:
+    - ATR filter: Reject gaps < 0.5x ATR (noise)
+    - Volume filter: Require UpVolume/DownVolume >= 1.5 (conviction)
+
     Args:
         bars: List of Dollar Bars (OHLCV data)
         current_index: Index of most recent bar (candle 3)
+        atr_filter: Optional ATR filter for noise reduction
+        volume_confirmer: Optional volume confirmer for conviction validation
 
     Returns:
-        FVGEvent if bullish FVG detected, None otherwise
+        FVGEvent if bullish FVG detected and passes filters, None otherwise
 
     Visual Example:
         Candle 1: [====|=====]  Close at 11850, High at 11860
@@ -60,7 +77,30 @@ def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     gap_size_ticks = gap_size_points / MNQ_TICK_SIZE
     gap_size_dollars = gap_size_points * MNQ_POINT_VALUE
 
-    # Bullish FVG detected!
+    # TIER 1 FILTER: ATR-based noise reduction
+    if atr_filter is not None:
+        should_filter, atr_multiple, message = atr_filter.should_filter_fvg(
+            gap_size_points,
+            bars[:current_index],  # Historical bars before current
+            direction="bullish",
+        )
+        if should_filter:
+            logger.debug(f"ATR filter rejected bullish FVG: {message}")
+            return None
+        logger.debug(f"ATR filter passed: {message}")
+
+    # TIER 1 FILTER: Volume directional confirmation
+    if volume_confirmer is not None:
+        should_filter, volume_ratio, message = volume_confirmer.should_filter_fvg(
+            direction="bullish",
+            bars=bars[:current_index],  # Historical bars before current
+        )
+        if should_filter:
+            logger.debug(f"Volume filter rejected bullish FVG: {message}")
+            return None
+        logger.debug(f"Volume filter passed: {message}")
+
+    # Bullish FVG detected and passed all filters!
     return FVGEvent(
         timestamp=candle_3.timestamp,
         direction="bullish",
@@ -72,18 +112,29 @@ def detect_bullish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     )
 
 
-def detect_bearish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | None:
+def detect_bearish_fvg(
+    bars: list[DollarBar],
+    current_index: int,
+    atr_filter: ATRFilter | None = None,
+    volume_confirmer: VolumeConfirmer | None = None,
+) -> FVGEvent | None:
     """Detect bearish FVG: price gap where candle 1 close < candle 3 open.
 
     A bearish FVG indicates aggressive selling pressure leaving a gap
     that price often revisits (fills) before continuing lower.
 
+    Enhanced with TIER 1 quality filtering:
+    - ATR filter: Reject gaps < 0.5x ATR (noise)
+    - Volume filter: Require DownVolume/UpVolume >= 1.5 (conviction)
+
     Args:
         bars: List of Dollar Bars (OHLCV data)
         current_index: Index of most recent bar (candle 3)
+        atr_filter: Optional ATR filter for noise reduction
+        volume_confirmer: Optional volume confirmer for conviction validation
 
     Returns:
-        FVGEvent if bearish FVG detected, None otherwise
+        FVGEvent if bearish FVG detected and passes filters, None otherwise
 
     Visual Example:
         Candle 1:       [===|===] Close at 11850, Low at 11840
@@ -117,7 +168,30 @@ def detect_bearish_fvg(bars: list[DollarBar], current_index: int) -> FVGEvent | 
     gap_size_ticks = gap_size_points / MNQ_TICK_SIZE
     gap_size_dollars = gap_size_points * MNQ_POINT_VALUE
 
-    # Bearish FVG detected!
+    # TIER 1 FILTER: ATR-based noise reduction
+    if atr_filter is not None:
+        should_filter, atr_multiple, message = atr_filter.should_filter_fvg(
+            gap_size_points,
+            bars[:current_index],  # Historical bars before current
+            direction="bearish",
+        )
+        if should_filter:
+            logger.debug(f"ATR filter rejected bearish FVG: {message}")
+            return None
+        logger.debug(f"ATR filter passed: {message}")
+
+    # TIER 1 FILTER: Volume directional confirmation
+    if volume_confirmer is not None:
+        should_filter, volume_ratio, message = volume_confirmer.should_filter_fvg(
+            direction="bearish",
+            bars=bars[:current_index],  # Historical bars before current
+        )
+        if should_filter:
+            logger.debug(f"Volume filter rejected bearish FVG: {message}")
+            return None
+        logger.debug(f"Volume filter passed: {message}")
+
+    # Bearish FVG detected and passed all filters!
     return FVGEvent(
         timestamp=candle_3.timestamp,
         direction="bearish",

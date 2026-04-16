@@ -159,3 +159,13 @@ auth_url.txt
 data/historical/
 *.json
 *.json
+
+# Training data files (too large for GitHub, can be regenerated)
+data/ml_training/regime_aware_1min_2025/
+data/ml_training/regime_aware_1min_2025_labeled/
+data/ml_training/regime_aware_1min_2025_tier1_features/
+*.parquet
+
+# Backup files
+*.backup
+scripts/*.backup

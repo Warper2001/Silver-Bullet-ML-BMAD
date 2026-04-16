@@ -18,6 +18,8 @@ warnings.filterwarnings('ignore')
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ml.regime_detection import HMMRegimeDetector, HMMFeatureEngineer
+from src.ml.features import FeatureEngineer
+from src.data.models import DollarBar
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -58,12 +60,12 @@ def main():
     logger.info("\nLoading XGBoost models...")
     import joblib
 
-    model_dir = Path("models/xgboost/regime_aware_1min_2025")
-    regime_0_model = joblib.load(model_dir / "xgboost_regime_0_real_labels.joblib")
-    regime_2_model = joblib.load(model_dir / "xgboost_regime_2_real_labels.joblib")
-    generic_model = joblib.load(model_dir / "xgboost_generic_real_labels.joblib")
+    model_dir = Path("models/xgboost/regime_aware_1min_2025_54features")  # Latest 54-feature models
+    regime_0_model = joblib.load(model_dir / "xgboost_regime_0_54features.joblib")
+    regime_2_model = joblib.load(model_dir / "xgboost_regime_2_54features.joblib")
+    generic_model = joblib.load(model_dir / "xgboost_generic_54features.joblib")
 
-    logger.info(f"✅ Loaded 3 XGBoost models")
+    logger.info(f"✅ Loaded 3 XGBoost models from {model_dir}")
 
     # Pre-compute all regimes (much faster than computing on each bar)
     logger.info("\nPre-computing regimes for all bars...")
@@ -72,23 +74,10 @@ def main():
     all_regimes = detector.predict(all_hmm_features)
     logger.info(f"✅ Regimes computed for {len(df):,} bars")
 
-    # Simple feature engineering (matches training data)
-    def calculate_features(df, i):
-        """Calculate simple features matching training data."""
-        current_bar = df.iloc[i]
-
-        # Momentum features
-        momentum_5 = (current_bar['close'] - df['close'].iloc[i-5]) / df['close'].iloc[i-5] if i >= 5 else 0
-
-        return np.array([
-            float(current_bar['open']),
-            float(current_bar['high']),
-            float(current_bar['low']),
-            float(current_bar['close']),
-            int(current_bar['volume']),
-            float(current_bar['notional']),
-            float(momentum_5)
-        ])
+    # Initialize FeatureEngineer for bar-by-bar feature generation
+    logger.info("\nInitializing FeatureEngineer...")
+    feature_engineer = FeatureEngineer(model_dir="models/xgboost/regime_aware_1min_2025_54features")
+    logger.info(f"✅ FeatureEngineer initialized")
 
     # Run backtest
     logger.info("\n" + "=" * 70)
@@ -118,9 +107,23 @@ def main():
         else:
             model = generic_model
 
-        # Generate features (matching training data)
+        # Generate features using proper FeatureEngineer (bar-by-bar method)
         bar_timestamp = df.index[i]
-        features = calculate_features(df, i)
+        dollar_bar = DollarBar(
+            timestamp=bar_timestamp,
+            open=float(current_bar['open']),
+            high=float(current_bar['high']),
+            low=float(current_bar['low']),
+            close=float(current_bar['close']),
+            volume=int(current_bar['volume']),
+            notional_value=float(current_bar['notional'])
+        )
+
+        # Generate 52 features using the same method as training
+        features = feature_engineer.generate_features_bar(
+            current_bar=dollar_bar,
+            historical_data=historical_data.reset_index()
+        )
 
         # Predict probability
         probability = float(model.predict_proba(features.reshape(1, -1))[0, 1])

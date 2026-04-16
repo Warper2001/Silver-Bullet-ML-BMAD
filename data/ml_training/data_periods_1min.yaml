@@ -1,0 +1,154 @@
+# 1-Minute Strategy Data Periods Configuration
+#
+# CRITICAL: These temporal splits MUST be strictly enforced to prevent data leakage
+# Training data MUST NEVER include validation or test periods
+#
+# Last Updated: 2026-04-16
+# Status: LOCKED - Do not modify without proper review
+
+training:
+  start: "2025-01-01"
+  end: "2025-09-30"
+  description: "Training data for 1-minute models"
+  bars_expected: ~214,103  # 9 months of 1-minute data
+  notes: |
+    - Use ONLY Jan-Sep 2025 for training
+    - Temporal 80/20 split: Train (Jan-Aug), Early Stop (Sep)
+    - NEVER include Oct-Dec 2025 in training
+    - This is the ONLY data allowed for model training
+
+validation:
+  start: "2025-10-01"
+  end: "2025-12-31"
+  description: "Held-out validation data - LOCKED"
+  bars_expected: ~75,127  # 3 months of 1-minute data
+  checksum: "5bed1cd1adeadc91bb907b6b83d6f600caaef92c936d730a027841cb710dd941"  # SHA256
+  locked_file: "data/ml_training/validation_octdec2025_LOCKED.csv"
+  notes: |
+    - ⚠️ LOCKED: NEVER use for training
+    - ONLY for model validation and hyperparameter tuning
+    - Must remain strictly separate from training data
+    - Any model trained on this period is INVALID
+  lock_status:
+    locked: true
+    locked_by: "Claude Code - 1min Tuning Action Plan"
+    locked_date: "2026-04-16"
+    reason: "Prevent data leakage in 1-minute model training"
+
+test:
+  start: "2026-01-01"
+  end: "2026-03-31"
+  description: "Future test data - final validation only"
+  bars_expected: ~75,000  # ~3 months of 1-minute data
+  notes: |
+    - Future data not yet available
+    - Will be used for final model validation before deployment
+    - Must not influence training in any way
+
+metadata:
+  timeframe: "1-minute"
+  symbol: "MNQ"
+  exchange: "CME"
+  data_type: "dollar_bars"
+  dollar_threshold: 50000000  # $50M notional value
+  timezone: "America/New_York"
+
+  data_quality:
+    completeness_target: 0.9999  # 99.99%
+    staleness_threshold_seconds: 30
+
+  temporal_split_strategy: "strict_temporal"
+  validation_methodology: "walk_forward"
+
+validation_checks:
+  - name: "temporal_separation_check"
+    description: "Ensure no temporal overlap between train/val/test"
+    enabled: true
+
+  - name: "data_leakage_check"
+    description: "Detect look-ahead bias in features"
+    enabled: true
+
+  - name: "checksum_verification"
+    description: "Verify locked data integrity"
+    enabled: true
+
+  - name: "train_on_validation_check"
+    description: "Prevent accidental training on validation period"
+    enabled: true
+    critical: true
+
+performance_targets:
+  # Realistic targets for 1-minute data
+  primary:
+    win_rate:
+      min: 45.0
+      max: 55.0
+      unit: "percent"
+      notes: "Realistic for 1-minute data with high noise"
+
+    trades_per_day:
+      min: 5
+      max: 25
+      unit: "trades"
+      notes: "Sufficient frequency without overtrading"
+
+    expectation_per_trade:
+      min: 20.0
+      unit: "dollars"
+      notes: "After transaction costs"
+
+  secondary:
+    sharpe_ratio:
+      min: 0.6
+      max: 1.5
+      notes: "Risk-adjusted returns"
+
+    profit_factor:
+      min: 1.3
+      notes: "Winners vs losers ratio"
+
+    max_drawdown:
+      max: 1000.0
+      unit: "dollars"
+      notes: "Maximum acceptable drawdown"
+
+  red_flags:
+    - condition: "win_rate > 70"
+      severity: "CRITICAL"
+      message: "Unrealistic win rate for 1-minute data - indicates overfitting"
+
+    - condition: "sharpe_ratio > 3.0"
+      severity: "CRITICAL"
+      message: "Sharpe ratio too high - indicates data leakage or overfitting"
+
+    - condition: "trades_per_day > 30"
+      severity: "WARNING"
+      message: "Trade frequency too high - likely trading noise"
+
+    - condition: "trades == 0"
+      severity: "CRITICAL"
+      message: "No trades generated - model broken or too conservative"
+
+implementation_notes: |
+  This configuration implements the corrected training methodology for 1-minute models.
+
+  Previous Issues Fixed:
+  1. Data leakage: Training data no longer includes validation period
+  2. Temporal overlap: Strict separation enforced
+  3. Overfitting: Realistic performance targets (45-55%, not 90%+)
+  4. Validation: Held-out Oct-Dec 2025 NEVER used for training
+
+  Training Procedure:
+  1. Load data for Jan-Sep 2025 ONLY
+  2. Create temporal 80/20 split:
+     - Train: Jan-Aug 2025 (~190K bars)
+     - Early stopping: Sep 2025 (~24K bars)
+  3. Train models with regularization
+  4. Validate on Oct-Dec 2025 (LOCKED, separate)
+  5. Only deploy if validation meets realistic targets
+
+  References:
+  - Investigation: data/reports/1min_training_methodology_investigation.md
+  - Action Plan: data/reports/1min_tuning_action_plan.md
+  - Tech Spec: _bmad-output/implementation_artifacts/tech-spec-1min-dollarbar-migration-2025.md

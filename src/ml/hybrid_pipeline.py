@@ -8,27 +8,20 @@ This module implements the hybrid regime-aware trading system that:
    - Regime 0 (trending_up): 25% threshold (65.2% win rate)
    - Regime 1 (ranging): 50% threshold (34.3% win rate)
    - Regime 2 (trending_down): 35% threshold (55.1% win rate)
-5. Enforces minimum bars between trades
+5. Enforces minimum bars between trades (1 minute for 1-min bars)
 6. Uses triple-barrier exits (TP: 0.3%, SL: 0.2%, Time: 30min)
 
-Tier 1 Model Support (Experimental - 2026-04-15):
-- Option 1: Baseline models (52 technical indicators)
-  - Regime 0: 97.83% accuracy
-  - Regime 2: 100.00% accuracy
-  - Generic: 79.30% accuracy
-- Option 2: Tier 1 models (17 order flow, volatility, microstructure features)
-  - Regime 0: 88.73% accuracy, 96.25% precision
-  - Regime 1: 82.61% accuracy, 21.26% precision (challenging regime)
-  - Regime 2: 69.10% accuracy (limited data)
-  - Enable via: config.yaml ml.tier1_models.enabled = true
-
-Expected Performance (based on triple-barrier label analysis):
-- Baseline: 55-65% win rate, 5-25 trades/day
-- Tier 1: Expected 55-65% win rate, 10-25 trades/day (higher precision in Regime 0)
+1-Minute Migration (2026-04-15):
+- Migrated from 5-minute to 1-minute dollar bars
+- MIN_BARS_BETWEEN_TRADES: 1 (vs 30 for 5-min system)
+- Expected trade frequency: 5-25 trades/day (vs 3.92 for 5-min)
+- Expected win rate: 50-52% for 1-min data (vs 55%+ for 5-min)
+- Processing latency < 50ms per bar (same target)
 
 Configuration:
-- See config.yaml [ml] section for Tier 1 model configuration
-- Toggle between baseline and Tier 1 via ml.tier1_models.enabled
+- See config.yaml [ml] section for 1-minute model configuration
+- Model path: models/xgboost/regime_aware_1min_2025_54features/
+- HMM path: models/hmm/regime_model_1min/
 """
 
 import asyncio
@@ -55,30 +48,24 @@ class HybridMLPipeline:
     """Hybrid regime-aware ML pipeline for bar-by-bar trading.
 
     Pipeline Flow:
-    1. Detect market regime using HMM
+    1. Detect market regime using HMM (1-minute model)
     2. Select appropriate ML model based on regime:
-       - Regime 0 (trending_up) → Regime 0 model (97.83% accuracy)
-       - Regime 1 (trending_up_strong) → Generic fallback (79.30% accuracy)
-       - Regime 2 (trending_down) → Regime 2 model (100.00% accuracy)
+       - Regime 0 (trending_up) → Regime 0 model (1-minute trained)
+       - Regime 1 (trending_up_strong) → Generic fallback (1-minute trained)
+       - Regime 2 (trending_down) → Regime 2 model (1-minute trained)
     3. Evaluate every bar with selected model
     4. Filter by REGIME-SPECIFIC probability threshold:
        - Regime 0: 25% (aggressive - 65.2% win rate)
        - Regime 1: 50% (conservative - 34.3% win rate)
        - Regime 2: 35% (moderate - 55.1% win rate)
-    5. Enforce minimum bars between trades
+    5. Enforce minimum bars between trades (1 minute for 1-min system)
     6. Publish trading signals to execution queue
 
-    Tier 1 Model Support (Experimental):
-    - Uses 17 order flow, volatility, microstructure features
-    - Higher precision in Regime 0 (96.25%)
-    - Graceful degradation: Falls back to baseline if Tier 1 unavailable
-    - Enable via config.yaml: ml.tier1_models.enabled = true
-
-    Performance (based on triple-barrier label analysis):
-        - Expected win rate: 55-65% (vs 34% generic)
-        - Expected trades/day: 5-25 (regime-dependent)
-        - Expected Sharpe: 0.8-1.5 (vs 0.4 generic)
-        - Processing latency < 50ms per bar
+    1-Minute System Performance:
+        - Expected win rate: 50-52% (realistic for 1-min data)
+        - Expected trades/day: 5-25 (vs 3.92 for 5-min system)
+        - Expected Sharpe: 0.6-1.0 (vs 0.74 for 5-min system)
+        - Processing latency < 50ms per bar (same target)
     """
 
     # Configuration constants (from deployment decision)
@@ -92,7 +79,7 @@ class HybridMLPipeline:
         2: 0.35,  # Regime 2: 35% threshold
     }
     DEFAULT_PROBABILITY_THRESHOLD = 0.40  # Fallback threshold
-    MIN_BARS_BETWEEN_TRADES = 30  # 2.5 hours at 5-min bars
+    MIN_BARS_BETWEEN_TRADES = 1  # 1 minute at 1-min bars (vs 30 for 5-min system)
 
     # Triple-barrier exit parameters
     TAKE_PROFIT_PCT = 0.003  # 0.3%

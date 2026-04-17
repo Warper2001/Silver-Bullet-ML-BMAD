@@ -41,7 +41,7 @@ MNQ_DATA_PATH = Path("/root/mnq_historical.json")
 MNQ_TICK_SIZE = 0.25
 MNQ_POINT_VALUE = 20.0
 DOLLAR_BAR_THRESHOLD = 50_000_000
-SAMPLE_SIZE = 50000  # Process only first 50K bars for speed
+SAMPLE_SIZE = 5000  # Process only first 5K bars for ultra-fast validation
 
 
 def load_sample_mnq_data(data_path: Path = MNQ_DATA_PATH, sample_size: int = SAMPLE_SIZE) -> pd.DataFrame:
@@ -240,11 +240,11 @@ class SimpleBacktest:
 def main():
     """Main entry point."""
     logger.info("=" * 70)
-    logger.info("TIER 1 FVG FAST VALIDATION")
+    logger.info("TIER 1 FVG ULTRA-FAST VALIDATION (5K Sample)")
     logger.info("=" * 70)
 
     # Load sample data
-    df = load_sample_mnq_data(sample_size=50000)
+    df = load_sample_mnq_data(sample_size=SAMPLE_SIZE)
 
     # Transform to Dollar Bars
     dollar_bars = transform_to_dollar_bars_fast(df)

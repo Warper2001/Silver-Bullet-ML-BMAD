@@ -53,6 +53,10 @@ class MultiTimeframeNester:
         self.base_bar_duration = base_bar_duration
         self.nesting_detection_count = 0
 
+        # Caching for resampled timeframes (performance optimization)
+        self._cached_bars_length = 0  # Track how many bars were cached
+        self._cached_timeframes: dict[int, list[DollarBar]] = {}  # {timeframe: resampled_bars}
+
     def resample_bars(
         self, bars: list[DollarBar], timeframe_minutes: int
     ) -> list[DollarBar]:
@@ -179,6 +183,32 @@ class MultiTimeframeNester:
             confidence=0.0,  # Calculated later by pipeline
         )
 
+    def _update_cache_if_needed(self, bars: list[DollarBar]) -> None:
+        """Update cached resampled timeframes if new bars were added.
+
+        This is a performance optimization - we only resample when the bar list
+        has grown, avoiding redundant resampling operations on every check.
+
+        Args:
+            bars: Current list of all dollar bars
+        """
+        current_bars_length = len(bars)
+
+        # Only update if we have more bars than last time
+        if current_bars_length > self._cached_bars_length:
+            # Clear cache and rebuild with new bars
+            self._cached_timeframes = {}
+            for _, large_tf in self.fibonacci_pairs:
+                try:
+                    resampled = self.resample_bars(bars, large_tf)
+                    self._cached_timeframes[large_tf] = resampled
+                    logger.debug(f"Cached {len(resampled)} bars at {large_tf}-min timeframe")
+                except Exception as e:
+                    logger.error(f"Failed to cache {large_tf}-min bars: {e}")
+                    self._cached_timeframes[large_tf] = []
+
+            self._cached_bars_length = current_bars_length
+
     def find_nesting_across_timeframes(
         self,
         base_fvg: FVGEvent,
@@ -197,12 +227,15 @@ class MultiTimeframeNester:
         """
         nested_fvgs = []
 
+        # Update cache if new bars were added (performance optimization)
+        self._update_cache_if_needed(bars)
+
         for small_tf, large_tf in self.fibonacci_pairs:
-            # Resample bars to larger timeframe
-            try:
-                large_tf_bars = self.resample_bars(bars, large_tf)
-            except Exception as e:
-                logger.error(f"Failed to resample to {large_tf}-min bars: {e}")
+            # Use cached resampled timeframes instead of resampling every time
+            large_tf_bars = self._cached_timeframes.get(large_tf, [])
+
+            if not large_tf_bars:
+                logger.warning(f"No cached bars available for {large_tf}-min timeframe")
                 continue
 
             # Detect FVGs at larger timeframe if not already in history

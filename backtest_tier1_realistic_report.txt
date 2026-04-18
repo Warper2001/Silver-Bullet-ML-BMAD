@@ -1,0 +1,65 @@
+
+================================================================================
+TIER 1 FVG SYSTEM - REALISTIC BACKTEST (With Proper P&L Calculation)
+================================================================================
+
+Data Source: Real MNQ Historical Data (/root/mnq_historical.json)
+Sample Size: 20,000 raw bars
+Data Points: 11473 Dollar Bars
+Date Range: 2023-12-01 to 2023-12-22
+
+Transaction Costs:
+- Commission: $0.45 per contract per side
+- Slippage: 1 tick ($0.25) per side
+- Total Cost: $1.40 per round-trip
+
+Exit Logic:
+- Take Profit: Gap fill (opposite boundary)
+- Stop Loss: 2.0× gap size against position
+- Time Exit: 10 bars max hold time
+
+================================================================================
+BASELINE (No Filters)
+================================================================================
+Total Trades: 11028
+Wins: 7374
+Losses: 3654
+Win Rate: 66.87%
+Profit Factor: 1.58
+Avg Trades/Day: 513.15
+Total P&L: $118064.80
+Avg Win: $43.52
+Avg Loss: $-55.51
+Expectancy: $10.71 per trade
+
+================================================================================
+TIER 1 (ATR + Volume Filters)
+================================================================================
+Total Trades: 1855
+Wins: 1232
+Losses: 623
+Win Rate: 66.42%
+Profit Factor: 1.38
+Avg Trades/Day: 86.32
+Total P&L: $13996.75
+Avg Win: $41.64
+Avg Loss: $-59.88
+Expectancy: $7.55 per trade
+
+================================================================================
+IMPROVEMENTS
+================================================================================
+Win Rate: -0.45%
+Profit Factor: -0.21
+Expectancy: $-3.16 per trade
+Trade Freq: -83.18%
+Total P&L: $-104068.05
+
+================================================================================
+TARGET VALIDATION (Win Rate >= 60%, PF >= 1.7, 8-15 trades/day)
+================================================================================
+Win Rate (>=60%):       ✅ PASS - 66.42%
+Profit Factor (>=1.7):  ❌ FAIL - 1.38
+Trade Freq (8-15/day):  ❌ FAIL - 86.32/day
+
+================================================================================

@@ -24,7 +24,7 @@ VENV_DIR="$PROJECT_ROOT/.venv"
 PYTHON="$VENV_DIR/bin/python"
 LOG_DIR="$PROJECT_ROOT/logs"
 STATE_DIR="$PROJECT_ROOT/data/state"
-TRADING_SCRIPT="$PROJECT_ROOT/src/research/tier1_paper_working.py"
+TRADING_SCRIPT="$PROJECT_ROOT/src/research/tier1_paper_rest.py"
 
 # TIER 1 Configuration (EXACT SAME AS BACKTEST)
 TIER1_CONFIG="SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0"

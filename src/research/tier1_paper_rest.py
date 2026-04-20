@@ -50,7 +50,7 @@ TRANSACTION_COST = (COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2 +
                    SLIPPAGE_TICKS * MNQ_TICK_SIZE * MNQ_POINT_VALUE * CONTRACTS_PER_TRADE * 2)
 
 # Data polling
-SYMBOL = "MNQ/M26"  # MNQ June 2026 contract
+SYMBOL = "MNQM26"  # MNQ June 2026 contract (no slash!)
 BAR_INTERVAL = "1min"  # 1-minute bars
 POLL_INTERVAL = 60  # seconds
 

@@ -12,7 +12,7 @@ import asyncio
 import logging
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -157,6 +157,10 @@ class Tier1StreamingTrader:
         logger.info("✓ HTTP client initialized")
         self.session_start_time = datetime.now()
         logger.info(f"✓ Session started at {self.session_start_time}")
+        if self._is_market_open():
+            logger.info("🟢 Market is currently OPEN")
+        else:
+            logger.info(f"🔴 Market is currently CLOSED — will wake at {self._next_open_cst()}")
 
     async def start_streaming(self):
         """Poll for complete bars and process each new one exactly once."""
@@ -165,12 +169,82 @@ class Tier1StreamingTrader:
 
         try:
             while self.running:
+                if not self._is_market_open():
+                    wait_secs = self._seconds_until_open()
+                    h, m = divmod(wait_secs // 60, 60)
+                    logger.info(
+                        f"🔴 Market closed — sleeping {h}h {m}m until next open "
+                        f"({self._next_open_cst()})"
+                    )
+                    # Sleep in 30-min chunks so we can recheck (handles DST, etc.)
+                    await asyncio.sleep(min(wait_secs, 1800))
+                    continue
+
                 await self._poll_and_process()
                 await asyncio.sleep(POLL_INTERVAL_SECONDS)
         except Exception as e:
             logger.error(f"❌ Polling error: {e}", exc_info=True)
         finally:
             await self.stop()
+
+    # ------------------------------------------------------------------ #
+    # Market hours (CME MNQ, all times UTC; CST = UTC-6)                  #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _is_market_open() -> bool:
+        """Return True if CME MNQ is currently trading.
+
+        Schedule (CST = UTC-6):
+        - Mon-Thu: open 5 PM CST prior day → 4 PM CST (daily break 4-5 PM CST)
+        - Friday:  open until 4 PM CST, then weekend begins
+        - Saturday: closed
+        - Sunday:  opens 5 PM CST
+        In UTC: daily break 22:00-23:00; weekend Fri 22:00 → Sun 23:00.
+        """
+        now = datetime.now(timezone.utc)
+        wd = now.weekday()   # 0=Mon … 6=Sun
+        h  = now.hour
+
+        if wd == 5:          # Saturday — always closed
+            return False
+        if wd == 6:          # Sunday — open only from 23:00 UTC
+            return h >= 23
+        if wd == 4:          # Friday — closes at 22:00 UTC, weekend begins
+            return h < 22
+        # Mon-Thu: closed only during the 22:00 hour (22:00-22:59 UTC)
+        return h != 22
+
+    @staticmethod
+    def _seconds_until_open() -> int:
+        """Seconds until the next market open window."""
+        now = datetime.now(timezone.utc)
+        wd  = now.weekday()
+        h   = now.hour
+
+        # Build the candidate next-open datetime in UTC
+        today = now.replace(minute=0, second=0, microsecond=0)
+
+        if wd == 5:  # Saturday → Sunday 23:00 UTC
+            days_ahead = 1
+            next_open = today.replace(hour=23) + timedelta(days=days_ahead)
+        elif wd == 6 and h < 23:  # Sunday before open → today 23:00 UTC
+            next_open = today.replace(hour=23)
+        elif wd == 4 and h >= 22:  # Friday post-close → Sunday 23:00 UTC
+            next_open = today.replace(hour=23) + timedelta(days=2)
+        else:  # Mon-Thu daily break (hour == 22) → today 23:00 UTC
+            next_open = today.replace(hour=23)
+
+        return max(1, int((next_open - now).total_seconds()))
+
+    @staticmethod
+    def _next_open_cst() -> str:
+        """Human-readable next open time in CST."""
+        now = datetime.now(timezone.utc)
+        secs = Tier1StreamingTrader._seconds_until_open()
+        opens_utc = now + timedelta(seconds=secs)
+        opens_cst = opens_utc - timedelta(hours=6)
+        return opens_cst.strftime("%a %Y-%m-%d %H:%M CST")
 
     async def stop(self):
         logger.info("Stopping TIER 1 paper trading system...")

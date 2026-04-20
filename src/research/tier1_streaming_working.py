@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """
-TIER 1 FVG Paper Trading - TradeStation HTTP Polling (Complete Bars Only)
+TIER 1 FVG Paper Trading - TradeStation HTTP Polling + SIM Order Placement
 Configuration: SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0
 
-Fixed bugs vs prior version:
-1. Direction case bug: _calculate_pnl now compares direction.upper() == "LONG"
-2. Real exit simulation: active trades tracked per-bar (TP/SL/time-stop)
-3. Bar deduplication: FVG detection only fires on newly completed bars
-4. Setup deduplication: same (bar_index, direction) cannot be traded twice
+Entry fires a bracket order on SIM account (entry + TP limit + SL stop).
+The SIM account manages TP/SL fills. Local per-bar simulation is the
+authoritative P&L record and handles the time-stop (cancel bracket + flat close).
 """
 
 import asyncio
@@ -45,14 +43,17 @@ SLIPPAGE_TICKS = 1
 TRANSACTION_COST = (COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2 +
                     SLIPPAGE_TICKS * MNQ_TICK_SIZE * MNQ_POINT_VALUE * CONTRACTS_PER_TRADE * 2)
 
-# TradeStation API
+# TradeStation market data API
 SYMBOL = "MNQM26"  # June 2026 contract (most active)
 BAR_INTERVAL = "1"
 BAR_UNIT = "Minute"
-# Fetch last 15 bars so we have enough history for ATR + FVG detection after restarts
 BARS_URL = (f"https://api.tradestation.com/v3/marketdata/barcharts/{SYMBOL}"
             f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}&bars_back=100")
-POLL_INTERVAL_SECONDS = 60  # Poll once per minute (aligns with 1-min bar close)
+POLL_INTERVAL_SECONDS = 60
+
+# TradeStation SIM order placement
+SIM_ACCOUNT_ID = "SIM279251F"
+SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orders"
 
 # Setup logging
 log_dir = Path(__file__).parent.parent.parent / "logs"
@@ -79,6 +80,9 @@ class ActiveTrade:
     tp_price: float
     sl_price: float
     bars_held: int = 0
+    sim_entry_order_id: Optional[str] = None
+    sim_tp_order_id: Optional[str] = None
+    sim_sl_order_id: Optional[str] = None
 
 
 @dataclass
@@ -92,6 +96,7 @@ class CompletedTrade:
     exit_type: str          # "tp", "sl", "time"
     bars_held: int
     pnl: float
+    sim_order_id: Optional[str] = None
 
 
 class Tier1StreamingTrader:
@@ -102,6 +107,8 @@ class Tier1StreamingTrader:
     - On each new bar: first advance active trades (check TP/SL/time exit),
       then detect new FVG setups
     - One active trade at a time (prevents compounding open risk)
+    - Entry fires a SIM bracket order (entry + TP limit + SL stop)
+    - Time-stop cancels bracket legs and sends a flat market close order
     """
 
     def __init__(self):
@@ -128,12 +135,13 @@ class Tier1StreamingTrader:
 
     async def initialize(self):
         logger.info("=" * 70)
-        logger.info("TIER 1 FVG PAPER TRADING - POLLING (COMPLETE BARS ONLY)")
+        logger.info("TIER 1 FVG PAPER TRADING - SIM ORDER PLACEMENT")
         logger.info("=" * 70)
         logger.info(f"Configuration: {TIER1_CONFIG}")
         logger.info(f"Symbol: {SYMBOL} (MNQ June 2026)")
+        logger.info(f"SIM Account: {SIM_ACCOUNT_ID}")
         logger.info(f"Data Source: TradeStation API (polling every {POLL_INTERVAL_SECONDS}s)")
-        logger.info(f"Mode: Paper Trading (Simulated)")
+        logger.info(f"Mode: Bracket orders on SIM (entry + TP limit + SL stop)")
         logger.info(f"Max hold: {MAX_HOLD_BARS} bars | SL mult: {SL_MULTIPLIER}x gap")
         logger.info(f"Transaction cost per round-trip: ${TRANSACTION_COST:.2f}")
         logger.info("=" * 70)
@@ -147,7 +155,6 @@ class Tier1StreamingTrader:
 
         self.client = httpx.AsyncClient(timeout=30.0)
         logger.info("✓ HTTP client initialized")
-
         self.session_start_time = datetime.now()
         logger.info(f"✓ Session started at {self.session_start_time}")
 
@@ -172,7 +179,7 @@ class Tier1StreamingTrader:
         # Force-close any active trade at last close price
         if self.active_trade and self.dollar_bars:
             last_bar = self.dollar_bars[-1]
-            self._close_active_trade(last_bar, last_bar.close, "time")
+            await self._close_active_trade(last_bar, last_bar.close, "time")
             logger.warning("⚠️  Active trade force-closed at session end")
 
         if self.client:
@@ -214,8 +221,8 @@ class Tier1StreamingTrader:
                     self._last_processed_timestamp = bar.timestamp
                     new_bar_count += 1
 
-                    self._advance_active_trade(bar)
-                    self._detect_and_enter(bar)
+                    await self._advance_active_trade(bar)
+                    await self._detect_and_enter(bar)
 
                     logger.info(
                         f"📊 Bar {len(self.dollar_bars):4d} | {bar.timestamp} | "
@@ -256,7 +263,7 @@ class Tier1StreamingTrader:
     # Active trade management (real exit simulation)                       #
     # ------------------------------------------------------------------ #
 
-    def _advance_active_trade(self, bar: DollarBar):
+    async def _advance_active_trade(self, bar: DollarBar):
         """Check if the new bar hits TP, SL, or time-stop for the active trade."""
         if self.active_trade is None:
             return
@@ -265,36 +272,43 @@ class Tier1StreamingTrader:
         trade.bars_held += 1
 
         if trade.direction == "LONG":
-            # SL: bar low touches or pierces stop
             if bar.low <= trade.sl_price:
                 exit_price = min(trade.sl_price, bar.low)
-                self._close_active_trade(bar, exit_price, "sl")
+                await self._close_active_trade(bar, exit_price, "sl")
                 return
-            # TP: bar high reaches take-profit
             if bar.high >= trade.tp_price:
-                exit_price = trade.tp_price
-                self._close_active_trade(bar, exit_price, "tp")
+                await self._close_active_trade(bar, trade.tp_price, "tp")
                 return
         else:  # SHORT
-            # SL: bar high touches or pierces stop
             if bar.high >= trade.sl_price:
                 exit_price = max(trade.sl_price, bar.high)
-                self._close_active_trade(bar, exit_price, "sl")
+                await self._close_active_trade(bar, exit_price, "sl")
                 return
-            # TP: bar low reaches take-profit
             if bar.low <= trade.tp_price:
-                exit_price = trade.tp_price
-                self._close_active_trade(bar, exit_price, "tp")
+                await self._close_active_trade(bar, trade.tp_price, "tp")
                 return
 
-        # Time-stop
         if trade.bars_held >= MAX_HOLD_BARS:
-            self._close_active_trade(bar, bar.close, "time")
+            await self._close_active_trade(bar, bar.close, "time")
 
-    def _close_active_trade(self, bar: DollarBar, exit_price: float, exit_type: str):
+    async def _close_active_trade(self, bar: DollarBar, exit_price: float, exit_type: str):
         trade = self.active_trade
         pnl = self._calculate_pnl(trade.entry_price, exit_price, trade.direction)
         result = "✅ WIN" if pnl > 0 else "❌ LOSS"
+
+        # Time-stop: bracket legs still open on SIM → cancel them + send flat close
+        if exit_type == "time":
+            if trade.sim_tp_order_id:
+                await self._cancel_sim_order(trade.sim_tp_order_id)
+            if trade.sim_sl_order_id:
+                await self._cancel_sim_order(trade.sim_sl_order_id)
+            await self._submit_close_order(trade.direction)
+            sim_note = "SIM bracket cancelled + flat close sent"
+        elif exit_type in ("tp", "sl"):
+            # Bracket already filled on SIM automatically — no additional order needed
+            sim_note = "SIM closed (bracket)"
+        else:
+            sim_note = ""
 
         completed = CompletedTrade(
             entry_time=trade.entry_time,
@@ -305,6 +319,7 @@ class Tier1StreamingTrader:
             exit_type=exit_type,
             bars_held=trade.bars_held,
             pnl=pnl,
+            sim_order_id=trade.sim_entry_order_id,
         )
         self.completed_trades.append(completed)
         self.active_trade = None
@@ -313,15 +328,15 @@ class Tier1StreamingTrader:
             f"{result} {completed.direction} | {exit_type.upper()} "
             f"entry ${trade.entry_price:.2f} → exit ${exit_price:.2f} "
             f"| bars={trade.bars_held} | P&L ${pnl:.2f}"
+            + (f" | {sim_note}" if sim_note else "")
         )
 
     # ------------------------------------------------------------------ #
     # FVG detection & trade entry                                          #
     # ------------------------------------------------------------------ #
 
-    def _detect_and_enter(self, bar: DollarBar):
+    async def _detect_and_enter(self, bar: DollarBar):
         """Detect FVG on the just-completed bar and open a trade if valid."""
-        # Don't stack trades
         if self.active_trade is not None:
             return
 
@@ -331,24 +346,22 @@ class Tier1StreamingTrader:
 
         bar_index = len(bars) - 1
 
-        # Try bullish FVG (LONG trade)
         setup_key_long = (bar_index, "LONG")
         if setup_key_long not in self._traded_setups:
             fvg = self._detect_bullish_fvg(bars)
             if fvg:
                 self._traded_setups.add(setup_key_long)
-                self._enter_trade(fvg, bar, bar_index)
+                await self._enter_trade(fvg, bar, bar_index)
                 return
 
-        # Try bearish FVG (SHORT trade) — only if no LONG was taken
         setup_key_short = (bar_index, "SHORT")
         if setup_key_short not in self._traded_setups:
             fvg = self._detect_bearish_fvg(bars)
             if fvg:
                 self._traded_setups.add(setup_key_short)
-                self._enter_trade(fvg, bar, bar_index)
+                await self._enter_trade(fvg, bar, bar_index)
 
-    def _enter_trade(self, fvg: dict, bar: DollarBar, bar_index: int):
+    async def _enter_trade(self, fvg: dict, bar: DollarBar, bar_index: int):
         direction = "LONG" if fvg["direction"] == "bullish" else "SHORT"
         gap_range = fvg["gap_range"]
         gap_size = gap_range["top"] - gap_range["bottom"]
@@ -371,10 +384,153 @@ class Tier1StreamingTrader:
             sl_price=sl_price,
         )
 
+        # Submit bracket order to SIM
+        entry_id, tp_id, sl_id = await self._submit_bracket_order(
+            direction, entry_price, tp_price, sl_price
+        )
+        self.active_trade.sim_entry_order_id = entry_id
+        self.active_trade.sim_tp_order_id = tp_id
+        self.active_trade.sim_sl_order_id = sl_id
+
+        sim_tag = f" | SIM order #{entry_id}" if entry_id else " | SIM order FAILED"
         logger.info(
             f"🔔 ENTER {direction} | entry ${entry_price:.2f} "
             f"TP ${tp_price:.2f} SL ${sl_price:.2f} | gap ${fvg['gap_size']:.2f}"
+            + sim_tag
         )
+
+    # ------------------------------------------------------------------ #
+    # SIM order placement                                                  #
+    # ------------------------------------------------------------------ #
+
+    async def _get_auth_headers(self) -> dict:
+        token = await self.auth.authenticate()
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+    async def _submit_bracket_order(
+        self, direction: str, entry_price: float, tp_price: float, sl_price: float
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Submit a bracket order (entry + TP limit + SL stop) to SIM.
+
+        Returns (entry_order_id, tp_order_id, sl_order_id).
+        Returns (None, None, None) on any error — local simulation continues unaffected.
+        """
+        if direction == "LONG":
+            entry_action = "BUY"
+            exit_action = "SELL"
+        else:
+            entry_action = "SELLSHORT"
+            exit_action = "BUYTOCOVER"
+
+        payload = {
+            "AccountID": SIM_ACCOUNT_ID,
+            "Symbol": SYMBOL,
+            "Quantity": str(CONTRACTS_PER_TRADE),
+            "OrderType": "Market",
+            "TradeAction": entry_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+            "OSOs": [{
+                "Type": "BRK",
+                "Orders": [
+                    {
+                        "AccountID": SIM_ACCOUNT_ID,
+                        "Symbol": SYMBOL,
+                        "Quantity": str(CONTRACTS_PER_TRADE),
+                        "OrderType": "Limit",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "LimitPrice": str(tp_price),
+                    },
+                    {
+                        "AccountID": SIM_ACCOUNT_ID,
+                        "Symbol": SYMBOL,
+                        "Quantity": str(CONTRACTS_PER_TRADE),
+                        "OrderType": "StopMarket",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "StopPrice": str(sl_price),
+                    },
+                ],
+            }],
+        }
+
+        try:
+            headers = await self._get_auth_headers()
+            response = await self.client.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            logger.debug(f"SIM bracket response {response.status_code}: {response.text[:500]}")
+
+            if response.status_code not in (200, 201):
+                logger.warning(
+                    f"⚠️  SIM bracket order failed HTTP {response.status_code}: "
+                    f"{response.text[:200]}"
+                )
+                return None, None, None
+
+            data = response.json()
+            orders = data.get("Orders", [])
+            entry_id = orders[0].get("OrderID") if len(orders) > 0 else None
+            tp_id = orders[1].get("OrderID") if len(orders) > 1 else None
+            sl_id = orders[2].get("OrderID") if len(orders) > 2 else None
+
+            logger.info(
+                f"✓ SIM bracket submitted | entry #{entry_id} | "
+                f"TP #{tp_id} | SL #{sl_id}"
+            )
+            return entry_id, tp_id, sl_id
+
+        except Exception as e:
+            logger.warning(f"⚠️  SIM bracket order exception: {e}")
+            return None, None, None
+
+    async def _cancel_sim_order(self, order_id: str):
+        """Cancel an open SIM order (used to cancel bracket legs on time-stop)."""
+        try:
+            headers = await self._get_auth_headers()
+            url = f"https://sim-api.tradestation.com/v3/orders/{order_id}"
+            response = await self.client.delete(url, headers=headers)
+            if response.status_code in (200, 204, 404):
+                logger.info(f"✓ SIM order #{order_id} cancelled (HTTP {response.status_code})")
+            else:
+                logger.warning(
+                    f"⚠️  Cancel order #{order_id} returned HTTP {response.status_code}: "
+                    f"{response.text[:100]}"
+                )
+        except Exception as e:
+            logger.warning(f"⚠️  Cancel order #{order_id} exception: {e}")
+
+    async def _submit_close_order(self, direction: str):
+        """Submit a flat market order to close the SIM position (time-stop only)."""
+        close_action = "SELL" if direction == "LONG" else "BUYTOCOVER"
+        payload = {
+            "AccountID": SIM_ACCOUNT_ID,
+            "Symbol": SYMBOL,
+            "Quantity": str(CONTRACTS_PER_TRADE),
+            "OrderType": "Market",
+            "TradeAction": close_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+        }
+
+        try:
+            headers = await self._get_auth_headers()
+            response = await self.client.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            if response.status_code in (200, 201):
+                data = response.json()
+                orders = data.get("Orders", [])
+                order_id = orders[0].get("OrderID") if orders else "?"
+                logger.info(f"✓ SIM flat close order #{order_id} submitted")
+            else:
+                logger.warning(
+                    f"⚠️  SIM close order failed HTTP {response.status_code}: "
+                    f"{response.text[:200]}"
+                )
+        except Exception as e:
+            logger.warning(f"⚠️  SIM close order exception: {e}")
 
     # ------------------------------------------------------------------ #
     # FVG detection (identical conditions to backtest fvg_detection.py)   #
@@ -462,20 +618,14 @@ class Tier1StreamingTrader:
             return up_vol == 0 or (dn_vol / up_vol) >= VOLUME_RATIO_THRESHOLD
 
     # ------------------------------------------------------------------ #
-    # P&L calculation (FIX: use direction.upper() for comparison)         #
+    # P&L calculation                                                      #
     # ------------------------------------------------------------------ #
 
     def _calculate_pnl(self, entry: float, exit_price: float, direction: str) -> float:
-        """Calculate realized P&L after transaction costs.
-
-        Uses MNQ_CONTRACT_VALUE ($5/point) to match backtest convention exactly.
-        direction is case-insensitive ("long" or "LONG" both work).
-        """
         if direction.upper() == "LONG":
             price_diff = exit_price - entry
         else:
             price_diff = entry - exit_price
-
         return price_diff * MNQ_CONTRACT_VALUE * CONTRACTS_PER_TRADE - TRANSACTION_COST
 
     # ------------------------------------------------------------------ #

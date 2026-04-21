@@ -168,13 +168,13 @@ def run_backtest(df: pd.DataFrame, use_mtf: bool,
     vols       = df["volume"].values
     timestamps = df["timestamp"]   # keep as pandas Series (tz-aware)
 
-    # Vectorized ATR (14-period EWM true range)
+    # Rolling 20-bar ATR (matches live paper trader methodology)
     prev_close = pd.Series(closes).shift(1).values
     tr = np.maximum(highs - lows,
                     np.maximum(np.abs(highs - prev_close),
                                np.abs(lows - prev_close)))
     tr[0] = highs[0] - lows[0]
-    atr = pd.Series(tr).ewm(span=14, adjust=False).mean().values
+    atr = pd.Series(tr).rolling(20, min_periods=5).mean().values
 
     # Vectorized rolling volume ratio (20-bar window)
     is_bull = (closes > opens).astype(float)
@@ -182,13 +182,13 @@ def run_backtest(df: pd.DataFrame, use_mtf: bool,
     up_vol = pd.Series(vols * is_bull).rolling(20, min_periods=1).sum().values
     dn_vol = pd.Series(vols * is_bear).rolling(20, min_periods=1).sum().values
 
-    trades      = []
-    mtf_skipped = 0
-    in_trade    = False   # one position at a time
+    trades         = []
+    mtf_skipped    = 0
+    next_entry_bar = 0   # earliest bar index at which we can open a new trade
 
     for i in range(2, n):
-        if in_trade:
-            continue   # position already open — skip new signals
+        if i < next_entry_bar:
+            continue   # still holding a position — skip until exit bar + 1
 
         bar_ts = timestamps.iloc[i]
         c1_close, c1_high = closes[i - 2], highs[i - 2]
@@ -206,8 +206,6 @@ def run_backtest(df: pd.DataFrame, use_mtf: bool,
             else:
                 if c1_close >= c3_open:
                     continue
-                gap_top, gap_bottom = c3_high, closes[i - 2 + 0]  # c1.low for bearish
-                # Recompute: bearish uses c3.high and c1.low
                 gap_top    = c3_high
                 gap_bottom = lows[i - 2]   # c1.low
                 entry = gap_top
@@ -250,16 +248,8 @@ def run_backtest(df: pd.DataFrame, use_mtf: bool,
             result["bar_ts"]    = bar_ts
             trades.append(result)
 
-            in_trade = True
+            next_entry_bar = i + result["bars_held"] + 1
             break   # one signal per bar max
-
-        if in_trade and trades and trades[-1]["bar_index"] == i:
-            # Advance past the exit bar so we don't re-enter immediately
-            exit_bar = i + trades[-1]["bars_held"]
-            # Fast-forward: mark all bars until exit as in_trade
-            # (handled by the `in_trade` flag above — reset after exit bar)
-            # We need to reset in_trade after the trade closes
-            in_trade = False   # simplified: allow next bar entry (conservative)
 
     # ── Metrics ──────────────────────────────────────────────────────────── #
     if not trades:

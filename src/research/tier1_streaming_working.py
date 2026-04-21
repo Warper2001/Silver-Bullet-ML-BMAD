@@ -47,8 +47,9 @@ TRANSACTION_COST = (COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2 +
 SYMBOL = "MNQM26"  # June 2026 contract (most active)
 BAR_INTERVAL = "1"
 BAR_UNIT = "Minute"
-BARS_URL = (f"https://api.tradestation.com/v3/marketdata/barcharts/{SYMBOL}"
-            f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}&bars_back=100")
+BARS_BASE_URL = (f"https://api.tradestation.com/v3/marketdata/barcharts/{SYMBOL}"
+                 f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}")
+HISTORY_HOURS = 8    # hours of history on cold start (~480 bars)
 POLL_INTERVAL_SECONDS = 60
 
 # TradeStation SIM order placement
@@ -265,13 +266,22 @@ class Tier1StreamingTrader:
     # Polling & bar ingestion                                              #
     # ------------------------------------------------------------------ #
 
+    def _build_bars_url(self) -> str:
+        """Build date-range URL. On cold start, go back HISTORY_HOURS; otherwise
+        since the last processed bar (dedup handles overlap)."""
+        if self._last_processed_timestamp is None:
+            since = datetime.now(timezone.utc) - timedelta(hours=HISTORY_HOURS)
+        else:
+            since = self._last_processed_timestamp
+        return f"{BARS_BASE_URL}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+
     async def _poll_and_process(self):
         """Fetch latest bars and process any new complete bars."""
         try:
             token = await self.auth.authenticate()
             headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
-            response = await self.client.get(BARS_URL, headers=headers)
+            response = await self.client.get(self._build_bars_url(), headers=headers)
             if response.status_code != 200:
                 logger.error(f"❌ API error {response.status_code}: {response.text[:200]}")
                 return
@@ -283,9 +293,14 @@ class Tier1StreamingTrader:
                 return
 
             new_bar_count = 0
+            now_utc = datetime.now(timezone.utc)
             for bar_data in bars_data:
                 bar = self._parse_bar(bar_data)
                 if bar is None:
+                    continue
+
+                # Skip bars whose close time hasn't arrived yet (in-progress bar)
+                if bar.timestamp > now_utc:
                     continue
 
                 # Only process bars we haven't seen yet (dedup by timestamp)
@@ -669,14 +684,15 @@ class Tier1StreamingTrader:
         }
 
     def _calculate_atr(self, bars: list[DollarBar]) -> float:
-        if len(bars) < 14:
+        if len(bars) < 5:
             return 10.0
+        window = bars[-20:]  # rolling 20-bar window, matches backtest methodology
         tr_values = []
-        for i in range(1, min(15, len(bars))):
+        for i in range(1, len(window)):
             tr = max(
-                bars[i].high - bars[i].low,
-                abs(bars[i].high - bars[i - 1].close),
-                abs(bars[i].low - bars[i - 1].close),
+                window[i].high - window[i].low,
+                abs(window[i].high - window[i - 1].close),
+                abs(window[i].low - window[i - 1].close),
             )
             tr_values.append(tr)
         return sum(tr_values) / len(tr_values) if tr_values else 10.0

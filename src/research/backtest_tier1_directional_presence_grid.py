@@ -6,10 +6,11 @@ tests whether a same-direction FVG existed on the parent TF within N bars
 BEFORE the 1-min signal. Pure directional recency — no spatial overlap needed.
 
 Grid dimensions:
-  Parent TF:  [5, 15, 60] minutes
+  Parent TF:  [5, 21, 89] minutes — Fibonacci ratios
   Lookback:   [10, 20, 40] parent bars
   Logic:      OR  (any parent TF matches)
               AND (all parent TFs must match)
+  Groupings:  single-TF | pairs [5,21] [21,89] | triple [5,21,89]
 
 Baseline: 1,559 trades | 76.33% WR | PF 1.20 | TPD 14.77 | P&L $3,694.40
 """
@@ -36,7 +37,7 @@ MAX_HOLD_BARS          = 10
 MNQ_CONTRACT_VALUE     = 5.0
 TRANSACTION_COST       = 10.90
 
-PARENT_TFS     = [5, 15, 60]   # minutes
+PARENT_TFS     = [5, 21, 89]   # Fibonacci minutes (5/21/89 from MTF research)
 LOOKBACK_BARS  = [10, 20, 40]  # parent bars back to search
 LOGIC_OPTIONS  = ["OR", "AND"]
 
@@ -286,11 +287,21 @@ def run_grid(df: pd.DataFrame) -> list[dict]:
     for tf, lb, _lg in single_tf_combos:
         all_combos.append({"tfs": [tf], "lookback": lb, "logic": "OR",
                            "label": f"TF{tf:3d}m  LB{lb:2d} OR "})
-    # Multi-TF (all 3 parent TFs, OR and AND)
+    # Multi-TF triple [5,21,89] OR and AND
     for tfs, lb, lg in multi_tf_combos:
         tf_str = "+".join(str(t) for t in tfs)
         all_combos.append({"tfs": tfs, "lookback": lb, "logic": lg,
-                           "label": f"TF{tf_str}m LB{lb:2d} {lg}"})
+                           "label": f"FIB{tf_str}m LB{lb:2d} {lg}"})
+    # Fibonacci pair groupings ([5,21] and [21,89])
+    for fib_pair in [[5, 21], [21, 89]]:
+        available = [t for t in fib_pair if t in parent_indices_all]
+        if len(available) < 2:
+            continue
+        tf_str = "+".join(str(t) for t in available)
+        for lb in LOOKBACK_BARS:
+            for lg in LOGIC_OPTIONS:
+                all_combos.append({"tfs": available, "lookback": lb, "logic": lg,
+                                   "label": f"FIB{tf_str}m LB{lb:2d} {lg}"})
 
     total = len(all_combos)
     print(f"Running {total} combinations ...")
@@ -329,9 +340,9 @@ def build_report(results: list[dict]) -> str:
     lines.append("TIER 1 DIRECTIONAL PRESENCE MTF GRID SEARCH — AUG–DEC 2025")
     lines.append("=" * 94)
     lines.append(f"Base config: SL{SL_MULTIPLIER}x | ATR{ATR_THRESHOLD} | Vol{VOLUME_RATIO_THRESHOLD} | MaxGap${MAX_GAP_DOLLARS} | Hold{MAX_HOLD_BARS}")
-    lines.append(f"Parent TFs tested: {PARENT_TFS} minutes (individually + all-three AND/OR)")
-    lines.append(f"Lookback windows:  {LOOKBACK_BARS} parent bars")
-    lines.append(f"Filter logic:      OR (any TF), AND (all TFs)")
+    lines.append(f"Parent TFs: {PARENT_TFS} min — Fibonacci ratios (5/21/89)")
+    lines.append(f"Combos: single-TF each | pairs [5,21] [21,89] | triple [5,21,89] | OR + AND")
+    lines.append(f"Lookback windows: {LOOKBACK_BARS} parent bars")
     lines.append("=" * 94)
     lines.append("")
     lines.append(f"BASELINE (no MTF): {b['total_trades']} trades | WR {b['win_rate']:.2f}% | PF {b['profit_factor']:.2f} | TPD {b['avg_tpd']:.2f} | P&L ${b['total_pnl']:.2f}")

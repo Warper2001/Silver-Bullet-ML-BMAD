@@ -53,8 +53,8 @@ HISTORY_HOURS = 8    # hours of history on cold start (~480 bars)
 POLL_INTERVAL_SECONDS = 60
 
 # TradeStation SIM order placement
-SIM_ACCOUNT_ID = "SIM279251F"
-SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orders"
+SIM_ACCOUNT_ID = "SIM2797251F"
+SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
 
 # Setup logging
 log_dir = Path(__file__).parent.parent.parent / "logs"
@@ -512,8 +512,9 @@ class Tier1StreamingTrader:
             entry_action = "BUY"
             exit_action = "SELL"
         else:
-            entry_action = "SELLSHORT"
-            exit_action = "BUYTOCOVER"
+            # Futures use BUY/SELL only (not SELLSHORT/BUYTOCOVER which are equities-only)
+            entry_action = "SELL"
+            exit_action = "BUY"
 
         payload = {
             "AccountID": SIM_ACCOUNT_ID,
@@ -580,7 +581,7 @@ class Tier1StreamingTrader:
         """Cancel an open SIM order (used to cancel bracket legs on time-stop)."""
         try:
             headers = await self._get_auth_headers()
-            url = f"https://sim-api.tradestation.com/v3/orders/{order_id}"
+            url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
             response = await self.client.delete(url, headers=headers)
             if response.status_code in (200, 204, 404):
                 logger.info(f"✓ SIM order #{order_id} cancelled (HTTP {response.status_code})")

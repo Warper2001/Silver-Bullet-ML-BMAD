@@ -24,13 +24,19 @@ from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
 
 # Configuration (SAME AS VALIDATED BACKTEST)
-TIER1_CONFIG = "SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0"
+TIER1_CONFIG = "SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0_TODfilter"
 SL_MULTIPLIER = 2.5
 ATR_THRESHOLD = 0.7
 VOLUME_RATIO_THRESHOLD = 2.25
 MAX_GAP_DOLLARS = 50.0
 MAX_HOLD_BARS = 10
 CONTRACTS_PER_TRADE = 1
+
+# TOD filter — skip signal detection during these Eastern Time hours
+# Source: backtest_tier1_tod_filter_report.txt "Block WR<75%" config
+# Blocked: 01:00, 06:00, 08:00, 16:00, 17:00, 22:00, 23:00 ET
+# Effect:  76.33% → 80.15% WR | PF 1.20 → 1.57 | +$2,531 over 5-month baseline
+TOD_BLOCKED_HOURS_ET: frozenset[int] = frozenset({1, 6, 8, 16, 17, 22, 23})
 
 # MNQ Specifications
 MNQ_TICK_SIZE = 0.25
@@ -145,6 +151,7 @@ class Tier1StreamingTrader:
         logger.info(f"Mode: Bracket orders on SIM (entry + TP limit + SL stop)")
         logger.info(f"Max hold: {MAX_HOLD_BARS} bars | SL mult: {SL_MULTIPLIER}x gap")
         logger.info(f"Transaction cost per round-trip: ${TRANSACTION_COST:.2f}")
+        logger.info(f"TOD filter: blocked ET hours {sorted(TOD_BLOCKED_HOURS_ET)} (WR<75% config)")
         logger.info("=" * 70)
 
         self.auth = TradeStationAuthV3.from_file('.access_token')
@@ -424,9 +431,20 @@ class Tier1StreamingTrader:
     # FVG detection & trade entry                                          #
     # ------------------------------------------------------------------ #
 
+    @staticmethod
+    def _bar_et_hour(ts: datetime) -> int:
+        """UTC timestamp → Eastern hour (EDT = UTC-4 for months ≤10, EST = UTC-5 otherwise)."""
+        offset = -4 if ts.month <= 10 else -5
+        return (ts.hour + offset) % 24
+
     async def _detect_and_enter(self, bar: DollarBar):
         """Detect FVG on the just-completed bar and open a trade if valid."""
         if self.active_trade is not None:
+            return
+
+        et_hour = self._bar_et_hour(bar.timestamp)
+        if et_hour in TOD_BLOCKED_HOURS_ET:
+            logger.debug(f"⏭  TOD filter: {et_hour:02d}:00 ET blocked")
             return
 
         bars = self.dollar_bars
@@ -595,7 +613,7 @@ class Tier1StreamingTrader:
 
     async def _submit_close_order(self, direction: str):
         """Submit a flat market order to close the SIM position (time-stop only)."""
-        close_action = "SELL" if direction == "LONG" else "BUYTOCOVER"
+        close_action = "SELL" if direction == "LONG" else "BUY"
         payload = {
             "AccountID": SIM_ACCOUNT_ID,
             "Symbol": SYMBOL,
@@ -761,8 +779,8 @@ class Tier1StreamingTrader:
         logger.info("=" * 70)
         logger.info(f"Total Trades:    {len(self.completed_trades)}")
         logger.info(f"Wins / Losses:   {len(wins)} / {len(losses)}")
-        logger.info(f"Win Rate:        {win_rate:.2f}%  (backtest target: 74.45%)")
-        logger.info(f"Profit Factor:   {profit_factor:.2f}  (backtest target: 1.75)")
+        logger.info(f"Win Rate:        {win_rate:.2f}%  (backtest target: 80.15%)")
+        logger.info(f"Profit Factor:   {profit_factor:.2f}  (backtest target: 1.57)")
         logger.info(f"Total P&L:       ${total_pnl:.2f}")
         logger.info(f"Expectancy:      ${total_pnl / len(self.completed_trades):.2f}/trade")
         logger.info(f"Avg Win:         ${avg_win:.2f} | Avg Loss: ${avg_loss:.2f}")

@@ -476,11 +476,11 @@ class Tier1StreamingTrader:
         if direction == "LONG":
             entry_price = gap_range["bottom"]
             tp_price = gap_range["top"]
-            sl_price = entry_price - gap_size * SL_MULTIPLIER
+            sl_price = round(round((entry_price - gap_size * SL_MULTIPLIER) / MNQ_TICK_SIZE) * MNQ_TICK_SIZE, 2)
         else:
             entry_price = gap_range["top"]
             tp_price = gap_range["bottom"]
-            sl_price = entry_price + gap_size * SL_MULTIPLIER
+            sl_price = round(round((entry_price + gap_size * SL_MULTIPLIER) / MNQ_TICK_SIZE) * MNQ_TICK_SIZE, 2)
 
         self.active_trade = ActiveTrade(
             bar_index=bar_index,

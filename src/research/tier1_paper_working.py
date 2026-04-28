@@ -10,7 +10,7 @@ import logging
 import signal
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -71,6 +71,13 @@ class ExitReason(Enum):
     STOP_LOSS = "stop_loss"
     MAX_TIME = "max_time"
     END_OF_DATA = "end_of_data"
+    END_OF_SESSION = "end_of_session"
+
+
+# Flatten all positions 1 minute before actual close (15:29 CT = 20:29 UTC)
+# so there is time to process exits before the market closes at 15:30 CT.
+SESSION_FLATTEN_HOUR_UTC = 20
+SESSION_FLATTEN_MINUTE_UTC = 29
 
 
 @dataclass
@@ -230,12 +237,16 @@ class Tier1PaperTrader:
                 # Fetch new bars
                 await self.fetch_new_bars()
 
-                # Detect FVG setups
-                if len(self.dollar_bars) >= 3:
-                    await self.detect_fvg_setups()
+                if self._is_session_flatten_time():
+                    # Flatten all positions 1 minute before actual market close
+                    await self.flatten_all_positions()
+                else:
+                    # Detect FVG setups (only during normal session hours)
+                    if len(self.dollar_bars) >= 3:
+                        await self.detect_fvg_setups()
 
-                # Monitor active trades
-                await self.monitor_active_trades()
+                    # Monitor active trades
+                    await self.monitor_active_trades()
 
                 # Log status every 50 bars
                 if len(self.dollar_bars) % 50 == 0:
@@ -586,6 +597,55 @@ class Tier1PaperTrader:
             return current_bar.close, ExitReason.MAX_TIME
 
         return None, None
+
+    def _is_session_flatten_time(self) -> bool:
+        """Return True when it's time to flatten all positions before close.
+
+        Treats 20:29 UTC (15:29 CT) as the effective close — 1 minute before
+        the afternoon session ends at 20:30 UTC — so there is processing time.
+        """
+        now = datetime.now(timezone.utc)
+        return (
+            now.hour > SESSION_FLATTEN_HOUR_UTC
+            or (now.hour == SESSION_FLATTEN_HOUR_UTC and now.minute >= SESSION_FLATTEN_MINUTE_UTC)
+        )
+
+    async def flatten_all_positions(self):
+        """Exit all active trades at current price (EOD flatten)."""
+        if not self.active_trades:
+            return
+
+        current_bar = self.dollar_bars[-1] if self.dollar_bars else None
+        if not current_bar:
+            logger.warning("EOD flatten: no current bar, cannot exit positions")
+            return
+
+        logger.info("=" * 60)
+        logger.info("⏰ END-OF-SESSION FLATTEN — closing all positions")
+        logger.info("=" * 60)
+
+        for trade in list(self.active_trades):
+            exit_price = current_bar.close
+
+            trade.exit_time = current_bar.timestamp
+            trade.exit_price = exit_price
+            trade.exit_reason = ExitReason.END_OF_SESSION
+            trade.bars_held = len(self.dollar_bars) - trade.bar_index
+
+            if trade.direction == TradeDirection.LONG:
+                price_diff = exit_price - trade.entry_price
+            else:
+                price_diff = trade.entry_price - exit_price
+
+            pnl_before_costs = price_diff * MNQ_CONTRACT_VALUE * CONTRACTS_PER_TRADE
+            trade.pnl = pnl_before_costs - TRANSACTION_COST
+
+            logger.info(f"  Flattened {trade.direction.value.upper()} @ ${exit_price:.2f} | P&L: ${trade.pnl:.2f}")
+
+            self.active_trades.remove(trade)
+            self.completed_trades.append(trade)
+
+        logger.info("=" * 60)
 
     def log_status(self):
         """Log current system status."""

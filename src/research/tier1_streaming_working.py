@@ -41,13 +41,12 @@ TOD_BLOCKED_HOURS_ET: frozenset[int] = frozenset({1, 6, 8, 16, 17, 22, 23})
 # MNQ Specifications
 MNQ_TICK_SIZE = 0.25
 MNQ_POINT_VALUE = 20.0
-MNQ_CONTRACT_VALUE = MNQ_TICK_SIZE * MNQ_POINT_VALUE  # $5 per index point (matches backtest)
+MNQ_CONTRACT_VALUE = MNQ_TICK_SIZE * MNQ_POINT_VALUE  # $5/pt — backtest scaling for gap/ATR filters only
+MNQ_DOLLAR_VALUE = 2.0  # real MNQ: $2 per index point per contract
 
-# Transaction Costs (match backtest exactly)
-COMMISSION_PER_CONTRACT = 0.45
-SLIPPAGE_TICKS = 1
-TRANSACTION_COST = (COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2 +
-                    SLIPPAGE_TICKS * MNQ_TICK_SIZE * MNQ_POINT_VALUE * CONTRACTS_PER_TRADE * 2)
+# Transaction Costs — commission only; actual SIM fill prices capture real slippage
+COMMISSION_PER_CONTRACT = 0.40  # actual TradeStation SIM rate per contract per side
+TRANSACTION_COST = COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2  # $0.80/roundtrip
 
 # TradeStation market data API
 SYMBOL = "MNQM26"  # June 2026 contract (most active)
@@ -66,13 +65,13 @@ SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
 log_dir = Path(__file__).parent.parent.parent / "logs"
 log_dir.mkdir(exist_ok=True)
 
+_handlers: list = [logging.FileHandler(log_dir / 'tier1_streaming_working.log')]
+if sys.stdout.isatty():
+    _handlers.append(logging.StreamHandler())
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s | %(levelname)-8s | %(message)s',
-    handlers=[
-        logging.FileHandler(log_dir / 'tier1_streaming_working.log'),
-        logging.StreamHandler()
-    ]
+    handlers=_handlers,
 )
 logger = logging.getLogger(__name__)
 
@@ -90,6 +89,7 @@ class ActiveTrade:
     sim_entry_order_id: Optional[str] = None
     sim_tp_order_id: Optional[str] = None
     sim_sl_order_id: Optional[str] = None
+    sim_entry_fill: Optional[float] = None  # actual fill price from SIM market order
 
 
 @dataclass
@@ -133,6 +133,9 @@ class Tier1StreamingTrader:
 
         # Deduplication: set of (bar_index, direction) already traded
         self._traded_setups: set[tuple[int, str]] = set()
+
+        # True during the initial HISTORY_HOURS backfill — suppresses SIM orders
+        self._is_backfill: bool = True
 
         self.session_start_time: Optional[datetime] = None
 
@@ -318,7 +321,7 @@ class Tier1StreamingTrader:
                     new_bar_count += 1
 
                     await self._advance_active_trade(bar)
-                    await self._detect_and_enter(bar)
+                    await self._detect_and_enter(bar, is_backfill=self._is_backfill)
 
                     logger.info(
                         f"📊 Bar {len(self.dollar_bars):4d} | {bar.timestamp} | "
@@ -330,6 +333,11 @@ class Tier1StreamingTrader:
                 logger.debug("No new complete bars this poll cycle")
             elif len(self.dollar_bars) % 10 == 0:
                 self._print_status()
+
+            # First poll is now complete — all subsequent bars are live
+            if self._is_backfill and new_bar_count > 0:
+                self._is_backfill = False
+                logger.info(f"✅ Backfill complete ({len(self.dollar_bars)} bars) — live SIM orders now active")
 
         except Exception as e:
             logger.error(f"❌ Error in poll cycle: {e}", exc_info=True)
@@ -389,29 +397,61 @@ class Tier1StreamingTrader:
 
     async def _close_active_trade(self, bar: DollarBar, exit_price: float, exit_type: str):
         trade = self.active_trade
-        pnl = self._calculate_pnl(trade.entry_price, exit_price, trade.direction)
-        result = "✅ WIN" if pnl > 0 else "❌ LOSS"
+        sim_exit_fill: Optional[float] = None
 
-        # Time-stop: bracket legs still open on SIM → cancel them + send flat close
+        # Time-stop: cancel bracket legs, then only flat-close if SIM still holds
+        # the position.  If a TP/SL bracket leg already filled while we were
+        # waiting for the next bar, sending a second close order would flip us
+        # into an unintended ghost position on the other side.
         if exit_type == "time":
+            tp_was_open = False
+            sl_was_open = False
             if trade.sim_tp_order_id:
-                await self._cancel_sim_order(trade.sim_tp_order_id)
+                tp_was_open = await self._cancel_sim_order(trade.sim_tp_order_id)
             if trade.sim_sl_order_id:
-                await self._cancel_sim_order(trade.sim_sl_order_id)
-            await self._submit_close_order(trade.direction)
-            sim_note = "SIM bracket cancelled + flat close sent"
-        elif exit_type in ("tp", "sl"):
-            # Bracket already filled on SIM automatically — no additional order needed
+                sl_was_open = await self._cancel_sim_order(trade.sim_sl_order_id)
+
+            bracket_already_filled = not tp_was_open and not sl_was_open
+            if bracket_already_filled or not await self._sim_has_open_position(trade.direction):
+                sim_note = "SIM bracket already filled — skipped flat close"
+                logger.info(f"⏭  Time-stop: bracket already closed on SIM, no flat close needed")
+            else:
+                close_order_id = await self._submit_close_order(trade.direction)
+                sim_note = "SIM bracket cancelled + flat close sent"
+                if close_order_id:
+                    sim_exit_fill = await self._fetch_order_fill(close_order_id)
+
+        elif exit_type == "tp":
             sim_note = "SIM closed (bracket)"
+            if trade.sim_tp_order_id:
+                sim_exit_fill = await self._fetch_order_fill(trade.sim_tp_order_id)
+        elif exit_type == "sl":
+            sim_note = "SIM closed (bracket)"
+            if trade.sim_sl_order_id:
+                sim_exit_fill = await self._fetch_order_fill(trade.sim_sl_order_id)
         else:
             sim_note = ""
+
+        # Use actual SIM fill prices when available; fall back to theoretical
+        actual_entry = trade.sim_entry_fill if trade.sim_entry_fill is not None else trade.entry_price
+        actual_exit = sim_exit_fill if sim_exit_fill is not None else exit_price
+        pnl = self._calculate_pnl(actual_entry, actual_exit, trade.direction)
+        result = "✅ WIN" if pnl > 0 else "❌ LOSS"
+
+        # Build price annotation — show actual vs theoretical if they differ
+        entry_str = f"${actual_entry:.2f}"
+        exit_str = f"${actual_exit:.2f}"
+        if trade.sim_entry_fill is None and trade.sim_entry_order_id:
+            entry_str += " (theoretical)"
+        if sim_exit_fill is None and trade.sim_entry_order_id:
+            exit_str += " (theoretical)"
 
         completed = CompletedTrade(
             entry_time=trade.entry_time,
             exit_time=bar.timestamp,
             direction=trade.direction,
-            entry_price=trade.entry_price,
-            exit_price=exit_price,
+            entry_price=actual_entry,
+            exit_price=actual_exit,
             exit_type=exit_type,
             bars_held=trade.bars_held,
             pnl=pnl,
@@ -422,7 +462,7 @@ class Tier1StreamingTrader:
 
         logger.info(
             f"{result} {completed.direction} | {exit_type.upper()} "
-            f"entry ${trade.entry_price:.2f} → exit ${exit_price:.2f} "
+            f"entry {entry_str} → exit {exit_str} "
             f"| bars={trade.bars_held} | P&L ${pnl:.2f}"
             + (f" | {sim_note}" if sim_note else "")
         )
@@ -437,7 +477,7 @@ class Tier1StreamingTrader:
         offset = -4 if ts.month <= 10 else -5
         return (ts.hour + offset) % 24
 
-    async def _detect_and_enter(self, bar: DollarBar):
+    async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool = False):
         """Detect FVG on the just-completed bar and open a trade if valid."""
         if self.active_trade is not None:
             return
@@ -458,7 +498,7 @@ class Tier1StreamingTrader:
             fvg = self._detect_bullish_fvg(bars)
             if fvg:
                 self._traded_setups.add(setup_key_long)
-                await self._enter_trade(fvg, bar, bar_index)
+                await self._enter_trade(fvg, bar, bar_index, is_backfill=is_backfill)
                 return
 
         setup_key_short = (bar_index, "SHORT")
@@ -466,9 +506,9 @@ class Tier1StreamingTrader:
             fvg = self._detect_bearish_fvg(bars)
             if fvg:
                 self._traded_setups.add(setup_key_short)
-                await self._enter_trade(fvg, bar, bar_index)
+                await self._enter_trade(fvg, bar, bar_index, is_backfill=is_backfill)
 
-    async def _enter_trade(self, fvg: dict, bar: DollarBar, bar_index: int):
+    async def _enter_trade(self, fvg: dict, bar: DollarBar, bar_index: int, is_backfill: bool = False):
         direction = "LONG" if fvg["direction"] == "bullish" else "SHORT"
         gap_range = fvg["gap_range"]
         gap_size = gap_range["top"] - gap_range["bottom"]
@@ -491,15 +531,30 @@ class Tier1StreamingTrader:
             sl_price=sl_price,
         )
 
-        # Submit bracket order to SIM
-        entry_id, tp_id, sl_id = await self._submit_bracket_order(
-            direction, entry_price, tp_price, sl_price
-        )
-        self.active_trade.sim_entry_order_id = entry_id
-        self.active_trade.sim_tp_order_id = tp_id
-        self.active_trade.sim_sl_order_id = sl_id
+        # Submit bracket order to SIM (suppressed during backfill)
+        if not is_backfill:
+            entry_id, tp_id, sl_id = await self._submit_bracket_order(
+                direction, entry_price, tp_price, sl_price
+            )
+            self.active_trade.sim_entry_order_id = entry_id
+            self.active_trade.sim_tp_order_id = tp_id
+            self.active_trade.sim_sl_order_id = sl_id
 
-        sim_tag = f" | SIM order #{entry_id}" if entry_id else " | SIM order FAILED"
+            if entry_id:
+                actual_fill = await self._fetch_order_fill(entry_id)
+                if actual_fill is not None:
+                    self.active_trade.sim_entry_fill = actual_fill
+                    slip = actual_fill - entry_price if direction == "LONG" else entry_price - actual_fill
+                    slip_str = f"+{slip:.2f}" if slip >= 0 else f"{slip:.2f}"
+                    logger.info(
+                        f"  → Entry fill: ${actual_fill:.2f} (theoretical ${entry_price:.2f}, "
+                        f"slippage {slip_str} pts)"
+                    )
+                sim_tag = f" | SIM order #{entry_id}"
+            else:
+                sim_tag = " | SIM order FAILED"
+        else:
+            sim_tag = " | SIM order suppressed (backfill)"
         logger.info(
             f"🔔 ENTER {direction} | entry ${entry_price:.2f} "
             f"TP ${tp_price:.2f} SL ${sl_price:.2f} | gap ${fvg['gap_size']:.2f}"
@@ -581,9 +636,19 @@ class Tier1StreamingTrader:
 
             data = response.json()
             orders = data.get("Orders", [])
-            entry_id = orders[0].get("OrderID") if len(orders) > 0 else None
-            tp_id = orders[1].get("OrderID") if len(orders) > 1 else None
-            sl_id = orders[2].get("OrderID") if len(orders) > 2 else None
+            # Submission response only has {"Message": "...", "OrderID": "..."} — no
+            # OrderType field.  Identify each leg from the message text:
+            #   "@ ... Stop Market" → SL, "@ ... Limit" → TP, else → entry (Market).
+            entry_id = tp_id = sl_id = None
+            for order in orders:
+                msg = order.get("Message", "")
+                oid = order.get("OrderID")
+                if "Stop Market" in msg:
+                    sl_id = oid
+                elif "Limit" in msg:
+                    tp_id = oid
+                else:
+                    entry_id = oid
 
             logger.info(
                 f"✓ SIM bracket submitted | entry #{entry_id} | "
@@ -595,24 +660,63 @@ class Tier1StreamingTrader:
             logger.warning(f"⚠️  SIM bracket order exception: {e}")
             return None, None, None
 
-    async def _cancel_sim_order(self, order_id: str):
-        """Cancel an open SIM order (used to cancel bracket legs on time-stop)."""
+    async def _cancel_sim_order(self, order_id: str) -> bool:
+        """Cancel an open SIM order.  Returns True if the order was still open
+        (cancel accepted), False if it was already filled / not found."""
         try:
             headers = await self._get_auth_headers()
             url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
             response = await self.client.delete(url, headers=headers)
-            if response.status_code in (200, 204, 404):
+            if response.status_code in (200, 204):
                 logger.info(f"✓ SIM order #{order_id} cancelled (HTTP {response.status_code})")
+                return True
+            elif response.status_code == 404:
+                # Order already gone — filled or expired
+                logger.info(f"⚠️  SIM order #{order_id} already gone (404) — likely already filled")
+                return False
             else:
                 logger.warning(
                     f"⚠️  Cancel order #{order_id} returned HTTP {response.status_code}: "
                     f"{response.text[:100]}"
                 )
+                return False
         except Exception as e:
             logger.warning(f"⚠️  Cancel order #{order_id} exception: {e}")
+            return False
 
-    async def _submit_close_order(self, direction: str):
-        """Submit a flat market order to close the SIM position (time-stop only)."""
+    async def _sim_has_open_position(self, direction: str) -> bool:
+        """Return True if the SIM account holds an open position in the expected direction.
+
+        Queried immediately before sending a time-stop flat close to avoid opening
+        a ghost position when the bracket TP/SL already filled on the SIM.
+        Defaults to True on any API error so the flat close is still sent."""
+        try:
+            headers = await self._get_auth_headers()
+            r = await self.client.get(
+                f"https://sim-api.tradestation.com/v3/brokerage/accounts/{SIM_ACCOUNT_ID}/positions",
+                headers=headers,
+            )
+            if r.status_code != 200:
+                logger.warning(f"⚠️  Position check HTTP {r.status_code} — assuming position open")
+                return True
+            for pos in r.json().get("Positions", []):
+                if pos.get("Symbol") != SYMBOL:
+                    continue
+                qty = int(float(pos.get("Quantity", 0)))
+                if direction == "LONG" and qty > 0:
+                    return True
+                if direction == "SHORT" and qty < 0:
+                    return True
+            return False
+        except Exception as e:
+            logger.warning(f"⚠️  Position check exception: {e} — assuming position open")
+            return True
+
+    async def _submit_close_order(self, direction: str) -> Optional[str]:
+        """Submit a flat market order to close the SIM position (time-stop only).
+
+        Returns the order ID on success, None on failure.
+        """
         close_action = "SELL" if direction == "LONG" else "BUY"
         payload = {
             "AccountID": SIM_ACCOUNT_ID,
@@ -630,15 +734,45 @@ class Tier1StreamingTrader:
             if response.status_code in (200, 201):
                 data = response.json()
                 orders = data.get("Orders", [])
-                order_id = orders[0].get("OrderID") if orders else "?"
+                order_id = orders[0].get("OrderID") if orders else None
                 logger.info(f"✓ SIM flat close order #{order_id} submitted")
+                return order_id
             else:
                 logger.warning(
                     f"⚠️  SIM close order failed HTTP {response.status_code}: "
                     f"{response.text[:200]}"
                 )
+                return None
         except Exception as e:
             logger.warning(f"⚠️  SIM close order exception: {e}")
+            return None
+
+    async def _fetch_order_fill(self, order_id: str, max_attempts: int = 3) -> Optional[float]:
+        """Fetch actual fill price for a completed SIM order.
+
+        Retries up to max_attempts times (1s apart) to allow market orders time to fill.
+        Returns None on failure so callers can fall back to theoretical prices.
+        """
+        url = (f"https://sim-api.tradestation.com/v3/brokerage/accounts/"
+               f"{SIM_ACCOUNT_ID}/orders/{order_id}")
+        for attempt in range(max_attempts):
+            try:
+                if attempt > 0:
+                    await asyncio.sleep(1)
+                headers = await self._get_auth_headers()
+                r = await self.client.get(url, headers=headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    # Response may be {"Orders": [...]} or a single order object
+                    orders = data.get("Orders", [data] if "FilledPrice" in data else [])
+                    for o in orders:
+                        if o.get("Status") == "FLL":
+                            fill = float(o.get("FilledPrice", 0))
+                            if fill > 0:
+                                return fill
+            except Exception as e:
+                logger.warning(f"⚠️  Fill fetch attempt {attempt + 1} for #{order_id}: {e}")
+        return None
 
     # ------------------------------------------------------------------ #
     # FVG detection (identical conditions to backtest fvg_detection.py)   #
@@ -735,7 +869,7 @@ class Tier1StreamingTrader:
             price_diff = exit_price - entry
         else:
             price_diff = entry - exit_price
-        return price_diff * MNQ_CONTRACT_VALUE * CONTRACTS_PER_TRADE - TRANSACTION_COST
+        return price_diff * MNQ_DOLLAR_VALUE * CONTRACTS_PER_TRADE - TRANSACTION_COST
 
     # ------------------------------------------------------------------ #
     # Reporting                                                            #

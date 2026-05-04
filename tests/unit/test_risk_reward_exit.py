@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime, timedelta
 
 from src.execution.exit_logic import RiskRewardExit
-from src.execution.models import PositionMonitoringState, TradeOrder
+from src.execution.models import _now, NY_TZ, PositionMonitoringState, TradeOrder
 from src.detection.models import EnsembleTradeSignal
 
 
@@ -16,7 +16,7 @@ class TestRiskRewardExit:
         """Create a sample ensemble signal."""
         return EnsembleTradeSignal(
             strategy_name="Ensemble-Weighted Confidence",
-            timestamp=datetime.now(),
+            timestamp=_now(),
             direction="long",
             entry_price=11850.0,
             stop_loss=11840.0,
@@ -25,13 +25,13 @@ class TestRiskRewardExit:
             contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
             strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
             strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
-            bar_timestamp=datetime.now()
+            bar_timestamp=_now()
         )
 
     @pytest.fixture
     def position(self, ensemble_signal):
         """Create a sample long position."""
-        entry_time = datetime.now() - timedelta(minutes=5)
+        entry_time = _now() - timedelta(minutes=5)
         return TradeOrder(
             trade_id="pos-rr-test",
             symbol="MNQ",
@@ -175,7 +175,7 @@ class TestRiskRewardExit:
 
         assert exit_order is not None
         assert exit_order.exit_type == "full"
-        assert exit_order.exit_reason == "take_profit"
+        assert exit_order.exit_reason == "Take profit"
         assert exit_order.quantity == 3
         assert exit_order.exit_price == 11870.0
         # P&L = (11870 - 11850) * 0.50 * 3 = 20 * 0.50 * 3 = $30
@@ -198,7 +198,7 @@ class TestRiskRewardExit:
 
         assert exit_order is not None
         assert exit_order.exit_type == "full"
-        assert exit_order.exit_reason == "stop_loss"
+        assert exit_order.exit_reason == "Stop loss"
         assert exit_order.exit_price == 11840.0
         # P&L = (11840 - 11850) * 0.50 * 3 = -10 * 0.50 * 3 = -$15
         assert exit_order.pnl == pytest.approx(-15.0)
@@ -222,7 +222,7 @@ class TestRiskRewardExit:
 
         # Should trigger stop loss, not take profit
         assert exit_order is not None
-        assert exit_order.exit_reason == "stop_loss"
+        assert exit_order.exit_reason == "Stop loss"
 
     def test_calculate_rr_achieved_profit(self, rr_exit):
         """Test R:R calculation for profitable exit."""
@@ -231,7 +231,7 @@ class TestRiskRewardExit:
         stop_loss = 11840.0
 
         # (11870 - 11850) / (11850 - 11840) = 20 / 10 = 2.0
-        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss)
+        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss, "long")
         assert rr == pytest.approx(2.0)
 
     def test_calculate_rr_achieved_loss(self, rr_exit):
@@ -241,7 +241,7 @@ class TestRiskRewardExit:
         stop_loss = 11840.0
 
         # Stopped at SL = -1R
-        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss)
+        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss, "long")
         assert rr == -1.0
 
     def test_calculate_rr_achieved_partial_profit(self, rr_exit):
@@ -251,7 +251,7 @@ class TestRiskRewardExit:
         stop_loss = 11840.0
 
         # (11865 - 11850) / (11850 - 11840) = 15 / 10 = 1.5
-        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss)
+        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss, "long")
         assert rr == pytest.approx(1.5)
 
     def test_custom_rr_ratio(self, ensemble_signal):
@@ -270,7 +270,7 @@ class TestRiskRewardExit:
     def test_short_position_take_profit(self, ensemble_signal):
         """Test take profit for short position."""
         signal = ensemble_signal.model_copy(update={"direction": "short"})
-        entry_time = datetime.now() - timedelta(minutes=5)
+        entry_time = _now() - timedelta(minutes=5)
 
         position = TradeOrder(
             trade_id="pos-short-tp",
@@ -314,14 +314,14 @@ class TestRiskRewardExit:
         exit_order = rr_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "take_profit"
+        assert exit_order.exit_reason == "Take profit"
         # P&L = (11850 - 11830) * 0.50 * 2 = 20 * 0.50 * 2 = $20
         assert exit_order.pnl == pytest.approx(20.0)
 
     def test_short_position_stop_loss(self, ensemble_signal):
         """Test stop loss for short position."""
         signal = ensemble_signal.model_copy(update={"direction": "short"})
-        entry_time = datetime.now() - timedelta(minutes=5)
+        entry_time = _now() - timedelta(minutes=5)
 
         position = TradeOrder(
             trade_id="pos-short-sl",
@@ -365,7 +365,7 @@ class TestRiskRewardExit:
         exit_order = rr_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "stop_loss"
+        assert exit_order.exit_reason == "Stop loss"
         # P&L = (11850 - 11860) * 0.50 * 2 = -10 * 0.50 * 2 = -$10
         assert exit_order.pnl == pytest.approx(-10.0)
         assert exit_order.rr_ratio == -1.0

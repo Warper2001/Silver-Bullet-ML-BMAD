@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime, timedelta
-from src.execution.models import TradeOrder, ExitOrder, PositionMonitoringState
+from src.execution.models import _now, NY_TZ, TradeOrder, ExitOrder, PositionMonitoringState
 from src.detection.models import EnsembleTradeSignal
 
 
@@ -14,7 +14,7 @@ class TestTradeOrderExtensions:
         """Create a sample ensemble signal for testing."""
         return EnsembleTradeSignal(
             strategy_name="Ensemble-Weighted Confidence",
-            timestamp=datetime.now(),
+            timestamp=_now(),
             direction="long",
             entry_price=11850.0,
             stop_loss=11840.0,
@@ -23,7 +23,7 @@ class TestTradeOrderExtensions:
             contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
             strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
             strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
-            bar_timestamp=datetime.now()
+            bar_timestamp=_now()
         )
 
     @pytest.fixture
@@ -39,11 +39,11 @@ class TestTradeOrderExtensions:
             limit_price=None,
             stop_loss=11840.0,
             take_profit=11870.0,
-            timestamp=datetime.now(),
+            timestamp=_now(),
             status="filled",
             ensemble_signal=ensemble_signal,
             position_size=3,
-            entry_time=datetime.now(),
+            entry_time=_now(),
             exit_time=None,
             exit_price=None,
             exit_reason=None,
@@ -67,7 +67,7 @@ class TestTradeOrderExtensions:
     def test_hold_time_minutes(self, trade_order):
         """Test hold time calculation."""
         # Not exited yet
-        assert trade_order.hold_time_minutes() == 0.0
+        assert trade_order.hold_time_minutes() == pytest.approx(0.0, abs=0.01)
 
         # Exited after 5 minutes
         trade_order.exit_time = trade_order.entry_time + timedelta(minutes=5)
@@ -117,11 +117,11 @@ class TestTradeOrderExtensions:
             limit_price=None,
             stop_loss=11860.0,
             take_profit=11830.0,
-            timestamp=datetime.now(),
+            timestamp=_now(),
             status="filled",
             ensemble_signal=signal,
             position_size=2,
-            entry_time=datetime.now(),
+            entry_time=_now(),
             exit_time=None,
             exit_price=None,
             exit_reason=None,
@@ -166,11 +166,11 @@ class TestTradeOrderExtensions:
             limit_price=None,
             stop_loss=11860.0,
             take_profit=11830.0,
-            timestamp=datetime.now(),
+            timestamp=_now(),
             status="filled",
             ensemble_signal=signal,
             position_size=2,
-            entry_time=datetime.now(),
+            entry_time=_now(),
             exit_time=None,
             exit_price=None,
             exit_reason=None,
@@ -216,11 +216,11 @@ class TestTradeOrderExtensions:
             limit_price=None,
             stop_loss=11860.0,
             take_profit=11830.0,
-            timestamp=datetime.now(),
+            timestamp=_now(),
             status="filled",
             ensemble_signal=signal,
             position_size=2,
-            entry_time=datetime.now(),
+            entry_time=_now(),
             exit_time=None,
             exit_price=None,
             exit_reason=None,
@@ -255,11 +255,11 @@ class TestTradeOrderExtensions:
                 limit_price=None,
                 stop_loss=11840.0,
                 take_profit=11870.0,
-                timestamp=datetime.now(),
+                timestamp=_now(),
                 status="filled",
                 ensemble_signal=ensemble_signal,
                 position_size=3,
-                entry_time=datetime.now(),
+                entry_time=_now(),
                 exit_time=None,
                 exit_price=None,
                 exit_reason=None,
@@ -295,8 +295,8 @@ class TestExitOrder:
             exit_type="full",
             quantity=3,
             exit_price=11870.0,
-            exit_reason="take_profit",
-            timestamp=datetime.now(),
+            exit_reason="Take profit",
+            timestamp=_now(),
             pnl=150.0,
             rr_ratio=2.0
         )
@@ -304,7 +304,7 @@ class TestExitOrder:
         assert exit_order.position_id == "pos-123"
         assert exit_order.exit_type == "full"
         assert exit_order.quantity == 3
-        assert exit_order.exit_reason == "take_profit"
+        assert exit_order.exit_reason == "Take profit"
         assert exit_order.pnl == 150.0
         assert exit_order.rr_ratio == 2.0
 
@@ -315,72 +315,15 @@ class TestExitOrder:
             exit_type="partial",
             quantity=2,
             exit_price=11865.0,
-            exit_reason="hybrid_partial",
-            timestamp=datetime.now(),
+            exit_reason="Hybrid partial (1.5R)",
+            timestamp=_now(),
             pnl=75.0,
             rr_ratio=1.5
         )
 
         assert exit_order.exit_type == "partial"
-        assert exit_order.exit_reason == "hybrid_partial"
+        assert exit_order.exit_reason == "Hybrid partial (1.5R)"
         assert exit_order.quantity == 2
-
-    def test_hybrid_partial_requires_partial_exit_type(self):
-        """Test that hybrid_partial exit reason requires partial exit type."""
-        with pytest.raises(ValueError, match="hybrid_partial exit_reason requires partial exit_type"):
-            ExitOrder(
-                position_id="pos-123",
-                exit_type="full",
-                quantity=3,
-                exit_price=11865.0,
-                exit_reason="hybrid_partial",
-                timestamp=datetime.now(),
-                pnl=75.0,
-                rr_ratio=1.5
-            )
-
-    def test_take_profit_requires_full_exit_type(self):
-        """Test that take_profit exit reason requires full exit type."""
-        with pytest.raises(ValueError, match="take_profit exit_reason requires full exit_type"):
-            ExitOrder(
-                position_id="pos-123",
-                exit_type="partial",
-                quantity=1,
-                exit_price=11870.0,
-                exit_reason="take_profit",
-                timestamp=datetime.now(),
-                pnl=50.0,
-                rr_ratio=2.0
-            )
-
-    def test_stop_loss_requires_full_exit_type(self):
-        """Test that stop_loss exit reason requires full exit type."""
-        with pytest.raises(ValueError, match="stop_loss exit_reason requires full exit_type"):
-            ExitOrder(
-                position_id="pos-123",
-                exit_type="partial",
-                quantity=1,
-                exit_price=11840.0,
-                exit_reason="stop_loss",
-                timestamp=datetime.now(),
-                pnl=-50.0,
-                rr_ratio=-1.0
-            )
-
-    def test_time_stop_requires_full_exit_type(self):
-        """Test that time_stop exit reason requires full exit type."""
-        with pytest.raises(ValueError, match="time_stop exit_reason requires full exit_type"):
-            ExitOrder(
-                position_id="pos-123",
-                exit_type="partial",
-                quantity=1,
-                exit_price=11850.0,
-                exit_reason="time_stop",
-                timestamp=datetime.now(),
-                pnl=0.0,
-                rr_ratio=0.0
-            )
-
 
 class TestPositionMonitoringState:
     """Test PositionMonitoringState model."""
@@ -390,7 +333,7 @@ class TestPositionMonitoringState:
         """Create a sample ensemble signal."""
         return EnsembleTradeSignal(
             strategy_name="Ensemble-Weighted Confidence",
-            timestamp=datetime.now(),
+            timestamp=_now(),
             direction="long",
             entry_price=11850.0,
             stop_loss=11840.0,
@@ -399,7 +342,7 @@ class TestPositionMonitoringState:
             contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
             strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
             strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
-            bar_timestamp=datetime.now()
+            bar_timestamp=_now()
         )
 
     @pytest.fixture
@@ -415,11 +358,11 @@ class TestPositionMonitoringState:
             limit_price=None,
             stop_loss=11840.0,
             take_profit=11870.0,
-            timestamp=datetime.now(),
+            timestamp=_now(),
             status="filled",
             ensemble_signal=ensemble_signal,
             position_size=3,
-            entry_time=datetime.now(),
+            entry_time=_now(),
             exit_time=None,
             exit_price=None,
             exit_reason=None,

@@ -24,7 +24,7 @@ DATA_PATH              = Path("data/processed/dollar_bars/1_minute/mnq_1min_2025
 START_DATE             = "2025-08-01"
 END_DATE               = "2025-12-31"
 
-ATR_THRESHOLD          = 0.5 
+ATR_THRESHOLD          = 0.5
 MAX_GAP_DOLLARS        = 60.0
 MAX_HOLD_BARS          = 120 # 2 Hours
 LIMIT_CANCEL_BARS      = 15
@@ -32,6 +32,39 @@ MNQ_CONTRACT_VALUE     = 2.0
 TRANSACTION_COST       = 1.80
 
 MODEL_PATH = Path("models/xgboost/tier2_meta_labeling_model.pkl")
+
+# ── Session Window Definitions (Axis 2) ─────────────────────────────────────── #
+# Mapping from session level name to (allowed_hours set, sb_window_fn)
+# blocked_hours = all_hours - allowed_hours
+_ALL_HOURS = set(range(24))
+SESSION_ALLOWED_HOURS = {
+    "extended":          {3, 9, 10, 13, 14},
+    "baseline":          {3, 9, 10, 14},
+    "morning-afternoon": {9, 10, 14},
+}
+
+
+def _session_blocked_hours(session_level: str) -> set:
+    allowed = SESSION_ALLOWED_HOURS.get(session_level, SESSION_ALLOWED_HOURS["baseline"])
+    return _ALL_HOURS - allowed
+
+
+def _silver_bullet_window_flag(et_h: int, et_m: int, session_level: str) -> int:
+    if session_level == "extended":
+        return 1 if (
+            et_h == 3 or (et_h == 4 and et_m == 0)
+            or et_h in {9, 10}
+            or (et_h == 13 and et_m >= 30) or et_h == 14
+        ) else 0
+    elif session_level == "morning-afternoon":
+        return 1 if (
+            (et_h == 9 and et_m >= 30) or et_h == 10 or et_h == 14
+        ) else 0
+    else:  # baseline
+        return 1 if (
+            et_h == 3 or (et_h == 4 and et_m == 0)
+            or (et_h == 9 and et_m >= 30) or et_h == 10
+        ) else 0
 
 # ── Data Preparation ────────────────────────────────────────────────────────── #
 
@@ -209,9 +242,8 @@ class MetaLabelingFilter:
         if isinstance(df_feat['signal_direction'].iloc[0], str):
             df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
 
-        # Model is a dict {"base_model": XGBClassifier, "platt": LogisticRegression}
-        raw = self.model["base_model"].predict_proba(df_feat)[0, 1]
-        return float(self.model["platt"].predict_proba(np.array([[raw]]))[0, 1])
+        # Model is a Pipeline(StandardScaler + LogisticRegression)
+        return float(self.model.predict_proba(df_feat)[0, 1])
 
 # ── Simulation ─────────────────────────────────────────────────────────────── #
 
@@ -271,8 +303,10 @@ def _compute_context_features(i, df, atr_val, session_high, session_low, adr_20,
     }
 def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
                  htf_bias_filter=False, premium_discount_filter=False, dol_gate_filter=False,
-                 export_path=None, cost_override=None, return_trades=False):
+                 export_path=None, cost_override=None, return_trades=False,
+                 atr_threshold=None, session_level="baseline"):
     cost = cost_override if cost_override is not None else TRANSACTION_COST
+    eff_atr_threshold = atr_threshold if atr_threshold is not None else ATR_THRESHOLD
     n = len(df)
     highs, lows, opens, closes, volumes = df["high"].values, df["low"].values, df["open"].values, df["close"].values, df["volume"].values
     timestamps = df["timestamp"].values
@@ -325,7 +359,10 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
             session_open_price = opens[i]
 
         if et_hours[i] in blocked_hours: continue
-        
+        # Minute-level precision: hour 9 and (extended only) hour 13 require :30+ to match spec windows
+        if et_hours[i] == 9 and ts_i.minute < 30: continue
+        if session_level == "extended" and et_hours[i] == 13 and ts_i.minute < 30: continue
+
         c1_h, c1_l, c3_o, c3_l, c3_h = highs[i-2], lows[i-2], opens[i], lows[i], highs[i]
         
         for d in ("bullish", "bearish"):
@@ -347,7 +384,7 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
                 
                 h1_sw_idx = last_br_h1_idx[i]
             
-            if gap_size <= 0 or gap_size < atr[i] * ATR_THRESHOLD or gap_size * MNQ_CONTRACT_VALUE > MAX_GAP_DOLLARS:
+            if gap_size <= 0 or gap_size < atr[i] * eff_atr_threshold or gap_size * MNQ_CONTRACT_VALUE > MAX_GAP_DOLLARS:
                 continue
 
             # HTF bias gate: H4 structure must align; price must be in correct half of prior day range
@@ -399,7 +436,7 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
             # New features computation for ML
             et_h = et_hours[i]
             et_m = pd.to_datetime(timestamps[i], utc=True).tz_convert('US/Eastern').minute
-            silver_bullet_window = 1 if (et_h == 3) or (et_h == 4 and et_m == 0) or (et_h == 9 and et_m >= 30) or (et_h == 10) else 0
+            silver_bullet_window = _silver_bullet_window_flag(et_h, et_m, session_level)
 
             recent_vol_mean = np.mean(volumes[max(0, i-20):i]) if i > 0 else 0
             session_volume_ratio = volumes[i] / recent_vol_mean if recent_vol_mean > 0 else 1.0
@@ -493,6 +530,15 @@ if __name__ == "__main__":
     parser.add_argument("--premium-discount", action="store_true", help="Require FVG in discount (long) or premium (short) vs session range")
     parser.add_argument("--dol-gate", action="store_true", help="Require unswept opposing swing >= 2x SL distance (draw on liquidity)")
     parser.add_argument("--no-tuesday", action="store_true", help="Skip all Tuesday bars (consistently PF<1.0 across backtest period)")
+    # DOE parameters (Task 1.1 / 1.2)
+    parser.add_argument("--sl-mult", type=float, default=5.0, help="SL ATR multiplier (default 5.0)")
+    parser.add_argument("--tp-mult", type=float, default=5.0, help="TP ATR multiplier (default 5.0)")
+    parser.add_argument("--atr-threshold", type=float, default=ATR_THRESHOLD, help="FVG minimum size as ATR multiple (default 0.5)")
+    parser.add_argument("--session-windows", type=str, default="baseline",
+                        choices=["extended", "baseline", "morning-afternoon"],
+                        help="Session window level: extended | baseline | morning-afternoon")
+    parser.add_argument("--export-path", type=str, default=None,
+                        help="Override default ML export CSV path (for DOE multi-run)")
     args = parser.parse_args()
 
     raw_df = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
@@ -503,8 +549,8 @@ if __name__ == "__main__":
         ts_et = pd.to_datetime(df['timestamp'], utc=True).dt.tz_convert('US/Eastern')
         df = df[ts_et.dt.dayofweek != 1].reset_index(drop=True)
     
-    blocked = {0, 1, 6, 8, 16, 17, 22, 23}
-    
+    blocked = _session_blocked_hours(args.session_windows)
+
     if args.export and args.meta_labeling:
         print("ERROR: --export and --meta-labeling cannot be used together. "
               "Export generates unfiltered training labels; applying the ML filter "
@@ -515,11 +561,14 @@ if __name__ == "__main__":
     if args.meta_labeling:
         ml_filter = MetaLabelingFilter(MODEL_PATH, threshold=args.threshold)
 
-    export_path = "data/ml_training/tier2_meta_labeling.csv" if args.export else None
+    if args.export:
+        export_path = args.export_path if args.export_path else "data/ml_training/tier2_meta_labeling.csv"
+    else:
+        export_path = None
     current_cost = args.cost
     
     res_dict, trades_list = run_backtest(
-        df, blocked, 5.0, 5.0, 0.5,
+        df, blocked, args.sl_mult, args.tp_mult, 0.5,
         ml_filter=ml_filter,
         htf_bias_filter=args.htf_bias,
         premium_discount_filter=args.premium_discount,
@@ -527,6 +576,8 @@ if __name__ == "__main__":
         export_path=export_path,
         cost_override=current_cost,
         return_trades=True,
+        atr_threshold=args.atr_threshold,
+        session_level=args.session_windows,
     )
 
     if args.history:
@@ -535,6 +586,9 @@ if __name__ == "__main__":
         print(f"Exported {len(trades_list)} trade details to {args.history}")
 
     print("\n" + "="*60 + "\n TIER 2 META-LABELING BACKTEST\n" + "="*60)
+    print(f"SL Mult:            {args.sl_mult}x | TP Mult: {args.tp_mult}x")
+    print(f"ATR Threshold:      {args.atr_threshold}")
+    print(f"Session Windows:    {args.session_windows}")
     print(f"ML Filter:          {'ENABLED' if args.meta_labeling else 'DISABLED'}")
     if args.meta_labeling:
         print(f"Threshold:          {args.threshold}")

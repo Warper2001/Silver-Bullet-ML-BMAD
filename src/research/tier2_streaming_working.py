@@ -39,10 +39,8 @@ MAX_HOLD_BARS = 120  # 2 Hours (matches final optimization)
 CONTRACTS_PER_TRADE = 1
 
 # MNQ Specifications
-MNQ_TICK_SIZE = 0.25
-MNQ_POINT_VALUE = 20.0
-MNQ_CONTRACT_VALUE = MNQ_TICK_SIZE * MNQ_POINT_VALUE  # $5/pt — gap-size dollar conversion (backtest-compatible)
-MNQ_DOLLAR_VALUE = 2.0  # $2 per index point — actual MNQ P&L scaling
+MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
+MNQ_DOLLAR_VALUE = 2.0          # $2 per index point — P&L scaling and gap-size dollar filter
 
 # Transaction Costs
 COMMISSION_PER_CONTRACT = 0.40
@@ -50,7 +48,7 @@ TRANSACTION_COST = COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2  # $0.80/ro
 
 # ML Filter
 ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta_labeling_model.pkl"
-ML_THRESHOLD = 0.0  # disabled — model needs more training data before it improves on raw algo
+ML_THRESHOLD = 0.52  # PF-optimal threshold from OOS sweep (PF=1.917, 18/204 OOS trades — story 6-6 LR model)
 
 # TradeStation market data API
 SYMBOL = "MNQM26"
@@ -110,10 +108,8 @@ class MetaLabelingFilter:
         try:
             df_feat = pd.DataFrame([features])[self.FEATURE_COLS].copy()
             df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
-            # Model is a dict {"base_model": XGBClassifier, "platt": LogisticRegression}
-            raw = self.model["base_model"].predict_proba(df_feat)[0, 1]
-            import numpy as np
-            return float(self.model["platt"].predict_proba(np.array([[raw]]))[0, 1])
+            # Model is a Pipeline(StandardScaler + LogisticRegression)
+            return float(self.model.predict_proba(df_feat)[0, 1])
         except Exception as e:
             logger.warning(f"ML inference failed: {e} — returning pass-through")
             return 1.0

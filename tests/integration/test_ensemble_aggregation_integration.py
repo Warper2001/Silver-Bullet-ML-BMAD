@@ -28,7 +28,7 @@ class TestEnsembleAggregationIntegration:
         base_time = datetime(2026, 3, 31, 10, 0, 0)
         return [
             EnsembleSignal(
-                strategy_name="Triple Confluence Scalper",
+                strategy_name="triple_confluence_scaler",
                 timestamp=base_time,
                 direction="long",
                 entry_price=11850.00,
@@ -39,7 +39,7 @@ class TestEnsembleAggregationIntegration:
                 metadata={"fvg_size": 10},
             ),
             EnsembleSignal(
-                strategy_name="Wolf Pack 3-Edge",
+                strategy_name="wolf_pack_3_edge",
                 timestamp=base_time + timedelta(seconds=1),
                 direction="long",
                 entry_price=11851.00,
@@ -50,7 +50,7 @@ class TestEnsembleAggregationIntegration:
                 metadata={"sweep_extent": 8},
             ),
             EnsembleSignal(
-                strategy_name="Adaptive EMA Momentum",
+                strategy_name="adaptive_ema_momentum",
                 timestamp=base_time + timedelta(seconds=2),
                 direction="short",
                 entry_price=11849.00,
@@ -99,7 +99,7 @@ class TestEnsembleAggregationIntegration:
 
         normalized = normalize_signal(tc_signal)
 
-        assert normalized.strategy_name == "Triple Confluence Scalper"
+        assert normalized.strategy_name == "triple_confluence_scaler"
         assert normalized.metadata["fvg_size"] == 12
         assert normalized.metadata["vwap_alignment"] is True
         assert "expected_win_rate" in normalized.metadata
@@ -152,7 +152,7 @@ class TestEnsembleAggregationIntegration:
 
         # Check EMA normalization (direction should be lowercase, confidence 0-1)
         signals = aggregator.get_signals()
-        ema_normalized = [s for s in signals if s.strategy_name == "Adaptive EMA Momentum"][0]
+        ema_normalized = [s for s in signals if s.strategy_name == "adaptive_ema_momentum"][0]
         assert ema_normalized.direction == "long"
         assert ema_normalized.confidence == 0.82
         assert ema_normalized.metadata["ema_fast"] == 11848.0
@@ -236,7 +236,7 @@ class TestEnsembleAggregationIntegration:
         # Check conflicting strategies (should be EMA Momentum)
         conflicting = aggregator.get_conflicting_strategies()
         assert len(conflicting) == 1
-        assert "Adaptive EMA Momentum" in conflicting
+        assert "adaptive_ema_momentum" in conflicting
 
     @pytest.mark.asyncio
     async def test_async_processing_integration(self):
@@ -312,11 +312,11 @@ class TestEnsembleAggregationIntegration:
 
         # Create 5 signals all agreeing on long
         strategies = [
-            "Triple Confluence Scalper",
-            "Wolf Pack 3-Edge",
-            "Adaptive EMA Momentum",
-            "VWAP Bounce",
-            "Opening Range Breakout",
+            "triple_confluence_scaler",
+            "wolf_pack_3_edge",
+            "adaptive_ema_momentum",
+            "vwap_bounce",
+            "opening_range_breakout",
         ]
 
         for i, strategy in enumerate(strategies):

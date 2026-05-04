@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from src.execution.models import ExitOrder, PositionMonitoringState, TradeOrder
+from src.execution.models import ExitOrder, PositionMonitoringState, TradeOrder, _now, NY_TZ
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +44,7 @@ class TimeBasedExit:
         logger.info(f"TimeBasedExit initialized with max_hold_minutes={max_hold_minutes}")
 
     def check_exit(self, state: PositionMonitoringState) -> Optional[ExitOrder]:
-        """Check if position should be exited based on hold time.
-
-        Args:
-            state: Current position monitoring state
-
-        Returns:
-            ExitOrder if max hold time reached, None otherwise
-        """
+        """Check if position should be exited based on hold time."""
         if state.is_at_max_hold_time(self.max_hold_minutes):
             # Calculate P&L
             multiplier = 0.50  # MNQ contract multiplier
@@ -61,6 +54,7 @@ class TimeBasedExit:
                 price_diff = -price_diff
 
             pnl = price_diff * multiplier * state.position.remaining_quantity
+            pnl_ticks = price_diff / 0.25 # Patch 8: P&L in ticks
 
             # Calculate R:R achieved
             risk = state.position.risk_per_contract()
@@ -78,9 +72,10 @@ class TimeBasedExit:
                 exit_type="full",
                 quantity=state.position.remaining_quantity,
                 exit_price=state.current_price,
-                exit_reason="time_stop",
-                timestamp=datetime.now(),
+                exit_reason="Time stop (10-min max)", # Decision 2A
+                timestamp=_now(), # Patch 7: aware time
                 pnl=pnl,
+                pnl_ticks=pnl_ticks,
                 rr_ratio=rr_achieved
             )
 
@@ -218,37 +213,23 @@ class RiskRewardExit:
         else:  # short
             return current_price >= sl
 
-    def calculate_rr_achieved(self, entry: float, exit_price: float, stop_loss: float) -> float:
-        """Calculate reward-risk ratio achieved.
-
-        Args:
-            entry: Entry price
-            exit_price: Exit price
-            stop_loss: Stop loss price
-
-        Returns:
-            R:R achieved (positive for profit, negative for loss)
-        """
+    def calculate_rr_achieved(self, entry: float, exit_price: float, stop_loss: float, direction: str) -> float:
+        """Calculate reward-risk ratio achieved (Fix Patch 6)."""
         risk = abs(entry - stop_loss)
         if risk == 0:
             return 0.0
 
-        if exit_price >= entry:
-            # Profit: (exit - entry) / risk
-            return (exit_price - entry) / risk
-        else:
-            # Loss: always -1.0 (stopped at defined risk)
+        if direction == "long":
+            if exit_price >= entry:
+                return (exit_price - entry) / risk
+            return -1.0 # Simplified for SL hit
+        else: # short
+            if exit_price <= entry:
+                return (entry - exit_price) / risk
             return -1.0
 
     def _create_take_profit_exit(self, state: PositionMonitoringState) -> ExitOrder:
-        """Create a take profit exit order.
-
-        Args:
-            state: Position monitoring state
-
-        Returns:
-            ExitOrder for take profit
-        """
+        """Create a take profit exit order."""
         multiplier = 0.50  # MNQ contract multiplier
         price_diff = state.current_price - state.position.entry_price
 
@@ -256,11 +237,13 @@ class RiskRewardExit:
             price_diff = -price_diff
 
         pnl = price_diff * multiplier * state.position.remaining_quantity
+        pnl_ticks = price_diff / 0.25
 
         rr_achieved = self.calculate_rr_achieved(
             state.position.entry_price,
             state.current_price,
-            state.position.stop_loss
+            state.position.stop_loss,
+            state.position.direction
         )
 
         logger.info(
@@ -275,21 +258,15 @@ class RiskRewardExit:
             exit_type="full",
             quantity=state.position.remaining_quantity,
             exit_price=state.current_price,
-            exit_reason="take_profit",
-            timestamp=datetime.now(),
+            exit_reason="Take profit",
+            timestamp=_now(),
             pnl=pnl,
+            pnl_ticks=pnl_ticks,
             rr_ratio=rr_achieved
         )
 
     def _create_stop_loss_exit(self, state: PositionMonitoringState) -> ExitOrder:
-        """Create a stop loss exit order.
-
-        Args:
-            state: Position monitoring state
-
-        Returns:
-            ExitOrder for stop loss
-        """
+        """Create a stop loss exit order."""
         multiplier = 0.50  # MNQ contract multiplier
         price_diff = state.current_price - state.position.entry_price
 
@@ -297,9 +274,15 @@ class RiskRewardExit:
             price_diff = -price_diff
 
         pnl = price_diff * multiplier * state.position.remaining_quantity
+        pnl_ticks = price_diff / 0.25
 
-        # Stop loss always means -1R
-        rr_achieved = -1.0
+        # Stop loss always means -1R or calculated loss
+        rr_achieved = self.calculate_rr_achieved(
+            state.position.entry_price,
+            state.current_price,
+            state.position.stop_loss,
+            state.position.direction
+        )
 
         logger.warning(
             f"Stop loss exit triggered for position {state.position.trade_id}: "
@@ -313,9 +296,10 @@ class RiskRewardExit:
             exit_type="full",
             quantity=state.position.remaining_quantity,
             exit_price=state.current_price,
-            exit_reason="stop_loss",
-            timestamp=datetime.now(),
+            exit_reason="Stop loss",
+            timestamp=_now(),
             pnl=pnl,
+            pnl_ticks=pnl_ticks,
             rr_ratio=rr_achieved
         )
 
@@ -366,70 +350,69 @@ class HybridExit:
     def check_exit(self, state: PositionMonitoringState) -> Optional[ExitOrder]:
         """Check if position should be exited using hybrid strategy.
 
-        Priority for open positions:
-        1. Partial exit at 1.5R (if not yet executed)
-        2. Final exit at 2R take profit
-        3. Final exit at 10-minute time stop
-
-        For partially closed positions:
-        1. Final exit at 2R take profit
-        2. Final exit at 10-minute time stop
-
-        Args:
-            state: Current position monitoring state
-
-        Returns:
-            ExitOrder if exit condition met, None otherwise
+        Decision priority: 
+        1. Stop loss hit (Critical Patch 4)
+        2. Partial exit at 1.5R
+        3. Final exit at 2R take profit
+        4. Final exit at 10-minute time stop
         """
+        # Patch 4: Check stop loss first (always highest priority)
+        if self._check_stop_loss(state):
+            return self._create_final_exit(state, "Stop loss")
+
         # Check if position is still open (no partial yet)
         if state.position.position_state == "open":
             # Check for partial exit at 1.5R
             if self._check_partial_exit_level(state):
                 return self._create_partial_exit(state)
 
-        # Check for final exits (regardless of partial state)
-        # Priority: 2R TP > time stop
-
+        # Check for final exits
         # Check 2R take profit
         if self._check_final_take_profit(state):
-            return self._create_final_exit(state, "hybrid_trail")
+            return self._create_final_exit(state, "Hybrid trail (2R)")
 
         # Check time stop
         if state.is_at_max_hold_time(self.max_hold_minutes):
-            return self._create_final_exit(state, "time_stop")
+            return self._create_final_exit(state, "Time stop (10-min max)")
 
         return None
 
+    def _check_stop_loss(self, state: PositionMonitoringState) -> bool:
+        """Check if stop loss has been hit (handles trailed stop)."""
+        if state.position.direction == "long":
+            return state.current_price <= state.position.stop_loss
+        else: # short
+            return state.current_price >= state.position.stop_loss
+
     def scale_out_partial(self, position: TradeOrder) -> ExitOrder:
-        """Create a partial scale-out exit order.
-
-        Args:
-            position: Position to partially exit
-
-        Returns:
-            ExitOrder for partial exit
-        """
+        """Create a partial scale-out exit order."""
+        # Patch 9: Rounding fix for small positions
         quantity = int(position.remaining_quantity * self.partial_percent)
-
-        # Round down for odd quantities (e.g., 5 * 0.5 = 2.5 → 2)
+        
+        # Ensure we don't scale out more than we have or leave an invalid state
         if quantity < 1:
             quantity = 1
+        
+        # Guard: If remaining is 1, a 50% scale-out is not possible as partial.
+        # It must be a full exit or stay open.
+        if quantity >= position.remaining_quantity:
+            quantity = position.remaining_quantity
 
-        # Calculate 1.5R price level
+        # Calculate target based on direction
         risk = position.risk_per_contract()
-        partial_target = position.entry_price + (risk * self.partial_rr) if position.direction == "long" else position.entry_price - (risk * self.partial_rr)
+        multiplier = 1.0 if position.direction == "long" else -1.0
+        partial_target = position.entry_price + (risk * self.partial_rr * multiplier)
 
         # Calculate P&L
-        multiplier = 0.50
-        price_diff = partial_target - position.entry_price
-        if position.direction == "short":
-            price_diff = -price_diff
-        pnl = price_diff * multiplier * quantity
+        multiplier_usd = 0.50
+        price_diff = (partial_target - position.entry_price) * multiplier
+        pnl = price_diff * multiplier_usd * quantity
+        pnl_ticks = (partial_target - position.entry_price) / 0.25
 
         logger.info(
             f"Hybrid partial exit for position {position.trade_id}: "
             f"quantity={quantity}, "
-            f"partial_price={partial_target}, "
+            f"partial_price={partial_target:.2f}, "
             f"pnl=${pnl:.2f}"
         )
 
@@ -438,9 +421,10 @@ class HybridExit:
             exit_type="partial",
             quantity=quantity,
             exit_price=partial_target,
-            exit_reason="hybrid_partial",
-            timestamp=datetime.now(),
+            exit_reason="Hybrid partial (1.5R)",
+            timestamp=_now(),
             pnl=pnl,
+            pnl_ticks=pnl_ticks,
             rr_ratio=self.partial_rr
         )
 
@@ -515,32 +499,43 @@ class HybridExit:
             f"rr={self.partial_rr:.1f}"
         )
 
+    def _create_partial_exit(self, state: PositionMonitoringState) -> ExitOrder:
+        """Create a partial scale-out exit order."""
+        # Fix: ensure quantity rounding matches scale_out_partial
+        quantity = int(state.position.remaining_quantity * self.partial_percent)
+        if quantity < 1: quantity = 1
+        if quantity >= state.position.remaining_quantity: quantity = state.position.remaining_quantity
+
+        # Calculate P&L
+        multiplier = 0.50
+        price_diff = state.current_price - state.position.entry_price
+        if state.position.direction == "short":
+            price_diff = -price_diff
+        
+        pnl = price_diff * multiplier * quantity
+        pnl_ticks = (state.current_price - state.position.entry_price) / 0.25
+
         return ExitOrder(
             position_id=state.position.trade_id,
             exit_type="partial",
             quantity=quantity,
             exit_price=state.current_price,
-            exit_reason="hybrid_partial",
-            timestamp=datetime.now(),
+            exit_reason="Hybrid partial (1.5R)",
+            timestamp=_now(),
             pnl=pnl,
+            pnl_ticks=pnl_ticks,
             rr_ratio=self.partial_rr
         )
 
     def _create_final_exit(self, state: PositionMonitoringState, exit_reason: str) -> ExitOrder:
-        """Create a final exit order for remaining position.
-
-        Args:
-            state: Position monitoring state
-            exit_reason: Exit reason ("hybrid_trail" or "time_stop")
-
-        Returns:
-            ExitOrder for final exit
-        """
+        """Create a final exit order for remaining position."""
         multiplier = 0.50
         price_diff = state.current_price - state.position.entry_price
         if state.position.direction == "short":
             price_diff = -price_diff
+        
         pnl = price_diff * multiplier * state.position.remaining_quantity
+        pnl_ticks = (state.current_price - state.position.entry_price) / 0.25
 
         # Calculate R:R achieved
         risk = state.position.risk_per_contract()
@@ -549,9 +544,7 @@ class HybridExit:
         logger.info(
             f"Hybrid final exit ({exit_reason}) for position {state.position.trade_id}: "
             f"quantity={state.position.remaining_quantity}, "
-            f"exit_price={state.current_price}, "
-            f"pnl=${pnl:.2f}, "
-            f"rr_achieved={rr_achieved:.2f}"
+            f"pnl=${pnl:.2f}, ticks={pnl_ticks:.1f}"
         )
 
         return ExitOrder(
@@ -560,47 +553,27 @@ class HybridExit:
             quantity=state.position.remaining_quantity,
             exit_price=state.current_price,
             exit_reason=exit_reason,
-            timestamp=datetime.now(),
+            timestamp=_now(),
             pnl=pnl,
+            pnl_ticks=pnl_ticks,
             rr_ratio=rr_achieved
         )
 
 
 class ExitLogic:
-    """Wrapper class for exit logic strategies in backtesting.
-
-    Provides a simplified interface for ensemble backtesting by combining
-    all three exit strategies (time-based, risk-reward, hybrid) into a
-    single interface.
-    """
+    """Wrapper class for exit logic strategies in backtesting."""
 
     def __init__(self, config_path: str = "config-sim.yaml"):
-        """Initialize exit logic with default strategies.
-
-        Args:
-            config_path: Path to configuration file
-        """
+        """Initialize exit logic with correct strategy parameters."""
         self.time_exit = TimeBasedExit(max_hold_minutes=10.0)
-        self.rr_exit = RiskRewardExit(target_rr=2.0)
+        # Patch 3: Fix parameter name (rr_ratio vs target_rr)
+        self.rr_exit = RiskRewardExit(rr_ratio=2.0)
         self.hybrid_exit = HybridExit(partial_rr=1.5, partial_percent=0.50, max_hold_minutes=10.0)
 
         logger.info("ExitLogic initialized with time, risk-reward, and hybrid exit strategies")
 
     def evaluate_exit(self, bar, position: dict) -> Optional[object]:
-        """Evaluate if position should be exited.
-
-        For backtesting, uses simplified logic:
-        1. Check time stop (10 minutes max)
-        2. Check take profit (2R)
-        3. Check stop loss breach
-
-        Args:
-            bar: Current dollar bar (dict or Series)
-            position: Position dictionary
-
-        Returns:
-            Exit decision object with should_exit bool and exit_price
-        """
+        """Evaluate exit using correct priorities: SL > TP > Time."""
         from dataclasses import dataclass
 
         @dataclass
@@ -614,31 +587,25 @@ class ExitLogic:
         stop_loss = position["stop_loss"]
         take_profit = position["take_profit"]
         direction = position["direction"]
-
-        # Calculate hold time
+        bar_time = bar["timestamp"]
         entry_time = position["entry_time"]
-        if isinstance(bar, dict):
-            bar_time = bar["timestamp"]
-        else:
-            bar_time = bar["timestamp"]
 
-        hold_minutes = (bar_time - entry_time).total_seconds() / 60
-
-        # Check 1: Time stop (10 minutes max)
-        if hold_minutes >= 10.0:
-            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="time_stop")
-
-        # Check 2: Take profit hit
-        if direction == "long" and current_price >= take_profit:
-            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="take_profit")
-        elif direction == "short" and current_price <= take_profit:
-            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="take_profit")
-
-        # Check 3: Stop loss hit
+        # 1. Stop loss hit (Priority 1)
         if direction == "long" and current_price <= stop_loss:
-            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="stop_loss")
+            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="Stop loss")
         elif direction == "short" and current_price >= stop_loss:
-            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="stop_loss")
+            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="Stop loss")
+
+        # 2. Take profit hit (Priority 2)
+        if direction == "long" and current_price >= take_profit:
+            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="Take profit")
+        elif direction == "short" and current_price <= take_profit:
+            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="Take profit")
+
+        # 3. Time stop (Priority 3)
+        hold_minutes = (bar_time - entry_time).total_seconds() / 60
+        if hold_minutes >= 10.0:
+            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="Time stop (10-min max)")
 
         # No exit triggered
         return ExitDecision(should_exit=False, exit_price=None, exit_reason="")

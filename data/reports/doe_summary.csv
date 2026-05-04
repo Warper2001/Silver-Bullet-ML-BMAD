@@ -1,0 +1,10 @@
+run_id,sl_mult,tp_mult,atr_threshold,session_level,instrument_level,n_trades,win_rate,profit_factor,sharpe,gate_pass,features_csv,history_csv
+1,2.0,2.0,0.1,extended,MNQ,713,47.41,0.81,,False,data/ml_training/doe_run_01_features.csv,data/ml_training/doe_run_01_history.csv
+2,2.0,2.0,0.25,baseline,MNQ,367,50.41,0.87,,False,data/ml_training/doe_run_02_features.csv,data/ml_training/doe_run_02_history.csv
+3,2.0,2.0,0.5,morning-afternoon,MNQ,149,51.68,1.01,,False,data/ml_training/doe_run_03_features.csv,data/ml_training/doe_run_03_history.csv
+4,3.5,3.5,0.25,extended,MNQ,416,49.76,1.01,,False,data/ml_training/doe_run_04_features.csv,data/ml_training/doe_run_04_history.csv
+5,3.5,3.5,0.5,baseline,MNQ,166,54.22,1.21,,False,data/ml_training/doe_run_05_features.csv,data/ml_training/doe_run_05_history.csv
+6,3.5,3.5,0.1,morning-afternoon,MNQ,382,48.69,1.02,,False,data/ml_training/doe_run_06_features.csv,data/ml_training/doe_run_06_history.csv
+7,5.0,5.0,0.5,extended,MNQ,183,53.55,1.22,,False,data/ml_training/doe_run_07_features.csv,data/ml_training/doe_run_07_history.csv
+8,5.0,5.0,0.1,baseline,MNQ,410,50.73,1.26,,True,data/ml_training/doe_run_08_features.csv,data/ml_training/doe_run_08_history.csv
+9,5.0,5.0,0.25,morning-afternoon,MNQ,219,49.77,1.18,,False,data/ml_training/doe_run_09_features.csv,data/ml_training/doe_run_09_history.csv

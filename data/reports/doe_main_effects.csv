@@ -1,0 +1,10 @@
+axis,column,level,mean_profit_factor,mean_n_trades,n_runs
+A,sl_mult,2.0,0.8967,409.7,3
+A,sl_mult,3.5,1.08,321.3,3
+A,sl_mult,5.0,1.22,270.7,3
+B,session_level,extended,1.0133,437.3,3
+B,session_level,baseline,1.1133,314.3,3
+B,session_level,morning-afternoon,1.07,250.0,3
+C,atr_threshold,0.1,1.03,501.7,3
+C,atr_threshold,0.25,1.02,334.0,3
+C,atr_threshold,0.5,1.1467,166.0,3

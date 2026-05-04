@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime, timedelta
 
 from src.execution.exit_logic import TimeBasedExit
-from src.execution.models import PositionMonitoringState, TradeOrder
+from src.execution.models import _now, NY_TZ, PositionMonitoringState, TradeOrder
 from src.detection.models import EnsembleTradeSignal
 
 
@@ -16,7 +16,7 @@ class TestTimeBasedExit:
         """Create a sample ensemble signal."""
         return EnsembleTradeSignal(
             strategy_name="Ensemble-Weighted Confidence",
-            timestamp=datetime.now(),
+            timestamp=_now(),
             direction="long",
             entry_price=11850.0,
             stop_loss=11840.0,
@@ -25,13 +25,13 @@ class TestTimeBasedExit:
             contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
             strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
             strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
-            bar_timestamp=datetime.now()
+            bar_timestamp=_now()
         )
 
     @pytest.fixture
     def position(self, ensemble_signal):
         """Create a sample position."""
-        entry_time = datetime.now() - timedelta(minutes=8)
+        entry_time = _now() - timedelta(minutes=8)
         return TradeOrder(
             trade_id="pos-time-test",
             symbol="MNQ",
@@ -113,7 +113,7 @@ class TestTimeBasedExit:
         assert exit_order is not None
         assert exit_order.exit_type == "full"
         assert exit_order.quantity == 3
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
         assert exit_order.position_id == "pos-time-test"
 
     def test_check_exit_triggered_above_limit(self, position, time_exit):
@@ -131,12 +131,12 @@ class TestTimeBasedExit:
         exit_order = time_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
 
     def test_calculate_hold_time(self, time_exit):
         """Test hold time calculation."""
-        entry_time = datetime.now() - timedelta(minutes=5, seconds=30)
-        current_time = datetime.now()
+        entry_time = _now() - timedelta(minutes=5, seconds=30)
+        current_time = _now()
 
         hold_time_seconds = time_exit.calculate_hold_time(entry_time, current_time)
 
@@ -160,7 +160,7 @@ class TestTimeBasedExit:
 
     def test_exit_order_pnl_calculation_long(self, ensemble_signal):
         """Test P&L calculation for long position exit."""
-        entry_time = datetime.now() - timedelta(minutes=11)
+        entry_time = _now() - timedelta(minutes=11)
         position = TradeOrder(
             trade_id="pos-pnl-long",
             symbol="MNQ",
@@ -209,7 +209,7 @@ class TestTimeBasedExit:
     def test_exit_order_pnl_calculation_short(self, ensemble_signal):
         """Test P&L calculation for short position exit."""
         signal = ensemble_signal.model_copy(update={"direction": "short"})
-        entry_time = datetime.now() - timedelta(minutes=11)
+        entry_time = _now() - timedelta(minutes=11)
 
         position = TradeOrder(
             trade_id="pos-pnl-short",
@@ -291,7 +291,7 @@ class TestTimeBasedExit:
 
         exit_order = custom_exit.check_exit(state)
         assert exit_order is not None
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
 
     def test_partial_position_state(self, position, time_exit):
         """Test time exit with partially closed position."""

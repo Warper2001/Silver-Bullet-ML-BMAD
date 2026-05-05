@@ -75,6 +75,23 @@ class TradeOrder(BaseModel):
                 raise ValueError("stop_loss must be >= entry_price for short positions")
         return v
 
+    @field_validator("take_profit")
+    @classmethod
+    def take_profit_must_respect_rr_ratio(cls, v: float, info) -> float:
+        """Validate take profit respects at least 2:1 reward-risk ratio."""
+        entry = info.data.get("entry_price")
+        stop_loss = info.data.get("stop_loss")
+        direction = info.data.get("direction")
+        if entry is not None and stop_loss is not None and direction is not None:
+            risk = abs(entry - stop_loss)
+            if risk > 0:
+                min_reward = risk * 2.0
+                if direction == "long" and v < entry + min_reward:
+                    raise ValueError(f"take_profit must give at least 2R (>= {entry + min_reward:.2f})")
+                if direction == "short" and v > entry - min_reward:
+                    raise ValueError(f"take_profit must give at least 2R (<= {entry - min_reward:.2f})")
+        return v
+
     @field_validator("remaining_quantity")
     @classmethod
     def remaining_quantity_cannot_exceed_original(cls, v: int, info) -> int:
@@ -86,9 +103,9 @@ class TradeOrder(BaseModel):
 
     def notional_value(self) -> float:
         """Calculate contract notional value."""
-        # Patch 8: Parameterize multipliers (default to MNQ $0.50)
-        multipliers = {"MNQ": 0.50, "NQ": 20.0, "MES": 5.0, "ES": 50.0}
-        multiplier = multipliers.get(self.symbol, 0.50)
+        # USD per point: MNQ=$2, NQ=$20, MES=$5, ES=$50
+        multipliers = {"MNQ": 2.0, "NQ": 20.0, "MES": 5.0, "ES": 50.0}
+        multiplier = multipliers.get(self.symbol, 2.0)
         return self.entry_price * multiplier * self.quantity
 
     def risk_per_contract(self) -> float:
@@ -105,7 +122,7 @@ class TradeOrder(BaseModel):
             delta = now - self.entry_time
         return delta.total_seconds() / 60.0
 
-    def is_held_max_time(self, max_hold_minutes: float = 120.0, current_time: Optional[datetime] = None) -> bool:
+    def is_held_max_time(self, max_hold_minutes: float = 10.0, current_time: Optional[datetime] = None) -> bool:
         """Check if position has exceeded maximum hold time."""
         return self.hold_time_minutes(current_time) >= max_hold_minutes
 
@@ -223,7 +240,7 @@ class PositionMonitoringState(BaseModel):
         """Calculate hold time in minutes."""
         return self.time_since_entry_seconds / 60.0
 
-    def is_at_max_hold_time(self, max_hold_minutes: float = 120.0) -> bool:
+    def is_at_max_hold_time(self, max_hold_minutes: float = 10.0) -> bool:
         """Check if position has exceeded maximum hold time."""
         return self.hold_time_minutes() >= max_hold_minutes
 

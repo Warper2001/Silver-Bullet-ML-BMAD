@@ -38,17 +38,20 @@ def check_silver_bullet_setup(
 
     Recognition Rules:
         - MSS and FVG must have matching directions (both bullish or both bearish)
+        - MSS must precede or coincide with FVG (mss.bar_index <= fvg.bar_index)
         - MSS and FVG must occur within max_bar_distance bars of each other
+        - When sweep present: sweep must precede MSS (sweep.bar_index < mss.bar_index)
+        - FVG midpoint must be in the correct premium/discount zone relative to MSS range
         - Setup direction is determined by MSS direction
         - Entry zone is the FVG gap range
         - Invalidation point is the opposite swing point from MSS
         - Priority: "high" if sweep present (3-pattern), "medium" otherwise
 
     Visual Example (Bullish Silver Bullet):
-        MSS: Price breaks above swing high (11850) with volume
-        FVG: Gap forms at 11860-11880 (within 10 bars)
-        Sweep: Price briefly swept below swing low then recovered
-        → Silver Bullet setup with entry zone 11860-11880, invalidation at 11800
+        Sweep: Price briefly swept below swing low (bar 5)
+        MSS: Price breaks above swing high (11850) with volume (bar 10)
+        FVG: Gap forms at 11810-11830 in discount zone (bar 11)
+        → Silver Bullet setup with entry zone 11810-11830, invalidation at 11800
     """
     # Both MSS and FVG are required
     if mss_event is None or fvg_event is None:
@@ -62,20 +65,59 @@ def check_silver_bullet_setup(
         )
         return None
 
-    # Check bar distance
-    bar_distance = abs(mss_event.bar_index - fvg_event.bar_index)
+    # MSS must precede or coincide with FVG (FVG is created by the MSS displacement leg)
+    if mss_event.bar_index > fvg_event.bar_index:
+        logger.debug(
+            f"MSS occurs after FVG: MSS bar={mss_event.bar_index}, "
+            f"FVG bar={fvg_event.bar_index} — invalid sequence"
+        )
+        return None
+
+    # Check bar distance (forward distance: FVG must be within max_bar_distance of MSS)
+    bar_distance = fvg_event.bar_index - mss_event.bar_index
     if bar_distance > max_bar_distance:
         logger.debug(
             f"MSS and FVG too far apart: {bar_distance} bars (max: {max_bar_distance})"
         )
         return None
 
-    # Check sweep direction if present
+    # When sweep present: enforce sweep → MSS → FVG ordering
     if sweep_event is not None:
         if sweep_event.direction != mss_event.direction:
             logger.debug(
                 f"Sweep direction mismatch: MSS={mss_event.direction}, "
                 f"Sweep={sweep_event.direction}"
+            )
+            return None
+        # Sweep must precede MSS (liquidity is swept, then structure shifts)
+        if sweep_event.bar_index >= mss_event.bar_index:
+            logger.debug(
+                f"Sweep must precede MSS: sweep bar={sweep_event.bar_index}, "
+                f"MSS bar={mss_event.bar_index}"
+            )
+            return None
+
+    # Premium/discount zone validation:
+    # The MSS swing range spans from the prior swing point (broken) to the breakout level.
+    # Bullish FVGs must be in discount (midpoint below 50% equilibrium of swing range).
+    # Bearish FVGs must be in premium (midpoint above 50% equilibrium of swing range).
+    fvg_midpoint = (fvg_event.gap_range.top + fvg_event.gap_range.bottom) / 2
+    swing_price = mss_event.swing_point.price
+    breakout_price = mss_event.breakout_price
+    equilibrium = (swing_price + breakout_price) / 2
+
+    if mss_event.direction == "bullish":
+        if fvg_midpoint >= equilibrium:
+            logger.debug(
+                f"Bullish FVG not in discount zone: midpoint={fvg_midpoint:.2f}, "
+                f"equilibrium={equilibrium:.2f}"
+            )
+            return None
+    else:  # bearish
+        if fvg_midpoint <= equilibrium:
+            logger.debug(
+                f"Bearish FVG not in premium zone: midpoint={fvg_midpoint:.2f}, "
+                f"equilibrium={equilibrium:.2f}"
             )
             return None
 
@@ -90,10 +132,9 @@ def check_silver_bullet_setup(
     # Invalidation point from MSS swing point
     invalidation_point = mss_event.swing_point.price
 
-    # Silver Bullet setup detected!
     return SilverBulletSetup(
-        timestamp=mss_event.timestamp,  # Use MSS timestamp as setup time
-        direction=mss_event.direction,  # Direction from MSS
+        timestamp=mss_event.timestamp,
+        direction=mss_event.direction,
         mss_event=mss_event,
         fvg_event=fvg_event,
         liquidity_sweep_event=sweep_event,
@@ -102,7 +143,7 @@ def check_silver_bullet_setup(
         invalidation_point=invalidation_point,
         confluence_count=confluence_count,
         priority=priority,
-        bar_index=mss_event.bar_index,  # Use MSS bar index
+        bar_index=mss_event.bar_index,
     )
 
 
@@ -128,8 +169,8 @@ def detect_silver_bullet_setup(
 
     Algorithm:
         1. For each MSS event, search for matching FVG events
-        2. Check if they form a valid setup (direction, distance)
-        3. If sweep events provided, look for matching sweeps
+        2. Enforce sequence: sweep (if any) < MSS ≤ FVG in bar_index
+        3. If sweep events provided, find the most recent sweep preceding the MSS
         4. Return all valid setups (may have multiple from same events)
     """
     if sweep_events is None:
@@ -137,35 +178,25 @@ def detect_silver_bullet_setup(
 
     setups = []
 
-    # Search for MSS + FVG combinations
     for mss in mss_events:
         for fvg in fvg_events:
-            # Check for valid setup
+            # Find the most recent sweep that precedes this MSS (if any)
+            matching_sweep = None
+            for sweep in sweep_events:
+                if (
+                    sweep.direction == mss.direction
+                    and sweep.bar_index < mss.bar_index
+                    and abs(sweep.bar_index - mss.bar_index) <= max_bar_distance
+                ):
+                    if matching_sweep is None or sweep.bar_index > matching_sweep.bar_index:
+                        matching_sweep = sweep
+
             setup = check_silver_bullet_setup(
                 mss_event=mss,
                 fvg_event=fvg,
-                sweep_event=None,
+                sweep_event=matching_sweep,
                 max_bar_distance=max_bar_distance,
             )
-
-            if setup is None:
-                continue
-
-            # Look for matching sweep
-            for sweep in sweep_events:
-                # Check if sweep matches setup
-                if (
-                    sweep.direction == mss.direction
-                    and abs(sweep.bar_index - mss.bar_index) <= max_bar_distance
-                ):
-                    # Create enhanced setup with sweep
-                    setup = check_silver_bullet_setup(
-                        mss_event=mss,
-                        fvg_event=fvg,
-                        sweep_event=sweep,
-                        max_bar_distance=max_bar_distance,
-                    )
-                    break  # Use first matching sweep
 
             if setup:
                 setups.append(setup)

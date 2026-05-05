@@ -545,7 +545,7 @@ class TestE2E006_TimeBasedExit:
 
         exit_order = exit_logic.check_exit(state)
         assert exit_order is not None
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
 
     def test_positions_within_time_limit_not_exited(self):
         """Verify positions within time limit not exited."""
@@ -604,7 +604,7 @@ class TestE2E007_RiskRewardExit:
 
         exit_order = exit_logic.check_exit(state)
         assert exit_order is not None
-        assert exit_order.exit_reason == "take_profit"
+        assert exit_order.exit_reason == "Take profit"
 
     def test_exit_at_stop_loss(self):
         """Verify exit at stop loss."""
@@ -632,7 +632,7 @@ class TestE2E007_RiskRewardExit:
 
         exit_order = exit_logic.check_exit(state)
         assert exit_order is not None
-        assert exit_order.exit_reason == "stop_loss"
+        assert exit_order.exit_reason == "Stop loss"
 
     def test_no_exit_when_in_range(self):
         """Verify no premature exit when in range."""

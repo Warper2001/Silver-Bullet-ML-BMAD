@@ -304,7 +304,8 @@ def _compute_context_features(i, df, atr_val, session_high, session_low, adr_20,
 def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
                  htf_bias_filter=False, premium_discount_filter=False, dol_gate_filter=False,
                  export_path=None, cost_override=None, return_trades=False,
-                 atr_threshold=None, session_level="baseline"):
+                 atr_threshold=None, session_level="baseline",
+                 bearish_only: bool = True, blocked_months: frozenset = frozenset()):
     cost = cost_override if cost_override is not None else TRANSACTION_COST
     eff_atr_threshold = atr_threshold if atr_threshold is not None else ATR_THRESHOLD
     n = len(df)
@@ -363,9 +364,14 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
         if et_hours[i] == 9 and ts_i.minute < 30: continue
         if session_level == "extended" and et_hours[i] == 13 and ts_i.minute < 30: continue
 
+        # Seasonality gate: skip months with statistically zero edge
+        if ts_i.month in blocked_months: continue
+
         c1_h, c1_l, c3_o, c3_l, c3_h = highs[i-2], lows[i-2], opens[i], lows[i], highs[i]
-        
+
         for d in ("bullish", "bearish"):
+            # Direction gate: skip bullish when bearish_only (default on)
+            if bearish_only and d == "bullish": continue
             if d == "bullish":
                 if not (bl_sw[i] and c1_h < c3_l and closes[i-1] > opens[i-1]): continue
                 gap_top, gap_bot = c3_l, c1_h
@@ -539,6 +545,12 @@ if __name__ == "__main__":
                         help="Session window level: extended | baseline | morning-afternoon")
     parser.add_argument("--export-path", type=str, default=None,
                         help="Override default ML export CSV path (for DOE multi-run)")
+    parser.add_argument("--bearish-only", dest="bearish_only", action="store_true", default=True,
+                        help="Only take bearish signals (default: on; full-year 2025 bearish PF 1.43 vs bullish 1.06)")
+    parser.add_argument("--no-bearish-only", dest="bearish_only", action="store_false",
+                        help="Enable both bullish and bearish signals")
+    parser.add_argument("--blocked-months", type=str, default="",
+                        help="Comma-separated month numbers to skip, e.g. '8,9,10' (default: none)")
     args = parser.parse_args()
 
     raw_df = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
@@ -567,6 +579,11 @@ if __name__ == "__main__":
         export_path = None
     current_cost = args.cost
     
+    blocked_months = frozenset(
+        int(m.strip()) for m in args.blocked_months.split(",")
+        if m.strip().isdigit()
+    )
+
     res_dict, trades_list = run_backtest(
         df, blocked, args.sl_mult, args.tp_mult, 0.5,
         ml_filter=ml_filter,
@@ -578,6 +595,8 @@ if __name__ == "__main__":
         return_trades=True,
         atr_threshold=args.atr_threshold,
         session_level=args.session_windows,
+        bearish_only=args.bearish_only,
+        blocked_months=blocked_months,
     )
 
     if args.history:

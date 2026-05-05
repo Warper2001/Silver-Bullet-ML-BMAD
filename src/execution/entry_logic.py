@@ -16,11 +16,23 @@ Position sizing is based on ensemble confidence scores:
 import logging
 import uuid
 from collections import defaultdict
-from typing import Literal
+from datetime import date
+from typing import Literal, Optional
+
+import pytz
 
 from src.execution.models import EntryDecision, TradeOrder, _now
 from src.risk.risk_orchestrator import RiskOrchestrator
 from src.detection.models import EnsembleTradeSignal
+
+_NY_TZ = pytz.timezone("America/New_York")
+
+# Kill-zone windows: (name, start_hour, end_hour) in ET
+_KILL_ZONES = [
+    ("London AM", 3, 4),
+    ("NY AM", 10, 11),
+    ("NY PM", 14, 15),
+]
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +238,22 @@ class EntryLogic:
         """
         self.position_sizer = position_sizer
         self.risk_validator = risk_validator
+        # AC4: one trade per kill-zone window per calendar day
+        self._window_trades: set[tuple[str, date]] = set()
+
+    @staticmethod
+    def _get_kill_zone(signal: EnsembleTradeSignal) -> Optional[str]:
+        """Return the kill-zone name for a signal's timestamp, or None if outside all zones."""
+        ts = signal.timestamp
+        if ts.tzinfo is None:
+            ts = _NY_TZ.localize(ts)
+        else:
+            ts = ts.astimezone(_NY_TZ)
+        hour = ts.hour
+        for name, start, end in _KILL_ZONES:
+            if start <= hour < end:
+                return name
+        return None
 
     def process_signal(
         self,
@@ -236,6 +264,28 @@ class EntryLogic:
         open_positions: int = 0,
     ) -> EntryDecision:
         """Process ensemble signal and make entry decision."""
+        rejection_reason: Optional[str] = None
+
+        # AC4: kill-zone dedup — one trade per window per calendar day
+        kill_zone = self._get_kill_zone(signal)
+        if kill_zone is not None:
+            ts = signal.timestamp
+            if ts.tzinfo is None:
+                ts = _NY_TZ.localize(ts)
+            trade_day = ts.astimezone(_NY_TZ).date()
+            window_key = (kill_zone, trade_day)
+            if window_key in self._window_trades:
+                logger.debug(f"Kill-zone dedup: {kill_zone} already fired on {trade_day}")
+                return EntryDecision(
+                    signal=signal,
+                    position_size=0,
+                    risk_checks_passed=False,
+                    risk_check_details={},
+                    decision="REJECT",
+                    rejection_reason=f"Kill-zone dedup: {kill_zone} already fired today",
+                    timestamp=_now(),
+                )
+
         # Validate risk
         risk_result = self.risk_validator.validate_entry(
             signal=signal,
@@ -247,11 +297,9 @@ class EntryLogic:
 
         # Make decision
         if risk_result["risk_checks_passed"]:
-            # Calculate position size from confidence
             position_size = self.position_sizer.calculate_position_size(
                 signal.composite_confidence
             )
-            # Patch 5 reinforcement: Ensure position size is at least 1 if accepted
             if position_size == 0:
                 decision = "REJECT"
                 rejection_reason = "Position size 0 (Confidence below threshold)"
@@ -261,24 +309,29 @@ class EntryLogic:
         else:
             position_size = 0
             decision = "REJECT"
-            # Find first failed check for rejection reason
+            # P8: ensure rejection_reason is always assigned
+            rejection_reason = "Risk checks failed"
             for check_name, check_result in risk_result["risk_check_details"].items():
                 if not check_result["passed"]:
                     rejection_reason = f"Risk check failed: {check_name}"
                     break
 
-        # Create entry decision
-        entry_decision = EntryDecision(
+        # Record kill-zone on accept
+        if decision == "ACCEPT" and kill_zone is not None:
+            ts = signal.timestamp
+            if ts.tzinfo is None:
+                ts = _NY_TZ.localize(ts)
+            self._window_trades.add((kill_zone, ts.astimezone(_NY_TZ).date()))
+
+        return EntryDecision(
             signal=signal,
             position_size=position_size,
             risk_checks_passed=risk_result["risk_checks_passed"],
             risk_check_details=risk_result["risk_check_details"],
             decision=decision,  # type: ignore
             rejection_reason=rejection_reason,
-            timestamp=_now(), # Patch 11: Unified aware time
+            timestamp=_now(),
         )
-
-        return entry_decision
 
     def process_signal_batch(
         self,
@@ -317,21 +370,20 @@ class EntryLogic:
         # Patch 10: Use full UUID for safety
         trade_id = f"entry-{uuid.uuid4()}"
 
-        # Create trade order with ALL required fields (Patch 3)
+        # AC1: limit order at FVG midpoint (entry_price is the FVG midpoint from detection)
         trade_order = TradeOrder(
             trade_id=trade_id,
             symbol="MNQ",
-            direction=decision.signal.direction.lower(), # Ensure lowercase
+            direction=decision.signal.direction.lower(),
             quantity=decision.position_size,
-            order_type="market",
+            order_type="limit",
             entry_price=decision.signal.entry_price,
-            limit_price=None,
+            limit_price=decision.signal.entry_price,  # limit at FVG midpoint
             stop_loss=decision.signal.stop_loss,
             take_profit=decision.signal.take_profit,
             timestamp=decision.timestamp,
             ensemble_signal=decision.signal,
             position_size=decision.position_size,
-            # Missing fields from Patch 3:
             entry_time=decision.timestamp,
             original_quantity=decision.position_size,
             remaining_quantity=decision.position_size,

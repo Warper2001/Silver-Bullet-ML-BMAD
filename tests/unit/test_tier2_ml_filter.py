@@ -174,11 +174,11 @@ class TestAllowedFilteredLogMessages:
         trader = Tier2StreamingTrader()
         trader.ml_filter.model = _mock_model(ML_THRESHOLD + 0.05)
         bar = self._make_bar()
-        trader.h1_bullish_sweep_active = True
+        trader.h1_bearish_sweep_active = True  # use bearish — BEARISH_ONLY=True by default
         trader.dollar_bars = [bar] * 25
 
         with caplog.at_level(logging.INFO):
-            with patch.object(trader, "_detect_fvg", return_value={"direction": "bullish", "top": 20005.0, "bottom": 20000.0}):
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bearish", "top": 20005.0, "bottom": 20000.0}):
                 with patch.object(trader, "_enter_trade", new_callable=AsyncMock):
                     asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
 
@@ -194,9 +194,9 @@ class TestAllowedFilteredLogMessages:
         with caplog.at_level(logging.INFO):
             import asyncio
             bar = self._make_bar()
-            trader.h1_bullish_sweep_active = True
+            trader.h1_bearish_sweep_active = True  # use bearish — BEARISH_ONLY=True by default
             trader.dollar_bars = [bar] * 25
-            with patch.object(trader, "_detect_fvg", return_value={"direction": "bullish", "top": 20005.0, "bottom": 20000.0}):
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bearish", "top": 20005.0, "bottom": 20000.0}):
                 asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
 
         assert any("FILTERED" in r.message for r in caplog.records)
@@ -278,3 +278,162 @@ class TestECEDiagnostic:
         fop, mpv = calibration_curve(y_val, proba, n_bins=5)
         ece = float(np.mean(np.abs(fop - mpv)))
         assert ece < 0.08, f"Well-calibrated LR ECE {ece:.4f} should be < 0.08"
+
+
+# ---------------------------------------------------------------------------
+# Direction filter (BEARISH_ONLY) and seasonality gate (BLOCKED_MONTHS)
+# ---------------------------------------------------------------------------
+
+class TestDirectionFilter:
+    """AC: bullish signals blocked when BEARISH_ONLY=True; bearish signals pass."""
+
+    def _make_bar(self, month: int = 4):
+        from src.data.models import DollarBar
+        from datetime import datetime, timezone
+        # Build a UTC timestamp whose ET equivalent is in the given month
+        # Use day=16 (Wednesday in 2025) — day 15 is Tuesday in April/July and would be filtered
+        ts = datetime(2025, month, 16, 15, 0, 0, tzinfo=timezone.utc)  # 11 AM ET
+        return DollarBar(
+            timestamp=ts, open=20000.0, high=20005.0, low=19995.0,
+            close=20000.0, volume=1000, notional_value=50_000_000, bar_num=1,
+        )
+
+    def test_bullish_signal_blocked_when_bearish_only(self):
+        """Bullish sweep is ignored when BEARISH_ONLY=True (default)."""
+        import asyncio
+        import src.research.tier2_streaming_working as mod
+        from src.research.tier2_streaming_working import Tier2StreamingTrader
+        from unittest.mock import AsyncMock, patch
+
+        assert mod.BEARISH_ONLY is True, "BEARISH_ONLY must default to True"
+
+        trader = Tier2StreamingTrader()
+        trader.ml_filter.model = _mock_model(1.0)
+        bar = self._make_bar()
+        trader.h1_bullish_sweep_active = True
+        trader.h1_bearish_sweep_active = False
+        trader.dollar_bars = [bar] * 25
+
+        with patch.object(trader, "_enter_trade", new_callable=AsyncMock) as mock_enter:
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bullish", "top": 20005.0, "bottom": 20000.0}):
+                asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
+
+        mock_enter.assert_not_called()
+
+    def test_bearish_signal_passes_when_bearish_only(self):
+        """Bearish sweep is processed when BEARISH_ONLY=True."""
+        import asyncio
+        import src.research.tier2_streaming_working as mod
+        from src.research.tier2_streaming_working import Tier2StreamingTrader
+        from unittest.mock import AsyncMock, patch
+
+        assert mod.BEARISH_ONLY is True
+
+        trader = Tier2StreamingTrader()
+        trader.ml_filter.model = _mock_model(1.0)  # above any threshold
+        bar = self._make_bar()
+        trader.h1_bearish_sweep_active = True
+        trader.dollar_bars = [bar] * 25
+
+        with patch.object(trader, "_enter_trade", new_callable=AsyncMock) as mock_enter:
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bearish", "top": 20005.0, "bottom": 20000.0}):
+                asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
+
+        mock_enter.assert_called_once()
+
+    def test_both_directions_when_bearish_only_false(self, monkeypatch):
+        """Both directions processed when BEARISH_ONLY=False."""
+        import asyncio
+        import src.research.tier2_streaming_working as mod
+        from src.research.tier2_streaming_working import Tier2StreamingTrader
+        from unittest.mock import AsyncMock, patch
+
+        monkeypatch.setattr(mod, "BEARISH_ONLY", False)
+
+        trader = Tier2StreamingTrader()
+        trader.ml_filter.model = _mock_model(1.0)
+        bar = self._make_bar()
+        trader.h1_bullish_sweep_active = True
+        trader.h1_bearish_sweep_active = False
+        trader.dollar_bars = [bar] * 25
+
+        with patch.object(trader, "_enter_trade", new_callable=AsyncMock) as mock_enter:
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bullish", "top": 20005.0, "bottom": 20000.0}):
+                asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
+
+        mock_enter.assert_called_once()
+
+
+class TestMonthFilter:
+    """AC: bars in BLOCKED_MONTHS return early; bars outside proceed normally."""
+
+    def _make_bar_for_month(self, month: int):
+        from src.data.models import DollarBar
+        from datetime import datetime, timezone
+        ts = datetime(2025, month, 16, 15, 0, 0, tzinfo=timezone.utc)  # 11 AM ET, Wednesday
+        return DollarBar(
+            timestamp=ts, open=20000.0, high=20005.0, low=19995.0,
+            close=20000.0, volume=1000, notional_value=50_000_000, bar_num=1,
+        )
+
+    def test_bar_in_blocked_month_skips_detection(self, monkeypatch):
+        """Bar arriving in a blocked month returns without entering trade."""
+        import asyncio
+        import src.research.tier2_streaming_working as mod
+        from src.research.tier2_streaming_working import Tier2StreamingTrader
+        from unittest.mock import AsyncMock, patch
+
+        monkeypatch.setattr(mod, "BLOCKED_MONTHS", frozenset({9}))
+
+        trader = Tier2StreamingTrader()
+        trader.ml_filter.model = _mock_model(1.0)
+        bar = self._make_bar_for_month(9)  # September — blocked
+        trader.h1_bearish_sweep_active = True
+        trader.dollar_bars = [bar] * 25
+
+        with patch.object(trader, "_enter_trade", new_callable=AsyncMock) as mock_enter:
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bearish", "top": 20005.0, "bottom": 20000.0}):
+                asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
+
+        mock_enter.assert_not_called()
+
+    def test_bar_outside_blocked_month_proceeds(self, monkeypatch):
+        """Bar arriving in an unblocked month is processed normally."""
+        import asyncio
+        import src.research.tier2_streaming_working as mod
+        from src.research.tier2_streaming_working import Tier2StreamingTrader
+        from unittest.mock import AsyncMock, patch
+
+        monkeypatch.setattr(mod, "BLOCKED_MONTHS", frozenset({8, 9, 10}))
+
+        trader = Tier2StreamingTrader()
+        trader.ml_filter.model = _mock_model(1.0)
+        bar = self._make_bar_for_month(11)  # November — not blocked
+        trader.h1_bearish_sweep_active = True
+        trader.dollar_bars = [bar] * 25
+
+        with patch.object(trader, "_enter_trade", new_callable=AsyncMock) as mock_enter:
+            with patch.object(trader, "_detect_fvg", return_value={"direction": "bearish", "top": 20005.0, "bottom": 20000.0}):
+                asyncio.run(trader._detect_and_enter(bar, is_backfill=False))
+
+        mock_enter.assert_called_once()
+
+
+class TestParseBlockedMonths:
+    """AC: malformed tokens skipped with warning; valid tokens parsed."""
+
+    def test_valid_tokens_parsed(self):
+        from src.research.tier2_streaming_working import _parse_blocked_months
+        assert _parse_blocked_months("8,9,10") == frozenset({8, 9, 10})
+
+    def test_empty_string_returns_empty(self):
+        from src.research.tier2_streaming_working import _parse_blocked_months
+        assert _parse_blocked_months("") == frozenset()
+
+    def test_malformed_token_skipped(self, caplog):
+        import logging
+        from src.research.tier2_streaming_working import _parse_blocked_months
+        with caplog.at_level(logging.WARNING):
+            result = _parse_blocked_months("8,abc,10")
+        assert result == frozenset({8, 10})
+        assert any("abc" in r.message for r in caplog.records)

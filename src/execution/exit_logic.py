@@ -46,15 +46,15 @@ class TimeBasedExit:
     def check_exit(self, state: PositionMonitoringState) -> Optional[ExitOrder]:
         """Check if position should be exited based on hold time."""
         if state.is_at_max_hold_time(self.max_hold_minutes):
-            # Calculate P&L
-            multiplier = 0.50  # MNQ contract multiplier
+            # P&L: $2/point for MNQ
+            multiplier = 2.0
             price_diff = state.current_price - state.position.entry_price
 
             if state.position.direction == "short":
                 price_diff = -price_diff
 
             pnl = price_diff * multiplier * state.position.remaining_quantity
-            pnl_ticks = price_diff / 0.25 # Patch 8: P&L in ticks
+            pnl_ticks = price_diff / 0.25  # direction-adjusted ticks
 
             # Calculate R:R achieved
             risk = state.position.risk_per_contract()
@@ -230,14 +230,14 @@ class RiskRewardExit:
 
     def _create_take_profit_exit(self, state: PositionMonitoringState) -> ExitOrder:
         """Create a take profit exit order."""
-        multiplier = 0.50  # MNQ contract multiplier
+        multiplier = 2.0  # MNQ: $2/point
         price_diff = state.current_price - state.position.entry_price
 
         if state.position.direction == "short":
             price_diff = -price_diff
 
         pnl = price_diff * multiplier * state.position.remaining_quantity
-        pnl_ticks = price_diff / 0.25
+        pnl_ticks = price_diff / 0.25  # direction-adjusted ticks
 
         rr_achieved = self.calculate_rr_achieved(
             state.position.entry_price,
@@ -267,14 +267,14 @@ class RiskRewardExit:
 
     def _create_stop_loss_exit(self, state: PositionMonitoringState) -> ExitOrder:
         """Create a stop loss exit order."""
-        multiplier = 0.50  # MNQ contract multiplier
+        multiplier = 2.0  # MNQ: $2/point
         price_diff = state.current_price - state.position.entry_price
 
         if state.position.direction == "short":
             price_diff = -price_diff
 
         pnl = price_diff * multiplier * state.position.remaining_quantity
-        pnl_ticks = price_diff / 0.25
+        pnl_ticks = price_diff / 0.25  # direction-adjusted ticks
 
         # Stop loss always means -1R or calculated loss
         rr_achieved = self.calculate_rr_achieved(
@@ -403,11 +403,11 @@ class HybridExit:
         multiplier = 1.0 if position.direction == "long" else -1.0
         partial_target = position.entry_price + (risk * self.partial_rr * multiplier)
 
-        # Calculate P&L
-        multiplier_usd = 0.50
+        # Calculate P&L — MNQ: $2/point; price_diff already direction-adjusted
+        multiplier_usd = 2.0
         price_diff = (partial_target - position.entry_price) * multiplier
         pnl = price_diff * multiplier_usd * quantity
-        pnl_ticks = (partial_target - position.entry_price) / 0.25
+        pnl_ticks = price_diff / 0.25  # direction-adjusted ticks
 
         logger.info(
             f"Hybrid partial exit for position {position.trade_id}: "
@@ -471,49 +471,25 @@ class HybridExit:
         return state.position.is_at_take_profit(state.current_price)
 
     def _create_partial_exit(self, state: PositionMonitoringState) -> ExitOrder:
-        """Create a partial exit order at 1.5R.
-
-        Args:
-            state: Position monitoring state
-
-        Returns:
-            ExitOrder for partial exit
-        """
+        """Create a partial scale-out exit order at 1.5R."""
         quantity = int(state.position.remaining_quantity * self.partial_percent)
-
-        # Round down for odd quantities
         if quantity < 1:
             quantity = 1
+        if quantity >= state.position.remaining_quantity:
+            quantity = state.position.remaining_quantity
 
-        multiplier = 0.50
+        multiplier = 2.0  # MNQ: $2/point
         price_diff = state.current_price - state.position.entry_price
         if state.position.direction == "short":
             price_diff = -price_diff
+
         pnl = price_diff * multiplier * quantity
+        pnl_ticks = price_diff / 0.25  # direction-adjusted ticks
 
         logger.info(
             f"Hybrid partial exit triggered for position {state.position.trade_id}: "
-            f"quantity={quantity}, "
-            f"exit_price={state.current_price}, "
-            f"pnl=${pnl:.2f}, "
-            f"rr={self.partial_rr:.1f}"
+            f"quantity={quantity}, exit_price={state.current_price:.2f}, pnl=${pnl:.2f}"
         )
-
-    def _create_partial_exit(self, state: PositionMonitoringState) -> ExitOrder:
-        """Create a partial scale-out exit order."""
-        # Fix: ensure quantity rounding matches scale_out_partial
-        quantity = int(state.position.remaining_quantity * self.partial_percent)
-        if quantity < 1: quantity = 1
-        if quantity >= state.position.remaining_quantity: quantity = state.position.remaining_quantity
-
-        # Calculate P&L
-        multiplier = 0.50
-        price_diff = state.current_price - state.position.entry_price
-        if state.position.direction == "short":
-            price_diff = -price_diff
-        
-        pnl = price_diff * multiplier * quantity
-        pnl_ticks = (state.current_price - state.position.entry_price) / 0.25
 
         return ExitOrder(
             position_id=state.position.trade_id,
@@ -529,13 +505,13 @@ class HybridExit:
 
     def _create_final_exit(self, state: PositionMonitoringState, exit_reason: str) -> ExitOrder:
         """Create a final exit order for remaining position."""
-        multiplier = 0.50
+        multiplier = 2.0  # MNQ: $2/point
         price_diff = state.current_price - state.position.entry_price
         if state.position.direction == "short":
             price_diff = -price_diff
-        
+
         pnl = price_diff * multiplier * state.position.remaining_quantity
-        pnl_ticks = (state.current_price - state.position.entry_price) / 0.25
+        pnl_ticks = price_diff / 0.25  # direction-adjusted ticks
 
         # Calculate R:R achieved
         risk = state.position.risk_per_contract()

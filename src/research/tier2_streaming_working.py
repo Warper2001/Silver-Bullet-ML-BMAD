@@ -48,7 +48,7 @@ TRANSACTION_COST = COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2  # $0.80/ro
 
 # ML Filter
 ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta_labeling_model.pkl"
-ML_THRESHOLD = 0.52  # PF-optimal threshold from OOS sweep (PF=1.917, 18/204 OOS trades — story 6-6 LR model)
+ML_THRESHOLD = 0.0   # Filter disabled — full-year backtest showed 9% pass rate with no PF improvement (2026-05-04)
 
 # TradeStation market data API
 SYMBOL = "MNQM26"
@@ -64,6 +64,29 @@ SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
 
 ET_TZ = pytz.timezone('US/Eastern')
+
+
+def _parse_blocked_months(raw: str) -> frozenset:
+    """Parse comma-separated month numbers from env var, skipping malformed tokens."""
+    months = set()
+    for tok in raw.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            months.add(int(tok))
+        except ValueError:
+            logging.warning(f"TIER2_BLOCKED_MONTHS: skipping malformed token {tok!r}")
+    return frozenset(months)
+
+
+# Direction + seasonality filters (Path 1 — 2026-05-04)
+# BEARISH_ONLY: full-year 2025 backtest shows bearish PF 1.43 vs bullish PF 1.06;
+#               bearish-only improves daily P&L and reduces max drawdown.
+BEARISH_ONLY: bool = True
+# BLOCKED_MONTHS: months where edge is statistically zero (Aug-Oct bearish: $0.50/trade avg).
+#                 Default empty — activate with TIER2_BLOCKED_MONTHS=8,9,10.
+BLOCKED_MONTHS: frozenset = _parse_blocked_months(os.environ.get("TIER2_BLOCKED_MONTHS", ""))
 
 # Setup logging
 log_dir = Path(__file__).parent.parent.parent / "logs"
@@ -158,12 +181,19 @@ class Tier2StreamingTrader:
         # ML Filter
         self.ml_filter = MetaLabelingFilter(ML_MODEL_PATH)
 
+        # Log active signal filters
+        logger.info(f"Signal filters — BEARISH_ONLY={BEARISH_ONLY}, "
+                    f"BLOCKED_MONTHS={sorted(BLOCKED_MONTHS) if BLOCKED_MONTHS else 'none'}")
+
         # H1 sweep state — flags persist until 6-hour expiry window lapses
         self.h1_bullish_sweep_active = False
         self.h1_bearish_sweep_active = False
         _epoch = datetime.min.replace(tzinfo=timezone.utc)
         self._bullish_sweep_expires: datetime = _epoch
         self._bearish_sweep_expires: datetime = _epoch
+        # Track which H1 bar timestamp was last logged to avoid re-firing every minute
+        self._last_bullish_sweep_h1_ts: datetime = _epoch
+        self._last_bearish_sweep_h1_ts: datetime = _epoch
 
         # Feature enrichment state
         self._last_entry_bar: int = -120
@@ -337,33 +367,37 @@ class Tier2StreamingTrader:
         new_bullish_sweep = False
         new_bearish_sweep = False
 
+        last_h1_ts = last['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc)
+
         for t, val in sh:
             if t < last['timestamp'] - timedelta(hours=2):  # swing must be confirmed
                 if last['high'] > val and last['close'] < val:
-                    new_bearish_sweep = True
-                    # P5: record actual bar index at sweep detection (current tail of dollar_bars)
-                    self._bearish_sweep_bar = len(self.dollar_bars)
-                    logger.info(f"🎯 H1 BEARISH SWEEP detected at {val:.2f}")
+                    if last_h1_ts > self._last_bearish_sweep_h1_ts:
+                        new_bearish_sweep = True
+                        self._bearish_sweep_bar = len(self.dollar_bars)
+                        self._last_bearish_sweep_h1_ts = last_h1_ts
+                        logger.info(f"🎯 H1 BEARISH SWEEP detected at {val:.2f}")
 
         for t, val in sl:
             if t < last['timestamp'] - timedelta(hours=2):
                 if last['low'] < val and last['close'] > val:
-                    new_bullish_sweep = True
-                    self._bullish_sweep_bar = len(self.dollar_bars)
-                    logger.info(f"🎯 H1 BULLISH SWEEP detected at {val:.2f}")
+                    if last_h1_ts > self._last_bullish_sweep_h1_ts:
+                        new_bullish_sweep = True
+                        self._bullish_sweep_bar = len(self.dollar_bars)
+                        self._last_bullish_sweep_h1_ts = last_h1_ts
+                        logger.info(f"🎯 H1 BULLISH SWEEP detected at {val:.2f}")
 
         # Sweep stays active for 6 H1 bars after detection; expires otherwise
         sweep_window = timedelta(hours=6)
-        last_ts = last['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc)
         if new_bullish_sweep:
             self.h1_bullish_sweep_active = True
-            self._bullish_sweep_expires = last_ts + sweep_window
+            self._bullish_sweep_expires = last_h1_ts + sweep_window
         elif now_utc > self._bullish_sweep_expires:
             self.h1_bullish_sweep_active = False
 
         if new_bearish_sweep:
             self.h1_bearish_sweep_active = True
-            self._bearish_sweep_expires = last_ts + sweep_window
+            self._bearish_sweep_expires = last_h1_ts + sweep_window
         elif now_utc > self._bearish_sweep_expires:
             self.h1_bearish_sweep_active = False
 
@@ -394,13 +428,21 @@ class Tier2StreamingTrader:
 
     async def _close_active_trade(self, bar: DollarBar, price: float, reason: str):
         t = self.active_trade
+        if reason == "time":
+            if t.sim_tp_order_id: await self._cancel_sim_order(t.sim_tp_order_id)
+            if t.sim_sl_order_id: await self._cancel_sim_order(t.sim_sl_order_id)
+            await self._submit_close_order(t.direction)
+        else:
+            # Bracket leg hit (TP or SL) - cancel the other leg
+            other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
+            if other_id: await self._cancel_sim_order(other_id)
+
         pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE - TRANSACTION_COST
         self.completed_trades.append(CompletedTrade(
             t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
         ))
         self.active_trade = None
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f}")
-
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self.active_trade: return
         bars = self.dollar_bars
@@ -411,7 +453,12 @@ class Tier2StreamingTrader:
         if bar_et.weekday() == 1:  # 1 = Tuesday
             return
 
-        if self.h1_bullish_sweep_active:
+        # Seasonality gate: skip months with statistically zero edge (default: none blocked)
+        if bar_et.month in BLOCKED_MONTHS:
+            return
+
+        # Direction gate: bearish-only by default (full-year 2025: bearish PF 1.43 vs bullish 1.06)
+        if not BEARISH_ONLY and self.h1_bullish_sweep_active:
             fvg = self._detect_fvg(bars, bullish=True)
             if fvg:
                 features = self._extract_features(bars, bar, fvg, "bullish")
@@ -421,7 +468,7 @@ class Tier2StreamingTrader:
                     await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
-        elif self.h1_bearish_sweep_active:
+        if self.h1_bearish_sweep_active:  # independent of bullish — fixes pre-existing elif gap
             fvg = self._detect_fvg(bars, bullish=False)
             if fvg:
                 features = self._extract_features(bars, bar, fvg, "bearish")
@@ -541,9 +588,116 @@ class Tier2StreamingTrader:
         ]
         return sum(tr) / len(tr)
 
+    async def _get_auth_headers(self):
+        token = await self.auth.authenticate()
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+    async def _submit_bracket_order(
+        self, direction: str, entry_price: float, tp_price: float, sl_price: float
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        if direction == "LONG":
+            entry_action = "BUY"
+            exit_action = "SELL"
+        else:
+            entry_action = "SELL"
+            exit_action = "BUY"
+
+        payload = {
+            "AccountID": SIM_ACCOUNT_ID,
+            "Symbol": SYMBOL,
+            "Quantity": str(CONTRACTS_PER_TRADE),
+            "OrderType": "Market",
+            "TradeAction": entry_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+            "OSOs": [{
+                "Type": "BRK",
+                "Orders": [
+                    {
+                        "AccountID": SIM_ACCOUNT_ID,
+                        "Symbol": SYMBOL,
+                        "Quantity": str(CONTRACTS_PER_TRADE),
+                        "OrderType": "Limit",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "LimitPrice": str(tp_price),
+                    },
+                    {
+                        "AccountID": SIM_ACCOUNT_ID,
+                        "Symbol": SYMBOL,
+                        "Quantity": str(CONTRACTS_PER_TRADE),
+                        "OrderType": "StopMarket",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "StopPrice": str(sl_price),
+                    },
+                ],
+            }],
+        }
+
+        try:
+            headers = await self._get_auth_headers()
+            response = await self.client.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            if response.status_code not in (200, 201):
+                logger.warning(f"⚠️ SIM bracket order failed HTTP {response.status_code}: {response.text[:200]}")
+                return None, None, None
+
+            data = response.json()
+            orders = data.get("Orders", [])
+            entry_id = tp_id = sl_id = None
+            for order in orders:
+                msg = order.get("Message", "")
+                oid = order.get("OrderID")
+                if "Stop Market" in msg: sl_id = oid
+                elif "Limit" in msg: tp_id = oid
+                else: entry_id = oid
+
+            logger.info(f"✓ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
+            return entry_id, tp_id, sl_id
+        except Exception as e:
+            logger.warning(f"⚠️ SIM bracket order exception: {e}")
+            return None, None, None
+
+    async def _cancel_sim_order(self, order_id: str) -> bool:
+        try:
+            headers = await self._get_auth_headers()
+            url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
+            response = await self.client.delete(url, headers=headers)
+            return response.status_code in (200, 204, 404)
+        except Exception as e:
+            logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
+            return False
+
+    async def _submit_close_order(self, direction: str) -> Optional[str]:
+        close_action = "SELL" if direction == "LONG" else "BUY"
+        payload = {
+            "AccountID": SIM_ACCOUNT_ID,
+            "Symbol": SYMBOL,
+            "Quantity": str(CONTRACTS_PER_TRADE),
+            "OrderType": "Market",
+            "TradeAction": close_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+        }
+        try:
+            headers = await self._get_auth_headers()
+            response = await self.client.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            if response.status_code in (200, 201):
+                oid = response.json().get("Orders", [{}])[0].get("OrderID")
+                logger.info(f"✓ SIM flat close order #{oid} submitted")
+                return oid
+            return None
+        except Exception as e:
+            logger.warning(f"⚠️ SIM close order exception: {e}")
+            return None
+
     async def _enter_trade(self, fvg: dict, bar: DollarBar, idx: int, is_backfill: bool):
-        self._last_entry_bar = len(self.dollar_bars)  # track even during backfill for feature consistency
-        if is_backfill: return  # never submit orders against historical replay bars
+        self._last_entry_bar = len(self.dollar_bars)
+        if is_backfill: return
 
         direction = "LONG" if fvg["direction"] == "bullish" else "SHORT"
         gap_size = fvg["top"] - fvg["bottom"]
@@ -554,7 +708,8 @@ class Tier2StreamingTrader:
             ent = fvg["bottom"] + gap_size * ENTRY_PCT
             tp, sl = ent - gap_size * TP_MULTIPLIER, ent + gap_size * SL_MULTIPLIER
 
-        self.active_trade = ActiveTrade(idx, bar.timestamp, direction, ent, tp, sl)
+        e_id, tp_id, sl_id = await self._submit_bracket_order(direction, ent, tp, sl)
+        self.active_trade = ActiveTrade(idx, bar.timestamp, direction, ent, tp, sl, sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id)
         logger.info(f"🔔 TIER 2 ENTRY: {direction} at ${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
 
     def _print_final_report(self):

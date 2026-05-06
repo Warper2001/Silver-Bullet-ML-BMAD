@@ -126,7 +126,8 @@ class WinningSilverBulletTrader:
                 return None
 
             volume = int(quote.get('Volume', 0) or 0)
-            notional_value = close_price * volume * 20.0 if volume > 0 else close_price * 20.0
+            # Volume from quote is cumulative daily — use single-contract notional to stay within DollarBar's $10B cap
+            notional_value = close_price * 20.0
 
             return DollarBar(
                 timestamp=timestamp,
@@ -329,6 +330,57 @@ class WinningSilverBulletTrader:
         logger.info(f"   Entry (Limit): {fvg_midpoint:.2f} | Target: {target_price:.2f} | SL: {stop_loss:.2f} | R:R: {rr:.2f}")
         logger.info(f"   Waiting for FVG touch (expires in 15 bars)...")
 
+    async def preload_history(self, symbol: str, bars: int = 300) -> None:
+        """Fetch the last N 1-minute bars from TradeStation to warm up the 200-bar lookback."""
+        logger.info(f"⏳ Preloading {bars} bars of 1-min history for {symbol}...")
+        url = (
+            f"https://api.tradestation.com/v3/marketdata/barcharts/{symbol}"
+            f"?interval=1&unit=Minute&barsback={bars}"
+        )
+        try:
+            token = await self.auth.authenticate()
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url, headers=headers)
+            if response.status_code != 200:
+                logger.warning(f"⚠️  History preload HTTP {response.status_code} — starting with empty history")
+                return
+            raw_bars = response.json().get("Bars", [])
+            if not raw_bars:
+                logger.warning("⚠️  No historical bars returned — starting with empty history")
+                return
+            loaded = 0
+            for bar_data in raw_bars:
+                try:
+                    ts_str = bar_data.get("TimeStamp", "")
+                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    close = float(bar_data.get("Close", 0) or 0)
+                    if close == 0:
+                        continue
+                    volume = int(bar_data.get("TotalVolume", 0) or 0)
+                    bar = DollarBar(
+                        timestamp=ts,
+                        open=float(bar_data.get("Open", close) or close),
+                        high=float(bar_data.get("High", close) or close),
+                        low=float(bar_data.get("Low", close) or close),
+                        close=close,
+                        volume=volume,
+                        notional_value=close * max(volume, 1) * 20.0,
+                        is_forward_filled=False,
+                    )
+                    self.recent_bars.append(bar)
+                    if len(self.recent_bars) > 300:
+                        self.recent_bars.pop(0)
+                    if len(self.recent_bars) >= 10:
+                        self._detect_patterns(bar)
+                    loaded += 1
+                except Exception as e:
+                    logger.debug(f"Skipping preload bar: {e}")
+                    continue
+            logger.info(f"✅ Preloaded {loaded} bars — 200-bar lookback window ready")
+        except Exception as e:
+            logger.warning(f"⚠️  History preload error: {e} — starting with empty history")
+
     async def run_trading_loop(self, symbol: str = "MNQM26"):
         """Main trading loop using winning strategy configuration."""
         # Detect active contract if needed
@@ -355,6 +407,9 @@ class WinningSilverBulletTrader:
         # Start 10-minute OAuth token auto-refresh
         logger.info("🔑 Starting 10-minute OAuth token auto-refresh...")
         await self.auth.start_auto_refresh(interval_minutes=10)
+
+        # Preload history so the 200-bar lookback is ready immediately
+        await self.preload_history(symbol)
 
         while self.running:
             try:

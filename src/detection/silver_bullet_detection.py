@@ -200,7 +200,7 @@ def detect_silver_bullet_setup(
 
             if setup:
                 setups.append(setup)
-                logger.info(
+                logger.debug(
                     f"Silver Bullet setup detected: {setup.direction} "
                     f"with {setup.confluence_count}-pattern confluence, "
                     f"priority={setup.priority}"

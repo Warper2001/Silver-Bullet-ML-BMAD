@@ -69,6 +69,8 @@ class WinningSilverBulletTrader:
         self.active_trades: list[dict] = []   # Open positions
         self.window_trades: dict[str, set[str]] = {} # {window: {date_str}}
         self.bar_index = 0
+        self._is_preloading = False
+        self._seen_setup_keys: set[tuple[int, int]] = set()  # (mss_bar_index, fvg_bar_index) dedup
 
         # Performance tracking
         self.total_trades = 0
@@ -232,14 +234,29 @@ class WinningSilverBulletTrader:
             bear_sweep.bar_index = self.bar_index
             sweeps.append(bear_sweep)
 
-        # 5. Confluence Detection
+        # 5. Confluence Detection (skipped during preload warmup)
+        if self._is_preloading:
+            return []
+
         setups = detect_silver_bullet_setup(
             mss_events=self.mss_events,
             fvg_events=self.fvg_events,
             sweep_events=sweeps
         )
-        
-        return setups
+
+        # Deduplicate: skip (mss_bar_index, fvg_bar_index) pairs already detected
+        new_setups = []
+        for s in setups:
+            key = (s.mss_event.bar_index if s.mss_event else -1,
+                   s.fvg_event.bar_index if s.fvg_event else -1)
+            if key not in self._seen_setup_keys:
+                self._seen_setup_keys.add(key)
+                new_setups.append(s)
+                logger.info(
+                    f"🔍 New setup: {s.direction} | confluence={s.confluence_count} | priority={s.priority}"
+                )
+
+        return new_setups
 
     async def process_trading_setup(self, setup: SilverBulletSetup):
         """Process a trading setup with ML filtering and R:R validation."""
@@ -437,6 +454,7 @@ class WinningSilverBulletTrader:
                 logger.warning("⚠️  No historical bars returned — starting with empty history")
                 return
             loaded = 0
+            self._is_preloading = True
             for bar_data in raw_bars:
                 try:
                     ts_str = bar_data.get("TimeStamp", "")
@@ -464,6 +482,7 @@ class WinningSilverBulletTrader:
                 except Exception as e:
                     logger.debug(f"Skipping preload bar: {e}")
                     continue
+            self._is_preloading = False
             logger.info(f"✅ Preloaded {loaded} bars — 200-bar lookback window ready")
         except Exception as e:
             logger.warning(f"⚠️  History preload error: {e} — starting with empty history")

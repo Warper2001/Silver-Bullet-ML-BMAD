@@ -79,68 +79,43 @@ class WinningSilverBulletTrader:
         logger.info("   - Avg daily P&L: $51.65 | 2.15 trades/day")
         logger.info("   - Max Drawdown: $312 | Avg hold: 7.4 min")
 
-    async def fetch_live_quotes(self, symbol: str = "MNQH26") -> dict:
-        """Fetch live market data for a symbol."""
-        url = f"https://api.tradestation.com/v3/marketdata/quotes/{symbol}"
-
+    async def fetch_latest_bar(self, symbol: str) -> DollarBar | None:
+        """Fetch the most recently completed 1-minute bar from barcharts API."""
+        url = (
+            f"https://api.tradestation.com/v3/marketdata/barcharts/{symbol}"
+            f"?interval=1&unit=Minute&barsback=2"
+        )
         try:
-            # Get fresh token from auth object
-            current_token = await self.auth.authenticate()
-            headers = {
-                "Authorization": f"Bearer {current_token}",
-                "Accept": "application/json",
-            }
-
-            async with httpx.AsyncClient(headers=headers) as client:
-                response = await client.get(url)
-                if response.status_code == 200:
-                    data = response.json()
-                    return data.get('Quotes', [{}])[0]
-                else:
-                    logger.error(f"Error fetching quotes: {response.status_code}")
-                    return {}
-
-        except Exception as e:
-            logger.error(f"Exception fetching quotes: {e}")
-            return {}
-
-    def bar_from_quote(self, quote: dict) -> DollarBar:
-        """Convert TradeStation quote to DollarBar (handle closed markets)."""
-        try:
-            timestamp = datetime.now(timezone.utc)
-
-            # Get price data (use Last > Bid > Ask priority)
-            last_price = float(quote.get('Last', 0) or 0)
-            bid_price = float(quote.get('Bid', 0) or 0)
-            ask_price = float(quote.get('Ask', 0) or 0)
-
-            # Use best available price
-            close_price = last_price or bid_price or ask_price
-            open_price = close_price  # For real-time, use close as open
-            high_price = max(close_price, bid_price, ask_price)
-            low_price = min(close_price, bid_price, ask_price) if min(close_price, bid_price, ask_price) > 0 else close_price
-
-            # Handle closed market (all zeros)
-            if close_price == 0:
-                logger.debug("Market closed - no valid price data")
+            token = await self.auth.authenticate()
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers)
+            if response.status_code != 200:
+                logger.warning(f"⚠️  barcharts HTTP {response.status_code}")
                 return None
-
-            volume = int(quote.get('Volume', 0) or 0)
-            # Volume from quote is cumulative daily — use single-contract notional to stay within DollarBar's $10B cap
-            notional_value = close_price * 20.0
-
+            bars = response.json().get("Bars", [])
+            # Use the first bar (most recent completed bar; second may still be forming)
+            bar_data = bars[0] if bars else None
+            if not bar_data:
+                return None
+            ts_str = bar_data.get("TimeStamp", "")
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            close = float(bar_data.get("Close", 0) or 0)
+            if close == 0:
+                return None
+            volume = int(bar_data.get("TotalVolume", 0) or 0)
             return DollarBar(
-                timestamp=timestamp,
-                open=open_price,
-                high=high_price,
-                low=low_price,
-                close=close_price,
+                timestamp=ts,
+                open=float(bar_data.get("Open", close) or close),
+                high=float(bar_data.get("High", close) or close),
+                low=float(bar_data.get("Low", close) or close),
+                close=close,
                 volume=volume,
-                notional_value=notional_value,
+                notional_value=close * 20.0,
                 is_forward_filled=False,
             )
         except Exception as e:
-            logger.debug(f"Error converting quote to DollarBar: {e}")
+            logger.error(f"Exception fetching barcharts bar: {e}")
             return None
 
     def _find_next_liquidity_pool(
@@ -273,9 +248,15 @@ class WinningSilverBulletTrader:
         if not within_killzone:
             return
 
-        # 2. Window Deduplication: one trade per window per day
+        # 2. Window Deduplication: one setup (pending or filled) per window per day
         today = datetime.now(timezone.utc).date().isoformat()
         if today in self.window_trades.get(window_name, set()):
+            return
+        already_pending = any(
+            s['window'] == window_name and s['date'] == today
+            for s in self.pending_setups
+        )
+        if already_pending:
             return
 
         # 3. ML prediction filter
@@ -411,21 +392,23 @@ class WinningSilverBulletTrader:
         # Preload history so the 200-bar lookback is ready immediately
         await self.preload_history(symbol)
 
+        last_bar_ts = None  # Deduplicate: skip if same bar returned twice
+
         while self.running:
             try:
-                # 1. Fetch live quote and convert to DollarBar
-                quote = await self.fetch_live_quotes(symbol)
+                # 1. Fetch the latest completed 1-minute bar
+                bar = await self.fetch_latest_bar(symbol)
 
-                if not quote or quote.get('Last', 0) == 0:
-                    logger.warning("⚠️  No valid quote received, waiting...")
-                    await asyncio.sleep(5)
-                    continue
-
-                bar = self.bar_from_quote(quote)
                 if bar is None or not self.validator.validate_bar_for_trading(bar):
                     logger.debug("Market closed or invalid bar - waiting...")
-                    await asyncio.sleep(60)
+                    await asyncio.sleep(15)
                     continue
+
+                # Skip if this is the same bar as last poll
+                if bar.timestamp == last_bar_ts:
+                    await asyncio.sleep(15)
+                    continue
+                last_bar_ts = bar.timestamp
 
                 # 2. Update bar history and detection
                 self.recent_bars.append(bar)
@@ -493,10 +476,10 @@ class WinningSilverBulletTrader:
 
                 # 6. Performance Logging
                 win_rate = (self.winning_trades / self.total_trades * 100) if self.total_trades > 0 else 0
-                logger.info(f"📊 {symbol} @ {bar.close} | Trades: {self.total_trades} | WR: {win_rate:.1f}% | P&L: ${self.total_pnl:.2f} | Pending: {len(self.pending_setups)} | Active: {len(self.active_trades)}")
+                logger.info(f"📊 {symbol} @ {bar.close} [{bar.timestamp.strftime('%H:%M')}Z H:{bar.high} L:{bar.low}] | Trades: {self.total_trades} | WR: {win_rate:.1f}% | P&L: ${self.total_pnl:.2f} | Pending: {len(self.pending_setups)} | Active: {len(self.active_trades)}")
 
-                # Wait for next "minute"
-                await asyncio.sleep(60)
+                # Poll every 15s to catch each new 1-min bar within ~15s of close
+                await asyncio.sleep(15)
 
             except asyncio.CancelledError:
                 logger.info("Trading loop cancelled")

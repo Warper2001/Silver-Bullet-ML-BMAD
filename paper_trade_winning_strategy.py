@@ -299,38 +299,53 @@ class WinningSilverBulletTrader:
             logger.info(f"❌ Insufficient R:R ({rr:.2f} < 2.0) - SKIPPED")
             return
 
-        # 6. Queue for FVG touch (Limit Fill Simulation)
+        # 6. Submit limit bracket to SIM now (same price/time as local limit order)
+        # SIM fills when price actually touches FVG midpoint — matches local sim entry exactly
+        sim_entry_id, sim_tp_id, sim_sl_id = await self._submit_sim_bracket(
+            symbol=self._current_symbol,
+            direction=setup.direction,
+            entry_price=fvg_midpoint,
+            tp_price=target_price,
+            sl_price=stop_loss,
+        )
+
+        # Queue for FVG touch detection (local simulation)
         self.pending_setups.append({
             'setup': setup,
             'fvg_midpoint': fvg_midpoint,
             'target_price': target_price,
             'stop_loss': stop_loss,
-            'expiry_idx': self.bar_index + 15, # 15 bar expiry
+            'expiry_idx': self.bar_index + 15,  # 15-bar (15-min) cancellation window
             'window': window_name,
-            'date': today
+            'date': today,
+            'sim_entry_id': sim_entry_id,
+            'sim_tp_id': sim_tp_id,
+            'sim_sl_id': sim_sl_id,
         })
-        
+
         logger.info(f"🎯 SETUP VALIDATED: {setup.direction.upper()} in {window_name}")
         logger.info(f"   Entry (Limit): {fvg_midpoint:.2f} | Target: {target_price:.2f} | SL: {stop_loss:.2f} | R:R: {rr:.2f}")
-        logger.info(f"   Waiting for FVG touch (expires in 15 bars)...")
+        logger.info(f"   SIM limit order armed | expires in 15 bars")
 
     async def _submit_sim_bracket(
         self,
         symbol: str,
         direction: str,
+        entry_price: float,
         tp_price: float,
         sl_price: float,
     ) -> tuple[str | None, str | None, str | None]:
-        """Submit a bracket order to TradeStation SIM and return (entry_id, tp_id, sl_id)."""
+        """Submit a limit bracket to TradeStation SIM at entry_price; return (entry_id, tp_id, sl_id)."""
         entry_action = "BUY" if direction == "bullish" else "SELL"
         exit_action = "SELL" if direction == "bullish" else "BUY"
         payload = {
             "AccountID": SIM_ACCOUNT_ID,
             "Symbol": symbol,
             "Quantity": "1",
-            "OrderType": "Market",
+            "OrderType": "Limit",
+            "LimitPrice": str(entry_price),
             "TradeAction": entry_action,
-            "TimeInForce": {"Duration": "DAY"},
+            "TimeInForce": {"Duration": "GTC"},
             "Route": "Intelligent",
             "OSOs": [{"Type": "BRK", "Orders": [
                 {
@@ -384,6 +399,23 @@ class WinningSilverBulletTrader:
         except Exception as e:
             logger.warning(f"⚠️  SIM bracket exception: {e}")
             return None, None, None
+
+    async def _cancel_sim_order(self, order_id: str) -> None:
+        """Cancel a pending SIM limit order (called when setup expires)."""
+        if not order_id:
+            return
+        url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
+        try:
+            token = await self.auth.authenticate()
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.delete(url, headers=headers)
+            if response.status_code in (200, 204, 404):
+                logger.info(f"🗑️  SIM limit order #{order_id} cancelled")
+            else:
+                logger.warning(f"⚠️  SIM cancel HTTP {response.status_code} for order #{order_id}")
+        except Exception as e:
+            logger.warning(f"⚠️  SIM cancel exception for #{order_id}: {e}")
 
     async def preload_history(self, symbol: str, bars: int = 300) -> None:
         """Fetch the last N 1-minute bars from TradeStation to warm up the 200-bar lookback."""
@@ -458,6 +490,7 @@ class WinningSilverBulletTrader:
         logger.info("=" * 80)
 
         self.running = True
+        self._current_symbol = symbol  # Available to process_trading_setup via self
 
         # Start 10-minute OAuth token auto-refresh
         logger.info("🔑 Starting 10-minute OAuth token auto-refresh...")
@@ -512,9 +545,10 @@ class WinningSilverBulletTrader:
 
                 # 4. Handle Pending Setups (FVG Touch/Entry)
                 for setup_req in self.pending_setups[:]:
-                    # Check Expiry
+                    # Check Expiry — cancel the SIM limit order if still pending
                     if self.bar_index > setup_req['expiry_idx']:
                         logger.info(f"⚪ Setup Expired: {setup_req['setup'].direction.upper()} FVG not touched")
+                        await self._cancel_sim_order(setup_req.get('sim_entry_id'))
                         self.pending_setups.remove(setup_req)
                         continue
                     
@@ -527,24 +561,17 @@ class WinningSilverBulletTrader:
                         
                     if is_touched:
                         logger.info(f"🔵 TRADE ENTERED: {setup_req['setup'].direction.upper()} @ {setup_req['fvg_midpoint']:.2f}")
+                        logger.info(f"   SIM limit order #{setup_req.get('sim_entry_id')} should now be filling")
 
-                        # Submit bracket order to TradeStation SIM for cross-validation
-                        entry_id, tp_id, sl_id = await self._submit_sim_bracket(
-                            symbol=symbol,
-                            direction=setup_req['setup'].direction,
-                            tp_price=setup_req['target_price'],
-                            sl_price=setup_req['stop_loss'],
-                        )
-
-                        # Add to active trades (local sim continues regardless of SIM outcome)
+                        # Carry SIM order IDs from pending setup into active trade for tracking
                         self.active_trades.append({
                             'entry_price': setup_req['fvg_midpoint'],
                             'target_price': setup_req['target_price'],
                             'stop_loss': setup_req['stop_loss'],
                             'direction': setup_req['setup'].direction,
-                            'sim_entry_id': entry_id,
-                            'sim_tp_id': tp_id,
-                            'sim_sl_id': sl_id,
+                            'sim_entry_id': setup_req.get('sim_entry_id'),
+                            'sim_tp_id': setup_req.get('sim_tp_id'),
+                            'sim_sl_id': setup_req.get('sim_sl_id'),
                         })
 
                         # Mark window as traded

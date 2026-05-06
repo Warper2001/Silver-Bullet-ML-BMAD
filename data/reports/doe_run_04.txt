@@ -1,0 +1,58 @@
+Exported 416 trade setups to data/ml_training/doe_run_04_features.csv
+Exported 416 trade details to data/ml_training/doe_run_04_history.csv
+
+============================================================
+ TIER 2 META-LABELING BACKTEST
+============================================================
+SL Mult:            3.5x | TP Mult: 3.5x
+ATR Threshold:      0.25
+Session Windows:    extended
+ML Filter:          DISABLED
+HTF Bias Gate:      off
+Premium/Discount:   off
+DOL Gate:           off
+No-Tuesday:         off
+Total Trades:       416
+Win Rate:           49.76%
+Profit Factor:      1.01
+Total P&L:          $97.95
+============================================================
+/root/Silver-Bullet-ML-BMAD/src/research/backtest_zero_bias_optimized.py:209: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df_1m[['br_sw_act', 'bl_sw_act']] = df_1m[['br_sw_act', 'bl_sw_act']].fillna(False)
+
+Simulating Trades:   0%|          | 0/118601 [00:00<?, ?it/s]
+Simulating Trades:   2%|▏         | 2852/118601 [00:00<00:04, 28506.03it/s]
+Simulating Trades:   5%|▍         | 5747/118601 [00:00<00:03, 28765.66it/s]
+Simulating Trades:   8%|▊         | 8962/118601 [00:00<00:03, 30310.09it/s]
+Simulating Trades:  11%|█         | 12679/118601 [00:00<00:03, 33016.53it/s]
+Simulating Trades:  13%|█▎        | 15981/118601 [00:00<00:03, 32961.38it/s]
+Simulating Trades:  16%|█▋        | 19278/118601 [00:00<00:03, 32176.22it/s]
+Simulating Trades:  19%|█▉        | 23025/118601 [00:00<00:02, 33870.70it/s]
+Simulating Trades:  22%|██▏       | 26418/118601 [00:00<00:02, 33817.76it/s]
+Simulating Trades:  25%|██▌       | 29894/118601 [00:00<00:02, 34108.68it/s]
+Simulating Trades:  28%|██▊       | 33475/118601 [00:01<00:02, 34628.83it/s]
+Simulating Trades:  31%|███       | 36999/118601 [00:01<00:02, 34813.19it/s]
+Simulating Trades:  35%|███▍      | 40938/118601 [00:01<00:02, 36200.58it/s]
+Simulating Trades:  38%|███▊      | 44560/118601 [00:01<00:02, 35165.88it/s]
+Simulating Trades:  41%|████      | 48262/118601 [00:01<00:01, 35707.95it/s]
+Simulating Trades:  44%|████▎     | 51840/118601 [00:01<00:01, 33654.37it/s]
+Simulating Trades:  47%|████▋     | 55476/118601 [00:01<00:01, 34426.10it/s]
+Simulating Trades:  50%|████▉     | 59120/118601 [00:01<00:01, 35007.74it/s]
+Simulating Trades:  53%|█████▎    | 62639/118601 [00:01<00:01, 34916.96it/s]
+Simulating Trades:  56%|█████▌    | 66144/118601 [00:01<00:01, 34293.22it/s]
+Simulating Trades:  59%|█████▊    | 69654/118601 [00:02<00:01, 34527.35it/s]
+Simulating Trades:  62%|██████▏   | 73115/118601 [00:02<00:01, 34025.61it/s]
+Simulating Trades:  65%|██████▍   | 76524/118601 [00:02<00:01, 33615.76it/s]
+Simulating Trades:  67%|██████▋   | 79898/118601 [00:02<00:01, 33651.79it/s]
+Simulating Trades:  70%|███████   | 83267/118601 [00:02<00:01, 33242.14it/s]
+Simulating Trades:  73%|███████▎  | 86594/118601 [00:02<00:01, 31375.72it/s]
+Simulating Trades:  76%|███████▌  | 90112/118601 [00:02<00:00, 32451.86it/s]
+Simulating Trades:  79%|███████▊  | 93378/118601 [00:02<00:00, 32062.41it/s]
+Simulating Trades:  81%|████████▏ | 96599/118601 [00:02<00:00, 31990.80it/s]
+Simulating Trades:  84%|████████▍ | 99811/118601 [00:02<00:00, 32028.12it/s]
+Simulating Trades:  87%|████████▋ | 103021/118601 [00:03<00:00, 30907.09it/s]
+Simulating Trades:  89%|████████▉ | 106124/118601 [00:03<00:00, 30765.12it/s]
+Simulating Trades:  92%|█████████▏| 109209/118601 [00:03<00:00, 30600.22it/s]
+Simulating Trades:  95%|█████████▌| 112930/118601 [00:03<00:00, 32529.71it/s]
+Simulating Trades:  98%|█████████▊| 116192/118601 [00:03<00:00, 32062.60it/s]
+Simulating Trades: 100%|██████████| 118601/118601 [00:03<00:00, 32982.72it/s]

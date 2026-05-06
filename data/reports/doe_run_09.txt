@@ -1,0 +1,60 @@
+Exported 219 trade setups to data/ml_training/doe_run_09_features.csv
+Exported 219 trade details to data/ml_training/doe_run_09_history.csv
+
+============================================================
+ TIER 2 META-LABELING BACKTEST
+============================================================
+SL Mult:            5.0x | TP Mult: 5.0x
+ATR Threshold:      0.25
+Session Windows:    morning-afternoon
+ML Filter:          DISABLED
+HTF Bias Gate:      off
+Premium/Discount:   off
+DOL Gate:           off
+No-Tuesday:         off
+Total Trades:       219
+Win Rate:           49.77%
+Profit Factor:      1.18
+Total P&L:          $1403.05
+============================================================
+/root/Silver-Bullet-ML-BMAD/src/research/backtest_zero_bias_optimized.py:209: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df_1m[['br_sw_act', 'bl_sw_act']] = df_1m[['br_sw_act', 'bl_sw_act']].fillna(False)
+
+Simulating Trades:   0%|          | 0/118601 [00:00<?, ?it/s]
+Simulating Trades:   2%|▏         | 2843/118601 [00:00<00:04, 28420.13it/s]
+Simulating Trades:   5%|▍         | 5842/118601 [00:00<00:03, 29339.89it/s]
+Simulating Trades:   7%|▋         | 8776/118601 [00:00<00:03, 28982.55it/s]
+Simulating Trades:  10%|█         | 11976/118601 [00:00<00:03, 30163.51it/s]
+Simulating Trades:  13%|█▎        | 14994/118601 [00:00<00:03, 27963.79it/s]
+Simulating Trades:  15%|█▌        | 18253/118601 [00:00<00:03, 29452.11it/s]
+Simulating Trades:  18%|█▊        | 21284/118601 [00:00<00:03, 29722.22it/s]
+Simulating Trades:  21%|██        | 24890/118601 [00:00<00:02, 31687.75it/s]
+Simulating Trades:  24%|██▎       | 28101/118601 [00:00<00:02, 31810.35it/s]
+Simulating Trades:  26%|██▋       | 31294/118601 [00:01<00:02, 30587.31it/s]
+Simulating Trades:  29%|██▉       | 34370/118601 [00:01<00:02, 28764.49it/s]
+Simulating Trades:  32%|███▏      | 37806/118601 [00:01<00:02, 30349.29it/s]
+Simulating Trades:  35%|███▍      | 41213/118601 [00:01<00:02, 31420.95it/s]
+Simulating Trades:  37%|███▋      | 44383/118601 [00:01<00:02, 30580.86it/s]
+Simulating Trades:  40%|████      | 47863/118601 [00:01<00:02, 31794.06it/s]
+Simulating Trades:  43%|████▎     | 51120/118601 [00:01<00:02, 32018.55it/s]
+Simulating Trades:  46%|████▌     | 54338/118601 [00:01<00:02, 31444.99it/s]
+Simulating Trades:  48%|████▊     | 57495/118601 [00:01<00:02, 27885.65it/s]
+Simulating Trades:  51%|█████▏    | 60904/118601 [00:02<00:01, 29557.66it/s]
+Simulating Trades:  54%|█████▍    | 63933/118601 [00:02<00:01, 28647.32it/s]
+Simulating Trades:  57%|█████▋    | 67208/118601 [00:02<00:01, 29780.55it/s]
+Simulating Trades:  59%|█████▉    | 70440/118601 [00:02<00:01, 30498.19it/s]
+Simulating Trades:  62%|██████▏   | 73827/118601 [00:02<00:01, 31468.02it/s]
+Simulating Trades:  65%|██████▍   | 77078/118601 [00:02<00:01, 31770.70it/s]
+Simulating Trades:  68%|██████▊   | 80277/118601 [00:02<00:01, 31539.82it/s]
+Simulating Trades:  71%|███████   | 83724/118601 [00:02<00:01, 32397.56it/s]
+Simulating Trades:  74%|███████▎  | 87241/118601 [00:02<00:00, 33213.82it/s]
+Simulating Trades:  76%|███████▋  | 90573/118601 [00:02<00:00, 33011.53it/s]
+Simulating Trades:  79%|███████▉  | 93882/118601 [00:03<00:00, 29851.46it/s]
+Simulating Trades:  82%|████████▏ | 96928/118601 [00:03<00:00, 28932.16it/s]
+Simulating Trades:  85%|████████▍ | 100547/118601 [00:03<00:00, 30932.82it/s]
+Simulating Trades:  87%|████████▋ | 103689/118601 [00:03<00:00, 30916.90it/s]
+Simulating Trades:  90%|█████████ | 106884/118601 [00:03<00:00, 31211.23it/s]
+Simulating Trades:  93%|█████████▎| 110030/118601 [00:03<00:00, 30939.45it/s]
+Simulating Trades:  96%|█████████▌| 113506/118601 [00:03<00:00, 32049.19it/s]
+Simulating Trades:  99%|█████████▊| 117054/118601 [00:03<00:00, 33054.93it/s]
+Simulating Trades: 100%|██████████| 118601/118601 [00:03<00:00, 30909.41it/s]

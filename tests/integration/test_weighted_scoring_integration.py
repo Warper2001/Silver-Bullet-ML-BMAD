@@ -183,13 +183,7 @@ class TestWeightedScoringIntegration:
         initial_confidence = initial_signal.composite_confidence
 
         # Change weights to favor triple_confluence_scaler
-        new_weights = StrategyWeights(
-            triple_confluence_scaler=0.40,
-            wolf_pack_3_edge=0.15,
-            adaptive_ema_momentum=0.15,
-            vwap_bounce=0.15,
-            opening_range_breakout=0.15,
-        )
+        new_weights = StrategyWeights(strategies={"triple_confluence_scaler": 0.40, "wolf_pack_3_edge": 0.15, "adaptive_ema_momentum": 0.15, "vwap_bounce": 0.15, "opening_range_breakout": 0.15})
         scorer.weight_manager.save_weights(new_weights)
         scorer.reload_config()
 

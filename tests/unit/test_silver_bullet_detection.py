@@ -51,26 +51,33 @@ class TestSilverBulletSetupAlgorithms:
 
     @pytest.fixture
     def bull_fvg(self, base_timestamp):
-        """Create a sample bullish FVG event."""
+        """Create a sample bullish FVG event.
+
+        Midpoint = (11805 + 11795) / 2 = 11800. MSS equilibrium = (11800 + 11810) / 2 = 11805.
+        Midpoint 11800 < equilibrium 11805 → correctly in discount zone.
+        """
         return FVGEvent(
             timestamp=base_timestamp + timedelta(seconds=5),
             direction="bullish",
-            gap_range=GapRange(top=11820.0, bottom=11790.0),
-            gap_size_ticks=120.0,
-            gap_size_dollars=600.0,
+            gap_range=GapRange(top=11805.0, bottom=11795.0),
+            gap_size_ticks=40.0,
+            gap_size_dollars=200.0,
             bar_index=11,
         )
 
     @pytest.fixture
     def bull_sweep(self, base_timestamp):
-        """Create a sample bullish liquidity sweep event."""
+        """Create a sample bullish liquidity sweep event.
+
+        bar_index=5 and timestamp before base_timestamp so sweep precedes MSS (bar 10).
+        """
         return LiquiditySweepEvent(
-            timestamp=base_timestamp + timedelta(seconds=10),
+            timestamp=base_timestamp - timedelta(seconds=5),
             direction="bullish",
             swing_point_price=11800.0,
             sweep_depth_ticks=20.0,
             sweep_depth_dollars=100.0,
-            bar_index=12,
+            bar_index=5,
         )
 
     def test_silver_bullet_recognized_with_mss_and_fvg(self, bullish_mss, bull_fvg):
@@ -144,8 +151,8 @@ class TestSilverBulletSetupAlgorithms:
             mss_event=bullish_mss, fvg_event=bull_fvg, max_bar_distance=10
         )
 
-        assert setup.entry_zone_top == bull_fvg.gap_range.top  # 11820.0
-        assert setup.entry_zone_bottom == bull_fvg.gap_range.bottom  # 11790.0
+        assert setup.entry_zone_top == bull_fvg.gap_range.top  # 11805.0
+        assert setup.entry_zone_bottom == bull_fvg.gap_range.bottom  # 11795.0
 
     def test_silver_bullet_invalidation_from_opposite_swing(
         self, bullish_mss, bull_fvg, swing_point
@@ -218,9 +225,10 @@ class TestSilverBulletSetupAlgorithms:
             FVGEvent(
                 timestamp=base_timestamp + timedelta(seconds=15),
                 direction="bullish",
-                gap_range=GapRange(top=11820.0, bottom=11790.0),
-                gap_size_ticks=120.0,
-                gap_size_dollars=600.0,
+                # midpoint=11799 < equilibrium=11805 → in discount zone ✓
+                gap_range=GapRange(top=11804.0, bottom=11794.0),
+                gap_size_ticks=40.0,
+                gap_size_dollars=200.0,
                 bar_index=11,
             )
         ]
@@ -234,6 +242,57 @@ class TestSilverBulletSetupAlgorithms:
         assert len(setups) == 1
         assert setups[0].direction == "bullish"
         assert setups[0].confluence_count == 2
+
+    def test_sweep_after_mss_rejected(self, base_timestamp, swing_point, bull_fvg):
+        """Verify setup rejected when sweep bar_index >= MSS bar_index."""
+        mss = MSSEvent(
+            timestamp=base_timestamp,
+            direction="bullish",
+            breakout_price=11810.0,
+            swing_point=swing_point,
+            volume_ratio=1.8,
+            bar_index=10,
+        )
+        late_sweep = LiquiditySweepEvent(
+            timestamp=base_timestamp + timedelta(seconds=15),
+            direction="bullish",
+            swing_point_price=11800.0,
+            sweep_depth_ticks=20.0,
+            sweep_depth_dollars=100.0,
+            bar_index=12,  # after MSS at bar 10 — invalid
+        )
+        setup = check_silver_bullet_setup(
+            mss_event=mss,
+            fvg_event=bull_fvg,
+            sweep_event=late_sweep,
+            max_bar_distance=10,
+        )
+        assert setup is None
+
+    def test_bullish_fvg_in_premium_rejected(self, base_timestamp, swing_point):
+        """Verify bullish setup rejected when FVG midpoint is above MSS equilibrium."""
+        mss = MSSEvent(
+            timestamp=base_timestamp,
+            direction="bullish",
+            breakout_price=11810.0,  # equilibrium = (11800 + 11810) / 2 = 11805
+            swing_point=swing_point,  # price=11800
+            volume_ratio=1.8,
+            bar_index=10,
+        )
+        premium_fvg = FVGEvent(
+            timestamp=base_timestamp + timedelta(seconds=5),
+            direction="bullish",
+            gap_range=GapRange(top=11820.0, bottom=11812.0),  # midpoint=11816 > 11805
+            gap_size_ticks=32.0,
+            gap_size_dollars=160.0,
+            bar_index=11,
+        )
+        setup = check_silver_bullet_setup(
+            mss_event=mss,
+            fvg_event=premium_fvg,
+            max_bar_distance=10,
+        )
+        assert setup is None
 
     def test_multiple_silver_bullets_detected(self, base_timestamp):
         """Verify multiple setups detected from multiple events."""
@@ -276,17 +335,19 @@ class TestSilverBulletSetupAlgorithms:
             FVGEvent(
                 timestamp=base_timestamp + timedelta(seconds=15),
                 direction="bullish",
-                gap_range=GapRange(top=11820.0, bottom=11790.0),
-                gap_size_ticks=120.0,
-                gap_size_dollars=600.0,
+                # midpoint=11799 < equilibrium=(11800+11810)/2=11805 → discount ✓
+                gap_range=GapRange(top=11804.0, bottom=11794.0),
+                gap_size_ticks=40.0,
+                gap_size_dollars=200.0,
                 bar_index=11,
             ),
             FVGEvent(
                 timestamp=base_timestamp + timedelta(seconds=25),
                 direction="bearish",
-                gap_range=GapRange(top=11910.0, bottom=11880.0),
-                gap_size_ticks=120.0,
-                gap_size_dollars=600.0,
+                # midpoint=11901 > equilibrium=(11900+11890)/2=11895 → premium ✓
+                gap_range=GapRange(top=11906.0, bottom=11896.0),
+                gap_size_ticks=40.0,
+                gap_size_dollars=200.0,
                 bar_index=21,
             ),
         ]

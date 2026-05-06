@@ -14,7 +14,7 @@ class TestEnsembleSignalModel:
     def test_ensemble_signal_creation_with_valid_data(self):
         """Test creating EnsembleSignal with all valid fields."""
         signal = EnsembleSignal(
-            strategy_name="Triple Confluence Scalper",
+            strategy_name="triple_confluence_scaler",
             timestamp=datetime(2026, 3, 31, 10, 30, 0),
             direction="long",
             entry_price=11850.00,
@@ -25,7 +25,7 @@ class TestEnsembleSignalModel:
             metadata={"fvg_size": 10, "vwap_alignment": True}
         )
 
-        assert signal.strategy_name == "Triple Confluence Scalper"
+        assert signal.strategy_name == "triple_confluence_scaler"
         assert signal.direction == "long"
         assert signal.entry_price == 11850.00
         assert signal.stop_loss == 11840.00
@@ -169,7 +169,7 @@ class TestEnsembleSignalModel:
             "atr_value": 15.5,
         }
         signal = EnsembleSignal(
-            strategy_name="Triple Confluence Scalper",
+            strategy_name="triple_confluence_scaler",
             timestamp=datetime(2026, 3, 31, 10, 30, 0),
             direction="long",
             entry_price=11850.00,
@@ -187,7 +187,7 @@ class TestEnsembleSignalModel:
 def sample_ensemble_signal():
     """Create a sample EnsembleSignal for testing."""
     return EnsembleSignal(
-        strategy_name="Triple Confluence Scalper",
+        strategy_name="triple_confluence_scaler",
         timestamp=datetime(2026, 3, 31, 10, 30, 0),
         direction="long",
         entry_price=11850.00,
@@ -205,7 +205,7 @@ def multiple_strategy_signals():
     base_time = datetime(2026, 3, 31, 10, 0, 0)
     return [
         EnsembleSignal(
-            strategy_name="Triple Confluence Scalper",
+            strategy_name="triple_confluence_scaler",
             timestamp=base_time,
             direction="long",
             entry_price=11850.00,
@@ -215,7 +215,7 @@ def multiple_strategy_signals():
             bar_timestamp=base_time,
         ),
         EnsembleSignal(
-            strategy_name="Wolf Pack 3-Edge",
+            strategy_name="wolf_pack_3_edge",
             timestamp=base_time + timedelta(seconds=1),
             direction="long",
             entry_price=11851.00,
@@ -225,7 +225,7 @@ def multiple_strategy_signals():
             bar_timestamp=base_time,
         ),
         EnsembleSignal(
-            strategy_name="Adaptive EMA Momentum",
+            strategy_name="adaptive_ema_momentum",
             timestamp=base_time + timedelta(seconds=2),
             direction="short",
             entry_price=11849.00,
@@ -263,7 +263,7 @@ class TestEnsembleSignalAggregator:
 
         signals = aggregator.get_signals()
         assert len(signals) == 1
-        assert signals[0].strategy_name == "Triple Confluence Scalper"
+        assert signals[0].strategy_name == "triple_confluence_scaler"
         assert signals[0].confidence == 0.85
 
     def test_add_signal_creates_per_strategy_storage(self, sample_ensemble_signal):
@@ -273,8 +273,8 @@ class TestEnsembleSignalAggregator:
         aggregator = EnsembleSignalAggregator()
         aggregator.add_signal(sample_ensemble_signal)
 
-        assert "Triple Confluence Scalper" in aggregator._signals
-        assert len(aggregator._signals["Triple Confluence Scalper"]) == 1
+        assert "triple_confluence_scaler" in aggregator._signals
+        assert len(aggregator._signals["triple_confluence_scaler"]) == 1
 
     def test_deduplication_replaces_same_bar_signal(self, sample_ensemble_signal):
         """Test that adding signal from same strategy for same bar replaces existing."""
@@ -352,9 +352,9 @@ class TestEnsembleSignalAggregator:
             aggregator.add_signal(signal)
 
         # Get only Triple Confluence signals
-        tc_signals = aggregator.get_signals(strategy="Triple Confluence Scalper")
+        tc_signals = aggregator.get_signals(strategy="triple_confluence_scaler")
         assert len(tc_signals) == 1
-        assert tc_signals[0].strategy_name == "Triple Confluence Scalper"
+        assert tc_signals[0].strategy_name == "triple_confluence_scaler"
 
     def test_get_signals_filters_by_direction(self, multiple_strategy_signals):
         """Test get_signals with direction filter."""
@@ -420,9 +420,9 @@ class TestEnsembleSignalAggregator:
 
         active = aggregator.get_active_strategies()
         assert len(active) == 3
-        assert "Triple Confluence Scalper" in active
-        assert "Wolf Pack 3-Edge" in active
-        assert "Adaptive EMA Momentum" in active
+        assert "triple_confluence_scaler" in active
+        assert "wolf_pack_3_edge" in active
+        assert "adaptive_ema_momentum" in active
 
     def test_get_latest_signal_returns_most_recent(self, sample_ensemble_signal):
         """Test get_latest_signal returns most recent signal from strategy."""
@@ -461,7 +461,7 @@ class TestEnsembleSignalAggregator:
         assert aggregator.get_signal_count() == 3
 
         # Count specific strategy
-        assert aggregator.get_signal_count(strategy="Triple Confluence Scalper") == 1
+        assert aggregator.get_signal_count(strategy="triple_confluence_scaler") == 1
 
     def test_clear_all_signals_removes_all(self, multiple_strategy_signals):
         """Test clear_all_signals removes all stored signals."""
@@ -500,11 +500,14 @@ class TestSignalNormalizer:
 
         normalized = normalize_triple_confluence(original)
 
-        assert normalized.strategy_name == "Triple Confluence Scalper"
+        assert normalized.strategy_name == "triple_confluence_scaler"
         assert normalized.direction == "long"
         assert normalized.entry_price == 11850.00
         assert normalized.confidence == 0.85
-        assert normalized.bar_timestamp == original.timestamp
+        # Compare normalized timestamps
+        from src.detection.ensemble_signal_aggregator import _normalize_ts
+        assert normalized.bar_timestamp == _normalize_ts(original.timestamp)
+
         assert "fvg_size" in normalized.metadata
 
     def test_normalize_wolf_pack_signal(self):
@@ -525,7 +528,7 @@ class TestSignalNormalizer:
 
         normalized = normalize_wolf_pack(original)
 
-        assert normalized.strategy_name == "Wolf Pack 3-Edge"
+        assert normalized.strategy_name == "wolf_pack_3_edge"
         assert normalized.direction == "long"
         assert normalized.entry_price == 11850.00
         assert normalized.confidence == 0.88
@@ -551,7 +554,7 @@ class TestSignalNormalizer:
 
         normalized = normalize_ema_momentum(original)
 
-        assert normalized.strategy_name == "Adaptive EMA Momentum"
+        assert normalized.strategy_name == "adaptive_ema_momentum"
         assert normalized.direction == "long"  # Converted from LONG
         assert normalized.entry_price == 11850.00
         assert normalized.confidence == 0.82  # Converted from 82.0
@@ -559,14 +562,14 @@ class TestSignalNormalizer:
         assert normalized.metadata["ema_fast"] == 11848.0
 
     def test_normalize_vwap_bounce_signal(self):
-        """Test normalizing VWAP Bounce signal to Ensemble format."""
+        """Test normalizing vwap_bounce signal to Ensemble format."""
         from datetime import datetime
         from src.detection.ensemble_signal_aggregator import normalize_vwap_bounce
 
         # Mock VWAPBounceSignalModel
         class MockVWAPSignal:
             def __init__(self):
-                self.strategy_name = "VWAP Bounce"
+                self.strategy_name = "vwap_bounce"
                 self.timestamp = datetime(2026, 3, 31, 10, 30, 0)
                 self.direction = "long"
                 self.entry_price = 11850.00
@@ -579,7 +582,7 @@ class TestSignalNormalizer:
 
         normalized = normalize_vwap_bounce(original)
 
-        assert normalized.strategy_name == "VWAP Bounce"
+        assert normalized.strategy_name == "vwap_bounce"
         assert normalized.direction == "long"
         assert normalized.entry_price == 11850.00
         assert normalized.confidence == 0.75
@@ -593,7 +596,7 @@ class TestSignalNormalizer:
         # Mock OpeningRangeSignalModel
         class MockORSignal:
             def __init__(self):
-                self.strategy_name = "Opening Range Breakout"
+                self.strategy_name = "opening_range_breakout"
                 self.timestamp = datetime(2026, 3, 31, 10, 30, 0)
                 self.direction = "short"
                 self.entry_price = 11850.00
@@ -606,7 +609,7 @@ class TestSignalNormalizer:
 
         normalized = normalize_opening_range(original)
 
-        assert normalized.strategy_name == "Opening Range Breakout"
+        assert normalized.strategy_name == "opening_range_breakout"
         assert normalized.direction == "short"
         assert normalized.entry_price == 11850.00
         assert normalized.confidence == 0.72
@@ -630,7 +633,7 @@ class TestSignalNormalizer:
 
         normalized = normalize_signal(original)
 
-        assert normalized.strategy_name == "Triple Confluence Scalper"
+        assert normalized.strategy_name == "triple_confluence_scaler"
         assert isinstance(normalized, EnsembleSignal)
 
     def test_normalize_signal_raises_error_for_unknown_type(self):
@@ -642,7 +645,7 @@ class TestSignalNormalizer:
 
         unknown = UnknownSignal()
 
-        with pytest.raises(ValueError, match="Unknown signal type"):
+        with pytest.raises(ValueError, match="Unsupported signal type"):
             normalize_signal(unknown)
 
 
@@ -660,7 +663,7 @@ class TestAsyncSignalProcessing:
 
         signals = aggregator.get_signals()
         assert len(signals) == 1
-        assert signals[0].strategy_name == "Triple Confluence Scalper"
+        assert signals[0].strategy_name == "triple_confluence_scaler"
 
     @pytest.mark.asyncio
     async def test_process_signals_queue_handles_multiple_signals(self, sample_ensemble_signal):
@@ -879,4 +882,4 @@ class TestSignalConsensusAndAlignment:
         conflicting = aggregator.get_conflicting_strategies()
         assert len(conflicting) == 1
         # The short signal should be identified as conflicting
-        assert "Adaptive EMA Momentum" in conflicting
+        assert "adaptive_ema_momentum" in conflicting

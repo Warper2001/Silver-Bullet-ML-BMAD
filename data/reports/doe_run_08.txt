@@ -1,0 +1,60 @@
+Exported 410 trade setups to data/ml_training/doe_run_08_features.csv
+Exported 410 trade details to data/ml_training/doe_run_08_history.csv
+
+============================================================
+ TIER 2 META-LABELING BACKTEST
+============================================================
+SL Mult:            5.0x | TP Mult: 5.0x
+ATR Threshold:      0.1
+Session Windows:    baseline
+ML Filter:          DISABLED
+HTF Bias Gate:      off
+Premium/Discount:   off
+DOL Gate:           off
+No-Tuesday:         off
+Total Trades:       410
+Win Rate:           50.73%
+Profit Factor:      1.26
+Total P&L:          $2736.75
+============================================================
+/root/Silver-Bullet-ML-BMAD/src/research/backtest_zero_bias_optimized.py:209: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df_1m[['br_sw_act', 'bl_sw_act']] = df_1m[['br_sw_act', 'bl_sw_act']].fillna(False)
+
+Simulating Trades:   0%|          | 0/118601 [00:00<?, ?it/s]
+Simulating Trades:   2%|▏         | 2943/118601 [00:00<00:03, 29418.38it/s]
+Simulating Trades:   5%|▌         | 6056/118601 [00:00<00:03, 30424.26it/s]
+Simulating Trades:   8%|▊         | 9513/118601 [00:00<00:03, 32315.53it/s]
+Simulating Trades:  11%|█         | 13052/118601 [00:00<00:03, 33527.49it/s]
+Simulating Trades:  14%|█▍        | 16700/118601 [00:00<00:02, 34590.62it/s]
+Simulating Trades:  17%|█▋        | 20160/118601 [00:00<00:02, 34346.96it/s]
+Simulating Trades:  20%|█▉        | 23596/118601 [00:00<00:02, 34137.71it/s]
+Simulating Trades:  23%|██▎       | 27011/118601 [00:00<00:02, 32087.09it/s]
+Simulating Trades:  25%|██▌       | 30243/118601 [00:00<00:02, 30319.18it/s]
+Simulating Trades:  28%|██▊       | 33304/118601 [00:01<00:02, 30348.72it/s]
+Simulating Trades:  31%|███       | 36359/118601 [00:01<00:02, 29580.49it/s]
+Simulating Trades:  34%|███▎      | 39955/118601 [00:01<00:02, 31406.44it/s]
+Simulating Trades:  37%|███▋      | 43293/118601 [00:01<00:02, 31979.55it/s]
+Simulating Trades:  39%|███▉      | 46675/118601 [00:01<00:02, 32518.35it/s]
+Simulating Trades:  42%|████▏     | 49949/118601 [00:01<00:02, 32582.33it/s]
+Simulating Trades:  45%|████▍     | 53217/118601 [00:01<00:02, 31314.81it/s]
+Simulating Trades:  48%|████▊     | 56436/118601 [00:01<00:01, 31566.89it/s]
+Simulating Trades:  51%|█████     | 59903/118601 [00:01<00:01, 32472.89it/s]
+Simulating Trades:  53%|█████▎    | 63378/118601 [00:01<00:01, 33143.46it/s]
+Simulating Trades:  57%|█████▋    | 67036/118601 [00:02<00:01, 34160.55it/s]
+Simulating Trades:  59%|█████▉    | 70460/118601 [00:02<00:01, 33843.48it/s]
+Simulating Trades:  62%|██████▏   | 73851/118601 [00:02<00:01, 33537.92it/s]
+Simulating Trades:  65%|██████▌   | 77210/118601 [00:02<00:01, 32631.65it/s]
+Simulating Trades:  68%|██████▊   | 80481/118601 [00:02<00:01, 31694.17it/s]
+Simulating Trades:  71%|███████   | 83677/118601 [00:02<00:01, 31767.94it/s]
+Simulating Trades:  73%|███████▎  | 86861/118601 [00:02<00:01, 31438.03it/s]
+Simulating Trades:  76%|███████▌  | 90010/118601 [00:02<00:00, 31111.99it/s]
+Simulating Trades:  79%|███████▊  | 93125/118601 [00:02<00:00, 28088.25it/s]
+Simulating Trades:  81%|████████  | 96193/118601 [00:03<00:00, 28795.31it/s]
+Simulating Trades:  84%|████████▎ | 99261/118601 [00:03<00:00, 29320.98it/s]
+Simulating Trades:  86%|████████▌ | 102228/118601 [00:03<00:00, 27979.96it/s]
+Simulating Trades:  89%|████████▊ | 105063/118601 [00:03<00:00, 28079.47it/s]
+Simulating Trades:  91%|█████████▏| 108484/118601 [00:03<00:00, 29829.35it/s]
+Simulating Trades:  94%|█████████▍| 111493/118601 [00:03<00:00, 29655.01it/s]
+Simulating Trades:  97%|█████████▋| 114606/118601 [00:03<00:00, 30083.28it/s]
+Simulating Trades:  99%|█████████▉| 117628/118601 [00:03<00:00, 29302.95it/s]
+Simulating Trades: 100%|██████████| 118601/118601 [00:03<00:00, 31193.85it/s]

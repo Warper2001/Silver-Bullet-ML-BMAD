@@ -1,0 +1,174 @@
+
+================================================================================
+TIER 1 PARAMETER TUNING REPORT - Grid Search Results
+================================================================================
+
+Data: 20,000 raw bars → 11473 Dollar Bars
+Date Range: 2023-12-01 to 2023-12-22
+Combinations Tested: 16
+
+================================================================================
+PARAMETER GRID RESULTS (Sorted by Profit Factor)
+================================================================================
+
+
+1. SL2.5x_ATR0.6_Vol2.25_MaxGap$100.0
+   Trades: 406, Wins: 307, Losses: 99
+   WR: 75.62%, PF: 2.57, Trades/Day: 18.89
+   P&L: $6490.85, Expectancy: $15.99/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+2. SL2.5x_ATR0.6_Vol2.25_MaxGap$75.0
+   Trades: 390, Wins: 294, Losses: 96
+   WR: 75.38%, PF: 2.48, Trades/Day: 18.15
+   P&L: $5570.25, Expectancy: $14.28/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+3. SL2.5x_ATR0.6_Vol2.0_MaxGap$100.0
+   Trades: 614, Wins: 447, Losses: 167
+   WR: 72.80%, PF: 2.25, Trades/Day: 28.57
+   P&L: $8631.15, Expectancy: $14.06/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+4. SL2.5x_ATR0.6_Vol2.0_MaxGap$75.0
+   Trades: 585, Wins: 426, Losses: 159
+   WR: 72.82%, PF: 2.24, Trades/Day: 27.22
+   P&L: $7423.50, Expectancy: $12.69/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+5. SL2.5x_ATR0.7_Vol2.0_MaxGap$100.0
+   Trades: 561, Wins: 409, Losses: 152
+   WR: 72.91%, PF: 2.18, Trades/Day: 26.10
+   P&L: $7656.35, Expectancy: $13.65/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+6. SL2.5x_ATR0.7_Vol2.0_MaxGap$75.0
+   Trades: 532, Wins: 388, Losses: 144
+   WR: 72.93%, PF: 2.15, Trades/Day: 24.75
+   P&L: $6448.70, Expectancy: $12.12/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+7. SL2.5x_ATR0.6_Vol1.75_MaxGap$75.0
+   Trades: 941, Wins: 677, Losses: 264
+   WR: 71.94%, PF: 2.06, Trades/Day: 43.79
+   P&L: $10913.10, Expectancy: $11.60/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+8. SL2.5x_ATR0.6_Vol1.75_MaxGap$100.0
+   Trades: 996, Wins: 717, Losses: 279
+   WR: 71.99%, PF: 2.05, Trades/Day: 46.35
+   P&L: $12738.60, Expectancy: $12.79/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+9. SL2.5x_ATR0.7_Vol1.75_MaxGap$100.0
+   Trades: 933, Wins: 672, Losses: 261
+   WR: 72.03%, PF: 1.99, Trades/Day: 43.41
+   P&L: $11626.55, Expectancy: $12.46/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+10. SL2.5x_ATR0.7_Vol1.75_MaxGap$75.0
+   Trades: 878, Wins: 632, Losses: 246
+   WR: 71.98%, PF: 1.99, Trades/Day: 40.85
+   P&L: $9801.05, Expectancy: $11.16/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+11. SL2.5x_ATR0.6_Vol2.25_MaxGap$50.0
+   Trades: 357, Wins: 265, Losses: 92
+   WR: 74.23%, PF: 1.87, Trades/Day: 16.61
+   P&L: $3183.70, Expectancy: $8.92/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+12. SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0
+   Trades: 321, Wins: 239, Losses: 82
+   WR: 74.45%, PF: 1.75, Trades/Day: 14.94
+   P&L: $2513.60, Expectancy: $7.83/trade
+   Targets: ✅ WR,
+            ✅ PF,
+            ✅ Freq
+   ALL TARGETS MET: ✅ YES
+
+13. SL2.5x_ATR0.6_Vol2.0_MaxGap$50.0
+   Trades: 533, Wins: 382, Losses: 151
+   WR: 71.67%, PF: 1.69, Trades/Day: 24.80
+   P&L: $3910.30, Expectancy: $7.34/trade
+   Targets: ✅ WR,
+            ❌ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+14. SL2.5x_ATR0.6_Vol1.75_MaxGap$50.0
+   Trades: 831, Wins: 591, Losses: 240
+   WR: 71.12%, PF: 1.65, Trades/Day: 38.67
+   P&L: $5760.85, Expectancy: $6.93/trade
+   Targets: ✅ WR,
+            ❌ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+15. SL2.5x_ATR0.7_Vol2.0_MaxGap$50.0
+   Trades: 481, Wins: 345, Losses: 136
+   WR: 71.73%, PF: 1.56, Trades/Day: 22.38
+   P&L: $2983.35, Expectancy: $6.20/trade
+   Targets: ✅ WR,
+            ❌ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+16. SL2.5x_ATR0.7_Vol1.75_MaxGap$50.0
+   Trades: 769, Wins: 547, Losses: 222
+   WR: 71.13%, PF: 1.56, Trades/Day: 35.78
+   P&L: $4696.65, Expectancy: $6.11/trade
+   Targets: ✅ WR,
+            ❌ PF,
+            ❌ Freq
+   ALL TARGETS MET: ❌ NO
+
+================================================================================
+BEST CONFIGURATION FOUND
+================================================================================
+SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0
+
+Metrics:
+Total Trades: 321
+Win Rate: 74.45%
+Profit Factor: 1.75
+Avg Trades/Day: 14.94
+Total P&L: $2513.60
+Expectancy: $7.83 per trade
+
+ALL TARGETS MET: ✅
+================================================================================
+================================================================================

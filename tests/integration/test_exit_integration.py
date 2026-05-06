@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime, timedelta
 
 from src.execution.exit_logic import TimeBasedExit, RiskRewardExit, HybridExit
-from src.execution.models import PositionMonitoringState, TradeOrder, ExitOrder
+from src.execution.models import _now, NY_TZ, PositionMonitoringState, TradeOrder, ExitOrder
 from src.detection.models import EnsembleTradeSignal
 
 
@@ -16,7 +16,7 @@ class TestExitLogicIntegration:
         """Create a sample ensemble signal."""
         return EnsembleTradeSignal(
             strategy_name="Ensemble-Weighted Confidence",
-            timestamp=datetime.now(),
+            timestamp=_now(),
             direction="long",
             entry_price=11850.0,
             stop_loss=11840.0,
@@ -25,13 +25,13 @@ class TestExitLogicIntegration:
             contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
             strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
             strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
-            bar_timestamp=datetime.now()
+            bar_timestamp=_now()
         )
 
     @pytest.fixture
     def open_position(self, ensemble_signal):
         """Create an open position."""
-        entry_time = datetime.now() - timedelta(minutes=3)
+        entry_time = _now() - timedelta(minutes=3)
         return TradeOrder(
             trade_id="pos-integration-test",
             symbol="MNQ",
@@ -76,7 +76,7 @@ class TestExitLogicIntegration:
         exit_order = time_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
         assert exit_order.exit_type == "full"
         assert exit_order.quantity == 3
 
@@ -98,7 +98,7 @@ class TestExitLogicIntegration:
         exit_order = rr_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "take_profit"
+        assert exit_order.exit_reason == "Take profit"
         assert exit_order.rr_ratio == pytest.approx(2.0)
 
     def test_full_pipeline_stop_loss(self, open_position):
@@ -119,7 +119,7 @@ class TestExitLogicIntegration:
         exit_order = rr_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "stop_loss"
+        assert exit_order.exit_reason == "Stop loss"
         assert exit_order.rr_ratio == -1.0
 
     def test_full_pipeline_hybrid_flow(self, open_position):
@@ -140,7 +140,7 @@ class TestExitLogicIntegration:
         partial_exit = hybrid_exit.check_exit(state_partial)
 
         assert partial_exit is not None
-        assert partial_exit.exit_reason == "hybrid_partial"
+        assert partial_exit.exit_reason == "Hybrid partial (1.5R)"
         assert partial_exit.exit_type == "partial"
         assert partial_exit.quantity == 1  # 3 * 0.50 = 1.5 → 1
 
@@ -162,7 +162,7 @@ class TestExitLogicIntegration:
         final_exit = hybrid_exit.check_exit(state_final)
 
         assert final_exit is not None
-        assert final_exit.exit_reason == "hybrid_trail"
+        assert final_exit.exit_reason == "Hybrid trail (2R)"
         assert final_exit.exit_type == "full"
         assert final_exit.quantity == 2  # Remaining quantity
 
@@ -186,7 +186,7 @@ class TestExitLogicIntegration:
         # RiskRewardExit should prioritize SL
         rr_exit_order = rr_exit.check_exit(state)
         assert rr_exit_order is not None
-        assert rr_exit_order.exit_reason == "stop_loss"
+        assert rr_exit_order.exit_reason == "Stop loss"
 
         # TimeBasedExit would also trigger, but SL should be checked first in production
 
@@ -212,7 +212,7 @@ class TestExitLogicIntegration:
         exit_order = hybrid_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
         assert exit_order.quantity == 2
 
     def test_no_exit_conditions_met(self, open_position):
@@ -251,11 +251,11 @@ class TestExitLogicIntegration:
             limit_price=None,
             stop_loss=11860.0,
             take_profit=11830.0,
-            timestamp=datetime.now() - timedelta(minutes=5),
+            timestamp=_now() - timedelta(minutes=5),
             status="filled",
             ensemble_signal=signal,
             position_size=3,
-            entry_time=datetime.now() - timedelta(minutes=5),
+            entry_time=_now() - timedelta(minutes=5),
             exit_time=None,
             exit_price=None,
             exit_reason=None,
@@ -283,7 +283,7 @@ class TestExitLogicIntegration:
         exit_order = rr_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "take_profit"
+        assert exit_order.exit_reason == "Take profit"
         # P&L = (11850 - 11830) * 0.50 * 3 = 20 * 0.50 * 3 = $30
         assert exit_order.pnl == pytest.approx(30.0)
 
@@ -397,10 +397,10 @@ class TestExitLogicIntegration:
 
         # Both strategies with custom 5-min limit should trigger
         assert custom_time.check_exit(state) is not None
-        assert custom_time.check_exit(state).exit_reason == "time_stop"
+        assert custom_time.check_exit(state).exit_reason == "Time stop (10-min max)"
 
         assert custom_hybrid.check_exit(state) is not None
-        assert custom_hybrid.check_exit(state).exit_reason == "time_stop"
+        assert custom_hybrid.check_exit(state).exit_reason == "Time stop (10-min max)"
 
     def test_pnl_accuracy_across_strategies(self, open_position):
         """Test P&L calculation accuracy across all strategies."""

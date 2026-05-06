@@ -9,6 +9,8 @@ import asyncio
 import logging
 from datetime import datetime
 
+import yaml
+
 from src.data.models import DollarBar, SilverBulletSetup, SwingPoint
 from src.detection.fvg_detector import FVGDetector
 from src.detection.liquidity_sweep_detector import LiquiditySweepDetector
@@ -18,6 +20,11 @@ from src.detection.time_window_filter import DEFAULT_TRADING_WINDOWS, check_time
 # Import functional APIs to avoid circular imports
 from src.detection.confidence_scorer import score_setup
 from src.detection.silver_bullet_detection import detect_silver_bullet_setup
+
+# TIER 1 imports
+from src.detection.atr_filter import ATRFilter
+from src.detection.volume_confirmer import VolumeConfirmer
+from src.detection.multi_timeframe import MultiTimeframeNester
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +39,9 @@ class DetectionStatistics:
         signal_count: Number of Silver Bullet signals generated
         total_confidence: Sum of all confidence scores (for calculating average)
         start_time: Timestamp when statistics tracking started
+        tier1_atr_filtered: Number of FVGs rejected by ATR filter
+        tier1_volume_filtered: Number of FVGs rejected by volume filter
+        tier1_nested_count: Number of nested FVGs detected
     """
 
     def __init__(self) -> None:
@@ -42,6 +52,11 @@ class DetectionStatistics:
         self.signal_count: int = 0
         self.total_confidence: float = 0.0
         self.start_time: datetime = datetime.now()
+
+        # TIER 1 statistics
+        self.tier1_atr_filtered: int = 0
+        self.tier1_volume_filtered: int = 0
+        self.tier1_nested_count: int = 0
 
     def record_mss(self) -> None:
         """Record an MSS detection event."""
@@ -63,6 +78,18 @@ class DetectionStatistics:
         """
         self.signal_count += 1
         self.total_confidence += confidence
+
+    def record_tier1_atr_filtered(self) -> None:
+        """Record an FVG rejected by ATR filter."""
+        self.tier1_atr_filtered += 1
+
+    def record_tier1_volume_filtered(self) -> None:
+        """Record an FVG rejected by volume filter."""
+        self.tier1_volume_filtered += 1
+
+    def record_tier1_nested(self) -> None:
+        """Record a nested FVG detection."""
+        self.tier1_nested_count += 1
 
     @property
     def average_confidence(self) -> float:
@@ -110,6 +137,10 @@ class DetectionStatistics:
             "average_confidence": self.average_confidence,
             "signals_per_hour": self.signals_per_hour,
             "runtime_seconds": self.runtime_seconds,
+            # TIER 1 statistics
+            "tier1_atr_filtered": self.tier1_atr_filtered,
+            "tier1_volume_filtered": self.tier1_volume_filtered,
+            "tier1_nested_count": self.tier1_nested_count,
         }
 
 
@@ -190,10 +221,69 @@ class DetectionPipeline:
         # Bar index tracking for detection functions
         self._current_bar_index = 0
 
+        # TIER 1: Initialize quality filters
+        self._init_tier1_filters()
+
         logger.info(
             f"DetectionPipeline initialized with {self.MAX_PATTERN_HISTORY} "
             f"pattern history limit"
         )
+
+    def _init_tier1_filters(self) -> None:
+        """Initialize TIER 1 quality filters from config.yaml.
+
+        Reads configuration and instantiates:
+        - ATRFilter for noise reduction
+        - VolumeConfirmer for conviction validation
+        - MultiTimeframeNester for Fibonacci nesting
+        """
+        try:
+            with open("config.yaml", "r") as f:
+                config = yaml.safe_load(f)
+
+            tier1_config = config.get("tier1", {}).get("fvg", {})
+            tier1_enabled = tier1_config.get("enabled", True)
+
+            if not tier1_enabled:
+                logger.info("TIER 1 filters disabled in config")
+                self.atr_filter = None
+                self.volume_confirmer = None
+                self.multi_timeframe_nester = None
+                return
+
+            # Initialize ATR filter
+            atr_threshold = tier1_config.get("atr_threshold", 0.5)
+            atr_lookback = tier1_config.get("atr_lookback_period", 14)
+            self.atr_filter = ATRFilter(
+                lookback_period=atr_lookback,
+                atr_threshold=atr_threshold,
+            )
+            logger.info(f"TIER 1 ATR filter initialized: threshold={atr_threshold}, lookback={atr_lookback}")
+
+            # Initialize volume confirmer
+            volume_ratio = tier1_config.get("volume_ratio", 1.5)
+            volume_lookback = tier1_config.get("volume_lookback_period", 20)
+            self.volume_confirmer = VolumeConfirmer(
+                lookback_period=volume_lookback,
+                volume_ratio_threshold=volume_ratio,
+            )
+            logger.info(f"TIER 1 volume confirmer initialized: ratio={volume_ratio}, lookback={volume_lookback}")
+
+            # Initialize multi-timeframe nester
+            fibonacci_pairs = tier1_config.get("fibonacci_pairs", [[5, 21], [8, 34], [13, 55]])
+            self.multi_timeframe_nester = MultiTimeframeNester(
+                fibonacci_pairs=fibonacci_pairs,
+            )
+            logger.info(f"TIER 1 multi-timeframe nester initialized: pairs={fibonacci_pairs}")
+
+            # Cache for FVG history across timeframes
+            self._fvg_history: dict[int, list] = {}
+
+        except Exception as e:
+            logger.error(f"Failed to initialize TIER 1 filters: {e}", exc_info=True)
+            self.atr_filter = None
+            self.volume_confirmer = None
+            self.multi_timeframe_nester = None
 
     async def process_bar(self, bar: DollarBar) -> None:
         """Process a single Dollar Bar through the detection pipeline.
@@ -325,13 +415,19 @@ class DetectionPipeline:
             self.statistics.record_mss()
             logger.debug(f"Bearish MSS detected at {bar.timestamp}")
 
-        # Detect FVG
+        # Detect FVG (with TIER 1 quality filters)
         if len(self._bar_history) >= 3:
             bullish_fvg = detect_bullish_fvg(
-                self._bar_history, len(self._bar_history) - 1
+                self._bar_history,
+                len(self._bar_history) - 1,
+                atr_filter=self.atr_filter,
+                volume_confirmer=self.volume_confirmer,
             )
             bearish_fvg = detect_bearish_fvg(
-                self._bar_history, len(self._bar_history) - 1
+                self._bar_history,
+                len(self._bar_history) - 1,
+                atr_filter=self.atr_filter,
+                volume_confirmer=self.volume_confirmer,
             )
 
             if bullish_fvg:
@@ -343,6 +439,23 @@ class DetectionPipeline:
                 fvg_events.append(bearish_fvg)
                 self.statistics.record_fvg()
                 logger.debug(f"Bearish FVG detected at {bar.timestamp}")
+
+        # TIER 1: Multi-timeframe nesting detection
+        if self.multi_timeframe_nester and fvg_events:
+            for fvg in fvg_events:
+                has_nesting, nested_fvgs = self.multi_timeframe_nester.check_nesting(
+                    base_fvg=fvg,
+                    bars=self._bar_history,
+                    fvg_history=self._fvg_history,
+                )
+                if has_nesting:
+                    self.statistics.record_tier1_nested()
+                    # Nested FVGs get higher confidence (boosted in scoring)
+                    # For now, just log the detection
+                    logger.info(
+                        f"Nested FVG detected: {len(nested_fvgs)} nesting(s) for "
+                        f"{fvg.direction.upper()} FVG at bar {fvg.bar_index}"
+                    )
 
         # Detect liquidity sweeps (need swing points)
         if swing_highs or swing_lows:
@@ -392,6 +505,7 @@ class DetectionPipeline:
             - Checks if MSS, FVG, and sweep occurred within 10 bars
             - Prioritizes 3-pattern confluence (MSS + FVG + sweep)
             - Falls back to 2-pattern confluence (MSS + FVG)
+            - TIER 1: Nested FVGs get confidence boost
         """
         setups = []
 
@@ -422,6 +536,24 @@ class DetectionPipeline:
                             sweep_events=self._recent_sweeps,
                         )
                         if setup:
+                            # TIER 1: Check if FVG has nesting and boost confidence
+                            if self.multi_timeframe_nester:
+                                has_nesting, nested_fvgs = self.multi_timeframe_nester.check_nesting(
+                                    base_fvg=fvg,
+                                    bars=self._bar_history,
+                                    fvg_history=self._fvg_history,
+                                )
+                                if has_nesting:
+                                    # Boost confidence for nested FVGs
+                                    # Base confidence is 0-5, add 0.5-1.5 based on nesting level
+                                    nesting_boost = min(len(nested_fvgs) * 0.5, 1.5)
+                                    setup.confidence = min(setup.confidence + nesting_boost, 5.0)
+                                    logger.info(
+                                        f"Nested FVG confidence boost: +{nesting_boost:.2f} "
+                                        f"for {setup.direction.upper()} setup "
+                                        f"(new confidence: {setup.confidence:.2f})"
+                                    )
+
                             detected_setups.append(setup)
 
         setups.extend(detected_setups)

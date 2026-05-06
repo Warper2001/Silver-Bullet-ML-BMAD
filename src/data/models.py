@@ -157,10 +157,10 @@ class DollarBar(BaseModel):
         if v <= 0:
             raise ValueError("notional_value must be positive")
 
-        # Sanity check: notional should not exceed $20B (400× threshold)
+        # Sanity check: notional should not exceed $10B (200× threshold)
         # This catches calculation errors or malformed data
-        # Increased limit for actual market data with high notional values ($14.4B+)
-        max_reasonable = 20_000_000_000  # $20B
+        # Increased limit for multi-timeframe resampling (21/34/55-min bars can aggregate higher volumes)
+        max_reasonable = 10_000_000_000  # $10B
         if v > max_reasonable:
             raise ValueError(
                 f"notional_value ${v:.2f} exceeds reasonable maximum ${max_reasonable:.2f}"
@@ -293,6 +293,40 @@ class FVGEvent(BaseModel):
     fill_bar_index: int | None = Field(
         default=None, ge=0, description="Bar index when gap was filled"
     )
+    confidence: float = Field(
+        default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
+    )
+
+
+class NestedFVGEvent(BaseModel):
+    """Represents a multi-timeframe nested Fair Value Gap event.
+
+    Nested FVGs occur when a smaller timeframe FVG (e.g., 5-minute)
+    is completely contained within a larger timeframe FVG (e.g., 21-minute)
+    in the same direction. These represent the highest-probability setups
+    due to confluence across time horizons.
+    """
+
+    timestamp: datetime = Field(..., description="Nested FVG detection timestamp")
+    direction: Literal["bullish", "bearish"] = Field(
+        ..., description="Nested FVG direction (both timeframes agree)"
+    )
+    child_fvg: FVGEvent = Field(
+        ..., description="Smaller timeframe FVG (e.g., 5-minute)"
+    )
+    parent_fvg: FVGEvent = Field(
+        ..., description="Larger timeframe FVG (e.g., 21-minute)"
+    )
+    nesting_level: int = Field(
+        ..., ge=1, le=3, description="Nesting depth (1=single pair, 2=triple nesting)"
+    )
+    timeframe_pair: tuple[int, int] = Field(
+        ..., description="Timeframe ratio pair (e.g., (5, 21) for 5-min inside 21-min)"
+    )
+    parent_fvg_id: str = Field(
+        ..., description="Unique identifier for parent FVG (timestamp+bar_index)"
+    )
+    bar_index: int = Field(..., ge=0, description="Bar index where nesting detected")
     confidence: float = Field(
         default=0.0, ge=0, le=5, description="Confidence score (1-5), calculated later"
     )

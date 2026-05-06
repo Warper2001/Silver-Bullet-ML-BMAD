@@ -1,0 +1,24 @@
+
+==================================================================
+MTF NESTING BACKTEST — SIDE-BY-SIDE COMPARISON
+==================================================================
+Data:     MNQ 2025-08-01 → 2025-12-31 (1-min bars)
+Config:   SL2.5x | ATR0.7 | Vol2.25 | MaxGap$50.0 | Hold10
+MTF:      1-min FVG nested in 15-min OR 4-hour (240-min)
+==================================================================
+
+Metric                           NO MTF    MTF 15/240       DELTA
+------------------------------------------------------------------
+Total Trades                       1559          1461         -98
+Win Rate                         76.33%        76.18%      -0.15%
+Profit Factor                      1.20          1.18       -0.02
+Avg Trades / Day                  14.77         13.84       -0.93
+Total P&L                  $    3694.40  $    3162.60  $  -531.80
+Avg Win                    $      18.88  $      18.83
+Avg Loss                   $      50.87  $      51.15
+TP / SL / Time exits       1166/95/298        1093/89/279
+MTF Signals Filtered                n/a           157
+------------------------------------------------------------------
+VERDICT: ⚠️  MIXED — Review manually
+Criteria: win rate improves AND avg trades/day >= 3
+==================================================================

@@ -26,72 +26,84 @@ class TestStrategyWeights:
     def test_valid_equal_weights(self):
         """Test creation with valid equal weights (0.20 each)."""
         weights = StrategyWeights(
-            triple_confluence_scaler=0.20,
-            wolf_pack_3_edge=0.20,
-            adaptive_ema_momentum=0.20,
-            vwap_bounce=0.20,
-            opening_range_breakout=0.20,
+            strategies={
+                "triple_confluence_scaler": 0.20,
+                "wolf_pack_3_edge": 0.20,
+                "adaptive_ema_momentum": 0.20,
+                "vwap_bounce": 0.20,
+                "opening_range_breakout": 0.20,
+            }
         )
-        assert weights.triple_confluence_scaler == 0.20
-        assert weights.wolf_pack_3_edge == 0.20
-        assert weights.adaptive_ema_momentum == 0.20
-        assert weights.vwap_bounce == 0.20
-        assert weights.opening_range_breakout == 0.20
+        assert weights.strategies["triple_confluence_scaler"] == 0.20
+        assert weights.strategies["wolf_pack_3_edge"] == 0.20
+        assert weights.strategies["adaptive_ema_momentum"] == 0.20
+        assert weights.strategies["vwap_bounce"] == 0.20
+        assert weights.strategies["opening_range_breakout"] == 0.20
 
     def test_weights_sum_to_one(self):
         """Test that weights must sum to 1.0."""
         with pytest.raises(ValidationError, match="sum to 1.0"):
             StrategyWeights(
-                triple_confluence_scaler=0.30,
-                wolf_pack_3_edge=0.30,
-                adaptive_ema_momentum=0.30,
-                vwap_bounce=0.30,
-                opening_range_breakout=0.30,  # Sum = 1.5, should fail
+                strategies={
+                    "triple_confluence_scaler": 0.30,
+                    "wolf_pack_3_edge": 0.30,
+                    "adaptive_ema_momentum": 0.30,
+                    "vwap_bounce": 0.30,
+                    "opening_range_breakout": 0.30,  # Sum = 1.5, should fail
+                }
             )
 
     def test_weights_must_be_positive(self):
         """Test that weights must be between 0 and 1."""
         with pytest.raises(ValidationError):
             StrategyWeights(
-                triple_confluence_scaler=-0.10,
-                wolf_pack_3_edge=0.30,
-                adaptive_ema_momentum=0.30,
-                vwap_bounce=0.30,
-                opening_range_breakout=0.20,
+                strategies={
+                    "triple_confluence_scaler": -0.10,
+                    "wolf_pack_3_edge": 0.30,
+                    "adaptive_ema_momentum": 0.30,
+                    "vwap_bounce": 0.30,
+                    "opening_range_breakout": 0.20,
+                }
             )
 
     def test_weights_must_not_exceed_one(self):
         """Test that individual weights cannot exceed 1.0."""
         with pytest.raises(ValidationError):
             StrategyWeights(
-                triple_confluence_scaler=1.5,
-                wolf_pack_3_edge=0.0,
-                adaptive_ema_momentum=0.0,
-                vwap_bounce=0.0,
-                opening_range_breakout=0.0,
+                strategies={
+                    "triple_confluence_scaler": 1.5,
+                    "wolf_pack_3_edge": 0.0,
+                    "adaptive_ema_momentum": 0.0,
+                    "vwap_bounce": 0.0,
+                    "opening_range_breakout": 0.0,
+                }
             )
 
     def test_valid_unequal_weights(self):
         """Test creation with valid unequal weights that sum to 1.0."""
         weights = StrategyWeights(
-            triple_confluence_scaler=0.25,
-            wolf_pack_3_edge=0.20,
-            adaptive_ema_momentum=0.15,
-            vwap_bounce=0.30,
-            opening_range_breakout=0.10,
+            strategies={
+                "triple_confluence_scaler": 0.25,
+                "wolf_pack_3_edge": 0.20,
+                "adaptive_ema_momentum": 0.15,
+                "vwap_bounce": 0.30,
+                "opening_range_breakout": 0.10,
+            }
         )
-        assert weights.triple_confluence_scaler == 0.25
-        assert weights.vwap_bounce == 0.30
+        assert weights.strategies["triple_confluence_scaler"] == 0.25
+        assert weights.strategies["vwap_bounce"] == 0.30
 
     def test_weights_sum_with_floating_point_tolerance(self):
         """Test that weights sum validation has floating point tolerance."""
         # Small floating point errors should be acceptable
         weights = StrategyWeights(
-            triple_confluence_scaler=0.2000000001,
-            wolf_pack_3_edge=0.20,
-            adaptive_ema_momentum=0.20,
-            vwap_bounce=0.20,
-            opening_range_breakout=0.1999999999,
+            strategies={
+                "triple_confluence_scaler": 0.2000000001,
+                "wolf_pack_3_edge": 0.20,
+                "adaptive_ema_momentum": 0.20,
+                "vwap_bounce": 0.20,
+                "opening_range_breakout": 0.1999999999,
+            }
         )
         assert weights is not None
 
@@ -156,11 +168,11 @@ class TestWeightManager:
         manager = WeightManager(config_path=str(valid_config_path))
         weights = manager.load_weights()
 
-        assert weights.triple_confluence_scaler == 0.20
-        assert weights.wolf_pack_3_edge == 0.20
-        assert weights.adaptive_ema_momentum == 0.20
-        assert weights.vwap_bounce == 0.20
-        assert weights.opening_range_breakout == 0.20
+        assert weights.strategies["triple_confluence_scaler"] == 0.20
+        assert weights.strategies["wolf_pack_3_edge"] == 0.20
+        assert weights.strategies["adaptive_ema_momentum"] == 0.20
+        assert weights.strategies["vwap_bounce"] == 0.20
+        assert weights.strategies["opening_range_breakout"] == 0.20
 
     def test_load_weights_raises_error_on_invalid_config(self, invalid_config_path):
         """Test that loading invalid config raises ValueError."""
@@ -173,13 +185,7 @@ class TestWeightManager:
         """Test saving weights to config file."""
         manager = WeightManager(config_path=str(valid_config_path))
 
-        new_weights = StrategyWeights(
-            triple_confluence_scaler=0.25,
-            wolf_pack_3_edge=0.20,
-            adaptive_ema_momentum=0.15,
-            vwap_bounce=0.30,
-            opening_range_breakout=0.10,
-        )
+        new_weights = StrategyWeights(strategies={"triple_confluence_scaler": 0.25, "wolf_pack_3_edge": 0.20, "adaptive_ema_momentum": 0.15, "vwap_bounce": 0.30, "opening_range_breakout": 0.10})
 
         manager.save_weights(new_weights)
 
@@ -187,9 +193,9 @@ class TestWeightManager:
         manager2 = WeightManager(config_path=str(valid_config_path))
         reloaded = manager2.load_weights()
 
-        assert reloaded.triple_confluence_scaler == 0.25
-        assert reloaded.vwap_bounce == 0.30
-        assert reloaded.adaptive_ema_momentum == 0.15
+        assert reloaded.strategies["triple_confluence_scaler"] == 0.25
+        assert reloaded.strategies["wolf_pack_3_edge"] == 0.20
+        assert reloaded.strategies["adaptive_ema_momentum"] == 0.15
 
     def test_update_single_weight(self, valid_config_path):
         """Test updating a single strategy weight.
@@ -211,33 +217,27 @@ class TestWeightManager:
         """Test that normalize_weights adjusts weights to sum to 1.0."""
         manager = WeightManager(config_path=str(valid_config_path))
 
-        # Use model_construct to create weights that don't sum to 1.0 (bypasses validation)
-        # This is allowed for testing internal normalization logic
         weights = StrategyWeights.model_construct(
-            triple_confluence_scaler=0.30,
-            wolf_pack_3_edge=0.30,
-            adaptive_ema_momentum=0.20,
-            vwap_bounce=0.15,
-            opening_range_breakout=0.15,  # Sum = 1.1
+            strategies={
+                "triple_confluence_scaler": 0.30,
+                "wolf_pack_3_edge": 0.30,
+                "adaptive_ema_momentum": 0.20,
+                "vwap_bounce": 0.15,
+                "opening_range_breakout": 0.15,  # Sum = 1.1
+            }
         )
 
         normalized = manager.normalize_weights(weights)
 
         # Should sum to 1.0
-        total = (
-            normalized.triple_confluence_scaler
-            + normalized.wolf_pack_3_edge
-            + normalized.adaptive_ema_momentum
-            + normalized.vwap_bounce
-            + normalized.opening_range_breakout
-        )
+        total = sum(normalized.strategies.values())
 
         assert abs(total - 1.0) < 1e-6
 
         # Proportions should be preserved
         # 0.30/0.30 = 1.0, so normalized values should be equal
         assert (
-            normalized.triple_confluence_scaler / normalized.wolf_pack_3_edge
+            normalized.strategies["triple_confluence_scaler"] / normalized.strategies["wolf_pack_3_edge"]
             == 0.30 / 0.30
         )
 

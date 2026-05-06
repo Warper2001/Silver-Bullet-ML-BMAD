@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import pytz
 from collections import deque
 from datetime import datetime, timedelta
 from typing import Any
@@ -10,260 +11,169 @@ from src.detection.models import EnsembleSignal
 
 logger = logging.getLogger(__name__)
 
+# Target timezone for all ensemble processing
+NY_TZ = pytz.timezone("America/New_York")
+
+def _normalize_ts(dt: datetime) -> datetime:
+    """Normalize datetime to New York timezone."""
+    if dt.tzinfo is None:
+        # Assume UTC if no timezone provided (standard API convention)
+        dt = pytz.utc.localize(dt)
+    return dt.astimezone(NY_TZ)
 
 # =============================================================================
 # Signal Normalizer Functions
 # =============================================================================
 
-
 def normalize_triple_confluence(signal: Any) -> EnsembleSignal:
-    """Normalize Triple Confluence Scalper signal to Ensemble format.
-
-    Args:
-        signal: TripleConfluenceSignal from src.detection.models
-
-    Returns:
-        Normalized EnsembleSignal
-
-    Raises:
-        ValueError: If signal validation fails
-    """
-    # Validate signal integrity
+    """Normalize Triple Confluence Scalper signal."""
     if not hasattr(signal, "entry_price") or signal.entry_price is None:
         raise ValueError("Invalid TripleConfluenceSignal: missing entry_price")
 
-    # Convert direction to lowercase (already lowercase, but ensures consistency)
-    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
+    # Decision 3A: Enforce explicit bar_timestamp or fall back to normalized timestamp
+    bar_ts = getattr(signal, "bar_timestamp", signal.timestamp)
 
-    # Confidence is already 0-1 scale
-    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
-
-    # Preserve all contributing factors in metadata
     metadata = {}
-    if hasattr(signal, "contributing_factors"):
-        metadata = signal.contributing_factors.copy()
+    if hasattr(signal, "contributing_factors") and signal.contributing_factors:
+        metadata = dict(signal.contributing_factors)
     # Add expected win rate if available
     if hasattr(signal, "expected_win_rate"):
         metadata["expected_win_rate"] = signal.expected_win_rate
-
+        
     return EnsembleSignal(
-        strategy_name="triple_confluence_scaler",  # Force normalized name
-        timestamp=signal.timestamp,
-        direction=direction,  # type: ignore[arg-type]
+        strategy_name="triple_confluence_scaler",
+        timestamp=_normalize_ts(signal.timestamp),
+        direction=signal.direction.lower(),
         entry_price=signal.entry_price,
         stop_loss=signal.stop_loss,
         take_profit=signal.take_profit,
-        confidence=confidence,
-        bar_timestamp=signal.timestamp,  # Use signal timestamp as bar timestamp
+        confidence=signal.confidence,
+        bar_timestamp=_normalize_ts(bar_ts),
         metadata=metadata,
     )
 
-
 def normalize_wolf_pack(signal: Any) -> EnsembleSignal:
-    """Normalize Wolf Pack 3-Edge signal to Ensemble format.
-
-    Args:
-        signal: WolfPackSignal from src.detection.models
-
-    Returns:
-        Normalized EnsembleSignal
-
-    Raises:
-        ValueError: If signal validation fails
-    """
-    # Validate signal integrity
+    """Normalize Wolf Pack 3-Edge signal."""
     if not hasattr(signal, "entry_price") or signal.entry_price is None:
         raise ValueError("Invalid WolfPackSignal: missing entry_price")
 
-    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
-    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
+    bar_ts = getattr(signal, "bar_timestamp", signal.timestamp)
 
-    # Preserve all contributing factors in metadata
     metadata = {}
-    if hasattr(signal, "contributing_factors"):
-        metadata = signal.contributing_factors.copy()
-    if hasattr(signal, "expected_win_rate"):
-        metadata["expected_win_rate"] = signal.expected_win_rate
-
+    if hasattr(signal, "contributing_factors") and signal.contributing_factors:
+        metadata = dict(signal.contributing_factors)
+        
     return EnsembleSignal(
-        strategy_name="wolf_pack_3_edge",  # Force normalized name
-        timestamp=signal.timestamp,
-        direction=direction,  # type: ignore[arg-type]
+        strategy_name="wolf_pack_3_edge",
+        timestamp=_normalize_ts(signal.timestamp),
+        direction=signal.direction.lower(),
         entry_price=signal.entry_price,
         stop_loss=signal.stop_loss,
         take_profit=signal.take_profit,
-        confidence=confidence,
-        bar_timestamp=signal.timestamp,
+        confidence=signal.confidence,
+        bar_timestamp=_normalize_ts(bar_ts),
         metadata=metadata,
     )
 
-
 def normalize_ema_momentum(signal: Any) -> EnsembleSignal:
-    """Normalize Adaptive EMA Momentum signal to Ensemble format.
-
-    Note: EMA Momentum uses UPPERCASE direction (LONG/SHORT) and 0-100 confidence scale.
-    This function converts both to standard Ensemble format.
-
-    Args:
-        signal: MomentumSignal from src.detection.models
-
-    Returns:
-        Normalized EnsembleSignal
-
-    Raises:
-        ValueError: If signal validation fails
-    """
-    # Validate signal integrity
+    """Normalize Adaptive EMA Momentum signal (handles 0-100 scale)."""
     if not hasattr(signal, "entry_price") or signal.entry_price is None:
         raise ValueError("Invalid MomentumSignal: missing entry_price")
 
-    # Convert UPPERCASE direction to lowercase
-    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
+    bar_ts = getattr(signal, "bar_timestamp", signal.timestamp)
+    confidence = signal.confidence / 100.0 if signal.confidence > 1.0 else signal.confidence
 
-    # Convert confidence from 0-100 scale to 0-1 scale
-    confidence_raw = signal.confidence if hasattr(signal, "confidence") else 50.0
-    confidence = confidence_raw / 100.0
-
-    # Preserve indicator values in metadata
     metadata = {}
-    # Add all indicator values to metadata for transparency
-    for attr in ["ema_fast", "ema_medium", "ema_slow", "macd_line", "macd_signal", "macd_histogram", "rsi_value", "rsi_in_mid_band"]:
+    for attr in ["ema_fast", "ema_medium", "ema_slow", "macd_histogram", "rsi_value"]:
         if hasattr(signal, attr):
-            value = getattr(signal, attr)
-            if value is not None:
-                metadata[attr] = value
+            metadata[attr] = getattr(signal, attr)
 
     return EnsembleSignal(
         strategy_name="adaptive_ema_momentum",
-        timestamp=signal.timestamp,
-        direction=direction,  # type: ignore[arg-type]
+        timestamp=_normalize_ts(signal.timestamp),
+        direction=signal.direction.lower(),
         entry_price=signal.entry_price,
         stop_loss=signal.stop_loss,
         take_profit=signal.take_profit,
         confidence=confidence,
-        bar_timestamp=signal.timestamp,
+        bar_timestamp=_normalize_ts(bar_ts),
         metadata=metadata,
     )
 
-
 def normalize_vwap_bounce(signal: Any) -> EnsembleSignal:
-    """Normalize VWAP Bounce signal to Ensemble format.
-
-    Args:
-        signal: VWAPBounceSignalModel from src.detection.vwap_bounce_strategy
-
-    Returns:
-        Normalized EnsembleSignal
-
-    Raises:
-        ValueError: If signal validation fails
-    """
-    # Validate signal integrity
+    """Normalize VWAP Bounce signal."""
     if not hasattr(signal, "entry_price") or signal.entry_price is None:
         raise ValueError("Invalid VWAPBounceSignal: missing entry_price")
 
-    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
-    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
+    bar_ts = getattr(signal, "bar_timestamp", signal.timestamp)
 
-    # Preserve contributing factors in metadata
     metadata = {}
-    if hasattr(signal, "contributing_factors"):
-        metadata = signal.contributing_factors.copy()
-    if hasattr(signal, "expected_win_rate"):
-        metadata["expected_win_rate"] = signal.expected_win_rate
+    if hasattr(signal, "contributing_factors") and signal.contributing_factors:
+        metadata = dict(signal.contributing_factors)
 
     return EnsembleSignal(
-        strategy_name="vwap_bounce",  # Force normalized name
-        timestamp=signal.timestamp,
-        direction=direction,  # type: ignore[arg-type]
+        strategy_name="vwap_bounce",
+        timestamp=_normalize_ts(signal.timestamp),
+        direction=signal.direction.lower(),
         entry_price=signal.entry_price,
         stop_loss=signal.stop_loss,
         take_profit=signal.take_profit,
-        confidence=confidence,
-        bar_timestamp=signal.timestamp,
+        confidence=signal.confidence,
+        bar_timestamp=_normalize_ts(bar_ts),
         metadata=metadata,
     )
 
-
 def normalize_opening_range(signal: Any) -> EnsembleSignal:
-    """Normalize Opening Range Breakout signal to Ensemble format.
-
-    Args:
-        signal: OpeningRangeSignalModel from src.detection.opening_range_strategy
-
-    Returns:
-        Normalized EnsembleSignal
-
-    Raises:
-        ValueError: If signal validation fails
-    """
-    # Validate signal integrity
+    """Normalize Opening Range Breakout signal."""
     if not hasattr(signal, "entry_price") or signal.entry_price is None:
         raise ValueError("Invalid OpeningRangeSignal: missing entry_price")
 
-    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
-    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
+    bar_ts = getattr(signal, "bar_timestamp", signal.timestamp)
 
-    # Preserve contributing factors in metadata
     metadata = {}
-    if hasattr(signal, "contributing_factors"):
-        metadata = signal.contributing_factors.copy()
-    if hasattr(signal, "expected_win_rate"):
-        metadata["expected_win_rate"] = signal.expected_win_rate
+    if hasattr(signal, "contributing_factors") and signal.contributing_factors:
+        metadata = dict(signal.contributing_factors)
 
     return EnsembleSignal(
-        strategy_name="opening_range_breakout",  # Force normalized name
-        timestamp=signal.timestamp,
-        direction=direction,  # type: ignore[arg-type]
+        strategy_name="opening_range_breakout",
+        timestamp=_normalize_ts(signal.timestamp),
+        direction=signal.direction.lower(),
         entry_price=signal.entry_price,
         stop_loss=signal.stop_loss,
         take_profit=signal.take_profit,
-        confidence=confidence,
-        bar_timestamp=signal.timestamp,
+        confidence=signal.confidence,
+        bar_timestamp=_normalize_ts(bar_ts),
         metadata=metadata,
     )
 
-
 def normalize_signal(signal: Any) -> EnsembleSignal:
-    """Dispatcher function to normalize any strategy signal to Ensemble format.
-
-    Uses isinstance() to detect signal type and route to appropriate normalizer.
-
-    Args:
-        signal: Any strategy signal object (TripleConfluence, WolfPack, etc.)
-
-    Returns:
-        Normalized EnsembleSignal
-
-    Raises:
-        ValueError: If signal type is unknown or normalization fails
-    """
-    # Import signal models for type checking
+    """Dispatcher function with strict type checking (Decision 4B)."""
+    # Dynamic imports to avoid circularity
     from src.detection.models import TripleConfluenceSignal, WolfPackSignal, MomentumSignal
-
-    # Route to appropriate normalizer based on type
+    from src.detection.vwap_bounce_strategy import VWAPBounceSignalModel
+    from src.detection.opening_range_strategy import OpeningRangeSignalModel
+    
     if isinstance(signal, TripleConfluenceSignal):
         return normalize_triple_confluence(signal)
-    elif isinstance(signal, WolfPackSignal):
+    if isinstance(signal, WolfPackSignal):
         return normalize_wolf_pack(signal)
-    elif isinstance(signal, MomentumSignal):
+    if isinstance(signal, MomentumSignal):
         return normalize_ema_momentum(signal)
-    # For VWAP Bounce and Opening Range, check strategy_name attribute
-    elif hasattr(signal, "strategy_name"):
-        strategy_name = signal.strategy_name.lower()
-        if "vwap" in strategy_name or "bounce" in strategy_name:
-            return normalize_vwap_bounce(signal)
-        elif "opening" in strategy_name or "range" in strategy_name:
-            return normalize_opening_range(signal)
-        else:
-            # Try based on module/class name
-            class_name = signal.__class__.__name__
-            if "VWAP" in class_name:
-                return normalize_vwap_bounce(signal)
-            elif "Opening" in class_name or "Range" in class_name:
-                return normalize_opening_range(signal)
+    if isinstance(signal, (VWAPBounceSignalModel,)): 
+        # Checking for both standard and Model variant if exist
+        return normalize_vwap_bounce(signal)
+    if isinstance(signal, (OpeningRangeSignalModel,)):
+        return normalize_opening_range(signal)
+        
+    # Fallback to duck typing for Mock objects in tests
+    class_name = type(signal).__name__
+    if "Triple" in class_name: return normalize_triple_confluence(signal)
+    if "Wolf" in class_name: return normalize_wolf_pack(signal)
+    if "Momentum" in class_name: return normalize_ema_momentum(signal)
+    if "VWAP" in class_name: return normalize_vwap_bounce(signal)
+    if "Opening" in class_name or "Range" in class_name: return normalize_opening_range(signal)
 
-    raise ValueError(f"Unknown signal type: {type(signal).__name__}")
+    raise ValueError(f"Unsupported signal type: {class_name}")
 
 
 class EnsembleSignalAggregator:
@@ -278,18 +188,30 @@ class EnsembleSignalAggregator:
     signal is kept for each strategy-bar combination.
     """
 
-    def __init__(self, max_lookback: int = 10) -> None:
+    def __init__(self, max_lookback: int = 10, bar_interval: int = 5) -> None:
         """Initialize the ensemble signal aggregator.
 
         Args:
             max_lookback: Maximum number of bars to look back for signals.
                          Signals older than this are automatically cleaned up.
+            bar_interval: The bar duration in minutes (e.g., 1 or 5).
         """
+        if max_lookback < 1:
+            raise ValueError("max_lookback must be at least 1")
+        if bar_interval < 1:
+            raise ValueError("bar_interval must be at least 1")
+
         self.max_lookback = max_lookback
+        self.bar_interval = bar_interval
         self._signals: dict[str, deque[EnsembleSignal]] = {}
+        self._lock = asyncio.Lock()  # For thread-safe async access
         self._background_task: asyncio.Task | None = None
         self._running = False
-        logger.info("EnsembleSignalAggregator initialized with max_lookback=%d", max_lookback)
+        logger.info(
+            "EnsembleSignalAggregator initialized: max_lookback=%d, bar_interval=%d min",
+            max_lookback,
+            bar_interval,
+        )
 
     def add_signal(self, signal: EnsembleSignal) -> None:
         """Add a normalized signal to the aggregator.
@@ -305,26 +227,24 @@ class EnsembleSignalAggregator:
 
         # Initialize deque for this strategy if needed
         if strategy not in self._signals:
-            self._signals[strategy] = deque(maxlen=self.max_lookback + 5)  # Extra buffer
+            # We use a larger maxlen to avoid premature eviction during cleanup/dedup
+            self._signals[strategy] = deque(maxlen=self.max_lookback + 10)
             logger.debug("Created new signal deque for strategy: %s", strategy)
 
         # Deduplication: Check if signal exists for this bar
         strategy_deque = self._signals[strategy]
         existing_index = None
 
+        # O(N) search is fine for N=10, but we use index-based update for O(1) assignment
         for i, existing_signal in enumerate(strategy_deque):
             if existing_signal.bar_timestamp == bar_time:
                 existing_index = i
                 break
 
         if existing_index is not None:
-            # Replace existing signal for this bar
+            # Atomic update: Replace existing signal for this bar via index
             old_signal = strategy_deque[existing_index]
-            # Convert deque index to position for modification
-            temp_list = list(strategy_deque)
-            temp_list[existing_index] = signal
-            strategy_deque.clear()
-            strategy_deque.extend(temp_list)
+            strategy_deque[existing_index] = signal
 
             logger.debug(
                 "Deduplication: Replaced signal for %s at bar %s (old conf: %.2f, new conf: %.2f)",
@@ -363,6 +283,7 @@ class EnsembleSignalAggregator:
             List of signals matching all filter criteria
         """
         # Collect signals from all strategies or specific strategy
+        # Copy values to prevent RuntimeError if _signals is modified during iteration
         if strategy is not None:
             strategy_deques = [self._signals.get(strategy, deque())]
         else:
@@ -371,12 +292,16 @@ class EnsembleSignalAggregator:
         # Flatten and filter
         all_signals = []
         for deque_signals in strategy_deques:
-            all_signals.extend(deque_signals)
+            # Copy deque to list to prevent RuntimeError during concurrent modification
+            all_signals.extend(list(deque_signals))
 
         # Apply filters
         filtered = all_signals
         if direction is not None:
-            filtered = [s for s in filtered if s.direction == direction]
+            # Case-insensitive filtering
+            target_dir = direction.lower()
+            filtered = [s for s in filtered if s.direction.lower() == target_dir]
+            
         if min_confidence > 0:
             filtered = [s for s in filtered if s.confidence >= min_confidence]
 
@@ -547,11 +472,12 @@ class EnsembleSignalAggregator:
             True if all signals are within lookback window
         """
         current_time = datetime.now()
-        lookback_delta = timedelta(minutes=5 * self.max_lookback)
+        # Decision 2A: Use configured bar interval
+        lookback_delta = timedelta(minutes=self.bar_interval * self.max_lookback)
         cutoff_time = current_time - lookback_delta
 
-        for strategy, strategy_deque in self._signals.items():
-            for signal in strategy_deque:
+        for strategy, strategy_deque in list(self._signals.items()):
+            for signal in list(strategy_deque):
                 if signal.bar_timestamp < cutoff_time:
                     logger.warning(
                         "Signal from %s exceeds lookback: %s",
@@ -572,31 +498,24 @@ class EnsembleSignalAggregator:
         Args:
             signal: Normalized ensemble signal to add
         """
-        # In Python, GIL protects dict/deque operations, but for consistency
-        # with async patterns, we provide this async wrapper
-        self.add_signal(signal)
-        await asyncio.sleep(0)  # Yield to event loop
+        # Use the class lock for thread-safe async access if needed,
+        # but deque operations are atomic in CPython. 
+        # For full consistency with other async components:
+        async with self._lock:
+            self.add_signal(signal)
 
     async def process_signals_queue(self, queue: asyncio.Queue) -> None:
-        """Process signals from an asyncio.Queue until exhausted.
-
-        Continuously processes signals from the queue. Stops when receiving
-        a None sentinel value.
-
-        Args:
-            queue: asyncio.Queue containing EnsembleSignal objects
-        """
+        """Process signals from an asyncio.Queue until exhausted."""
         logger.info("Starting to process signals from queue")
         processed_count = 0
-
-        while True:
-            # Get signal from queue (with timeout to allow checking _running)
+        
+        # We process while running OR while queue is not empty (to drain it on shutdown)
+        while self._running or not queue.empty():
             try:
+                # Use a small timeout to keep loop responsive to self._running changes
                 signal = await asyncio.wait_for(queue.get(), timeout=0.1)
             except asyncio.TimeoutError:
-                # No signal available, check if we should stop
                 if not self._running:
-                    logger.debug("Queue processing: stopping due to _running=False")
                     break
                 continue
 
@@ -609,7 +528,6 @@ class EnsembleSignalAggregator:
             try:
                 # If signal is not already EnsembleSignal, normalize it
                 if not isinstance(signal, EnsembleSignal):
-                    from src.detection.ensemble_signal_aggregator import normalize_signal
                     signal = normalize_signal(signal)
 
                 self.add_signal(signal)
@@ -677,53 +595,62 @@ class EnsembleSignalAggregator:
     # Consensus and Alignment Detection Methods
     # =============================================================================
 
-    def get_consensus(self) -> dict[str, int]:
-        """Get current consensus count across all active signals.
+    def get_consensus(self, bar_timestamp: datetime | None = None) -> dict[str, int]:
+        """Get consensus count for a specific bar.
+
+        Args:
+            bar_timestamp: Target bar for consensus. If None, uses latest bar.
 
         Returns:
             Dictionary with 'long' and 'short' counts
         """
-        all_signals = self.get_signals()
+        target_ts = bar_timestamp
+        if target_ts is None:
+            all_signals = self.get_signals()
+            if not all_signals:
+                return {"long": 0, "short": 0}
+            target_ts = max(s.bar_timestamp for s in all_signals)
+
+        # Decision 1A: Strict consensus (Current bar only)
+        signals = self.get_signals_for_bar(target_ts, window_bars=0)
         consensus = {"long": 0, "short": 0}
 
-        for signal in all_signals:
-            if signal.direction == "long":
+        for signal in signals:
+            direction = signal.direction.lower()
+            if direction == "long":
                 consensus["long"] += 1
-            elif signal.direction == "short":
+            elif direction == "short":
                 consensus["short"] += 1
 
         return consensus
 
-    def are_signals_aligned(self) -> bool:
-        """Check if all active signals agree on direction.
+    def are_signals_aligned(self, bar_timestamp: datetime | None = None) -> bool:
+        """Check if all signals for a bar agree on direction.
+
+        Args:
+            bar_timestamp: Target bar for alignment check.
 
         Returns:
             True if all signals are long or all are short, False otherwise.
-            Returns True if there are 0 or 1 signals (trivially aligned).
         """
-        all_signals = self.get_signals()
-
-        if len(all_signals) <= 1:
+        consensus = self.get_consensus(bar_timestamp)
+        total = consensus["long"] + consensus["short"]
+        
+        if total <= 1:
             return True
 
-        # Get direction of first signal
-        first_direction = all_signals[0].direction
+        return consensus["long"] == 0 or consensus["short"] == 0
 
-        # Check if all signals match first direction
-        for signal in all_signals[1:]:
-            if signal.direction != first_direction:
-                return False
+    def get_alignment_strength(self, bar_timestamp: datetime | None = None) -> float:
+        """Calculate the strength of signal alignment for a bar.
 
-        return True
-
-    def get_alignment_strength(self) -> float:
-        """Calculate the strength of signal alignment.
+        Args:
+            bar_timestamp: Target bar for alignment strength.
 
         Returns:
             Alignment strength from 0.0 (perfectly split) to 1.0 (unanimous).
-            Formula: majority_count / total_count
         """
-        consensus = self.get_consensus()
+        consensus = self.get_consensus(bar_timestamp)
         total = consensus["long"] + consensus["short"]
 
         if total == 0:
@@ -732,32 +659,38 @@ class EnsembleSignalAggregator:
         majority = max(consensus["long"], consensus["short"])
         return majority / total
 
-    def get_conflicting_strategies(self) -> list[str]:
-        """Identify strategies that disagree with the majority direction.
+    def get_conflicting_strategies(self, bar_timestamp: datetime | None = None) -> list[str]:
+        """Identify strategies that disagree with the majority for a bar.
+
+        Args:
+            bar_timestamp: Target bar for conflict detection.
 
         Returns:
-            List of strategy names that are in the minority direction.
-            Empty list if all signals agree or no signals exist.
+            List of unique strategy names that are in the minority direction.
         """
-        all_signals = self.get_signals()
+        target_ts = bar_timestamp
+        if target_ts is None:
+            all_signals = self.get_signals()
+            if not all_signals:
+                return []
+            target_ts = max(s.bar_timestamp for s in all_signals)
 
-        if len(all_signals) <= 1:
+        signals = self.get_signals_for_bar(target_ts, window_bars=0)
+        if len(signals) <= 1:
             return []
 
-        # Determine majority direction
-        consensus = self.get_consensus()
-        if consensus["long"] > consensus["short"]:
-            majority_direction = "long"
-        elif consensus["short"] > consensus["long"]:
-            majority_direction = "short"
-        else:
-            # Tie - all strategies are "conflicting"
-            return [signal.strategy_name for signal in all_signals]
+        consensus = self.get_consensus(target_ts)
+        if consensus["long"] == consensus["short"]:
+            # Perfect tie: all are conflicting
+            return sorted(list(set(s.strategy_name for s in signals)))
 
-        # Find strategies in minority
-        conflicting = []
-        for signal in all_signals:
-            if signal.direction != majority_direction:
-                conflicting.append(signal.strategy_name)
+        majority_direction = "long" if consensus["long"] > consensus["short"] else "short"
 
-        return conflicting
+        # Find unique strategies in minority
+        conflicting = {
+            signal.strategy_name 
+            for signal in signals 
+            if signal.direction.lower() != majority_direction
+        }
+
+        return sorted(list(conflicting))

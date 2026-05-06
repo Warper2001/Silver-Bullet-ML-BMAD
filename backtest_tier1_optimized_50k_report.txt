@@ -1,0 +1,71 @@
+
+================================================================================
+TIER 1 FVG SYSTEM - OPTIMIZED REALISTIC BACKTEST (50K Sample)
+================================================================================
+
+Data Source: Real MNQ Historical Data (/root/mnq_historical.json)
+Sample Size: 20,000 raw bars
+Data Points: 11473 Dollar Bars
+Date Range: 2023-12-01 to 2023-12-22
+
+Optimizations Applied:
+- Vectorized ATR calculation (pandas)
+- Pre-calculated volume ratios
+- Fast exit calculation (maintains realism)
+- 50K sample for statistical significance
+
+Transaction Costs:
+- Commission: $0.45 per contract per side
+- Slippage: 1 tick ($0.25) per side
+- Total Cost: $1.40 per round-trip
+
+Exit Logic:
+- Take Profit: Gap fill (opposite boundary)
+- Stop Loss: 2.0× gap size against position
+- Time Exit: 10 bars max hold time
+
+================================================================================
+BASELINE (No Filters)
+================================================================================
+Total Trades: 37
+Wins: 32
+Losses: 5
+Win Rate: 86.49%
+Profit Factor: 6.20
+Avg Trades/Day: 1.72
+Total P&L: $914.20
+Avg Win: $34.06
+Avg Loss: $-35.15
+Expectancy: $24.71 per trade
+
+================================================================================
+TIER 1 (ATR + Volume Filters)
+================================================================================
+Total Trades: 0
+Wins: 0
+Losses: 0
+Win Rate: 0.00%
+Profit Factor: 0.00
+Avg Trades/Day: 0.00
+Total P&L: $0.00
+Avg Win: $0.00
+Avg Loss: $0.00
+Expectancy: $0.00 per trade
+
+================================================================================
+IMPROVEMENTS
+================================================================================
+Win Rate: -86.49%
+Profit Factor: -6.20
+Expectancy: $-24.71 per trade
+Trade Freq: -100.00%
+Total P&L: $-914.20
+
+================================================================================
+TARGET VALIDATION (Win Rate >= 60%, PF >= 1.7, 8-15 trades/day)
+================================================================================
+Win Rate (>=60%):       ❌ FAIL - 0.00%
+Profit Factor (>=1.7):  ❌ FAIL - 0.00
+Trade Freq (8-15/day):  ❌ FAIL - 0.00/day
+
+================================================================================

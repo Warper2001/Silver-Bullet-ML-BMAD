@@ -1,0 +1,63 @@
+
+================================================================================
+WALK-FORWARD VALIDATION REPORT - TIER 1 FVG System
+================================================================================
+
+Configuration: SL2.5x_ATR0.7_Vol2.25_MaxGap$50.0
+
+================================================================================
+PERIOD RESULTS
+================================================================================
+
+
+Period 1: Dec 2025 (Most Recent)
+Date Range: 2026-02-16 to 2026-03-06
+================================================================================
+Total Trades: 212
+Wins: 152 | Losses: 60
+Win Rate: 71.70% ✅
+Profit Factor: 1.97 ✅
+Trade Frequency: 11.38/day ✅
+Total P&L: $3300.45
+Expectancy: $15.57/trade
+Targets Met: 3/3
+
+Period 2: Nov 2025 (Out-of-Sample)
+Date Range: 2026-01-26 to 2026-02-16
+================================================================================
+Total Trades: 244
+Wins: 185 | Losses: 59
+Win Rate: 75.82% ✅
+Profit Factor: 2.02 ✅
+Trade Frequency: 11.89/day ✅
+Total P&L: $4094.15
+Expectancy: $16.78/trade
+Targets Met: 3/3
+
+Period 3: Oct 2025 (Out-of-Sample)
+Date Range: 2026-01-05 to 2026-01-26
+================================================================================
+Total Trades: 403
+Wins: 301 | Losses: 102
+Win Rate: 74.69% ✅
+Profit Factor: 1.51 ❌
+Trade Frequency: 19.49/day ❌
+Total P&L: $3443.55
+Expectancy: $8.54/trade
+Targets Met: 1/3
+
+================================================================================
+AGGREGATE STATISTICS (3 periods)
+================================================================================
+Average Win Rate: 74.07% (±1.74%)
+Average Profit Factor: 1.83 (±0.23)
+Average Trade Frequency: 14.25/day
+Total P&L (all periods): $10838.15
+
+
+================================================================================
+ROBUSTNESS ASSESSMENT
+================================================================================
+Periods Passing All 3 Targets: 2/3 (66.7%)
+Conclusion: ⚠️ MODERATE - System shows some inconsistency but may be viable
+================================================================================

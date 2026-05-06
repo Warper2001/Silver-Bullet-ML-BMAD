@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime, timedelta
 
 from src.execution.exit_logic import HybridExit
-from src.execution.models import PositionMonitoringState, TradeOrder
+from src.execution.models import _now, NY_TZ, PositionMonitoringState, TradeOrder
 from src.detection.models import EnsembleTradeSignal
 
 
@@ -16,7 +16,7 @@ class TestHybridExit:
         """Create a sample ensemble signal."""
         return EnsembleTradeSignal(
             strategy_name="Ensemble-Weighted Confidence",
-            timestamp=datetime.now(),
+            timestamp=_now(),
             direction="long",
             entry_price=11850.0,
             stop_loss=11840.0,
@@ -25,13 +25,13 @@ class TestHybridExit:
             contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
             strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
             strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
-            bar_timestamp=datetime.now()
+            bar_timestamp=_now()
         )
 
     @pytest.fixture
     def position(self, ensemble_signal):
         """Create a sample long position."""
-        entry_time = datetime.now() - timedelta(minutes=3)
+        entry_time = _now() - timedelta(minutes=3)
         return TradeOrder(
             trade_id="pos-hybrid-test",
             symbol="MNQ",
@@ -132,7 +132,7 @@ class TestHybridExit:
 
         assert exit_order is not None
         assert exit_order.exit_type == "partial"
-        assert exit_order.exit_reason == "hybrid_partial"
+        assert exit_order.exit_reason == "Hybrid partial (1.5R)"
         # 4 * 0.50 = 2 contracts
         assert exit_order.quantity == 2
         assert exit_order.rr_ratio == 1.5
@@ -154,11 +154,11 @@ class TestHybridExit:
         exit_order = hybrid_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "hybrid_partial"
+        assert exit_order.exit_reason == "Hybrid partial (1.5R)"
 
     def test_check_exit_final_take_profit(self, ensemble_signal):
         """Test final exit at 2R take profit."""
-        entry_time = datetime.now() - timedelta(minutes=5)
+        entry_time = _now() - timedelta(minutes=5)
         position = TradeOrder(
             trade_id="pos-hybrid-final",
             symbol="MNQ",
@@ -202,7 +202,7 @@ class TestHybridExit:
 
         assert exit_order is not None
         assert exit_order.exit_type == "full"
-        assert exit_order.exit_reason == "hybrid_trail"
+        assert exit_order.exit_reason == "Hybrid trail (2R)"
         assert exit_order.quantity == 2  # Remaining quantity
         # P&L = (11870 - 11850) * 0.50 * 2 = 20 * 0.50 * 2 = $20
         assert exit_order.pnl == pytest.approx(20.0)
@@ -224,7 +224,7 @@ class TestHybridExit:
 
         assert exit_order is not None
         assert exit_order.exit_type == "full"
-        assert exit_order.exit_reason == "time_stop"
+        assert exit_order.exit_reason == "Time stop (10-min max)"
         assert exit_order.quantity == 4
 
     def test_scale_out_partial_even_quantity(self, position, hybrid_exit):
@@ -234,11 +234,11 @@ class TestHybridExit:
         # 4 * 0.50 = 2 contracts
         assert exit_order.quantity == 2
         assert exit_order.exit_type == "partial"
-        assert exit_order.exit_reason == "hybrid_partial"
+        assert exit_order.exit_reason == "Hybrid partial (1.5R)"
 
     def test_scale_out_partial_odd_quantity(self, ensemble_signal):
         """Test partial exit with odd quantity (rounds down)."""
-        entry_time = datetime.now() - timedelta(minutes=3)
+        entry_time = _now() - timedelta(minutes=3)
         position = TradeOrder(
             trade_id="pos-odd-qty",
             symbol="MNQ",
@@ -273,7 +273,7 @@ class TestHybridExit:
 
     def test_scale_out_partial_small_quantity(self, ensemble_signal):
         """Test partial exit with small quantity (minimum 1)."""
-        entry_time = datetime.now() - timedelta(minutes=3)
+        entry_time = _now() - timedelta(minutes=3)
         position = TradeOrder(
             trade_id="pos-small-qty",
             symbol="MNQ",
@@ -331,7 +331,7 @@ class TestHybridExit:
 
         partial_exit = hybrid_exit.check_exit(state_partial)
         assert partial_exit is not None
-        assert partial_exit.exit_reason == "hybrid_partial"
+        assert partial_exit.exit_reason == "Hybrid partial (1.5R)"
         assert partial_exit.quantity == 2
 
         # Simulate partial execution (update position)
@@ -355,13 +355,13 @@ class TestHybridExit:
 
         final_exit = hybrid_exit.check_exit(state_final)
         assert final_exit is not None
-        assert final_exit.exit_reason == "hybrid_trail"
+        assert final_exit.exit_reason == "Hybrid trail (2R)"
         assert final_exit.quantity == 2  # Remaining quantity
 
     def test_short_position_partial_exit(self, ensemble_signal):
         """Test hybrid partial exit for short position."""
         signal = ensemble_signal.model_copy(update={"direction": "short"})
-        entry_time = datetime.now() - timedelta(minutes=3)
+        entry_time = _now() - timedelta(minutes=3)
 
         position = TradeOrder(
             trade_id="pos-short-hybrid",
@@ -405,7 +405,7 @@ class TestHybridExit:
         exit_order = hybrid_exit.check_exit(state)
 
         assert exit_order is not None
-        assert exit_order.exit_reason == "hybrid_partial"
+        assert exit_order.exit_reason == "Hybrid partial (1.5R)"
         assert exit_order.quantity == 2
         # P&L = (11850 - 11835) * 0.50 * 2 = 15 * 0.50 * 2 = $15
         assert exit_order.pnl == pytest.approx(15.0)
@@ -450,7 +450,7 @@ class TestHybridExit:
     def test_final_exit_after_partial_trail(self, position, ensemble_signal):
         """Test final exit calculation after partial with trailed stop."""
         # Create partially closed position
-        entry_time = datetime.now() - timedelta(minutes=8)
+        entry_time = _now() - timedelta(minutes=8)
 
         partially_closed = TradeOrder(
             trade_id="pos-after-partial",

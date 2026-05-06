@@ -34,6 +34,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SIM_ACCOUNT_ID = "SIM2797251F"
+SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+
 
 class WinningSilverBulletTrader:
     """Live paper trader using the winning Silver Bullet ML Strategy configuration."""
@@ -311,6 +314,77 @@ class WinningSilverBulletTrader:
         logger.info(f"   Entry (Limit): {fvg_midpoint:.2f} | Target: {target_price:.2f} | SL: {stop_loss:.2f} | R:R: {rr:.2f}")
         logger.info(f"   Waiting for FVG touch (expires in 15 bars)...")
 
+    async def _submit_sim_bracket(
+        self,
+        symbol: str,
+        direction: str,
+        tp_price: float,
+        sl_price: float,
+    ) -> tuple[str | None, str | None, str | None]:
+        """Submit a bracket order to TradeStation SIM and return (entry_id, tp_id, sl_id)."""
+        entry_action = "BUY" if direction == "bullish" else "SELL"
+        exit_action = "SELL" if direction == "bullish" else "BUY"
+        payload = {
+            "AccountID": SIM_ACCOUNT_ID,
+            "Symbol": symbol,
+            "Quantity": "1",
+            "OrderType": "Market",
+            "TradeAction": entry_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+            "OSOs": [{"Type": "BRK", "Orders": [
+                {
+                    "AccountID": SIM_ACCOUNT_ID,
+                    "Symbol": symbol,
+                    "Quantity": "1",
+                    "OrderType": "Limit",
+                    "TradeAction": exit_action,
+                    "TimeInForce": {"Duration": "GTC"},
+                    "LimitPrice": str(tp_price),
+                },
+                {
+                    "AccountID": SIM_ACCOUNT_ID,
+                    "Symbol": symbol,
+                    "Quantity": "1",
+                    "OrderType": "StopMarket",
+                    "TradeAction": exit_action,
+                    "TimeInForce": {"Duration": "GTC"},
+                    "StopPrice": str(sl_price),
+                },
+            ]}],
+        }
+        try:
+            token = await self.auth.authenticate()
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            if response.status_code not in (200, 201):
+                logger.warning(f"⚠️  SIM bracket HTTP {response.status_code}: {response.text[:200]}")
+                return None, None, None
+            orders = response.json().get("Orders", [])
+            entry_id = tp_id = sl_id = None
+            for order in orders:
+                msg = order.get("Message", "")
+                oid = order.get("OrderID")
+                if "Stop Market" in msg:
+                    sl_id = oid
+                elif "Limit" in msg:
+                    tp_id = oid
+                else:
+                    entry_id = oid
+            if entry_id is None and tp_id is None and sl_id is None:
+                logger.warning(f"⚠️  SIM bracket: no order IDs parsed from response — {orders}")
+            else:
+                logger.info(f"✅ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
+            return entry_id, tp_id, sl_id
+        except Exception as e:
+            logger.warning(f"⚠️  SIM bracket exception: {e}")
+            return None, None, None
+
     async def preload_history(self, symbol: str, bars: int = 300) -> None:
         """Fetch the last N 1-minute bars from TradeStation to warm up the 200-bar lookback."""
         logger.info(f"⏳ Preloading {bars} bars of 1-min history for {symbol}...")
@@ -453,19 +527,30 @@ class WinningSilverBulletTrader:
                         
                     if is_touched:
                         logger.info(f"🔵 TRADE ENTERED: {setup_req['setup'].direction.upper()} @ {setup_req['fvg_midpoint']:.2f}")
-                        
-                        # Add to active trades
+
+                        # Submit bracket order to TradeStation SIM for cross-validation
+                        entry_id, tp_id, sl_id = await self._submit_sim_bracket(
+                            symbol=symbol,
+                            direction=setup_req['setup'].direction,
+                            tp_price=setup_req['target_price'],
+                            sl_price=setup_req['stop_loss'],
+                        )
+
+                        # Add to active trades (local sim continues regardless of SIM outcome)
                         self.active_trades.append({
                             'entry_price': setup_req['fvg_midpoint'],
                             'target_price': setup_req['target_price'],
                             'stop_loss': setup_req['stop_loss'],
-                            'direction': setup_req['setup'].direction
+                            'direction': setup_req['setup'].direction,
+                            'sim_entry_id': entry_id,
+                            'sim_tp_id': tp_id,
+                            'sim_sl_id': sl_id,
                         })
-                        
+
                         # Mark window as traded
                         win_set = self.window_trades.setdefault(setup_req['window'], set())
                         win_set.add(setup_req['date'])
-                        
+
                         self.pending_setups.remove(setup_req)
 
                 # 5. Detect New Setups

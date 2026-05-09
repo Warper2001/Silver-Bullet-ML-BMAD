@@ -1,0 +1,3170 @@
+diff --git a/src/execution/exit_logic.py b/src/execution/exit_logic.py
+new file mode 100644
+index 0000000..9a27ed6
+--- /dev/null
++++ b/src/execution/exit_logic.py
+@@ -0,0 +1,644 @@
++"""Exit logic strategies for ensemble trading positions.
++
++This module implements three exit strategies for managing ensemble positions:
++1. TimeBasedExit - Maximum 10-minute hold time
++2. RiskRewardExit - 2:1 reward-risk ratio take profit and stop loss
++3. HybridExit - Partial scaling at 1.5R with trailing stop to breakeven
++
++Each strategy independently evaluates positions and can generate exit orders.
++"""
++
++import logging
++from datetime import datetime
++from typing import Optional
++
++from src.execution.models import ExitOrder, PositionMonitoringState, TradeOrder
++
++logger = logging.getLogger(__name__)
++
++
++class TimeBasedExit:
++    """Time-based exit strategy with maximum hold time.
++
++    Monitors positions and exits at the 10-minute maximum hold time
++    as specified in NFR2. This is a hard stop to prevent over-holding
++    positions regardless of P&L.
++
++    Attributes:
++        max_hold_minutes: Maximum hold time in minutes (default 10)
++    """
++
++    def __init__(self, max_hold_minutes: float = 10.0) -> None:
++        """Initialize time-based exit strategy.
++
++        Args:
++            max_hold_minutes: Maximum hold time in minutes (default 10.0)
++
++        Raises:
++            ValueError: If max_hold_minutes is not positive
++        """
++        if max_hold_minutes <= 0:
++            raise ValueError("max_hold_minutes must be positive")
++
++        self.max_hold_minutes = max_hold_minutes
++        logger.info(f"TimeBasedExit initialized with max_hold_minutes={max_hold_minutes}")
++
++    def check_exit(self, state: PositionMonitoringState) -> Optional[ExitOrder]:
++        """Check if position should be exited based on hold time.
++
++        Args:
++            state: Current position monitoring state
++
++        Returns:
++            ExitOrder if max hold time reached, None otherwise
++        """
++        if state.is_at_max_hold_time(self.max_hold_minutes):
++            # Calculate P&L
++            multiplier = 0.50  # MNQ contract multiplier
++            price_diff = state.current_price - state.position.entry_price
++
++            if state.position.direction == "short":
++                price_diff = -price_diff
++
++            pnl = price_diff * multiplier * state.position.remaining_quantity
++
++            # Calculate R:R achieved
++            risk = state.position.risk_per_contract()
++            rr_achieved = (price_diff / risk) if risk > 0 else 0.0
++
++            logger.info(
++                f"Time-based exit triggered for position {state.position.trade_id}: "
++                f"hold_time={state.hold_time_minutes():.1f}min, "
++                f"pnl=${pnl:.2f}, "
++                f"rr_achieved={rr_achieved:.2f}"
++            )
++
++            return ExitOrder(
++                position_id=state.position.trade_id,
++                exit_type="full",
++                quantity=state.position.remaining_quantity,
++                exit_price=state.current_price,
++                exit_reason="time_stop",
++                timestamp=datetime.now(),
++                pnl=pnl,
++                rr_ratio=rr_achieved
++            )
++
++        return None
++
++    def calculate_hold_time(self, entry_time: datetime, current_time: datetime) -> int:
++        """Calculate time since position entry in seconds.
++
++        Args:
++            entry_time: Position entry timestamp
++            current_time: Current timestamp
++
++        Returns:
++            Hold time in seconds
++        """
++        delta = current_time - entry_time
++        return int(delta.total_seconds())
++
++    def get_hold_time_minutes(self, state: PositionMonitoringState) -> float:
++        """Get hold time in minutes for a position.
++
++        Args:
++            state: Position monitoring state
++
++        Returns:
++            Hold time in minutes
++        """
++        return state.hold_time_minutes()
++
++
++class RiskRewardExit:
++    """Risk-reward based exit strategy with 2:1 ratio.
++
++    Monitors positions and exits when either:
++    - Take profit level is hit (2:1 reward-risk ratio)
++    - Stop loss level is hit (as defined by entry signal)
++
++    This is a traditional binary exit strategy that fully exits
++    the position when either level is hit.
++
++    Attributes:
++        rr_ratio: Target reward-risk ratio (default 2.0)
++    """
++
++    def __init__(self, rr_ratio: float = 2.0) -> None:
++        """Initialize risk-reward exit strategy.
++
++        Args:
++            rr_ratio: Target reward-risk ratio (default 2.0)
++
++        Raises:
++            ValueError: If rr_ratio is not positive
++        """
++        if rr_ratio <= 0:
++            raise ValueError("rr_ratio must be positive")
++
++        self.rr_ratio = rr_ratio
++        logger.info(f"RiskRewardExit initialized with rr_ratio={rr_ratio}")
++
++    def check_exit(self, state: PositionMonitoringState) -> Optional[ExitOrder]:
++        """Check if position should be exited based on TP or SL hit.
++
++        Priority:
++        1. Stop loss hit (highest priority - protect capital)
++        2. Take profit hit (realize gains)
++
++        Args:
++            state: Current position monitoring state
++
++        Returns:
++            ExitOrder if TP or SL hit, None otherwise
++        """
++        # Check stop loss first (higher priority)
++        if self.check_stop_loss_hit(state.current_price, state.position.stop_loss, state.position.direction):
++            return self._create_stop_loss_exit(state)
++
++        # Then check take profit
++        if self.check_take_profit_hit(state.current_price, state.position.take_profit, state.position.direction):
++            return self._create_take_profit_exit(state)
++
++        return None
++
++    def calculate_take_profit(self, entry: float, stop_loss: float, direction: str, rr: float | None = None) -> float:
++        """Calculate take profit level based on risk and R:R ratio.
++
++        Args:
++            entry: Entry price
++            stop_loss: Stop loss price
++            direction: Trade direction ("long" or "short")
++            rr: Reward-risk ratio (uses instance rr_ratio if None)
++
++        Returns:
++            Take profit price level
++        """
++        if rr is None:
++            rr = self.rr_ratio
++
++        risk = abs(entry - stop_loss)
++        reward = risk * rr
++
++        if direction == "long":
++            return entry + reward
++        else:  # short
++            return entry - reward
++
++    def check_take_profit_hit(self, current_price: float, tp: float, direction: str) -> bool:
++        """Check if take profit level has been hit.
++
++        Args:
++            current_price: Current market price
++            tp: Take profit level
++            direction: Trade direction
++
++        Returns:
++            True if take profit has been hit
++        """
++        if direction == "long":
++            return current_price >= tp
++        else:  # short
++            return current_price <= tp
++
++    def check_stop_loss_hit(self, current_price: float, sl: float, direction: str) -> bool:
++        """Check if stop loss level has been hit.
++
++        Args:
++            current_price: Current market price
++            sl: Stop loss level
++            direction: Trade direction
++
++        Returns:
++            True if stop loss has been hit
++        """
++        if direction == "long":
++            return current_price <= sl
++        else:  # short
++            return current_price >= sl
++
++    def calculate_rr_achieved(self, entry: float, exit_price: float, stop_loss: float) -> float:
++        """Calculate reward-risk ratio achieved.
++
++        Args:
++            entry: Entry price
++            exit_price: Exit price
++            stop_loss: Stop loss price
++
++        Returns:
++            R:R achieved (positive for profit, negative for loss)
++        """
++        risk = abs(entry - stop_loss)
++        if risk == 0:
++            return 0.0
++
++        if exit_price >= entry:
++            # Profit: (exit - entry) / risk
++            return (exit_price - entry) / risk
++        else:
++            # Loss: always -1.0 (stopped at defined risk)
++            return -1.0
++
++    def _create_take_profit_exit(self, state: PositionMonitoringState) -> ExitOrder:
++        """Create a take profit exit order.
++
++        Args:
++            state: Position monitoring state
++
++        Returns:
++            ExitOrder for take profit
++        """
++        multiplier = 0.50  # MNQ contract multiplier
++        price_diff = state.current_price - state.position.entry_price
++
++        if state.position.direction == "short":
++            price_diff = -price_diff
++
++        pnl = price_diff * multiplier * state.position.remaining_quantity
++
++        rr_achieved = self.calculate_rr_achieved(
++            state.position.entry_price,
++            state.current_price,
++            state.position.stop_loss
++        )
++
++        logger.info(
++            f"Take profit exit triggered for position {state.position.trade_id}: "
++            f"exit_price={state.current_price}, "
++            f"pnl=${pnl:.2f}, "
++            f"rr_achieved={rr_achieved:.2f}"
++        )
++
++        return ExitOrder(
++            position_id=state.position.trade_id,
++            exit_type="full",
++            quantity=state.position.remaining_quantity,
++            exit_price=state.current_price,
++            exit_reason="take_profit",
++            timestamp=datetime.now(),
++            pnl=pnl,
++            rr_ratio=rr_achieved
++        )
++
++    def _create_stop_loss_exit(self, state: PositionMonitoringState) -> ExitOrder:
++        """Create a stop loss exit order.
++
++        Args:
++            state: Position monitoring state
++
++        Returns:
++            ExitOrder for stop loss
++        """
++        multiplier = 0.50  # MNQ contract multiplier
++        price_diff = state.current_price - state.position.entry_price
++
++        if state.position.direction == "short":
++            price_diff = -price_diff
++
++        pnl = price_diff * multiplier * state.position.remaining_quantity
++
++        # Stop loss always means -1R
++        rr_achieved = -1.0
++
++        logger.warning(
++            f"Stop loss exit triggered for position {state.position.trade_id}: "
++            f"exit_price={state.current_price}, "
++            f"pnl=${pnl:.2f}, "
++            f"rr_achieved={rr_achieved:.2f}"
++        )
++
++        return ExitOrder(
++            position_id=state.position.trade_id,
++            exit_type="full",
++            quantity=state.position.remaining_quantity,
++            exit_price=state.current_price,
++            exit_reason="stop_loss",
++            timestamp=datetime.now(),
++            pnl=pnl,
++            rr_ratio=rr_achieved
++        )
++
++
++class HybridExit:
++    """Hybrid exit strategy with partial scaling and trailing stop.
++
++    Implements a two-stage exit strategy:
++    1. Scale out 50% of position at 1.5R (partial take profit)
++    2. Trail remaining 50% with stop to breakeven
++    3. Close remaining at 2R take profit or 10-minute time stop
++
++    This strategy aims to capture some profit while leaving room for
++    additional upside, with risk protection via trailing stop.
++
++    Attributes:
++        partial_rr: R:R ratio for partial exit (default 1.5)
++        partial_percent: Percentage to exit at partial (default 0.50)
++        max_hold_minutes: Maximum hold time for remaining position (default 10.0)
++    """
++
++    def __init__(self, partial_rr: float = 1.5, partial_percent: float = 0.50, max_hold_minutes: float = 10.0) -> None:
++        """Initialize hybrid exit strategy.
++
++        Args:
++            partial_rr: R:R ratio for partial exit (default 1.5)
++            partial_percent: Percentage to exit at partial (default 0.50)
++            max_hold_minutes: Maximum hold time in minutes (default 10.0)
++
++        Raises:
++            ValueError: If parameters are invalid
++        """
++        if partial_rr <= 0:
++            raise ValueError("partial_rr must be positive")
++        if partial_percent <= 0 or partial_percent > 1.0:
++            raise ValueError("partial_percent must be between 0 and 1")
++        if max_hold_minutes <= 0:
++            raise ValueError("max_hold_minutes must be positive")
++
++        self.partial_rr = partial_rr
++        self.partial_percent = partial_percent
++        self.max_hold_minutes = max_hold_minutes
++        logger.info(
++            f"HybridExit initialized with partial_rr={partial_rr}, "
++            f"partial_percent={partial_percent}, max_hold_minutes={max_hold_minutes}"
++        )
++
++    def check_exit(self, state: PositionMonitoringState) -> Optional[ExitOrder]:
++        """Check if position should be exited using hybrid strategy.
++
++        Priority for open positions:
++        1. Partial exit at 1.5R (if not yet executed)
++        2. Final exit at 2R take profit
++        3. Final exit at 10-minute time stop
++
++        For partially closed positions:
++        1. Final exit at 2R take profit
++        2. Final exit at 10-minute time stop
++
++        Args:
++            state: Current position monitoring state
++
++        Returns:
++            ExitOrder if exit condition met, None otherwise
++        """
++        # Check if position is still open (no partial yet)
++        if state.position.position_state == "open":
++            # Check for partial exit at 1.5R
++            if self._check_partial_exit_level(state):
++                return self._create_partial_exit(state)
++
++        # Check for final exits (regardless of partial state)
++        # Priority: 2R TP > time stop
++
++        # Check 2R take profit
++        if self._check_final_take_profit(state):
++            return self._create_final_exit(state, "hybrid_trail")
++
++        # Check time stop
++        if state.is_at_max_hold_time(self.max_hold_minutes):
++            return self._create_final_exit(state, "time_stop")
++
++        return None
++
++    def scale_out_partial(self, position: TradeOrder) -> ExitOrder:
++        """Create a partial scale-out exit order.
++
++        Args:
++            position: Position to partially exit
++
++        Returns:
++            ExitOrder for partial exit
++        """
++        quantity = int(position.remaining_quantity * self.partial_percent)
++
++        # Round down for odd quantities (e.g., 5 * 0.5 = 2.5 → 2)
++        if quantity < 1:
++            quantity = 1
++
++        # Calculate 1.5R price level
++        risk = position.risk_per_contract()
++        partial_target = position.entry_price + (risk * self.partial_rr) if position.direction == "long" else position.entry_price - (risk * self.partial_rr)
++
++        # Calculate P&L
++        multiplier = 0.50
++        price_diff = partial_target - position.entry_price
++        if position.direction == "short":
++            price_diff = -price_diff
++        pnl = price_diff * multiplier * quantity
++
++        logger.info(
++            f"Hybrid partial exit for position {position.trade_id}: "
++            f"quantity={quantity}, "
++            f"partial_price={partial_target}, "
++            f"pnl=${pnl:.2f}"
++        )
++
++        return ExitOrder(
++            position_id=position.trade_id,
++            exit_type="partial",
++            quantity=quantity,
++            exit_price=partial_target,
++            exit_reason="hybrid_partial",
++            timestamp=datetime.now(),
++            pnl=pnl,
++            rr_ratio=self.partial_rr
++        )
++
++    def trail_stop_to_breakeven(self, position: TradeOrder) -> None:
++        """Trail stop loss to breakeven for remaining position.
++
++        Args:
++            position: Position to trail stop for (modified in-place)
++        """
++        old_stop = position.stop_loss
++        position.stop_loss = position.entry_price
++
++        logger.info(
++            f"Trailed stop loss to breakeven for position {position.trade_id}: "
++            f"{old_stop} → {position.entry_price}"
++        )
++
++    def _check_partial_exit_level(self, state: PositionMonitoringState) -> bool:
++        """Check if price has hit partial exit level (1.5R).
++
++        Args:
++            state: Position monitoring state
++
++        Returns:
++            True if partial level has been hit
++        """
++        risk = state.position.risk_per_contract()
++        partial_target = state.position.entry_price + (risk * self.partial_rr) if state.position.direction == "long" else state.position.entry_price - (risk * self.partial_rr)
++
++        if state.position.direction == "long":
++            return state.current_price >= partial_target
++        else:  # short
++            return state.current_price <= partial_target
++
++    def _check_final_take_profit(self, state: PositionMonitoringState) -> bool:
++        """Check if price has hit final take profit (2R).
++
++        Args:
++            state: Position monitoring state
++
++        Returns:
++            True if 2R take profit has been hit
++        """
++        return state.position.is_at_take_profit(state.current_price)
++
++    def _create_partial_exit(self, state: PositionMonitoringState) -> ExitOrder:
++        """Create a partial exit order at 1.5R.
++
++        Args:
++            state: Position monitoring state
++
++        Returns:
++            ExitOrder for partial exit
++        """
++        quantity = int(state.position.remaining_quantity * self.partial_percent)
++
++        # Round down for odd quantities
++        if quantity < 1:
++            quantity = 1
++
++        multiplier = 0.50
++        price_diff = state.current_price - state.position.entry_price
++        if state.position.direction == "short":
++            price_diff = -price_diff
++        pnl = price_diff * multiplier * quantity
++
++        logger.info(
++            f"Hybrid partial exit triggered for position {state.position.trade_id}: "
++            f"quantity={quantity}, "
++            f"exit_price={state.current_price}, "
++            f"pnl=${pnl:.2f}, "
++            f"rr={self.partial_rr:.1f}"
++        )
++
++        return ExitOrder(
++            position_id=state.position.trade_id,
++            exit_type="partial",
++            quantity=quantity,
++            exit_price=state.current_price,
++            exit_reason="hybrid_partial",
++            timestamp=datetime.now(),
++            pnl=pnl,
++            rr_ratio=self.partial_rr
++        )
++
++    def _create_final_exit(self, state: PositionMonitoringState, exit_reason: str) -> ExitOrder:
++        """Create a final exit order for remaining position.
++
++        Args:
++            state: Position monitoring state
++            exit_reason: Exit reason ("hybrid_trail" or "time_stop")
++
++        Returns:
++            ExitOrder for final exit
++        """
++        multiplier = 0.50
++        price_diff = state.current_price - state.position.entry_price
++        if state.position.direction == "short":
++            price_diff = -price_diff
++        pnl = price_diff * multiplier * state.position.remaining_quantity
++
++        # Calculate R:R achieved
++        risk = state.position.risk_per_contract()
++        rr_achieved = (price_diff / risk) if risk > 0 else 0.0
++
++        logger.info(
++            f"Hybrid final exit ({exit_reason}) for position {state.position.trade_id}: "
++            f"quantity={state.position.remaining_quantity}, "
++            f"exit_price={state.current_price}, "
++            f"pnl=${pnl:.2f}, "
++            f"rr_achieved={rr_achieved:.2f}"
++        )
++
++        return ExitOrder(
++            position_id=state.position.trade_id,
++            exit_type="full",
++            quantity=state.position.remaining_quantity,
++            exit_price=state.current_price,
++            exit_reason=exit_reason,
++            timestamp=datetime.now(),
++            pnl=pnl,
++            rr_ratio=rr_achieved
++        )
++
++
++class ExitLogic:
++    """Wrapper class for exit logic strategies in backtesting.
++
++    Provides a simplified interface for ensemble backtesting by combining
++    all three exit strategies (time-based, risk-reward, hybrid) into a
++    single interface.
++    """
++
++    def __init__(self, config_path: str = "config-sim.yaml"):
++        """Initialize exit logic with default strategies.
++
++        Args:
++            config_path: Path to configuration file
++        """
++        self.time_exit = TimeBasedExit(max_hold_minutes=10.0)
++        self.rr_exit = RiskRewardExit(target_rr=2.0)
++        self.hybrid_exit = HybridExit(partial_rr=1.5, partial_percent=0.50, max_hold_minutes=10.0)
++
++        logger.info("ExitLogic initialized with time, risk-reward, and hybrid exit strategies")
++
++    def evaluate_exit(self, bar, position: dict) -> Optional[object]:
++        """Evaluate if position should be exited.
++
++        For backtesting, uses simplified logic:
++        1. Check time stop (10 minutes max)
++        2. Check take profit (2R)
++        3. Check stop loss breach
++
++        Args:
++            bar: Current dollar bar (dict or Series)
++            position: Position dictionary
++
++        Returns:
++            Exit decision object with should_exit bool and exit_price
++        """
++        from dataclasses import dataclass
++
++        @dataclass
++        class ExitDecision:
++            should_exit: bool
++            exit_price: Optional[float]
++            exit_reason: str
++
++        current_price = bar["close"]
++        entry_price = position["entry_price"]
++        stop_loss = position["stop_loss"]
++        take_profit = position["take_profit"]
++        direction = position["direction"]
++
++        # Calculate hold time
++        entry_time = position["entry_time"]
++        if isinstance(bar, dict):
++            bar_time = bar["timestamp"]
++        else:
++            bar_time = bar["timestamp"]
++
++        hold_minutes = (bar_time - entry_time).total_seconds() / 60
++
++        # Check 1: Time stop (10 minutes max)
++        if hold_minutes >= 10.0:
++            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="time_stop")
++
++        # Check 2: Take profit hit
++        if direction == "long" and current_price >= take_profit:
++            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="take_profit")
++        elif direction == "short" and current_price <= take_profit:
++            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="take_profit")
++
++        # Check 3: Stop loss hit
++        if direction == "long" and current_price <= stop_loss:
++            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="stop_loss")
++        elif direction == "short" and current_price >= stop_loss:
++            return ExitDecision(should_exit=True, exit_price=current_price, exit_reason="stop_loss")
++
++        # No exit triggered
++        return ExitDecision(should_exit=False, exit_price=None, exit_reason="")
+diff --git a/src/execution/models.py b/src/execution/models.py
+new file mode 100644
+index 0000000..aecce2a
+--- /dev/null
++++ b/src/execution/models.py
+@@ -0,0 +1,331 @@
++"""Pydantic models for trade execution, entry decisions, and position tracking."""
++
++from datetime import datetime
++from typing import Literal, Optional
++from uuid import uuid4
++
++from pydantic import BaseModel, Field, field_validator, computed_field
++
++from src.detection.models import EnsembleTradeSignal
++
++
++class TradeOrder(BaseModel):
++    """Trade order for execution with position lifecycle tracking.
++
++    This model represents a complete trade order with all metadata needed
++    for execution, monitoring, and exit management. Orders are created by
++    entry logic, monitored for exit conditions, and passed to execution.
++
++    Attributes:
++        trade_id: Unique identifier for this trade (UUID)
++        symbol: Trading symbol (e.g., 'MNQ')
++        direction: Trade direction (long or short)
++        quantity: Number of contracts (1-5)
++        order_type: Order type (market or limit)
++        entry_price: Entry price for the trade
++        limit_price: Limit price (if limit order)
++        stop_loss: Stop loss price level
++        take_profit: Take profit price level
++        timestamp: Order creation timestamp
++        status: Order status (pending, submitted, filled, rejected, cancelled)
++        ensemble_signal: Reference to ensemble signal that triggered this order
++        position_size: Position size in contracts (1-5)
++        entry_time: Time position was entered
++        exit_time: Time position was exited (None if still open)
++        exit_price: Price at exit (None if not exited)
++        exit_reason: Reason for exit (None if not exited)
++        hold_time_seconds: Time held in seconds (None if not exited)
++        realized_pnl: Realized profit/loss (None if not exited)
++        rr_achieved: Reward-risk ratio achieved (None if not exited)
++        position_state: Current position state (open/partially_closed/closed)
++        original_quantity: Original quantity for partial exits tracking
++        remaining_quantity: Remaining quantity after partial exits
++    """
++
++    trade_id: str = Field(..., description="Unique identifier for this trade")
++    symbol: str = Field(default="MNQ", description="Trading symbol")
++    direction: Literal["long", "short"] = Field(..., description="Trade direction")
++    quantity: int = Field(..., ge=1, le=5, description="Number of contracts (1-5)")
++    order_type: Literal["market", "limit"] = Field(..., description="Order type")
++    entry_price: float = Field(..., gt=0, description="Entry price for the trade")
++    limit_price: Optional[float] = Field(None, gt=0, description="Limit price (if limit order)")
++    stop_loss: float = Field(..., gt=0, description="Stop loss price level")
++    take_profit: float = Field(..., gt=0, description="Take profit price level")
++    timestamp: datetime = Field(..., description="Order creation timestamp")
++    status: Literal["pending", "submitted", "filled", "rejected", "cancelled"] = Field(
++        default="pending", description="Order status"
++    )
++    ensemble_signal: EnsembleTradeSignal = Field(
++        ..., description="Reference to ensemble signal"
++    )
++    position_size: int = Field(..., ge=1, le=5, description="Position size in contracts")
++
++    # Exit tracking fields
++    entry_time: datetime = Field(..., description="Time position was entered")
++    exit_time: Optional[datetime] = Field(None, description="Time position was exited")
++    exit_price: Optional[float] = Field(None, gt=0, description="Price at exit")
++    exit_reason: Optional[str] = Field(None, description="Reason for exit")
++    hold_time_seconds: Optional[int] = Field(None, ge=0, description="Hold time in seconds")
++    realized_pnl: Optional[float] = Field(None, description="Realized P&L in USD")
++    rr_achieved: Optional[float] = Field(None, description="R:R achieved")
++    position_state: Literal["open", "partially_closed", "closed"] = Field(
++        default="open", description="Current position state"
++    )
++    original_quantity: int = Field(..., ge=1, le=5, description="Original quantity")
++    remaining_quantity: int = Field(..., ge=0, le=5, description="Remaining quantity")
++
++    @field_validator("stop_loss")
++    @classmethod
++    def stop_loss_must_respect_direction(cls, v: float, info) -> float:
++        """Validate stop loss position based on direction."""
++        direction = info.data.get("direction")
++        entry = info.data.get("entry_price")
++
++        if entry is not None and direction is not None:
++            if direction == "long" and v >= entry:
++                raise ValueError("stop_loss must be below entry_price for long positions")
++            if direction == "short" and v <= entry:
++                raise ValueError("stop_loss must be above entry_price for short positions")
++        return v
++
++    @field_validator("take_profit")
++    @classmethod
++    def take_profit_must_respect_rr_ratio(cls, v: float, info) -> float:
++        """Validate take profit respects at least 2:1 reward-risk ratio."""
++        entry = info.data.get("entry_price")
++        stop_loss = info.data.get("stop_loss")
++        direction = info.data.get("direction")
++
++        if entry is not None and stop_loss is not None and direction is not None:
++            risk = abs(entry - stop_loss)
++            if risk > 0:
++                min_reward = risk * 2.0
++                if direction == "long" and v < entry + min_reward:
++                    raise ValueError(f"take_profit must be at least 2:1 reward-risk (>= {entry + min_reward})")
++                if direction == "short" and v > entry - min_reward:
++                    raise ValueError(f"take_profit must be at least 2:1 reward-risk (<= {entry - min_reward})")
++        return v
++
++    @field_validator("remaining_quantity")
++    @classmethod
++    def remaining_quantity_cannot_exceed_original(cls, v: int, info) -> int:
++        """Validate remaining quantity doesn't exceed original."""
++        original = info.data.get("original_quantity")
++        if original is not None and v > original:
++            raise ValueError("remaining_quantity cannot exceed original_quantity")
++        return v
++
++    def notional_value(self) -> float:
++        """Calculate contract notional value.
++
++        MNQ contract multiplier is $0.50 per point.
++
++        Returns:
++            Notional value in USD
++        """
++        multiplier = 0.50  # MNQ contract multiplier
++        return self.entry_price * multiplier * self.quantity
++
++    def risk_per_contract(self) -> float:
++        """Calculate risk per contract in points.
++
++        Returns:
++            Risk in points from entry to stop loss
++        """
++        return abs(self.entry_price - self.stop_loss)
++
++    def hold_time_minutes(self) -> float:
++        """Calculate hold time in minutes.
++
++        Returns:
++            Hold time in minutes (0 if position not exited)
++        """
++        if self.hold_time_seconds is None:
++            return 0.0
++        return self.hold_time_seconds / 60.0
++
++    def is_held_max_time(self, max_hold_minutes: float = 10.0) -> bool:
++        """Check if position has exceeded maximum hold time.
++
++        Args:
++            max_hold_minutes: Maximum hold time in minutes (default 10)
++
++        Returns:
++            True if position has exceeded max hold time
++        """
++        if self.exit_time is None:
++            # Check current hold time if still open
++            from datetime import datetime
++            current_hold = (datetime.now() - self.entry_time).total_seconds() / 60.0
++            return current_hold >= max_hold_minutes
++        else:
++            # Check final hold time if closed
++            return self.hold_time_minutes() >= max_hold_minutes
++
++    def is_at_take_profit(self, current_price: float) -> bool:
++        """Check if current price has hit take profit level.
++
++        Args:
++            current_price: Current market price
++
++        Returns:
++            True if take profit level has been hit
++        """
++        if self.direction == "long":
++            return current_price >= self.take_profit
++        else:  # short
++            return current_price <= self.take_profit
++
++    def is_at_stop_loss(self, current_price: float) -> bool:
++        """Check if current price has hit stop loss level.
++
++        Args:
++            current_price: Current market price
++
++        Returns:
++            True if stop loss level has been hit
++        """
++        if self.direction == "long":
++            return current_price <= self.stop_loss
++        else:  # short
++            return current_price >= self.stop_loss
++
++    def is_at_hybrid_partial(self, current_price: float, partial_rr: float = 1.5) -> bool:
++        """Check if current price has hit hybrid partial exit level (1.5R).
++
++        Args:
++            current_price: Current market price
++            partial_rr: Partial R:R ratio (default 1.5)
++
++        Returns:
++            True if hybrid partial level has been hit
++        """
++        risk = abs(self.entry_price - self.stop_loss)
++        partial_target = self.entry_price + (risk * partial_rr) if self.direction == "long" else self.entry_price - (risk * partial_rr)
++
++        if self.direction == "long":
++            return current_price >= partial_target
++        else:  # short
++            return current_price <= partial_target
++
++
++class EntryDecision(BaseModel):
++    """Entry decision with risk validation results.
++
++    This model represents the decision to accept or reject a trade signal
++    based on risk checks. It includes detailed information about the
++    validation process.
++
++    Attributes:
++        signal: Ensemble trade signal being evaluated
++        position_size: Position size in contracts (0 if rejected)
++        risk_checks_passed: Whether all risk checks passed
++        risk_check_details: Dictionary with detailed results of each risk check
++        decision: Entry decision (ACCEPT or REJECT)
++        rejection_reason: Reason for rejection (if applicable)
++        timestamp: Decision timestamp
++    """
++
++    signal: EnsembleTradeSignal = Field(..., description="Ensemble trade signal being evaluated")
++    position_size: int = Field(..., ge=0, le=5, description="Position size in contracts (0 if rejected)")
++    risk_checks_passed: bool = Field(..., description="Whether all risk checks passed")
++    risk_check_details: dict = Field(..., description="Detailed risk check results")
++    decision: Literal["ACCEPT", "REJECT"] = Field(..., description="Entry decision")
++    rejection_reason: Optional[str] = Field(None, description="Reason for rejection")
++    timestamp: datetime = Field(..., description="Decision timestamp")
++
++    @field_validator("position_size")
++    @classmethod
++    def position_size_must_match_decision(cls, v: int, info) -> int:
++        """Validate position size matches decision."""
++        decision = info.data.get("decision")
++        if decision == "REJECT" and v != 0:
++            raise ValueError("position_size must be 0 for REJECT decisions")
++        if decision == "ACCEPT" and v == 0:
++            raise ValueError("position_size must be >= 1 for ACCEPT decisions")
++        return v
++
++
++class ExitOrder(BaseModel):
++    """Exit order for closing positions.
++
++    This model represents an order to exit a position, either fully or partially.
++    Exit orders are generated by exit logic strategies and passed to execution.
++
++    Attributes:
++        position_id: Position ID (references TradeOrder.trade_id)
++        exit_type: Exit type (full or partial)
++        quantity: Number of contracts to close
++        exit_price: Exit price
++        exit_reason: Reason for exit (take_profit, stop_loss, time_stop, hybrid_partial, hybrid_trail)
++        timestamp: Exit order timestamp
++        pnl: Profit/loss for this exit in USD
++        rr_ratio: Reward-risk ratio achieved
++    """
++
++    position_id: str = Field(..., description="Position ID to exit")
++    exit_type: Literal["full", "partial"] = Field(..., description="Exit type")
++    quantity: int = Field(..., ge=1, le=5, description="Number of contracts to close")
++    exit_price: float = Field(..., gt=0, description="Exit price")
++    exit_reason: Literal["take_profit", "stop_loss", "time_stop", "hybrid_partial", "hybrid_trail"] = Field(
++        ..., description="Reason for exit"
++    )
++    timestamp: datetime = Field(..., description="Exit order timestamp")
++    pnl: float = Field(..., description="Profit/loss for this exit in USD")
++    rr_ratio: float = Field(..., description="Reward-risk ratio achieved")
++
++    @field_validator("exit_reason")
++    @classmethod
++    def exit_reason_must_match_exit_type(cls, v: str, info) -> str:
++        """Validate exit reason matches exit type."""
++        exit_type = info.data.get("exit_type")
++        if v == "hybrid_partial" and exit_type != "partial":
++            raise ValueError("hybrid_partial exit_reason requires partial exit_type")
++        if v in ["take_profit", "stop_loss", "time_stop", "hybrid_trail"] and exit_type != "full":
++            raise ValueError(f"{v} exit_reason requires full exit_type")
++        return v
++
++
++class PositionMonitoringState(BaseModel):
++    """Position state for exit monitoring.
++
++    This model captures the current state of a position being monitored
++    for exit conditions. Includes all information needed by exit strategies.
++
++    Attributes:
++        position: TradeOrder being monitored
++        current_price: Current market price
++        unrealized_pnl: Current unrealized P&L
++        time_since_entry_seconds: Time since position entry in seconds
++        distance_to_tp: Distance to take profit (price units)
++        distance_to_sl: Distance to stop loss (price units)
++        rr_achieved: Current R:R achieved
++    """
++
++    position: TradeOrder = Field(..., description="Position being monitored")
++    current_price: float = Field(..., gt=0, description="Current market price")
++    unrealized_pnl: float = Field(..., description="Current unrealized P&L in USD")
++    time_since_entry_seconds: int = Field(..., ge=0, description="Time since entry in seconds")
++    distance_to_tp: float = Field(..., description="Distance to take profit")
++    distance_to_sl: float = Field(..., description="Distance to stop loss")
++    rr_achieved: float = Field(..., description="Current R:R achieved")
++
++    def hold_time_minutes(self) -> float:
++        """Calculate hold time in minutes.
++
++        Returns:
++            Hold time in minutes
++        """
++        return self.time_since_entry_seconds / 60.0
++
++    def is_at_max_hold_time(self, max_hold_minutes: float = 10.0) -> bool:
++        """Check if position has exceeded maximum hold time.
++
++        Args:
++            max_hold_minutes: Maximum hold time in minutes (default 10)
++
++        Returns:
++            True if max hold time has been reached
++        """
++        return self.hold_time_minutes() >= max_hold_minutes
++
+diff --git a/tests/integration/test_exit_integration.py b/tests/integration/test_exit_integration.py
+new file mode 100644
+index 0000000..5966734
+--- /dev/null
++++ b/tests/integration/test_exit_integration.py
+@@ -0,0 +1,440 @@
++"""Integration tests for exit logic strategies (Story 2.4)."""
++
++import pytest
++from datetime import datetime, timedelta
++
++from src.execution.exit_logic import TimeBasedExit, RiskRewardExit, HybridExit
++from src.execution.models import PositionMonitoringState, TradeOrder, ExitOrder
++from src.detection.models import EnsembleTradeSignal
++
++
++class TestExitLogicIntegration:
++    """Integration tests for exit logic strategies."""
++
++    @pytest.fixture
++    def ensemble_signal(self):
++        """Create a sample ensemble signal."""
++        return EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime.now(),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime.now()
++        )
++
++    @pytest.fixture
++    def open_position(self, ensemble_signal):
++        """Create an open position."""
++        entry_time = datetime.now() - timedelta(minutes=3)
++        return TradeOrder(
++            trade_id="pos-integration-test",
++            symbol="MNQ",
++            direction="long",
++            quantity=3,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=3,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=3,
++            remaining_quantity=3
++        )
++
++    def test_full_pipeline_time_stop(self, open_position):
++        """Test full pipeline with time-based exit."""
++        time_exit = TimeBasedExit(max_hold_minutes=10.0)
++
++        # Position held for 11 minutes
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=660,
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "time_stop"
++        assert exit_order.exit_type == "full"
++        assert exit_order.quantity == 3
++
++    def test_full_pipeline_take_profit(self, open_position):
++        """Test full pipeline with take profit exit."""
++        rr_exit = RiskRewardExit()
++
++        # Price hits 2R take profit
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11870.0,
++            unrealized_pnl=150.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "take_profit"
++        assert exit_order.rr_ratio == pytest.approx(2.0)
++
++    def test_full_pipeline_stop_loss(self, open_position):
++        """Test full pipeline with stop loss exit."""
++        rr_exit = RiskRewardExit()
++
++        # Price hits stop loss
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11840.0,
++            unrealized_pnl=-75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=30.0,
++            distance_to_sl=0.0,
++            rr_achieved=-1.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "stop_loss"
++        assert exit_order.rr_ratio == -1.0
++
++    def test_full_pipeline_hybrid_flow(self, open_position):
++        """Test full hybrid exit pipeline: partial then final."""
++        hybrid_exit = HybridExit()
++
++        # Stage 1: Partial exit at 1.5R (11865)
++        state_partial = PositionMonitoringState(
++            position=open_position,
++            current_price=11865.0,
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        partial_exit = hybrid_exit.check_exit(state_partial)
++
++        assert partial_exit is not None
++        assert partial_exit.exit_reason == "hybrid_partial"
++        assert partial_exit.exit_type == "partial"
++        assert partial_exit.quantity == 1  # 3 * 0.50 = 1.5 → 1
++
++        # Simulate partial execution
++        open_position.position_state = "partially_closed"
++        open_position.remaining_quantity = 2
++
++        # Stage 2: Final exit at 2R
++        state_final = PositionMonitoringState(
++            position=open_position,
++            current_price=11870.0,
++            unrealized_pnl=100.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        final_exit = hybrid_exit.check_exit(state_final)
++
++        assert final_exit is not None
++        assert final_exit.exit_reason == "hybrid_trail"
++        assert final_exit.exit_type == "full"
++        assert final_exit.quantity == 2  # Remaining quantity
++
++    def test_strategy_priority_stop_loss_over_tp(self, open_position):
++        """Test that stop loss has priority over take profit."""
++        rr_exit = RiskRewardExit()
++        time_exit = TimeBasedExit()
++
++        # Create state where both could theoretically trigger
++        # (in real market, this shouldn't happen)
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11840.0,  # At SL, not at TP
++            unrealized_pnl=-75.0,
++            time_since_entry_seconds=660,  # Also at time stop
++            distance_to_tp=30.0,
++            distance_to_sl=0.0,
++            rr_achieved=-1.0
++        )
++
++        # RiskRewardExit should prioritize SL
++        rr_exit_order = rr_exit.check_exit(state)
++        assert rr_exit_order is not None
++        assert rr_exit_order.exit_reason == "stop_loss"
++
++        # TimeBasedExit would also trigger, but SL should be checked first in production
++
++    def test_hybrid_with_time_stop(self, open_position):
++        """Test hybrid exit with time stop on remaining position."""
++        hybrid_exit = HybridExit()
++
++        # Position already partially closed
++        open_position.position_state = "partially_closed"
++        open_position.remaining_quantity = 2
++
++        # Hit time stop before 2R
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11855.0,
++            unrealized_pnl=50.0,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "time_stop"
++        assert exit_order.quantity == 2
++
++    def test_no_exit_conditions_met(self, open_position):
++        """Test that no exit is generated when conditions aren't met."""
++        time_exit = TimeBasedExit()
++        rr_exit = RiskRewardExit()
++        hybrid_exit = HybridExit()
++
++        # Price between SL and TP, not at time stop
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=300,  # 5 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        # None of the strategies should trigger
++        assert time_exit.check_exit(state) is None
++        assert rr_exit.check_exit(state) is None
++        assert hybrid_exit.check_exit(state) is None
++
++    def test_short_position_pipeline(self, open_position):
++        """Test full pipeline with short position."""
++        signal = open_position.ensemble_signal.model_copy(update={"direction": "short"})
++
++        position = TradeOrder(
++            trade_id="pos-short-integration",
++            symbol="MNQ",
++            direction="short",
++            quantity=3,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=datetime.now() - timedelta(minutes=5),
++            status="filled",
++            ensemble_signal=signal,
++            position_size=3,
++            entry_time=datetime.now() - timedelta(minutes=5),
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=3,
++            remaining_quantity=3
++        )
++
++        rr_exit = RiskRewardExit()
++
++        # Short position hits take profit
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11830.0,
++            unrealized_pnl=150.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "take_profit"
++        # P&L = (11850 - 11830) * 0.50 * 3 = 20 * 0.50 * 3 = $30
++        assert exit_order.pnl == pytest.approx(30.0)
++
++    def test_hybrid_partial_quantity_rounding(self, open_position):
++        """Test hybrid exit with various quantities for rounding."""
++        hybrid_exit = HybridExit()
++
++        # Test with 5 contracts (should round down to 2)
++        open_position.quantity = 5
++        open_position.remaining_quantity = 5
++
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11865.0,
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        # 5 * 0.50 = 2.5 → 2 (rounds down)
++        assert exit_order is not None
++        assert exit_order.quantity == 2
++
++    def test_multiple_strategies_no_conflict(self, open_position):
++        """Test that multiple strategies can coexist without conflict."""
++        time_exit = TimeBasedExit()
++        rr_exit = RiskRewardExit()
++        hybrid_exit = HybridExit()
++
++        # Price at 1R (between SL and TP)
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11860.0,
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=10.0,
++            distance_to_sl=20.0,
++            rr_achieved=1.0
++        )
++
++        # Only hybrid should trigger (at 1.5R partial)
++        # But this is at 1R, so nothing should trigger
++        assert time_exit.check_exit(state) is None
++        assert rr_exit.check_exit(state) is None
++        # Hybrid also shouldn't trigger (not at 1.5R yet)
++        assert hybrid_exit.check_exit(state) is None
++
++    def test_exit_order_metadata_preservation(self, open_position):
++        """Test that exit orders preserve all metadata."""
++        rr_exit = RiskRewardExit()
++
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11870.0,
++            unrealized_pnl=150.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        # Verify all metadata fields
++        assert exit_order.position_id == open_position.trade_id
++        assert exit_order.exit_price == 11870.0
++        assert exit_order.timestamp is not None
++        assert exit_order.pnl is not None
++        assert exit_order.rr_ratio is not None
++
++    def test_position_state_transitions(self, open_position):
++        """Test position state transitions through exits."""
++        # Initial state: open
++        assert open_position.position_state == "open"
++
++        # Simulate partial exit
++        open_position.position_state = "partially_closed"
++        open_position.remaining_quantity = 1
++
++        # Verify state
++        assert open_position.position_state == "partially_closed"
++        assert open_position.remaining_quantity == 1
++
++        # Simulate final exit
++        open_position.position_state = "closed"
++        open_position.remaining_quantity = 0
++
++        # Verify final state
++        assert open_position.position_state == "closed"
++        assert open_position.remaining_quantity == 0
++
++    def test_custom_max_hold_time(self, open_position):
++        """Test custom max hold time across strategies."""
++        custom_time = TimeBasedExit(max_hold_minutes=5.0)
++        custom_hybrid = HybridExit(max_hold_minutes=5.0)
++
++        # Position held for 6 minutes
++        state = PositionMonitoringState(
++            position=open_position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=360,  # 6 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        # Both strategies with custom 5-min limit should trigger
++        assert custom_time.check_exit(state) is not None
++        assert custom_time.check_exit(state).exit_reason == "time_stop"
++
++        assert custom_hybrid.check_exit(state) is not None
++        assert custom_hybrid.check_exit(state).exit_reason == "time_stop"
++
++    def test_pnl_accuracy_across_strategies(self, open_position):
++        """Test P&L calculation accuracy across all strategies."""
++        time_exit = TimeBasedExit()
++        rr_exit = RiskRewardExit()
++        hybrid_exit = HybridExit()
++
++        # At take profit (20 points profit)
++        state_tp = PositionMonitoringState(
++            position=open_position,
++            current_price=11870.0,
++            unrealized_pnl=150.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        # All strategies should calculate same P&L for same price move
++        # (ignoring partial exits for hybrid)
++        time_order = time_exit.check_exit(
++            PositionMonitoringState(
++                position=open_position,
++                current_price=11870.0,
++                unrealized_pnl=150.0,
++                time_since_entry_seconds=660,
++                distance_to_tp=0.0,
++                distance_to_sl=30.0,
++                rr_achieved=2.0
++            )
++        )
++
++        rr_order = rr_exit.check_exit(state_tp)
++
++        # Both should have same P&L for full position
++        assert time_order.pnl == pytest.approx(30.0)  # (11870-11850) * 0.50 * 3
++        assert rr_order.pnl == pytest.approx(30.0)
+diff --git a/tests/unit/test_exit_logic_models.py b/tests/unit/test_exit_logic_models.py
+new file mode 100644
+index 0000000..9c88b4f
+--- /dev/null
++++ b/tests/unit/test_exit_logic_models.py
+@@ -0,0 +1,505 @@
++"""Unit tests for exit logic models (Task 1)."""
++
++import pytest
++from datetime import datetime, timedelta
++from src.execution.models import TradeOrder, ExitOrder, PositionMonitoringState
++from src.detection.models import EnsembleTradeSignal
++
++
++class TestTradeOrderExtensions:
++    """Test TradeOrder model extensions for exit tracking."""
++
++    @pytest.fixture
++    def ensemble_signal(self):
++        """Create a sample ensemble signal for testing."""
++        return EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime.now(),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime.now()
++        )
++
++    @pytest.fixture
++    def trade_order(self, ensemble_signal):
++        """Create a sample trade order for testing."""
++        return TradeOrder(
++            trade_id="test-trade-123",
++            symbol="MNQ",
++            direction="long",
++            quantity=3,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=datetime.now(),
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=3,
++            entry_time=datetime.now(),
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=3,
++            remaining_quantity=3
++        )
++
++    def test_trade_order_with_exit_fields(self, trade_order):
++        """Test trade order with exit tracking fields."""
++        assert trade_order.position_state == "open"
++        assert trade_order.original_quantity == 3
++        assert trade_order.remaining_quantity == 3
++        assert trade_order.exit_time is None
++        assert trade_order.exit_price is None
++        assert trade_order.exit_reason is None
++
++    def test_hold_time_minutes(self, trade_order):
++        """Test hold time calculation."""
++        # Not exited yet
++        assert trade_order.hold_time_minutes() == 0.0
++
++        # Exited after 5 minutes
++        trade_order.exit_time = trade_order.entry_time + timedelta(minutes=5)
++        trade_order.hold_time_seconds = 300
++        assert trade_order.hold_time_minutes() == 5.0
++
++    def test_is_held_max_time_not_exceeded(self, trade_order):
++        """Test max hold time check when not exceeded."""
++        # Position just entered
++        assert not trade_order.is_held_max_time(max_hold_minutes=10.0)
++
++    def test_is_held_max_time_exceeded(self, trade_order):
++        """Test max hold time check when exceeded."""
++        # Position held for 11 minutes
++        trade_order.exit_time = trade_order.entry_time + timedelta(minutes=11)
++        trade_order.hold_time_seconds = 660
++        assert trade_order.is_held_max_time(max_hold_minutes=10.0)
++
++    def test_is_held_max_time_exactly_at_limit(self, trade_order):
++        """Test max hold time check at exactly 10 minutes."""
++        # Position held for exactly 10 minutes
++        trade_order.exit_time = trade_order.entry_time + timedelta(minutes=10)
++        trade_order.hold_time_seconds = 600
++        assert trade_order.is_held_max_time(max_hold_minutes=10.0)
++
++    def test_is_at_take_profit_long(self, trade_order):
++        """Test take profit detection for long position."""
++        # Not at TP yet
++        assert not trade_order.is_at_take_profit(11860.0)
++
++        # At TP
++        assert trade_order.is_at_take_profit(11870.0)
++
++        # Past TP
++        assert trade_order.is_at_take_profit(11875.0)
++
++    def test_is_at_take_profit_short(self, ensemble_signal):
++        """Test take profit detection for short position."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        order = TradeOrder(
++            trade_id="test-short",
++            symbol="MNQ",
++            direction="short",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=datetime.now(),
++            status="filled",
++            ensemble_signal=signal,
++            position_size=2,
++            entry_time=datetime.now(),
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        # Not at TP yet
++        assert not order.is_at_take_profit(11840.0)
++
++        # At TP
++        assert order.is_at_take_profit(11830.0)
++
++        # Past TP
++        assert order.is_at_take_profit(11825.0)
++
++    def test_is_at_stop_loss_long(self, trade_order):
++        """Test stop loss detection for long position."""
++        # Not at SL yet
++        assert not trade_order.is_at_stop_loss(11845.0)
++
++        # At SL
++        assert trade_order.is_at_stop_loss(11840.0)
++
++        # Past SL
++        assert trade_order.is_at_stop_loss(11835.0)
++
++    def test_is_at_stop_loss_short(self, ensemble_signal):
++        """Test stop loss detection for short position."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        order = TradeOrder(
++            trade_id="test-short",
++            symbol="MNQ",
++            direction="short",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=datetime.now(),
++            status="filled",
++            ensemble_signal=signal,
++            position_size=2,
++            entry_time=datetime.now(),
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        # Not at SL yet
++        assert not order.is_at_stop_loss(11855.0)
++
++        # At SL
++        assert order.is_at_stop_loss(11860.0)
++
++        # Past SL
++        assert order.is_at_stop_loss(11865.0)
++
++    def test_is_at_hybrid_partial_long(self, trade_order):
++        """Test hybrid partial level detection for long position."""
++        # Risk = 10 points, 1.5R = 15 points, target = 11850 + 15 = 11865
++        # Not at partial yet
++        assert not trade_order.is_at_hybrid_partial(11860.0)
++
++        # At partial level
++        assert trade_order.is_at_hybrid_partial(11865.0)
++
++        # Past partial level
++        assert trade_order.is_at_hybrid_partial(11870.0)
++
++    def test_is_at_hybrid_partial_short(self, ensemble_signal):
++        """Test hybrid partial level detection for short position."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        order = TradeOrder(
++            trade_id="test-short",
++            symbol="MNQ",
++            direction="short",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=datetime.now(),
++            status="filled",
++            ensemble_signal=signal,
++            position_size=2,
++            entry_time=datetime.now(),
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        # Risk = 10 points, 1.5R = 15 points, target = 11850 - 15 = 11835
++        # Not at partial yet
++        assert not order.is_at_hybrid_partial(11840.0)
++
++        # At partial level
++        assert order.is_at_hybrid_partial(11835.0)
++
++        # Past partial level
++        assert order.is_at_hybrid_partial(11830.0)
++
++    def test_remaining_quantity_validation(self, trade_order, ensemble_signal):
++        """Test remaining quantity cannot exceed original."""
++        with pytest.raises(ValueError, match="remaining_quantity cannot exceed original_quantity"):
++            TradeOrder(
++                trade_id="test-trade-123",
++                symbol="MNQ",
++                direction="long",
++                quantity=3,
++                order_type="market",
++                entry_price=11850.0,
++                limit_price=None,
++                stop_loss=11840.0,
++                take_profit=11870.0,
++                timestamp=datetime.now(),
++                status="filled",
++                ensemble_signal=ensemble_signal,
++                position_size=3,
++                entry_time=datetime.now(),
++                exit_time=None,
++                exit_price=None,
++                exit_reason=None,
++                hold_time_seconds=None,
++                realized_pnl=None,
++                rr_achieved=None,
++                position_state="open",
++                original_quantity=3,
++                remaining_quantity=5  # Invalid: exceeds original
++            )
++
++    def test_position_state_transitions(self, trade_order):
++        """Test position state transitions."""
++        # Open
++        assert trade_order.position_state == "open"
++
++        # Partially closed
++        trade_order.position_state = "partially_closed"
++        assert trade_order.position_state == "partially_closed"
++
++        # Closed
++        trade_order.position_state = "closed"
++        assert trade_order.position_state == "closed"
++
++
++class TestExitOrder:
++    """Test ExitOrder model."""
++
++    def test_create_full_exit_order(self):
++        """Test creating a full exit order."""
++        exit_order = ExitOrder(
++            position_id="pos-123",
++            exit_type="full",
++            quantity=3,
++            exit_price=11870.0,
++            exit_reason="take_profit",
++            timestamp=datetime.now(),
++            pnl=150.0,
++            rr_ratio=2.0
++        )
++
++        assert exit_order.position_id == "pos-123"
++        assert exit_order.exit_type == "full"
++        assert exit_order.quantity == 3
++        assert exit_order.exit_reason == "take_profit"
++        assert exit_order.pnl == 150.0
++        assert exit_order.rr_ratio == 2.0
++
++    def test_create_partial_exit_order(self):
++        """Test creating a partial exit order."""
++        exit_order = ExitOrder(
++            position_id="pos-123",
++            exit_type="partial",
++            quantity=2,
++            exit_price=11865.0,
++            exit_reason="hybrid_partial",
++            timestamp=datetime.now(),
++            pnl=75.0,
++            rr_ratio=1.5
++        )
++
++        assert exit_order.exit_type == "partial"
++        assert exit_order.exit_reason == "hybrid_partial"
++        assert exit_order.quantity == 2
++
++    def test_hybrid_partial_requires_partial_exit_type(self):
++        """Test that hybrid_partial exit reason requires partial exit type."""
++        with pytest.raises(ValueError, match="hybrid_partial exit_reason requires partial exit_type"):
++            ExitOrder(
++                position_id="pos-123",
++                exit_type="full",
++                quantity=3,
++                exit_price=11865.0,
++                exit_reason="hybrid_partial",
++                timestamp=datetime.now(),
++                pnl=75.0,
++                rr_ratio=1.5
++            )
++
++    def test_take_profit_requires_full_exit_type(self):
++        """Test that take_profit exit reason requires full exit type."""
++        with pytest.raises(ValueError, match="take_profit exit_reason requires full exit_type"):
++            ExitOrder(
++                position_id="pos-123",
++                exit_type="partial",
++                quantity=1,
++                exit_price=11870.0,
++                exit_reason="take_profit",
++                timestamp=datetime.now(),
++                pnl=50.0,
++                rr_ratio=2.0
++            )
++
++    def test_stop_loss_requires_full_exit_type(self):
++        """Test that stop_loss exit reason requires full exit type."""
++        with pytest.raises(ValueError, match="stop_loss exit_reason requires full exit_type"):
++            ExitOrder(
++                position_id="pos-123",
++                exit_type="partial",
++                quantity=1,
++                exit_price=11840.0,
++                exit_reason="stop_loss",
++                timestamp=datetime.now(),
++                pnl=-50.0,
++                rr_ratio=-1.0
++            )
++
++    def test_time_stop_requires_full_exit_type(self):
++        """Test that time_stop exit reason requires full exit type."""
++        with pytest.raises(ValueError, match="time_stop exit_reason requires full exit_type"):
++            ExitOrder(
++                position_id="pos-123",
++                exit_type="partial",
++                quantity=1,
++                exit_price=11850.0,
++                exit_reason="time_stop",
++                timestamp=datetime.now(),
++                pnl=0.0,
++                rr_ratio=0.0
++            )
++
++
++class TestPositionMonitoringState:
++    """Test PositionMonitoringState model."""
++
++    @pytest.fixture
++    def ensemble_signal(self):
++        """Create a sample ensemble signal."""
++        return EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime.now(),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime.now()
++        )
++
++    @pytest.fixture
++    def position(self, ensemble_signal):
++        """Create a sample position."""
++        return TradeOrder(
++            trade_id="pos-123",
++            symbol="MNQ",
++            direction="long",
++            quantity=3,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=datetime.now(),
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=3,
++            entry_time=datetime.now(),
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=3,
++            remaining_quantity=3
++        )
++
++    def test_create_monitoring_state(self, position):
++        """Test creating a position monitoring state."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=180,
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        assert state.position.trade_id == "pos-123"
++        assert state.current_price == 11855.0
++        assert state.unrealized_pnl == 37.5
++        assert state.time_since_entry_seconds == 180
++
++    def test_hold_time_minutes(self, position):
++        """Test hold time calculation in monitoring state."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=300,  # 5 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        assert state.hold_time_minutes() == 5.0
++
++    def test_is_at_max_hold_time_not_exceeded(self, position):
++        """Test max hold time check when not exceeded."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=540,  # 9 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        assert not state.is_at_max_hold_time(max_hold_minutes=10.0)
++
++    def test_is_at_max_hold_time_exceeded(self, position):
++        """Test max hold time check when exceeded."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        assert state.is_at_max_hold_time(max_hold_minutes=10.0)
++
++    def test_is_at_max_hold_time_exactly_at_limit(self, position):
++        """Test max hold time check at exactly limit."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=600,  # 10 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        assert state.is_at_max_hold_time(max_hold_minutes=10.0)
+diff --git a/tests/unit/test_hybrid_exit.py b/tests/unit/test_hybrid_exit.py
+new file mode 100644
+index 0000000..71b52fc
+--- /dev/null
++++ b/tests/unit/test_hybrid_exit.py
+@@ -0,0 +1,497 @@
++"""Unit tests for HybridExit class (Task 4)."""
++
++import pytest
++from datetime import datetime, timedelta
++
++from src.execution.exit_logic import HybridExit
++from src.execution.models import PositionMonitoringState, TradeOrder
++from src.detection.models import EnsembleTradeSignal
++
++
++class TestHybridExit:
++    """Test HybridExit strategy."""
++
++    @pytest.fixture
++    def ensemble_signal(self):
++        """Create a sample ensemble signal."""
++        return EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime.now(),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime.now()
++        )
++
++    @pytest.fixture
++    def position(self, ensemble_signal):
++        """Create a sample long position."""
++        entry_time = datetime.now() - timedelta(minutes=3)
++        return TradeOrder(
++            trade_id="pos-hybrid-test",
++            symbol="MNQ",
++            direction="long",
++            quantity=4,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=4,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=4,
++            remaining_quantity=4
++        )
++
++    @pytest.fixture
++    def hybrid_exit(self):
++        """Create a HybridExit instance."""
++        return HybridExit(partial_rr=1.5, partial_percent=0.50, max_hold_minutes=10.0)
++
++    def test_initialization(self, hybrid_exit):
++        """Test HybridExit initialization."""
++        assert hybrid_exit.partial_rr == 1.5
++        assert hybrid_exit.partial_percent == 0.50
++        assert hybrid_exit.max_hold_minutes == 10.0
++
++    def test_initialization_custom_params(self):
++        """Test HybridExit with custom parameters."""
++        custom = HybridExit(partial_rr=1.8, partial_percent=0.40, max_hold_minutes=15.0)
++        assert custom.partial_rr == 1.8
++        assert custom.partial_percent == 0.40
++        assert custom.max_hold_minutes == 15.0
++
++    def test_initialization_invalid_partial_rr(self):
++        """Test HybridExit initialization with invalid partial_rr."""
++        with pytest.raises(ValueError, match="partial_rr must be positive"):
++            HybridExit(partial_rr=0)
++
++        with pytest.raises(ValueError, match="partial_rr must be positive"):
++            HybridExit(partial_rr=-1.0)
++
++    def test_initialization_invalid_partial_percent(self):
++        """Test HybridExit initialization with invalid partial_percent."""
++        with pytest.raises(ValueError, match="partial_percent must be between 0 and 1"):
++            HybridExit(partial_percent=0)
++
++        with pytest.raises(ValueError, match="partial_percent must be between 0 and 1"):
++            HybridExit(partial_percent=1.5)
++
++    def test_initialization_invalid_max_hold(self):
++        """Test HybridExit initialization with invalid max_hold_minutes."""
++        with pytest.raises(ValueError, match="max_hold_minutes must be positive"):
++            HybridExit(max_hold_minutes=0)
++
++        with pytest.raises(ValueError, match="max_hold_minutes must be positive"):
++            HybridExit(max_hold_minutes=-5)
++
++    def test_check_exit_no_trigger(self, position, hybrid_exit):
++        """Test no exit when price hasn't hit any level."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,  # Below 1.5R (11865) and 2R (11870)
++            unrealized_pnl=50.0,
++            time_since_entry_seconds=180,  # 3 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++        assert exit_order is None
++
++    def test_check_exit_partial_triggered(self, position, hybrid_exit):
++        """Test partial exit triggered at 1.5R."""
++        # 1.5R = 11850 + 10 * 1.5 = 11865
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11865.0,  # Exactly at 1.5R
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_type == "partial"
++        assert exit_order.exit_reason == "hybrid_partial"
++        # 4 * 0.50 = 2 contracts
++        assert exit_order.quantity == 2
++        assert exit_order.rr_ratio == 1.5
++        # P&L = (11865 - 11850) * 0.50 * 2 = 15 * 0.50 * 2 = $15
++        assert exit_order.pnl == pytest.approx(15.0)
++
++    def test_check_exit_partial_above_level(self, position, hybrid_exit):
++        """Test partial exit triggered when above 1.5R."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11867.0,  # Above 1.5R
++            unrealized_pnl=85.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=3.0,
++            distance_to_sl=27.0,
++            rr_achieved=1.7
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "hybrid_partial"
++
++    def test_check_exit_final_take_profit(self, ensemble_signal):
++        """Test final exit at 2R take profit."""
++        entry_time = datetime.now() - timedelta(minutes=5)
++        position = TradeOrder(
++            trade_id="pos-hybrid-final",
++            symbol="MNQ",
++            direction="long",
++            quantity=4,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=4,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="partially_closed",  # Already partially closed
++            original_quantity=4,
++            remaining_quantity=2  # 2 remaining after partial
++        )
++
++        hybrid_exit = HybridExit()
++
++        # At 2R TP
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11870.0,
++            unrealized_pnl=100.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_type == "full"
++        assert exit_order.exit_reason == "hybrid_trail"
++        assert exit_order.quantity == 2  # Remaining quantity
++        # P&L = (11870 - 11850) * 0.50 * 2 = 20 * 0.50 * 2 = $20
++        assert exit_order.pnl == pytest.approx(20.0)
++        assert exit_order.rr_ratio == pytest.approx(2.0)
++
++    def test_check_exit_time_stop(self, position, hybrid_exit):
++        """Test final exit at 10-minute time stop."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=50.0,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_type == "full"
++        assert exit_order.exit_reason == "time_stop"
++        assert exit_order.quantity == 4
++
++    def test_scale_out_partial_even_quantity(self, position, hybrid_exit):
++        """Test partial exit with even quantity."""
++        exit_order = hybrid_exit.scale_out_partial(position)
++
++        # 4 * 0.50 = 2 contracts
++        assert exit_order.quantity == 2
++        assert exit_order.exit_type == "partial"
++        assert exit_order.exit_reason == "hybrid_partial"
++
++    def test_scale_out_partial_odd_quantity(self, ensemble_signal):
++        """Test partial exit with odd quantity (rounds down)."""
++        entry_time = datetime.now() - timedelta(minutes=3)
++        position = TradeOrder(
++            trade_id="pos-odd-qty",
++            symbol="MNQ",
++            direction="long",
++            quantity=5,  # Odd quantity
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=5,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=5,
++            remaining_quantity=5
++        )
++
++        hybrid_exit = HybridExit()
++        exit_order = hybrid_exit.scale_out_partial(position)
++
++        # 5 * 0.50 = 2.5 → 2 (rounds down)
++        assert exit_order.quantity == 2
++
++    def test_scale_out_partial_small_quantity(self, ensemble_signal):
++        """Test partial exit with small quantity (minimum 1)."""
++        entry_time = datetime.now() - timedelta(minutes=3)
++        position = TradeOrder(
++            trade_id="pos-small-qty",
++            symbol="MNQ",
++            direction="long",
++            quantity=1,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=1,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=1,
++            remaining_quantity=1
++        )
++
++        hybrid_exit = HybridExit()
++        exit_order = hybrid_exit.scale_out_partial(position)
++
++        # 1 * 0.50 = 0.5 → 1 (minimum 1)
++        assert exit_order.quantity == 1
++
++    def test_trail_stop_to_breakeven(self, position, hybrid_exit):
++        """Test trailing stop loss to breakeven."""
++        old_stop = position.stop_loss
++        assert old_stop == 11840.0
++
++        hybrid_exit.trail_stop_to_breakeven(position)
++
++        assert position.stop_loss == position.entry_price
++        assert position.stop_loss == 11850.0
++
++    def test_partial_then_final_exit_flow(self, position, hybrid_exit):
++        """Test complete hybrid exit flow: partial then final."""
++        # Stage 1: Partial exit at 1.5R
++        state_partial = PositionMonitoringState(
++            position=position,
++            current_price=11865.0,  # At 1.5R
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        partial_exit = hybrid_exit.check_exit(state_partial)
++        assert partial_exit is not None
++        assert partial_exit.exit_reason == "hybrid_partial"
++        assert partial_exit.quantity == 2
++
++        # Simulate partial execution (update position)
++        position.position_state = "partially_closed"
++        position.remaining_quantity = 2
++        hybrid_exit.trail_stop_to_breakeven(position)
++
++        # Verify stop moved to breakeven
++        assert position.stop_loss == 11850.0
++
++        # Stage 2: Final exit at 2R
++        state_final = PositionMonitoringState(
++            position=position,
++            current_price=11870.0,  # At 2R
++            unrealized_pnl=100.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=20.0,
++            rr_achieved=2.0
++        )
++
++        final_exit = hybrid_exit.check_exit(state_final)
++        assert final_exit is not None
++        assert final_exit.exit_reason == "hybrid_trail"
++        assert final_exit.quantity == 2  # Remaining quantity
++
++    def test_short_position_partial_exit(self, ensemble_signal):
++        """Test hybrid partial exit for short position."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        entry_time = datetime.now() - timedelta(minutes=3)
++
++        position = TradeOrder(
++            trade_id="pos-short-hybrid",
++            symbol="MNQ",
++            direction="short",
++            quantity=4,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=signal,
++            position_size=4,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=4,
++            remaining_quantity=4
++        )
++
++        hybrid_exit = HybridExit()
++
++        # 1.5R for short: 11850 - 15 = 11835
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11835.0,  # At 1.5R
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "hybrid_partial"
++        assert exit_order.quantity == 2
++        # P&L = (11850 - 11835) * 0.50 * 2 = 15 * 0.50 * 2 = $15
++        assert exit_order.pnl == pytest.approx(15.0)
++
++    def test_custom_partial_percent(self, position):
++        """Test hybrid exit with custom partial percentage."""
++        custom = HybridExit(partial_percent=0.40)  # 40% instead of 50%
++
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11865.0,  # At 1.5R
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        exit_order = custom.check_exit(state)
++
++        # 4 * 0.40 = 1.6 → 1 (rounds down)
++        assert exit_order is not None
++        assert exit_order.quantity == 1
++
++    def test_partial_exit_pnl_calculation(self, position, hybrid_exit):
++        """Test P&L calculation for partial exit."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11865.0,
++            unrealized_pnl=75.0,
++            time_since_entry_seconds=180,
++            distance_to_tp=5.0,
++            distance_to_sl=25.0,
++            rr_achieved=1.5
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        # P&L = (11865 - 11850) * 0.50 * 2 = $15
++        assert exit_order.pnl == pytest.approx(15.0)
++
++    def test_final_exit_after_partial_trail(self, position, ensemble_signal):
++        """Test final exit calculation after partial with trailed stop."""
++        # Create partially closed position
++        entry_time = datetime.now() - timedelta(minutes=8)
++
++        partially_closed = TradeOrder(
++            trade_id="pos-after-partial",
++            symbol="MNQ",
++            direction="long",
++            quantity=4,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11845.0,  # Slightly above original but still valid
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=4,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="partially_closed",
++            original_quantity=4,
++            remaining_quantity=2
++        )
++
++        hybrid_exit = HybridExit()
++
++        # Price between 1.5R and 2R, not at time stop
++        state = PositionMonitoringState(
++            position=partially_closed,
++            current_price=11868.0,  # Close to 2R but not there yet
++            unrealized_pnl=90.0,
++            time_since_entry_seconds=480,  # 8 minutes
++            distance_to_tp=2.0,
++            distance_to_sl=23.0,
++            rr_achieved=1.8
++        )
++
++        exit_order = hybrid_exit.check_exit(state)
++
++        # Should not exit yet (not at 2R and not at time stop)
++        assert exit_order is None
+diff --git a/tests/unit/test_risk_reward_exit.py b/tests/unit/test_risk_reward_exit.py
+new file mode 100644
+index 0000000..03ee17c
+--- /dev/null
++++ b/tests/unit/test_risk_reward_exit.py
+@@ -0,0 +1,395 @@
++"""Unit tests for RiskRewardExit class (Task 3)."""
++
++import pytest
++from datetime import datetime, timedelta
++
++from src.execution.exit_logic import RiskRewardExit
++from src.execution.models import PositionMonitoringState, TradeOrder
++from src.detection.models import EnsembleTradeSignal
++
++
++class TestRiskRewardExit:
++    """Test RiskRewardExit strategy."""
++
++    @pytest.fixture
++    def ensemble_signal(self):
++        """Create a sample ensemble signal."""
++        return EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime.now(),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime.now()
++        )
++
++    @pytest.fixture
++    def position(self, ensemble_signal):
++        """Create a sample long position."""
++        entry_time = datetime.now() - timedelta(minutes=5)
++        return TradeOrder(
++            trade_id="pos-rr-test",
++            symbol="MNQ",
++            direction="long",
++            quantity=3,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=3,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=3,
++            remaining_quantity=3
++        )
++
++    @pytest.fixture
++    def rr_exit(self):
++        """Create a RiskRewardExit instance."""
++        return RiskRewardExit(rr_ratio=2.0)
++
++    def test_initialization(self, rr_exit):
++        """Test RiskRewardExit initialization."""
++        assert rr_exit.rr_ratio == 2.0
++
++    def test_initialization_custom_rr(self):
++        """Test RiskRewardExit with custom R:R ratio."""
++        custom_exit = RiskRewardExit(rr_ratio=2.5)
++        assert custom_exit.rr_ratio == 2.5
++
++    def test_initialization_invalid_rr(self):
++        """Test RiskRewardExit initialization with invalid R:R."""
++        with pytest.raises(ValueError, match="rr_ratio must be positive"):
++            RiskRewardExit(rr_ratio=0)
++
++        with pytest.raises(ValueError, match="rr_ratio must be positive"):
++            RiskRewardExit(rr_ratio=-1.0)
++
++    def test_calculate_take_profit_long(self, rr_exit):
++        """Test take profit calculation for long position."""
++        entry = 11850.0
++        stop_loss = 11840.0
++        risk = 10
++
++        # TP = entry + risk * 2 = 11850 + 20 = 11870
++        tp = rr_exit.calculate_take_profit(entry, stop_loss, "long")
++        assert tp == pytest.approx(11870.0)
++
++    def test_calculate_take_profit_short(self, rr_exit):
++        """Test take profit calculation for short position."""
++        entry = 11850.0
++        stop_loss = 11860.0
++        risk = 10
++
++        # TP = entry - risk * 2 = 11850 - 20 = 11830
++        tp = rr_exit.calculate_take_profit(entry, stop_loss, "short")
++        assert tp == pytest.approx(11830.0)
++
++    def test_check_take_profit_hit_long(self, position, rr_exit):
++        """Test take profit hit detection for long position."""
++        # Not at TP
++        assert not rr_exit.check_take_profit_hit(11860.0, 11870.0, "long")
++
++        # At TP
++        assert rr_exit.check_take_profit_hit(11870.0, 11870.0, "long")
++
++        # Past TP
++        assert rr_exit.check_take_profit_hit(11875.0, 11870.0, "long")
++
++    def test_check_take_profit_hit_short(self, rr_exit):
++        """Test take profit hit detection for short position."""
++        # Not at TP
++        assert not rr_exit.check_take_profit_hit(11840.0, 11830.0, "short")
++
++        # At TP
++        assert rr_exit.check_take_profit_hit(11830.0, 11830.0, "short")
++
++        # Past TP
++        assert rr_exit.check_take_profit_hit(11825.0, 11830.0, "short")
++
++    def test_check_stop_loss_hit_long(self, position, rr_exit):
++        """Test stop loss hit detection for long position."""
++        # Not at SL
++        assert not rr_exit.check_stop_loss_hit(11845.0, 11840.0, "long")
++
++        # At SL
++        assert rr_exit.check_stop_loss_hit(11840.0, 11840.0, "long")
++
++        # Past SL
++        assert rr_exit.check_stop_loss_hit(11835.0, 11840.0, "long")
++
++    def test_check_stop_loss_hit_short(self, rr_exit):
++        """Test stop loss hit detection for short position."""
++        # Not at SL
++        assert not rr_exit.check_stop_loss_hit(11855.0, 11860.0, "short")
++
++        # At SL
++        assert rr_exit.check_stop_loss_hit(11860.0, 11860.0, "short")
++
++        # Past SL
++        assert rr_exit.check_stop_loss_hit(11865.0, 11860.0, "short")
++
++    def test_check_exit_no_trigger(self, position, rr_exit):
++        """Test no exit triggered when price is between SL and TP."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,  # Between SL (11840) and TP (11870)
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=300,
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = rr_exit.check_exit(state)
++        assert exit_order is None
++
++    def test_check_exit_take_profit_triggered(self, position, rr_exit):
++        """Test take profit exit triggered."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11870.0,  # Exactly at TP
++            unrealized_pnl=150.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_type == "full"
++        assert exit_order.exit_reason == "take_profit"
++        assert exit_order.quantity == 3
++        assert exit_order.exit_price == 11870.0
++        # P&L = (11870 - 11850) * 0.50 * 3 = 20 * 0.50 * 3 = $30
++        assert exit_order.pnl == pytest.approx(30.0)
++        assert exit_order.rr_ratio == pytest.approx(2.0)
++
++    def test_check_exit_stop_loss_triggered(self, position, rr_exit):
++        """Test stop loss exit triggered."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11840.0,  # Exactly at SL
++            unrealized_pnl=-75.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=30.0,
++            distance_to_sl=0.0,
++            rr_achieved=-1.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_type == "full"
++        assert exit_order.exit_reason == "stop_loss"
++        assert exit_order.exit_price == 11840.0
++        # P&L = (11840 - 11850) * 0.50 * 3 = -10 * 0.50 * 3 = -$15
++        assert exit_order.pnl == pytest.approx(-15.0)
++        assert exit_order.rr_ratio == -1.0
++
++    def test_stop_loss_priority_over_take_profit(self, position, rr_exit):
++        """Test stop loss has higher priority than take profit."""
++        # Create position where both SL and TP could be hit
++        # In real market, this shouldn't happen, but we test priority
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11840.0,  # At SL, not at TP
++            unrealized_pnl=-75.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=30.0,
++            distance_to_sl=0.0,
++            rr_achieved=-1.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        # Should trigger stop loss, not take profit
++        assert exit_order is not None
++        assert exit_order.exit_reason == "stop_loss"
++
++    def test_calculate_rr_achieved_profit(self, rr_exit):
++        """Test R:R calculation for profitable exit."""
++        entry = 11850.0
++        exit_price = 11870.0
++        stop_loss = 11840.0
++
++        # (11870 - 11850) / (11850 - 11840) = 20 / 10 = 2.0
++        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss)
++        assert rr == pytest.approx(2.0)
++
++    def test_calculate_rr_achieved_loss(self, rr_exit):
++        """Test R:R calculation for loss exit."""
++        entry = 11850.0
++        exit_price = 11840.0
++        stop_loss = 11840.0
++
++        # Stopped at SL = -1R
++        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss)
++        assert rr == -1.0
++
++    def test_calculate_rr_achieved_partial_profit(self, rr_exit):
++        """Test R:R calculation for partial profit (1.5R)."""
++        entry = 11850.0
++        exit_price = 11865.0
++        stop_loss = 11840.0
++
++        # (11865 - 11850) / (11850 - 11840) = 15 / 10 = 1.5
++        rr = rr_exit.calculate_rr_achieved(entry, exit_price, stop_loss)
++        assert rr == pytest.approx(1.5)
++
++    def test_custom_rr_ratio(self, ensemble_signal):
++        """Test custom R:R ratio calculation."""
++        entry = 11850.0
++        stop_loss = 11840.0
++        risk = 10
++
++        # Custom 2.5:1 ratio
++        custom_exit = RiskRewardExit(rr_ratio=2.5)
++        tp = custom_exit.calculate_take_profit(entry, stop_loss, "long")
++
++        # TP = 11850 + 10 * 2.5 = 11875
++        assert tp == pytest.approx(11875.0)
++
++    def test_short_position_take_profit(self, ensemble_signal):
++        """Test take profit for short position."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        entry_time = datetime.now() - timedelta(minutes=5)
++
++        position = TradeOrder(
++            trade_id="pos-short-tp",
++            symbol="MNQ",
++            direction="short",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=signal,
++            position_size=2,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        rr_exit = RiskRewardExit()
++
++        # At TP (11830)
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11830.0,
++            unrealized_pnl=100.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "take_profit"
++        # P&L = (11850 - 11830) * 0.50 * 2 = 20 * 0.50 * 2 = $20
++        assert exit_order.pnl == pytest.approx(20.0)
++
++    def test_short_position_stop_loss(self, ensemble_signal):
++        """Test stop loss for short position."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        entry_time = datetime.now() - timedelta(minutes=5)
++
++        position = TradeOrder(
++            trade_id="pos-short-sl",
++            symbol="MNQ",
++            direction="short",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=signal,
++            position_size=2,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        rr_exit = RiskRewardExit()
++
++        # At SL (11860)
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11860.0,
++            unrealized_pnl=-50.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=30.0,
++            distance_to_sl=0.0,
++            rr_achieved=-1.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "stop_loss"
++        # P&L = (11850 - 11860) * 0.50 * 2 = -10 * 0.50 * 2 = -$10
++        assert exit_order.pnl == pytest.approx(-10.0)
++        assert exit_order.rr_ratio == -1.0
++
++    def test_partial_position_rr_exit(self, position, rr_exit):
++        """Test R:R exit with partially closed position."""
++        # Update position to be partially closed
++        position.remaining_quantity = 2
++        position.position_state = "partially_closed"
++
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11870.0,  # At TP
++            unrealized_pnl=100.0,
++            time_since_entry_seconds=300,
++            distance_to_tp=0.0,
++            distance_to_sl=30.0,
++            rr_achieved=2.0
++        )
++
++        exit_order = rr_exit.check_exit(state)
++
++        # Should close remaining quantity (2), not original (3)
++        assert exit_order is not None
++        assert exit_order.quantity == 2
++        # P&L = (11870 - 11850) * 0.50 * 2 = 20 * 0.50 * 2 = $20
++        assert exit_order.pnl == pytest.approx(20.0)
+diff --git a/tests/unit/test_time_based_exit.py b/tests/unit/test_time_based_exit.py
+new file mode 100644
+index 0000000..08af654
+--- /dev/null
++++ b/tests/unit/test_time_based_exit.py
+@@ -0,0 +1,316 @@
++"""Unit tests for TimeBasedExit class (Task 2)."""
++
++import pytest
++from datetime import datetime, timedelta
++
++from src.execution.exit_logic import TimeBasedExit
++from src.execution.models import PositionMonitoringState, TradeOrder
++from src.detection.models import EnsembleTradeSignal
++
++
++class TestTimeBasedExit:
++    """Test TimeBasedExit strategy."""
++
++    @pytest.fixture
++    def ensemble_signal(self):
++        """Create a sample ensemble signal."""
++        return EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime.now(),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime.now()
++        )
++
++    @pytest.fixture
++    def position(self, ensemble_signal):
++        """Create a sample position."""
++        entry_time = datetime.now() - timedelta(minutes=8)
++        return TradeOrder(
++            trade_id="pos-time-test",
++            symbol="MNQ",
++            direction="long",
++            quantity=3,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=3,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=3,
++            remaining_quantity=3
++        )
++
++    @pytest.fixture
++    def time_exit(self):
++        """Create a TimeBasedExit instance."""
++        return TimeBasedExit(max_hold_minutes=10.0)
++
++    def test_initialization(self, time_exit):
++        """Test TimeBasedExit initialization."""
++        assert time_exit.max_hold_minutes == 10.0
++
++    def test_initialization_custom_max_hold(self):
++        """Test TimeBasedExit with custom max hold time."""
++        custom_exit = TimeBasedExit(max_hold_minutes=15.0)
++        assert custom_exit.max_hold_minutes == 15.0
++
++    def test_initialization_invalid_max_hold(self):
++        """Test TimeBasedExit initialization with invalid max hold time."""
++        with pytest.raises(ValueError, match="max_hold_minutes must be positive"):
++            TimeBasedExit(max_hold_minutes=0)
++
++        with pytest.raises(ValueError, match="max_hold_minutes must be positive"):
++            TimeBasedExit(max_hold_minutes=-5)
++
++    def test_check_exit_not_triggered(self, position, time_exit):
++        """Test exit not triggered when hold time below max."""
++        # Position held for 8 minutes, below 10-minute max
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=480,  # 8 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = time_exit.check_exit(state)
++        assert exit_order is None
++
++    def test_check_exit_triggered_at_limit(self, position, time_exit):
++        """Test exit triggered exactly at 10-minute limit."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=600,  # Exactly 10 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_type == "full"
++        assert exit_order.quantity == 3
++        assert exit_order.exit_reason == "time_stop"
++        assert exit_order.position_id == "pos-time-test"
++
++    def test_check_exit_triggered_above_limit(self, position, time_exit):
++        """Test exit triggered when above 10-minute limit."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        assert exit_order is not None
++        assert exit_order.exit_reason == "time_stop"
++
++    def test_calculate_hold_time(self, time_exit):
++        """Test hold time calculation."""
++        entry_time = datetime.now() - timedelta(minutes=5, seconds=30)
++        current_time = datetime.now()
++
++        hold_time_seconds = time_exit.calculate_hold_time(entry_time, current_time)
++
++        # Should be approximately 330 seconds (5.5 minutes)
++        assert 325 <= hold_time_seconds <= 335
++
++    def test_get_hold_time_minutes(self, position, time_exit):
++        """Test getting hold time in minutes."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=300,  # 5 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        hold_time_minutes = time_exit.get_hold_time_minutes(state)
++        assert hold_time_minutes == 5.0
++
++    def test_exit_order_pnl_calculation_long(self, ensemble_signal):
++        """Test P&L calculation for long position exit."""
++        entry_time = datetime.now() - timedelta(minutes=11)
++        position = TradeOrder(
++            trade_id="pos-pnl-long",
++            symbol="MNQ",
++            direction="long",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11840.0,
++            take_profit=11870.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=ensemble_signal,
++            position_size=2,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        time_exit = TimeBasedExit()
++
++        # Price moved up 10 points
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11860.0,
++            unrealized_pnl=0,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=10.0,
++            distance_to_sl=20.0,
++            rr_achieved=1.0
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        # P&L = (11860 - 11850) * 0.50 * 2 = 10 * 0.50 * 2 = $10
++        assert exit_order is not None
++        assert exit_order.pnl == pytest.approx(10.0)
++
++    def test_exit_order_pnl_calculation_short(self, ensemble_signal):
++        """Test P&L calculation for short position exit."""
++        signal = ensemble_signal.model_copy(update={"direction": "short"})
++        entry_time = datetime.now() - timedelta(minutes=11)
++
++        position = TradeOrder(
++            trade_id="pos-pnl-short",
++            symbol="MNQ",
++            direction="short",
++            quantity=2,
++            order_type="market",
++            entry_price=11850.0,
++            limit_price=None,
++            stop_loss=11860.0,
++            take_profit=11830.0,
++            timestamp=entry_time,
++            status="filled",
++            ensemble_signal=signal,
++            position_size=2,
++            entry_time=entry_time,
++            exit_time=None,
++            exit_price=None,
++            exit_reason=None,
++            hold_time_seconds=None,
++            realized_pnl=None,
++            rr_achieved=None,
++            position_state="open",
++            original_quantity=2,
++            remaining_quantity=2
++        )
++
++        time_exit = TimeBasedExit()
++
++        # Price moved down 10 points (profit for short)
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11840.0,
++            unrealized_pnl=0,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=10.0,
++            distance_to_sl=20.0,
++            rr_achieved=1.0
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        # P&L = (11850 - 11840) * 0.50 * 2 = 10 * 0.50 * 2 = $10
++        assert exit_order is not None
++        assert exit_order.pnl == pytest.approx(10.0)
++
++    def test_exit_order_rr_calculation(self, position, time_exit):
++        """Test R:R calculation in exit order."""
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11860.0,  # 10 points profit, 1R achieved
++            unrealized_pnl=0,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=10.0,
++            distance_to_sl=20.0,
++            rr_achieved=1.0
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        # R:R = 10 points / 10 points risk = 1.0
++        assert exit_order is not None
++        assert exit_order.rr_ratio == pytest.approx(1.0)
++
++    def test_custom_max_hold_time(self, position):
++        """Test TimeBasedExit with custom max hold time."""
++        custom_exit = TimeBasedExit(max_hold_minutes=5.0)
++
++        # Position held for 6 minutes, above 5-minute custom max
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=360,  # 6 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = custom_exit.check_exit(state)
++        assert exit_order is not None
++        assert exit_order.exit_reason == "time_stop"
++
++    def test_partial_position_state(self, position, time_exit):
++        """Test time exit with partially closed position."""
++        # Update position to be partially closed
++        position.remaining_quantity = 2
++        position.position_state = "partially_closed"
++
++        state = PositionMonitoringState(
++            position=position,
++            current_price=11855.0,
++            unrealized_pnl=37.5,
++            time_since_entry_seconds=660,  # 11 minutes
++            distance_to_tp=15.0,
++            distance_to_sl=15.0,
++            rr_achieved=0.5
++        )
++
++        exit_order = time_exit.check_exit(state)
++
++        # Should close remaining quantity (2), not original (3)
++        assert exit_order is not None
++        assert exit_order.quantity == 2

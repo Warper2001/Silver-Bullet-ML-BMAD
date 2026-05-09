@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 
 SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+MNQ_TICK = 0.25  # MNQ minimum price increment
+
+
+def round_tick(price: float, tick: float = MNQ_TICK) -> float:
+    """Round price to nearest valid tick increment."""
+    return round(round(price / tick) * tick, 10)
 
 
 class WinningSilverBulletTrader:
@@ -297,15 +303,22 @@ class WinningSilverBulletTrader:
             # Strategy is profitable without ML filter (PF=2.60 raw)
 
         # 4. Target Calculation (Next Liquidity Pool)
-        fvg_midpoint = (setup.entry_zone_top + setup.entry_zone_bottom) / 2
+        fvg_midpoint = round_tick((setup.entry_zone_top + setup.entry_zone_bottom) / 2)
         target_price = self._find_next_liquidity_pool(setup.direction, fvg_midpoint)
-        
+
         if not target_price:
             logger.debug("❌ No valid liquidity pool target found - SKIPPED")
             return
 
+        target_price = round_tick(target_price)
+
         # 5. R:R Enforcement (Minimum 2:1)
-        stop_loss = setup.invalidation_point
+        # Stop anchored to FVG geometry (matches backtest): bottom-0.5×gap (bullish) / top+0.5×gap (bearish)
+        fvg_gap = setup.entry_zone_top - setup.entry_zone_bottom
+        if setup.direction == "bullish":
+            stop_loss = round_tick(setup.entry_zone_bottom - 0.5 * fvg_gap)
+        else:
+            stop_loss = round_tick(setup.entry_zone_top + 0.5 * fvg_gap)
         risk = abs(fvg_midpoint - stop_loss)
         if risk == 0: return
         
@@ -398,18 +411,38 @@ class WinningSilverBulletTrader:
                 logger.warning(f"⚠️  SIM bracket HTTP {response.status_code}: {response.text[:200]}")
                 return None, None, None
             orders = response.json().get("Orders", [])
+            logger.debug(f"SIM bracket raw orders: {orders}")
             entry_id = tp_id = sl_id = None
+
+            # SL: match by message text OR OrderType field (guards against message wording changes)
+            limit_orders = []
             for order in orders:
                 msg = order.get("Message", "")
+                order_type = order.get("OrderType", "")
                 oid = order.get("OrderID")
-                if "Stop Market" in msg:
+                if "Stop Market" in msg or "StopMarket" in order_type:
                     sl_id = oid
-                elif "Limit" in msg:
-                    tp_id = oid
                 else:
-                    entry_id = oid
-            if entry_id is None and tp_id is None and sl_id is None:
-                logger.warning(f"⚠️  SIM bracket: no order IDs parsed from response — {orders}")
+                    limit_orders.append(oid)
+
+            # Entry is the OSO parent — TradeStation assigns it the highest OrderID.
+            # Empirically verified across all observed submissions (5 working cases).
+            # Sort descending: [0]=entry, [1]=TP.
+            def _order_id_key(oid):
+                try:
+                    return int(oid)
+                except (TypeError, ValueError):
+                    logger.warning(f"Non-integer OrderID '{oid}' — sort position undefined")
+                    return 0
+
+            limit_orders.sort(key=_order_id_key, reverse=True)
+            if len(limit_orders) >= 2:
+                entry_id, tp_id = limit_orders[0], limit_orders[1]
+            elif len(limit_orders) == 1:
+                entry_id = limit_orders[0]
+
+            if entry_id is None or tp_id is None or sl_id is None:
+                logger.warning(f"⚠️  SIM bracket: incomplete order IDs — entry={entry_id} tp={tp_id} sl={sl_id} | raw={orders}")
             else:
                 logger.info(f"✅ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
             return entry_id, tp_id, sl_id

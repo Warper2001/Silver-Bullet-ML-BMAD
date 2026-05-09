@@ -1,0 +1,2051 @@
+diff --git a/src/detection/ensemble_signal_aggregator.py b/src/detection/ensemble_signal_aggregator.py
+new file mode 100644
+index 0000000..56bd7e8
+--- /dev/null
++++ b/src/detection/ensemble_signal_aggregator.py
+@@ -0,0 +1,763 @@
++"""Ensemble Signal Aggregator for normalizing and storing strategy signals."""
++
++import asyncio
++import logging
++from collections import deque
++from datetime import datetime, timedelta
++from typing import Any
++
++from src.detection.models import EnsembleSignal
++
++logger = logging.getLogger(__name__)
++
++
++# =============================================================================
++# Signal Normalizer Functions
++# =============================================================================
++
++
++def normalize_triple_confluence(signal: Any) -> EnsembleSignal:
++    """Normalize Triple Confluence Scalper signal to Ensemble format.
++
++    Args:
++        signal: TripleConfluenceSignal from src.detection.models
++
++    Returns:
++        Normalized EnsembleSignal
++
++    Raises:
++        ValueError: If signal validation fails
++    """
++    # Validate signal integrity
++    if not hasattr(signal, "entry_price") or signal.entry_price is None:
++        raise ValueError("Invalid TripleConfluenceSignal: missing entry_price")
++
++    # Convert direction to lowercase (already lowercase, but ensures consistency)
++    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
++
++    # Confidence is already 0-1 scale
++    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
++
++    # Preserve all contributing factors in metadata
++    metadata = {}
++    if hasattr(signal, "contributing_factors"):
++        metadata = signal.contributing_factors.copy()
++    # Add expected win rate if available
++    if hasattr(signal, "expected_win_rate"):
++        metadata["expected_win_rate"] = signal.expected_win_rate
++
++    return EnsembleSignal(
++        strategy_name="triple_confluence_scaler",  # Force normalized name
++        timestamp=signal.timestamp,
++        direction=direction,  # type: ignore[arg-type]
++        entry_price=signal.entry_price,
++        stop_loss=signal.stop_loss,
++        take_profit=signal.take_profit,
++        confidence=confidence,
++        bar_timestamp=signal.timestamp,  # Use signal timestamp as bar timestamp
++        metadata=metadata,
++    )
++
++
++def normalize_wolf_pack(signal: Any) -> EnsembleSignal:
++    """Normalize Wolf Pack 3-Edge signal to Ensemble format.
++
++    Args:
++        signal: WolfPackSignal from src.detection.models
++
++    Returns:
++        Normalized EnsembleSignal
++
++    Raises:
++        ValueError: If signal validation fails
++    """
++    # Validate signal integrity
++    if not hasattr(signal, "entry_price") or signal.entry_price is None:
++        raise ValueError("Invalid WolfPackSignal: missing entry_price")
++
++    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
++    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
++
++    # Preserve all contributing factors in metadata
++    metadata = {}
++    if hasattr(signal, "contributing_factors"):
++        metadata = signal.contributing_factors.copy()
++    if hasattr(signal, "expected_win_rate"):
++        metadata["expected_win_rate"] = signal.expected_win_rate
++
++    return EnsembleSignal(
++        strategy_name="wolf_pack_3_edge",  # Force normalized name
++        timestamp=signal.timestamp,
++        direction=direction,  # type: ignore[arg-type]
++        entry_price=signal.entry_price,
++        stop_loss=signal.stop_loss,
++        take_profit=signal.take_profit,
++        confidence=confidence,
++        bar_timestamp=signal.timestamp,
++        metadata=metadata,
++    )
++
++
++def normalize_ema_momentum(signal: Any) -> EnsembleSignal:
++    """Normalize Adaptive EMA Momentum signal to Ensemble format.
++
++    Note: EMA Momentum uses UPPERCASE direction (LONG/SHORT) and 0-100 confidence scale.
++    This function converts both to standard Ensemble format.
++
++    Args:
++        signal: MomentumSignal from src.detection.models
++
++    Returns:
++        Normalized EnsembleSignal
++
++    Raises:
++        ValueError: If signal validation fails
++    """
++    # Validate signal integrity
++    if not hasattr(signal, "entry_price") or signal.entry_price is None:
++        raise ValueError("Invalid MomentumSignal: missing entry_price")
++
++    # Convert UPPERCASE direction to lowercase
++    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
++
++    # Convert confidence from 0-100 scale to 0-1 scale
++    confidence_raw = signal.confidence if hasattr(signal, "confidence") else 50.0
++    confidence = confidence_raw / 100.0
++
++    # Preserve indicator values in metadata
++    metadata = {}
++    # Add all indicator values to metadata for transparency
++    for attr in ["ema_fast", "ema_medium", "ema_slow", "macd_line", "macd_signal", "macd_histogram", "rsi_value", "rsi_in_mid_band"]:
++        if hasattr(signal, attr):
++            value = getattr(signal, attr)
++            if value is not None:
++                metadata[attr] = value
++
++    return EnsembleSignal(
++        strategy_name="adaptive_ema_momentum",
++        timestamp=signal.timestamp,
++        direction=direction,  # type: ignore[arg-type]
++        entry_price=signal.entry_price,
++        stop_loss=signal.stop_loss,
++        take_profit=signal.take_profit,
++        confidence=confidence,
++        bar_timestamp=signal.timestamp,
++        metadata=metadata,
++    )
++
++
++def normalize_vwap_bounce(signal: Any) -> EnsembleSignal:
++    """Normalize VWAP Bounce signal to Ensemble format.
++
++    Args:
++        signal: VWAPBounceSignalModel from src.detection.vwap_bounce_strategy
++
++    Returns:
++        Normalized EnsembleSignal
++
++    Raises:
++        ValueError: If signal validation fails
++    """
++    # Validate signal integrity
++    if not hasattr(signal, "entry_price") or signal.entry_price is None:
++        raise ValueError("Invalid VWAPBounceSignal: missing entry_price")
++
++    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
++    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
++
++    # Preserve contributing factors in metadata
++    metadata = {}
++    if hasattr(signal, "contributing_factors"):
++        metadata = signal.contributing_factors.copy()
++    if hasattr(signal, "expected_win_rate"):
++        metadata["expected_win_rate"] = signal.expected_win_rate
++
++    return EnsembleSignal(
++        strategy_name="vwap_bounce",  # Force normalized name
++        timestamp=signal.timestamp,
++        direction=direction,  # type: ignore[arg-type]
++        entry_price=signal.entry_price,
++        stop_loss=signal.stop_loss,
++        take_profit=signal.take_profit,
++        confidence=confidence,
++        bar_timestamp=signal.timestamp,
++        metadata=metadata,
++    )
++
++
++def normalize_opening_range(signal: Any) -> EnsembleSignal:
++    """Normalize Opening Range Breakout signal to Ensemble format.
++
++    Args:
++        signal: OpeningRangeSignalModel from src.detection.opening_range_strategy
++
++    Returns:
++        Normalized EnsembleSignal
++
++    Raises:
++        ValueError: If signal validation fails
++    """
++    # Validate signal integrity
++    if not hasattr(signal, "entry_price") or signal.entry_price is None:
++        raise ValueError("Invalid OpeningRangeSignal: missing entry_price")
++
++    direction = signal.direction.lower() if hasattr(signal, "direction") else "unknown"
++    confidence = signal.confidence if hasattr(signal, "confidence") else 0.5
++
++    # Preserve contributing factors in metadata
++    metadata = {}
++    if hasattr(signal, "contributing_factors"):
++        metadata = signal.contributing_factors.copy()
++    if hasattr(signal, "expected_win_rate"):
++        metadata["expected_win_rate"] = signal.expected_win_rate
++
++    return EnsembleSignal(
++        strategy_name="opening_range_breakout",  # Force normalized name
++        timestamp=signal.timestamp,
++        direction=direction,  # type: ignore[arg-type]
++        entry_price=signal.entry_price,
++        stop_loss=signal.stop_loss,
++        take_profit=signal.take_profit,
++        confidence=confidence,
++        bar_timestamp=signal.timestamp,
++        metadata=metadata,
++    )
++
++
++def normalize_signal(signal: Any) -> EnsembleSignal:
++    """Dispatcher function to normalize any strategy signal to Ensemble format.
++
++    Uses isinstance() to detect signal type and route to appropriate normalizer.
++
++    Args:
++        signal: Any strategy signal object (TripleConfluence, WolfPack, etc.)
++
++    Returns:
++        Normalized EnsembleSignal
++
++    Raises:
++        ValueError: If signal type is unknown or normalization fails
++    """
++    # Import signal models for type checking
++    from src.detection.models import TripleConfluenceSignal, WolfPackSignal, MomentumSignal
++
++    # Route to appropriate normalizer based on type
++    if isinstance(signal, TripleConfluenceSignal):
++        return normalize_triple_confluence(signal)
++    elif isinstance(signal, WolfPackSignal):
++        return normalize_wolf_pack(signal)
++    elif isinstance(signal, MomentumSignal):
++        return normalize_ema_momentum(signal)
++    # For VWAP Bounce and Opening Range, check strategy_name attribute
++    elif hasattr(signal, "strategy_name"):
++        strategy_name = signal.strategy_name.lower()
++        if "vwap" in strategy_name or "bounce" in strategy_name:
++            return normalize_vwap_bounce(signal)
++        elif "opening" in strategy_name or "range" in strategy_name:
++            return normalize_opening_range(signal)
++        else:
++            # Try based on module/class name
++            class_name = signal.__class__.__name__
++            if "VWAP" in class_name:
++                return normalize_vwap_bounce(signal)
++            elif "Opening" in class_name or "Range" in class_name:
++                return normalize_opening_range(signal)
++
++    raise ValueError(f"Unknown signal type: {type(signal).__name__}")
++
++
++class EnsembleSignalAggregator:
++    """Aggregates and normalizes signals from all trading strategies.
++
++    This class provides a unified interface for receiving signals from
++    multiple strategies, storing them with configurable lookback, and
++    querying them for ensemble processing.
++
++    Signals are stored per-strategy with automatic cleanup of old signals
++    beyond the lookback window. Deduplication ensures only the latest
++    signal is kept for each strategy-bar combination.
++    """
++
++    def __init__(self, max_lookback: int = 10) -> None:
++        """Initialize the ensemble signal aggregator.
++
++        Args:
++            max_lookback: Maximum number of bars to look back for signals.
++                         Signals older than this are automatically cleaned up.
++        """
++        self.max_lookback = max_lookback
++        self._signals: dict[str, deque[EnsembleSignal]] = {}
++        self._background_task: asyncio.Task | None = None
++        self._running = False
++        logger.info("EnsembleSignalAggregator initialized with max_lookback=%d", max_lookback)
++
++    def add_signal(self, signal: EnsembleSignal) -> None:
++        """Add a normalized signal to the aggregator.
++
++        This method stores the signal in the appropriate strategy-specific
++        deque, performing deduplication and cleanup as needed.
++
++        Args:
++            signal: Normalized ensemble signal to add
++        """
++        strategy = signal.strategy_name
++        bar_time = signal.bar_timestamp
++
++        # Initialize deque for this strategy if needed
++        if strategy not in self._signals:
++            self._signals[strategy] = deque(maxlen=self.max_lookback + 5)  # Extra buffer
++            logger.debug("Created new signal deque for strategy: %s", strategy)
++
++        # Deduplication: Check if signal exists for this bar
++        strategy_deque = self._signals[strategy]
++        existing_index = None
++
++        for i, existing_signal in enumerate(strategy_deque):
++            if existing_signal.bar_timestamp == bar_time:
++                existing_index = i
++                break
++
++        if existing_index is not None:
++            # Replace existing signal for this bar
++            old_signal = strategy_deque[existing_index]
++            # Convert deque index to position for modification
++            temp_list = list(strategy_deque)
++            temp_list[existing_index] = signal
++            strategy_deque.clear()
++            strategy_deque.extend(temp_list)
++
++            logger.debug(
++                "Deduplication: Replaced signal for %s at bar %s (old conf: %.2f, new conf: %.2f)",
++                strategy,
++                bar_time,
++                old_signal.confidence,
++                signal.confidence,
++            )
++        else:
++            # Add new signal
++            strategy_deque.append(signal)
++            logger.debug(
++                "Added signal from %s: direction=%s, confidence=%.2f",
++                strategy,
++                signal.direction,
++                signal.confidence,
++            )
++
++        # Automatic cleanup of old signals
++        self.cleanup_old_signals(bar_time)
++
++    def get_signals(
++        self,
++        strategy: str | None = None,
++        direction: str | None = None,
++        min_confidence: float = 0.0,
++    ) -> list[EnsembleSignal]:
++        """Get signals with optional filtering.
++
++        Args:
++            strategy: Filter by strategy name (None = all strategies)
++            direction: Filter by direction ('long' or 'short', None = both)
++            min_confidence: Minimum confidence threshold (0-1)
++
++        Returns:
++            List of signals matching all filter criteria
++        """
++        # Collect signals from all strategies or specific strategy
++        if strategy is not None:
++            strategy_deques = [self._signals.get(strategy, deque())]
++        else:
++            strategy_deques = list(self._signals.values())
++
++        # Flatten and filter
++        all_signals = []
++        for deque_signals in strategy_deques:
++            all_signals.extend(deque_signals)
++
++        # Apply filters
++        filtered = all_signals
++        if direction is not None:
++            filtered = [s for s in filtered if s.direction == direction]
++        if min_confidence > 0:
++            filtered = [s for s in filtered if s.confidence >= min_confidence]
++
++        return filtered
++
++    def get_signals_for_bar(
++        self, bar_timestamp: datetime, window_bars: int = 0
++    ) -> list[EnsembleSignal]:
++        """Get signals for a specific bar with optional window.
++
++        Args:
++            bar_timestamp: The bar timestamp to get signals for
++            window_bars: Include signals within N bars of the target bar (default: 0)
++
++        Returns:
++            List of signals for the target bar (and window if specified)
++        """
++        # Define time window (assuming 5-minute bars for MNQ)
++        # In production, this should use actual bar timestamps from data
++        window_delta = timedelta(minutes=5 * window_bars)
++
++        window_start = bar_timestamp - window_delta
++        window_end = bar_timestamp + window_delta
++
++        matching_signals = []
++        for strategy_deque in self._signals.values():
++            for signal in strategy_deque:
++                if window_start <= signal.bar_timestamp <= window_end:
++                    matching_signals.append(signal)
++
++        return matching_signals
++
++    def cleanup_old_signals(self, current_bar_timestamp: datetime) -> None:
++        """Remove signals that exceed the max_lookback window.
++
++        Args:
++            current_bar_timestamp: The current bar timestamp (for comparison)
++        """
++        # Approximate lookback in minutes (assuming 5-minute bars)
++        lookback_delta = timedelta(minutes=5 * self.max_lookback)
++        cutoff_time = current_bar_timestamp - lookback_delta
++
++        total_removed = 0
++        for strategy, strategy_deque in self._signals.items():
++            # Remove signals older than cutoff
++            initial_count = len(strategy_deque)
++            # Filter in-place using deque rotation
++            to_keep = deque()
++            for signal in strategy_deque:
++                if signal.bar_timestamp >= cutoff_time:
++                    to_keep.append(signal)
++
++            removed_count = initial_count - len(to_keep)
++            total_removed += removed_count
++
++            # Update deque
++            strategy_deque.clear()
++            strategy_deque.extend(to_keep)
++
++            if removed_count > 0:
++                logger.debug(
++                    "Cleanup: Removed %d old signals from %s (cutoff: %s)",
++                    removed_count,
++                    strategy,
++                    cutoff_time,
++                )
++
++        if total_removed > 0:
++            logger.info("Cleanup: Removed %d total signals exceeding lookback", total_removed)
++
++    def get_active_strategies(self) -> list[str]:
++        """Get list of strategies that have signals in the lookback window.
++
++        Returns:
++            List of strategy names with at least one signal
++        """
++        return [strategy for strategy, deque_signals in self._signals.items() if len(deque_signals) > 0]
++
++    def get_latest_signal(self, strategy: str) -> EnsembleSignal | None:
++        """Get the most recent signal from a specific strategy.
++
++        Args:
++            strategy: Strategy name to get latest signal from
++
++        Returns:
++            Most recent signal from the strategy, or None if no signals exist
++        """
++        strategy_deque = self._signals.get(strategy)
++        if not strategy_deque or len(strategy_deque) == 0:
++            return None
++
++        # Return last signal (most recently added)
++        return strategy_deque[-1]
++
++    def get_signals_by_direction(self, direction: str) -> list[EnsembleSignal]:
++        """Get all signals of a specific direction.
++
++        Args:
++            direction: 'long' or 'short'
++
++        Returns:
++            List of signals matching the direction
++        """
++        return self.get_signals(direction=direction)
++
++    def get_signals_by_confidence(self, min_confidence: float) -> list[EnsembleSignal]:
++        """Get signals above a confidence threshold.
++
++        Args:
++            min_confidence: Minimum confidence level (0-1)
++
++        Returns:
++            List of signals with confidence >= threshold
++        """
++        return self.get_signals(min_confidence=min_confidence)
++
++    def get_signal_count(self, strategy: str | None = None) -> int:
++        """Count total signals or signals for a specific strategy.
++
++        Args:
++            strategy: Strategy name to count, or None for total count
++
++        Returns:
++            Number of signals
++        """
++        if strategy is not None:
++            strategy_deque = self._signals.get(strategy)
++            return len(strategy_deque) if strategy_deque else 0
++
++        return sum(len(deque_signals) for deque_signals in self._signals.values())
++
++    def clear_all_signals(self) -> None:
++        """Remove all stored signals.
++
++        Useful for testing or resetting state.
++        """
++        self._signals.clear()
++        logger.info("Cleared all signals from aggregator")
++
++    def get_storage_stats(self) -> dict:
++        """Get statistics about signal storage.
++
++        Returns:
++            Dictionary with storage statistics including:
++            - total_signals: Total number of signals stored
++            - strategies: Dict of signal counts per strategy
++            - active_strategies: Number of strategies with signals
++        """
++        stats = {
++            "total_signals": 0,
++            "strategies": {},
++            "active_strategies": 0,
++        }
++
++        for strategy, strategy_deque in self._signals.items():
++            count = len(strategy_deque)
++            stats["strategies"][strategy] = count
++            stats["total_signals"] += count
++
++        stats["active_strategies"] = len(self.get_active_strategies())
++
++        return stats
++
++    def validate_lookback(self) -> bool:
++        """Verify no signals exceed max_lookback.
++
++        Returns:
++            True if all signals are within lookback window
++        """
++        current_time = datetime.now()
++        lookback_delta = timedelta(minutes=5 * self.max_lookback)
++        cutoff_time = current_time - lookback_delta
++
++        for strategy, strategy_deque in self._signals.items():
++            for signal in strategy_deque:
++                if signal.bar_timestamp < cutoff_time:
++                    logger.warning(
++                        "Signal from %s exceeds lookback: %s",
++                        strategy,
++                        signal.bar_timestamp,
++                    )
++                    return False
++
++        return True
++
++    # =============================================================================
++    # Async Methods for Real-Time Processing
++    # =============================================================================
++
++    async def add_signal_async(self, signal: EnsembleSignal) -> None:
++        """Async version of add_signal for thread-safe operation.
++
++        Args:
++            signal: Normalized ensemble signal to add
++        """
++        # In Python, GIL protects dict/deque operations, but for consistency
++        # with async patterns, we provide this async wrapper
++        self.add_signal(signal)
++        await asyncio.sleep(0)  # Yield to event loop
++
++    async def process_signals_queue(self, queue: asyncio.Queue) -> None:
++        """Process signals from an asyncio.Queue until exhausted.
++
++        Continuously processes signals from the queue. Stops when receiving
++        a None sentinel value.
++
++        Args:
++            queue: asyncio.Queue containing EnsembleSignal objects
++        """
++        logger.info("Starting to process signals from queue")
++        processed_count = 0
++
++        while True:
++            # Get signal from queue (with timeout to allow checking _running)
++            try:
++                signal = await asyncio.wait_for(queue.get(), timeout=0.1)
++            except asyncio.TimeoutError:
++                # No signal available, check if we should stop
++                if not self._running:
++                    logger.debug("Queue processing: stopping due to _running=False")
++                    break
++                continue
++
++            # Check for sentinel value to stop
++            if signal is None:
++                logger.info("Queue processing: received sentinel, stopping")
++                break
++
++            # Normalize if needed and add signal
++            try:
++                # If signal is not already EnsembleSignal, normalize it
++                if not isinstance(signal, EnsembleSignal):
++                    from src.detection.ensemble_signal_aggregator import normalize_signal
++                    signal = normalize_signal(signal)
++
++                self.add_signal(signal)
++                processed_count += 1
++
++                if processed_count % 100 == 0:
++                    logger.info("Queue processing: processed %d signals so far", processed_count)
++
++            except Exception as e:
++                logger.error("Error processing signal from queue: %s", e)
++
++            # Mark task as done
++            queue.task_done()
++
++        logger.info("Queue processing: completed. Total processed: %d", processed_count)
++
++    async def start_aggregator(self, queue: asyncio.Queue) -> asyncio.Task:
++        """Start background task for continuous signal processing.
++
++        Args:
++            queue: asyncio.Queue containing signals to process
++
++        Returns:
++            The background task object
++
++        Raises:
++            RuntimeError: If aggregator is already running
++        """
++        if self._running:
++            raise RuntimeError("Aggregator is already running")
++
++        self._running = True
++        self._background_task = asyncio.create_task(self.process_signals_queue(queue))
++        logger.info("Started aggregator background task")
++        return self._background_task
++
++    async def stop_aggregator(self) -> None:
++        """Stop the background signal processing task.
++
++        Waits for the background task to complete gracefully.
++        """
++        if not self._running:
++            logger.warning("Aggregator is not running, nothing to stop")
++            return
++
++        logger.info("Stopping aggregator background task...")
++        self._running = False
++
++        if self._background_task is not None:
++            # Wait for task to complete (with timeout)
++            try:
++                await asyncio.wait_for(self._background_task, timeout=5.0)
++                logger.info("Aggregator background task stopped successfully")
++            except asyncio.TimeoutError:
++                logger.warning("Aggregator background task did not stop within timeout, cancelling")
++                self._background_task.cancel()
++                try:
++                    await self._background_task
++                except asyncio.CancelledError:
++                    logger.info("Aggregator background task cancelled")
++            finally:
++                self._background_task = None
++
++    # =============================================================================
++    # Consensus and Alignment Detection Methods
++    # =============================================================================
++
++    def get_consensus(self) -> dict[str, int]:
++        """Get current consensus count across all active signals.
++
++        Returns:
++            Dictionary with 'long' and 'short' counts
++        """
++        all_signals = self.get_signals()
++        consensus = {"long": 0, "short": 0}
++
++        for signal in all_signals:
++            if signal.direction == "long":
++                consensus["long"] += 1
++            elif signal.direction == "short":
++                consensus["short"] += 1
++
++        return consensus
++
++    def are_signals_aligned(self) -> bool:
++        """Check if all active signals agree on direction.
++
++        Returns:
++            True if all signals are long or all are short, False otherwise.
++            Returns True if there are 0 or 1 signals (trivially aligned).
++        """
++        all_signals = self.get_signals()
++
++        if len(all_signals) <= 1:
++            return True
++
++        # Get direction of first signal
++        first_direction = all_signals[0].direction
++
++        # Check if all signals match first direction
++        for signal in all_signals[1:]:
++            if signal.direction != first_direction:
++                return False
++
++        return True
++
++    def get_alignment_strength(self) -> float:
++        """Calculate the strength of signal alignment.
++
++        Returns:
++            Alignment strength from 0.0 (perfectly split) to 1.0 (unanimous).
++            Formula: majority_count / total_count
++        """
++        consensus = self.get_consensus()
++        total = consensus["long"] + consensus["short"]
++
++        if total == 0:
++            return 0.0
++
++        majority = max(consensus["long"], consensus["short"])
++        return majority / total
++
++    def get_conflicting_strategies(self) -> list[str]:
++        """Identify strategies that disagree with the majority direction.
++
++        Returns:
++            List of strategy names that are in the minority direction.
++            Empty list if all signals agree or no signals exist.
++        """
++        all_signals = self.get_signals()
++
++        if len(all_signals) <= 1:
++            return []
++
++        # Determine majority direction
++        consensus = self.get_consensus()
++        if consensus["long"] > consensus["short"]:
++            majority_direction = "long"
++        elif consensus["short"] > consensus["long"]:
++            majority_direction = "short"
++        else:
++            # Tie - all strategies are "conflicting"
++            return [signal.strategy_name for signal in all_signals]
++
++        # Find strategies in minority
++        conflicting = []
++        for signal in all_signals:
++            if signal.direction != majority_direction:
++                conflicting.append(signal.strategy_name)
++
++        return conflicting
+diff --git a/tests/integration/test_ensemble_aggregation_integration.py b/tests/integration/test_ensemble_aggregation_integration.py
+new file mode 100644
+index 0000000..6f048a9
+--- /dev/null
++++ b/tests/integration/test_ensemble_aggregation_integration.py
+@@ -0,0 +1,388 @@
++"""Integration tests for Ensemble Signal Aggregation.
++
++Tests end-to-end signal flow from strategies to ensemble processing.
++"""
++
++from datetime import datetime, timedelta
++
++import pytest
++
++from src.detection.ensemble_signal_aggregator import (
++    EnsembleSignalAggregator,
++    normalize_signal,
++)
++from src.detection.models import (
++    EnsembleSignal,
++    MomentumSignal,
++    TripleConfluenceSignal,
++    WolfPackSignal,
++)
++
++
++class TestEnsembleAggregationIntegration:
++    """Test end-to-end ensemble signal aggregation pipeline."""
++
++    @pytest.fixture
++    def sample_ensemble_signals(self):
++        """Create sample ensemble signals from all strategies."""
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++        return [
++            EnsembleSignal(
++                strategy_name="Triple Confluence Scalper",
++                timestamp=base_time,
++                direction="long",
++                entry_price=11850.00,
++                stop_loss=11840.00,
++                take_profit=11870.00,
++                confidence=0.85,
++                bar_timestamp=base_time,
++                metadata={"fvg_size": 10},
++            ),
++            EnsembleSignal(
++                strategy_name="Wolf Pack 3-Edge",
++                timestamp=base_time + timedelta(seconds=1),
++                direction="long",
++                entry_price=11851.00,
++                stop_loss=11841.00,
++                take_profit=11871.00,
++                confidence=0.82,
++                bar_timestamp=base_time,
++                metadata={"sweep_extent": 8},
++            ),
++            EnsembleSignal(
++                strategy_name="Adaptive EMA Momentum",
++                timestamp=base_time + timedelta(seconds=2),
++                direction="short",
++                entry_price=11849.00,
++                stop_loss=11859.00,
++                take_profit=11829.00,
++                confidence=0.78,
++                bar_timestamp=base_time,
++                metadata={"ema_fast": 11848.0},
++            ),
++        ]
++
++    def test_end_to_end_normalization_and_aggregation(self, sample_ensemble_signals):
++        """Test complete pipeline: normalize → aggregate → query."""
++        aggregator = EnsembleSignalAggregator()
++
++        # Add all signals
++        for signal in sample_ensemble_signals:
++            aggregator.add_signal(signal)
++
++        # Verify all signals stored
++        assert aggregator.get_signal_count() == 3
++
++        # Verify all strategies active
++        active = aggregator.get_active_strategies()
++        assert len(active) == 3
++
++        # Verify consensus
++        consensus = aggregator.get_consensus()
++        assert consensus["long"] == 2
++        assert consensus["short"] == 1
++
++    def test_normalization_preserves_strategy_specific_data(self):
++        """Test that normalization preserves all strategy-specific metadata."""
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Test Triple Confluence normalization
++        tc_signal = TripleConfluenceSignal(
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            direction="long",
++            confidence=0.85,
++            timestamp=base_time,
++            contributing_factors={"fvg_size": 12, "vwap_alignment": True},
++        )
++
++        normalized = normalize_signal(tc_signal)
++
++        assert normalized.strategy_name == "Triple Confluence Scalper"
++        assert normalized.metadata["fvg_size"] == 12
++        assert normalized.metadata["vwap_alignment"] is True
++        assert "expected_win_rate" in normalized.metadata
++
++    def test_normalization_from_all_strategy_types(self):
++        """Test normalization from all 5 strategy types."""
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++        aggregator = EnsembleSignalAggregator()
++
++        # Triple Confluence Signal
++        tc_signal = TripleConfluenceSignal(
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            direction="long",
++            confidence=0.85,
++            timestamp=base_time,
++            contributing_factors={"fvg_size": 10},
++        )
++
++        # Wolf Pack Signal
++        wp_signal = WolfPackSignal(
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            direction="long",
++            confidence=0.88,
++            timestamp=base_time,
++            contributing_factors={"sweep_extent": 8},
++        )
++
++        # EMA Momentum Signal (uses UPPERCASE direction, 0-100 confidence)
++        ema_signal = MomentumSignal(
++            timestamp=base_time,
++            direction="LONG",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=82.0,  # 0-100 scale
++            ema_fast=11848.0,
++        )
++
++        # Normalize and add all signals
++        aggregator.add_signal(normalize_signal(tc_signal))
++        aggregator.add_signal(normalize_signal(wp_signal))
++        aggregator.add_signal(normalize_signal(ema_signal))
++
++        # Verify all normalized correctly
++        assert aggregator.get_signal_count() == 3
++
++        # Check EMA normalization (direction should be lowercase, confidence 0-1)
++        signals = aggregator.get_signals()
++        ema_normalized = [s for s in signals if s.strategy_name == "Adaptive EMA Momentum"][0]
++        assert ema_normalized.direction == "long"
++        assert ema_normalized.confidence == 0.82
++        assert ema_normalized.metadata["ema_fast"] == 11848.0
++
++    def test_signal_flow_chronological_processing(self):
++        """Test processing signals chronologically with automatic cleanup."""
++        aggregator = EnsembleSignalAggregator(max_lookback=3)
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add 20 bars worth of signals
++        for i in range(20):
++            is_long = i % 2 == 0
++            signal = EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=base_time + timedelta(minutes=i * 5),
++                direction="long" if is_long else "short",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i if is_long else 11860.00 + i,  # Above entry for short
++                take_profit=11870.00 + i if is_long else 11830.00 + i,  # Below entry for short
++                confidence=0.85,
++                bar_timestamp=base_time + timedelta(minutes=i * 5),
++            )
++            aggregator.add_signal(signal)
++
++        # Should only have last 3 bars (lookback=3)
++        # Plus buffer, but cleanup should remove old ones
++        stats = aggregator.get_storage_stats()
++        assert stats["total_signals"] <= 8  # max_lookback + buffer
++
++    def test_deduplication_in_integration(self):
++        """Test deduplication works correctly in real scenario."""
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add initial signal
++        signal1 = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=base_time,
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.80,
++            bar_timestamp=base_time,
++        )
++        aggregator.add_signal(signal1)
++
++        # Add updated signal for same bar
++        signal2 = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=base_time + timedelta(seconds=30),
++            direction="long",
++            entry_price=11851.00,
++            stop_loss=11841.00,
++            take_profit=11871.00,
++            confidence=0.90,  # Updated confidence
++            bar_timestamp=base_time,  # Same bar
++        )
++        aggregator.add_signal(signal2)
++
++        # Should only have one signal for this bar
++        signals = aggregator.get_signals(strategy="Test Strategy")
++        assert len(signals) == 1
++        assert signals[0].confidence == 0.90  # Latest kept
++        assert signals[0].entry_price == 11851.00
++
++    def test_consensus_detection_integration(self, sample_ensemble_signals):
++        """Test consensus detection with real signal data."""
++        aggregator = EnsembleSignalAggregator()
++
++        for signal in sample_ensemble_signals:
++            aggregator.add_signal(signal)
++
++        # Check alignment (should be False: 2 long, 1 short)
++        assert aggregator.are_signals_aligned() is False
++
++        # Check alignment strength (2/3 = 0.67)
++        strength = aggregator.get_alignment_strength()
++        assert abs(strength - 0.6667) < 0.01
++
++        # Check conflicting strategies (should be EMA Momentum)
++        conflicting = aggregator.get_conflicting_strategies()
++        assert len(conflicting) == 1
++        assert "Adaptive EMA Momentum" in conflicting
++
++    @pytest.mark.asyncio
++    async def test_async_processing_integration(self):
++        """Test async signal processing with real signals."""
++        import asyncio
++
++        aggregator = EnsembleSignalAggregator()
++        queue = asyncio.Queue()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add multiple signals to queue
++        for i in range(5):
++            signal = EnsembleSignal(
++                strategy_name=f"Strategy {i}",
++                timestamp=base_time + timedelta(seconds=i),
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time,
++            )
++            await queue.put(signal)
++
++        # Add sentinel to stop
++        await queue.put(None)
++
++        # Process queue
++        await aggregator.process_signals_queue(queue)
++
++        # Verify all signals processed
++        assert aggregator.get_signal_count() == 5
++
++    @pytest.mark.asyncio
++    async def test_background_task_integration(self):
++        """Test background task with start/stop lifecycle."""
++        import asyncio
++
++        aggregator = EnsembleSignalAggregator()
++        queue = asyncio.Queue()
++
++        # Start background task
++        task = await aggregator.start_aggregator(queue)
++        assert task is not None
++
++        # Add signal
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++        signal = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=base_time,
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.85,
++            bar_timestamp=base_time,
++        )
++        await queue.put(signal)
++
++        # Wait for processing
++        await asyncio.sleep(0.2)
++
++        # Stop aggregator
++        await aggregator.stop_aggregator()
++
++        # Verify signal processed
++        assert aggregator.get_signal_count() == 1
++
++    def test_edge_case_all_strategies_signal_simultaneously(self):
++        """Test edge case where all 5 strategies signal simultaneously."""
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Create 5 signals all agreeing on long
++        strategies = [
++            "Triple Confluence Scalper",
++            "Wolf Pack 3-Edge",
++            "Adaptive EMA Momentum",
++            "VWAP Bounce",
++            "Opening Range Breakout",
++        ]
++
++        for i, strategy in enumerate(strategies):
++            signal = EnsembleSignal(
++                strategy_name=strategy,
++                timestamp=base_time + timedelta(milliseconds=i),
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.80 + (i * 0.02),
++                bar_timestamp=base_time,
++            )
++            aggregator.add_signal(signal)
++
++        # Verify all signals stored
++        assert aggregator.get_signal_count() == 5
++
++        # Verify perfect alignment
++        assert aggregator.are_signals_aligned() is True
++        assert aggregator.get_alignment_strength() == 1.0
++        assert len(aggregator.get_conflicting_strategies()) == 0
++
++    def test_edge_case_no_signals_empty_state(self):
++        """Test aggregator behavior with no signals."""
++        aggregator = EnsembleSignalAggregator()
++
++        # Verify empty state
++        assert aggregator.get_signal_count() == 0
++        assert len(aggregator.get_active_strategies()) == 0
++        assert aggregator.are_signals_aligned() is True  # Trivially aligned
++        assert aggregator.get_alignment_strength() == 0.0
++        assert len(aggregator.get_conflicting_strategies()) == 0
++
++        # Verify queries return empty
++        assert aggregator.get_signals() == []
++        assert aggregator.get_signals(strategy="Nonexistent") == []
++        assert aggregator.get_latest_signal("Nonexistent") is None
++
++    def test_performance_rapid_signal_bursts(self):
++        """Test aggregator performance with rapid signal bursts."""
++        import time
++
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add 100 signals rapidly
++        start_time = time.time()
++        for i in range(100):
++            is_long = i % 2 == 0
++            signal = EnsembleSignal(
++                strategy_name=f"Strategy {i % 5}",  # Rotate through 5 strategies
++                timestamp=base_time + timedelta(milliseconds=i),
++                direction="long" if is_long else "short",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i if is_long else 11860.00 + i,  # Above entry for short
++                take_profit=11870.00 + i if is_long else 11830.00 + i,  # Below entry for short
++                confidence=0.85,
++                bar_timestamp=base_time + timedelta(seconds=i // 10),  # Group by 10s
++            )
++            aggregator.add_signal(signal)
++
++        elapsed = time.time() - start_time
++
++        # Should process 100 signals quickly (< 1 second)
++        assert elapsed < 1.0
++
++        # Verify signals added
++        assert aggregator.get_signal_count() <= 100  # May be less due to deduplication
+diff --git a/tests/unit/test_ensemble_aggregator.py b/tests/unit/test_ensemble_aggregator.py
+new file mode 100644
+index 0000000..96fd1a7
+--- /dev/null
++++ b/tests/unit/test_ensemble_aggregator.py
+@@ -0,0 +1,882 @@
++"""Unit tests for Ensemble Signal Aggregator."""
++
++from collections import deque
++from datetime import datetime, timedelta
++
++import pytest
++
++from src.detection.models import EnsembleSignal
++
++
++class TestEnsembleSignalModel:
++    """Test EnsembleSignal Pydantic model validation and methods."""
++
++    def test_ensemble_signal_creation_with_valid_data(self):
++        """Test creating EnsembleSignal with all valid fields."""
++        signal = EnsembleSignal(
++            strategy_name="Triple Confluence Scalper",
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.85,
++            bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            metadata={"fvg_size": 10, "vwap_alignment": True}
++        )
++
++        assert signal.strategy_name == "Triple Confluence Scalper"
++        assert signal.direction == "long"
++        assert signal.entry_price == 11850.00
++        assert signal.stop_loss == 11840.00
++        assert signal.take_profit == 11870.00
++        assert signal.confidence == 0.85
++        assert signal.metadata == {"fvg_size": 10, "vwap_alignment": True}
++
++    def test_ensemble_signal_confidence_must_be_between_0_and_1(self):
++        """Test confidence validation rejects values outside 0-1 range."""
++        with pytest.raises(ValueError):  # Pydantic v2 built-in validation
++            EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=datetime(2026, 3, 31, 10, 30, 0),
++                direction="long",
++                entry_price=11850.00,
++                stop_loss=11840.00,
++                take_profit=11870.00,
++                confidence=1.5,  # Invalid: > 1
++                bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            )
++
++    def test_ensemble_signal_confidence_rejects_negative(self):
++        """Test confidence validation rejects negative values."""
++        with pytest.raises(ValueError):  # Pydantic v2 built-in validation
++            EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=datetime(2026, 3, 31, 10, 30, 0),
++                direction="long",
++                entry_price=11850.00,
++                stop_loss=11840.00,
++                take_profit=11870.00,
++                confidence=-0.1,  # Invalid: < 0
++                bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            )
++
++    def test_ensemble_signal_stop_loss_must_be_below_entry_for_long(self):
++        """Test stop_loss validation for long trades."""
++        with pytest.raises(ValueError, match="stop_loss must be below entry_price for long"):
++            EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=datetime(2026, 3, 31, 10, 30, 0),
++                direction="long",
++                entry_price=11850.00,
++                stop_loss=11860.00,  # Invalid: above entry for long
++                take_profit=11870.00,
++                confidence=0.85,
++                bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            )
++
++    def test_ensemble_signal_stop_loss_must_be_above_entry_for_short(self):
++        """Test stop_loss validation for short trades."""
++        with pytest.raises(ValueError, match="stop_loss must be above entry_price for short"):
++            EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=datetime(2026, 3, 31, 10, 30, 0),
++                direction="short",
++                entry_price=11850.00,
++                stop_loss=11840.00,  # Invalid: below entry for short
++                take_profit=11830.00,
++                confidence=0.85,
++                bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            )
++
++    def test_ensemble_signal_take_profit_must_respect_2to1_ratio(self):
++        """Test take_profit validation enforces 2:1 reward-risk ratio."""
++        with pytest.raises(ValueError, match="take_profit must respect 2:1 ratio"):
++            EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=datetime(2026, 3, 31, 10, 30, 0),
++                direction="long",
++                entry_price=11850.00,
++                stop_loss=11840.00,  # Risk: $10
++                take_profit=11855.00,  # Reward: $5 (only 0.5:1, invalid)
++                confidence=0.85,
++                bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            )
++
++    def test_ensemble_signal_take_profit_allows_small_tolerance(self):
++        """Test take_profit allows small rounding tolerance around 2:1."""
++        # Risk: $10, Reward: $19 (1.9:1, should be valid with tolerance)
++        signal = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,  # Risk: $10
++            take_profit=11869.00,  # Reward: $19 (1.9:1, valid with tolerance)
++            confidence=0.85,
++            bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++        )
++        assert signal.take_profit == 11869.00
++
++    def test_ensemble_signal_risk_reward_ratio_calculation(self):
++        """Test risk_reward_ratio() method calculates correctly."""
++        signal = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,  # Risk: $10
++            take_profit=11870.00,  # Reward: $20 (2:1)
++            confidence=0.85,
++            bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++        )
++        assert signal.risk_reward_ratio() == 2.0
++
++    def test_ensemble_signal_is_valid_returns_true_for_valid_signal(self):
++        """Test is_valid() returns True for valid signal."""
++        signal = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.85,
++            bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++        )
++        assert signal.is_valid() is True
++
++    def test_ensemble_signal_direction_must_be_valid(self):
++        """Test direction must be either 'long' or 'short'."""
++        with pytest.raises(ValueError):  # Pydantic v2 Literal validation
++            EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=datetime(2026, 3, 31, 10, 30, 0),
++                direction="invalid",  # Invalid direction
++                entry_price=11850.00,
++                stop_loss=11840.00,
++                take_profit=11870.00,
++                confidence=0.85,
++                bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            )
++
++    def test_ensemble_signal_metadata_preserves_strategy_specific_data(self):
++        """Test metadata field preserves strategy-specific information."""
++        metadata = {
++            "fvg_size_ticks": 12,
++            "sweep_extent": 8,
++            "vwap_distance": 5,
++            "atr_value": 15.5,
++        }
++        signal = EnsembleSignal(
++            strategy_name="Triple Confluence Scalper",
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.85,
++            bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            metadata=metadata,
++        )
++        assert signal.metadata == metadata
++        assert signal.metadata["fvg_size_ticks"] == 12
++
++
++@pytest.fixture
++def sample_ensemble_signal():
++    """Create a sample EnsembleSignal for testing."""
++    return EnsembleSignal(
++        strategy_name="Triple Confluence Scalper",
++        timestamp=datetime(2026, 3, 31, 10, 30, 0),
++        direction="long",
++        entry_price=11850.00,
++        stop_loss=11840.00,
++        take_profit=11870.00,
++        confidence=0.85,
++        bar_timestamp=datetime(2026, 3, 31, 10, 30, 0),
++        metadata={"test": "data"},
++    )
++
++
++@pytest.fixture
++def multiple_strategy_signals():
++    """Create signals from multiple strategies for testing."""
++    base_time = datetime(2026, 3, 31, 10, 0, 0)
++    return [
++        EnsembleSignal(
++            strategy_name="Triple Confluence Scalper",
++            timestamp=base_time,
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.85,
++            bar_timestamp=base_time,
++        ),
++        EnsembleSignal(
++            strategy_name="Wolf Pack 3-Edge",
++            timestamp=base_time + timedelta(seconds=1),
++            direction="long",
++            entry_price=11851.00,
++            stop_loss=11841.00,
++            take_profit=11871.00,
++            confidence=0.82,
++            bar_timestamp=base_time,
++        ),
++        EnsembleSignal(
++            strategy_name="Adaptive EMA Momentum",
++            timestamp=base_time + timedelta(seconds=2),
++            direction="short",
++            entry_price=11849.00,
++            stop_loss=11859.00,
++            take_profit=11829.00,
++            confidence=0.78,
++            bar_timestamp=base_time,
++        ),
++    ]
++
++
++class TestEnsembleSignalAggregator:
++    """Test EnsembleSignalAggregator class functionality."""
++
++    def test_aggregator_initialization_with_default_lookback(self):
++        """Test aggregator initializes with default lookback of 10 bars."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        assert aggregator.max_lookback == 10
++
++    def test_aggregator_initialization_with_custom_lookback(self):
++        """Test aggregator initializes with custom lookback."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator(max_lookback=20)
++        assert aggregator.max_lookback == 20
++
++    def test_add_signal_stores_signal_correctly(self, sample_ensemble_signal):
++        """Test adding a signal stores it correctly."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        aggregator.add_signal(sample_ensemble_signal)
++
++        signals = aggregator.get_signals()
++        assert len(signals) == 1
++        assert signals[0].strategy_name == "Triple Confluence Scalper"
++        assert signals[0].confidence == 0.85
++
++    def test_add_signal_creates_per_strategy_storage(self, sample_ensemble_signal):
++        """Test that signals are stored per strategy in separate deques."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        aggregator.add_signal(sample_ensemble_signal)
++
++        assert "Triple Confluence Scalper" in aggregator._signals
++        assert len(aggregator._signals["Triple Confluence Scalper"]) == 1
++
++    def test_deduplication_replaces_same_bar_signal(self, sample_ensemble_signal):
++        """Test that adding signal from same strategy for same bar replaces existing."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        bar_time = datetime(2026, 3, 31, 10, 30, 0)
++
++        # Add first signal
++        signal1 = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=bar_time,
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.80,
++            bar_timestamp=bar_time,
++        )
++        aggregator.add_signal(signal1)
++
++        # Add second signal for same bar (should replace)
++        signal2 = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=bar_time + timedelta(seconds=1),
++            direction="long",
++            entry_price=11851.00,
++            stop_loss=11841.00,
++            take_profit=11871.00,
++            confidence=0.85,  # Different confidence
++            bar_timestamp=bar_time,  # Same bar
++        )
++        aggregator.add_signal(signal2)
++
++        signals = aggregator.get_signals(strategy="Test Strategy")
++        assert len(signals) == 1  # Only one signal for the bar
++        assert signals[0].confidence == 0.85  # Latest signal kept
++        assert signals[0].entry_price == 11851.00
++
++    def test_cleanup_old_signals_removes_signals_beyond_lookback(self, sample_ensemble_signal):
++        """Test that old signals beyond lookback window are removed."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator(max_lookback=3)
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add signals for bars 0, 1, 2, 3, 4
++        for i in range(5):
++            signal = EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=base_time + timedelta(hours=i),
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time + timedelta(hours=i),
++            )
++            aggregator.add_signal(signal)
++
++        # Clean up with current bar at hour 4
++        aggregator.cleanup_old_signals(base_time + timedelta(hours=4))
++
++        signals = aggregator.get_signals(strategy="Test Strategy")
++        # Should keep bars 2, 3, 4 (within 3 bars lookback from bar 4)
++        # Bar 0, 1 should be removed
++        assert len(signals) <= 3
++
++    def test_get_signals_filters_by_strategy(self, multiple_strategy_signals):
++        """Test get_signals with strategy filter."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        # Get only Triple Confluence signals
++        tc_signals = aggregator.get_signals(strategy="Triple Confluence Scalper")
++        assert len(tc_signals) == 1
++        assert tc_signals[0].strategy_name == "Triple Confluence Scalper"
++
++    def test_get_signals_filters_by_direction(self, multiple_strategy_signals):
++        """Test get_signals with direction filter."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        # Get only long signals
++        long_signals = aggregator.get_signals(direction="long")
++        assert len(long_signals) == 2
++        assert all(s.direction == "long" for s in long_signals)
++
++    def test_get_signals_filters_by_min_confidence(self, multiple_strategy_signals):
++        """Test get_signals with minimum confidence filter."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        # Get only high confidence signals (>= 0.80)
++        high_conf_signals = aggregator.get_signals(min_confidence=0.80)
++        assert len(high_conf_signals) == 2
++        assert all(s.confidence >= 0.80 for s in high_conf_signals)
++
++    def test_get_signals_for_bar_with_window(self, multiple_strategy_signals):
++        """Test get_signals_for_bar with window parameter."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add signals at different bars
++        for i in range(5):
++            signal = EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=base_time + timedelta(minutes=i * 5),
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time + timedelta(minutes=i * 5),
++            )
++            aggregator.add_signal(signal)
++
++        # Get signals for bar at minute 10 with window of 1 bar
++        bar_time = base_time + timedelta(minutes=10)
++        signals = aggregator.get_signals_for_bar(bar_time, window_bars=1)
++
++        # Should get signal at minute 10 only (window=0 would give only that bar)
++        assert len(signals) >= 1
++
++    def test_get_active_strategies_returns_list(self, multiple_strategy_signals):
++        """Test get_active_strategies returns list of strategies with signals."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        active = aggregator.get_active_strategies()
++        assert len(active) == 3
++        assert "Triple Confluence Scalper" in active
++        assert "Wolf Pack 3-Edge" in active
++        assert "Adaptive EMA Momentum" in active
++
++    def test_get_latest_signal_returns_most_recent(self, sample_ensemble_signal):
++        """Test get_latest_signal returns most recent signal from strategy."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # Add multiple signals
++        for i in range(3):
++            signal = EnsembleSignal(
++                strategy_name="Test Strategy",
++                timestamp=base_time + timedelta(minutes=i),
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time + timedelta(minutes=i),
++            )
++            aggregator.add_signal(signal)
++
++        latest = aggregator.get_latest_signal("Test Strategy")
++        assert latest is not None
++        assert latest.entry_price == 11852.00  # Last signal
++
++    def test_get_signal_count(self, multiple_strategy_signals):
++        """Test get_signal_count returns correct count."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        # Count all signals
++        assert aggregator.get_signal_count() == 3
++
++        # Count specific strategy
++        assert aggregator.get_signal_count(strategy="Triple Confluence Scalper") == 1
++
++    def test_clear_all_signals_removes_all(self, multiple_strategy_signals):
++        """Test clear_all_signals removes all stored signals."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        assert aggregator.get_signal_count() == 3
++
++        aggregator.clear_all_signals()
++
++        assert aggregator.get_signal_count() == 0
++        assert len(aggregator.get_active_strategies()) == 0
++
++
++class TestSignalNormalizer:
++    """Test signal normalization from all 5 strategies."""
++
++    def test_normalize_triple_confluence_signal(self):
++        """Test normalizing Triple Confluence signal to Ensemble format."""
++        from datetime import datetime
++        from src.detection.ensemble_signal_aggregator import normalize_triple_confluence
++        from src.detection.models import TripleConfluenceSignal
++
++        original = TripleConfluenceSignal(
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            direction="long",
++            confidence=0.85,
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            contributing_factors={"fvg_size": 10, "vwap_alignment": True},
++        )
++
++        normalized = normalize_triple_confluence(original)
++
++        assert normalized.strategy_name == "Triple Confluence Scalper"
++        assert normalized.direction == "long"
++        assert normalized.entry_price == 11850.00
++        assert normalized.confidence == 0.85
++        assert normalized.bar_timestamp == original.timestamp
++        assert "fvg_size" in normalized.metadata
++
++    def test_normalize_wolf_pack_signal(self):
++        """Test normalizing Wolf Pack signal to Ensemble format."""
++        from datetime import datetime
++        from src.detection.ensemble_signal_aggregator import normalize_wolf_pack
++        from src.detection.models import WolfPackSignal
++
++        original = WolfPackSignal(
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            direction="long",
++            confidence=0.88,
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            contributing_factors={"sweep_extent": 8, "trap_severity": 2.5},
++        )
++
++        normalized = normalize_wolf_pack(original)
++
++        assert normalized.strategy_name == "Wolf Pack 3-Edge"
++        assert normalized.direction == "long"
++        assert normalized.entry_price == 11850.00
++        assert normalized.confidence == 0.88
++        assert "sweep_extent" in normalized.metadata
++
++    def test_normalize_ema_momentum_signal(self):
++        """Test normalizing EMA Momentum signal to Ensemble format."""
++        from datetime import datetime
++        from src.detection.ensemble_signal_aggregator import normalize_ema_momentum
++        from src.detection.models import MomentumSignal
++
++        original = MomentumSignal(
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            direction="LONG",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=82.0,  # 0-100 scale
++            ema_fast=11848.0,
++            ema_medium=11845.0,
++            ema_slow=11840.0,
++        )
++
++        normalized = normalize_ema_momentum(original)
++
++        assert normalized.strategy_name == "Adaptive EMA Momentum"
++        assert normalized.direction == "long"  # Converted from LONG
++        assert normalized.entry_price == 11850.00
++        assert normalized.confidence == 0.82  # Converted from 82.0
++        assert "ema_fast" in normalized.metadata
++        assert normalized.metadata["ema_fast"] == 11848.0
++
++    def test_normalize_vwap_bounce_signal(self):
++        """Test normalizing VWAP Bounce signal to Ensemble format."""
++        from datetime import datetime
++        from src.detection.ensemble_signal_aggregator import normalize_vwap_bounce
++
++        # Mock VWAPBounceSignalModel
++        class MockVWAPSignal:
++            def __init__(self):
++                self.strategy_name = "VWAP Bounce"
++                self.timestamp = datetime(2026, 3, 31, 10, 30, 0)
++                self.direction = "long"
++                self.entry_price = 11850.00
++                self.stop_loss = 11840.00
++                self.take_profit = 11870.00
++                self.confidence = 0.75
++                self.contributing_factors = {"rejection_distance": 3, "adx_value": 25}
++
++        original = MockVWAPSignal()
++
++        normalized = normalize_vwap_bounce(original)
++
++        assert normalized.strategy_name == "VWAP Bounce"
++        assert normalized.direction == "long"
++        assert normalized.entry_price == 11850.00
++        assert normalized.confidence == 0.75
++        assert "rejection_distance" in normalized.metadata
++
++    def test_normalize_opening_range_signal(self):
++        """Test normalizing Opening Range signal to Ensemble format."""
++        from datetime import datetime
++        from src.detection.ensemble_signal_aggregator import normalize_opening_range
++
++        # Mock OpeningRangeSignalModel
++        class MockORSignal:
++            def __init__(self):
++                self.strategy_name = "Opening Range Breakout"
++                self.timestamp = datetime(2026, 3, 31, 10, 30, 0)
++                self.direction = "short"
++                self.entry_price = 11850.00
++                self.stop_loss = 11860.00
++                self.take_profit = 11830.00
++                self.confidence = 0.72
++                self.contributing_factors = {"or_high": 11855, "breakout_strength": 1.8}
++
++        original = MockORSignal()
++
++        normalized = normalize_opening_range(original)
++
++        assert normalized.strategy_name == "Opening Range Breakout"
++        assert normalized.direction == "short"
++        assert normalized.entry_price == 11850.00
++        assert normalized.confidence == 0.72
++        assert "or_high" in normalized.metadata
++
++    def test_normalize_signal_dispatcher(self):
++        """Test normalize_signal dispatcher routes to correct normalizer."""
++        from datetime import datetime
++        from src.detection.ensemble_signal_aggregator import normalize_signal
++        from src.detection.models import TripleConfluenceSignal
++
++        original = TripleConfluenceSignal(
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            direction="long",
++            confidence=0.85,
++            timestamp=datetime(2026, 3, 31, 10, 30, 0),
++            contributing_factors={},
++        )
++
++        normalized = normalize_signal(original)
++
++        assert normalized.strategy_name == "Triple Confluence Scalper"
++        assert isinstance(normalized, EnsembleSignal)
++
++    def test_normalize_signal_raises_error_for_unknown_type(self):
++        """Test normalize_signal raises ValueError for unknown signal types."""
++        from src.detection.ensemble_signal_aggregator import normalize_signal
++
++        class UnknownSignal:
++            pass
++
++        unknown = UnknownSignal()
++
++        with pytest.raises(ValueError, match="Unknown signal type"):
++            normalize_signal(unknown)
++
++
++class TestAsyncSignalProcessing:
++    """Test async signal processing pipeline."""
++
++    @pytest.mark.asyncio
++    async def test_add_signal_async_stores_signal(self, sample_ensemble_signal):
++        """Test async add_signal stores signal correctly."""
++        import asyncio
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        await aggregator.add_signal_async(sample_ensemble_signal)
++
++        signals = aggregator.get_signals()
++        assert len(signals) == 1
++        assert signals[0].strategy_name == "Triple Confluence Scalper"
++
++    @pytest.mark.asyncio
++    async def test_process_signals_queue_handles_multiple_signals(self, sample_ensemble_signal):
++        """Test processing multiple signals from queue."""
++        import asyncio
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        queue = asyncio.Queue()
++
++        # Add multiple signals to queue
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++        for i in range(3):
++            signal = EnsembleSignal(
++                strategy_name=f"Strategy {i}",
++                timestamp=base_time + timedelta(seconds=i),
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time,
++            )
++            await queue.put(signal)
++
++        # Process queue
++        await aggregator.process_signals_queue(queue)
++
++        # Verify all signals added
++        assert aggregator.get_signal_count() == 3
++
++    @pytest.mark.asyncio
++    async def test_process_signals_queue_stops_on_none(self, sample_ensemble_signal):
++        """Test process_signals_queue stops when receiving None."""
++        import asyncio
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        queue = asyncio.Queue()
++
++        # Add signal and None sentinel
++        await queue.put(sample_ensemble_signal)
++        await queue.put(None)  # Sentinel to stop processing
++
++        # Process queue (should stop after None)
++        await aggregator.process_signals_queue(queue)
++
++        # Verify only first signal added
++        assert aggregator.get_signal_count() == 1
++
++    @pytest.mark.asyncio
++    async def test_start_and_stop_aggregator_background_task(self):
++        """Test starting and stopping background aggregator task."""
++        import asyncio
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        queue = asyncio.Queue()
++
++        # Start background task
++        task = await aggregator.start_aggregator(queue)
++        assert task is not None
++
++        # Add a signal
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++        signal = EnsembleSignal(
++            strategy_name="Test Strategy",
++            timestamp=base_time,
++            direction="long",
++            entry_price=11850.00,
++            stop_loss=11840.00,
++            take_profit=11870.00,
++            confidence=0.85,
++            bar_timestamp=base_time,
++        )
++        await queue.put(signal)
++
++        # Wait for processing
++        await asyncio.sleep(0.1)
++
++        # Stop aggregator
++        await aggregator.stop_aggregator()
++
++        # Verify signal was processed
++        assert aggregator.get_signal_count() == 1
++
++
++class TestSignalConsensusAndAlignment:
++    """Test signal consensus and alignment detection methods."""
++
++    def test_get_consensus_with_unanimous_long(self, multiple_strategy_signals):
++        """Test get_consensus when all signals agree on long."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++
++        # All long signals
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++        for i in range(3):
++            signal = EnsembleSignal(
++                strategy_name=f"Strategy {i}",
++                timestamp=base_time,
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time,
++            )
++            aggregator.add_signal(signal)
++
++        consensus = aggregator.get_consensus()
++        assert consensus["long"] == 3
++        assert consensus["short"] == 0
++
++    def test_get_consensus_with_mixed_signals(self, multiple_strategy_signals):
++        """Test get_consensus with mixed long/short signals."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        consensus = aggregator.get_consensus()
++        # Should have 2 long, 1 short from multiple_strategy_signals fixture
++        assert consensus["long"] == 2
++        assert consensus["short"] == 1
++
++    def test_are_signals_aligned_returns_true_for_unanimous(self):
++        """Test are_signals_aligned returns True when all signals agree."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # All long signals
++        for i in range(3):
++            signal = EnsembleSignal(
++                strategy_name=f"Strategy {i}",
++                timestamp=base_time,
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time,
++            )
++            aggregator.add_signal(signal)
++
++        assert aggregator.are_signals_aligned() is True
++
++    def test_are_signals_aligned_returns_false_for_mixed(self, multiple_strategy_signals):
++        """Test are_signals_aligned returns False when signals disagree."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        assert aggregator.are_signals_aligned() is False
++
++    def test_are_signals_aligned_returns_true_for_single_signal(self, sample_ensemble_signal):
++        """Test are_signals_aligned returns True with only one signal."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        aggregator.add_signal(sample_ensemble_signal)
++
++        assert aggregator.are_signals_aligned() is True
++
++    def test_get_alignment_strength_for_unanimous(self):
++        """Test get_alignment_strength returns 1.0 for unanimous signals."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        base_time = datetime(2026, 3, 31, 10, 0, 0)
++
++        # All long signals
++        for i in range(4):
++            signal = EnsembleSignal(
++                strategy_name=f"Strategy {i}",
++                timestamp=base_time,
++                direction="long",
++                entry_price=11850.00 + i,
++                stop_loss=11840.00 + i,
++                take_profit=11870.00 + i,
++                confidence=0.85,
++                bar_timestamp=base_time,
++            )
++            aggregator.add_signal(signal)
++
++        strength = aggregator.get_alignment_strength()
++        assert strength == 1.0
++
++    def test_get_alignment_strength_for_split(self, multiple_strategy_signals):
++        """Test get_alignment_strength for mixed signals."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        strength = aggregator.get_alignment_strength()
++        # 2 long, 1 short = 2/3 strength
++        assert abs(strength - 0.6667) < 0.01
++
++    def test_get_conflicting_strategies(self, multiple_strategy_signals):
++        """Test get_conflicting_strategies identifies minority signals."""
++        from src.detection.ensemble_signal_aggregator import EnsembleSignalAggregator
++
++        aggregator = EnsembleSignalAggregator()
++        for signal in multiple_strategy_signals:
++            aggregator.add_signal(signal)
++
++        # 2 long, 1 short - short is conflicting
++        conflicting = aggregator.get_conflicting_strategies()
++        assert len(conflicting) == 1
++        # The short signal should be identified as conflicting
++        assert "Adaptive EMA Momentum" in conflicting

@@ -1,0 +1,1637 @@
+diff --git a/config-sim.yaml b/config-sim.yaml
+new file mode 100644
+index 0000000..ebba1ae
+--- /dev/null
++++ b/config-sim.yaml
+@@ -0,0 +1,28 @@
++backtesting:
++  commission_per_contract: 0.85
++  end_date: '2026-03-31'
++  initial_account_size: 50000
++  slippage_ticks: 1
++  start_date: '2024-01-01'
++ensemble:
++  confidence_threshold: 0.5
++  minimum_strategies: 1
++  strategies:
++    adaptive_ema_momentum: 0.2
++    opening_range_breakout: 0.2
++    triple_confluence_scaler: 0.2
++    vwap_bounce: 0.2
++    wolf_pack_3_edge: 0.2
++logging:
++  console: true
++  file: logs/ensemble.log
++  level: INFO
++risk:
++  max_position_size: 5
++  max_risk_per_trade: 0.02
++  risk_reward_ratio: 2.0
++walk_forward:
++  minimum_steps: 12
++  step_forward_months: 1
++  testing_window_months: 1
++  training_window_months: 6
+diff --git a/src/detection/weighted_confidence_scorer.py b/src/detection/weighted_confidence_scorer.py
+new file mode 100644
+index 0000000..ec6259e
+--- /dev/null
++++ b/src/detection/weighted_confidence_scorer.py
+@@ -0,0 +1,558 @@
++"""Weighted Confidence Scorer for Ensemble Trading System.
++
++This module implements configuration-driven strategy weight management and
++weighted confidence scoring for the ensemble trading system.
++
++Key Components:
++- StrategyWeights: Pydantic model for strategy weight validation
++- WeightManager: Configuration-driven weight management and persistence
++- WeightedConfidenceScorer: Core weighted scoring logic with filtering
++"""
++
++import logging
++from pathlib import Path
++from typing import Any
++
++import yaml
++from pydantic import BaseModel, Field, field_validator, model_validator
++
++from src.detection.models import EnsembleSignal, EnsembleTradeSignal
++
++logger = logging.getLogger(__name__)
++
++
++class StrategyWeights(BaseModel):
++    """Strategy weights for ensemble scoring.
++
++    Weights represent the contribution of each strategy to the ensemble.
++    All weights must be between 0 and 1, and must sum to 1.0.
++
++    Attributes:
++        triple_confluence_scaler: Weight for Triple Confluence Scalper strategy
++        wolf_pack_3_edge: Weight for Wolf Pack 3-Edge strategy
++        adaptive_ema_momentum: Weight for Adaptive EMA Momentum strategy
++        vwap_bounce: Weight for VWAP Bounce strategy
++        opening_range_breakout: Weight for Opening Range Breakout strategy
++    """
++
++    triple_confluence_scaler: float = Field(..., ge=0, le=1, description="Weight for Triple Confluence Scalper")
++    wolf_pack_3_edge: float = Field(..., ge=0, le=1, description="Weight for Wolf Pack 3-Edge")
++    adaptive_ema_momentum: float = Field(..., ge=0, le=1, description="Weight for Adaptive EMA Momentum")
++    vwap_bounce: float = Field(..., ge=0, le=1, description="Weight for VWAP Bounce")
++    opening_range_breakout: float = Field(..., ge=0, le=1, description="Weight for Opening Range Breakout")
++
++    @model_validator(mode="after")
++    def validate_weights_sum(self) -> "StrategyWeights":
++        """Validate that weights sum to 1.0 with floating point tolerance.
++
++        Returns:
++            self if validation passes
++
++        Raises:
++            ValueError: If weights don't sum to 1.0 (within 1e-6 tolerance)
++        """
++        total = (
++            self.triple_confluence_scaler
++            + self.wolf_pack_3_edge
++            + self.adaptive_ema_momentum
++            + self.vwap_bounce
++            + self.opening_range_breakout
++        )
++
++        if abs(total - 1.0) > 1e-6:
++            raise ValueError(
++                f"Weights must sum to 1.0, got {total:.6f}. "
++                f"Please adjust weights to sum exactly to 1.0."
++            )
++
++        return self
++
++
++class WeightManager:
++    """Configuration-driven strategy weight management.
++
++    Manages loading, saving, updating, and normalizing strategy weights
++    from YAML configuration files. Provides validation and persistence
++    for ensemble weight configuration.
++
++    Attributes:
++        config_path: Path to configuration file (default: config-sim.yaml)
++    """
++
++    def __init__(self, config_path: str = "config-sim.yaml") -> None:
++        """Initialize WeightManager with configuration file path.
++
++        Args:
++            config_path: Path to YAML configuration file
++        """
++        self.config_path = Path(config_path)
++        logger.info("WeightManager initialized with config: %s", self.config_path)
++
++    def load_weights(self) -> StrategyWeights:
++        """Load strategy weights from configuration file.
++
++        Returns:
++            StrategyWeights object with loaded weights
++
++        Raises:
++            FileNotFoundError: If config file doesn't exist
++            ValueError: If weights are invalid (don't sum to 1.0 or out of range)
++        """
++        if not self.config_path.exists():
++            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
++
++        with open(self.config_path) as f:
++            config = yaml.safe_load(f)
++
++        strategies = config.get("ensemble", {}).get("strategies", {})
++
++        weights = StrategyWeights(
++            triple_confluence_scaler=strategies.get("triple_confluence_scaler", 0.20),
++            wolf_pack_3_edge=strategies.get("wolf_pack_3_edge", 0.20),
++            adaptive_ema_momentum=strategies.get("adaptive_ema_momentum", 0.20),
++            vwap_bounce=strategies.get("vwap_bounce", 0.20),
++            opening_range_breakout=strategies.get("opening_range_breakout", 0.20),
++        )
++
++        logger.info("Loaded weights from config: %s", self.config_path)
++        return weights
++
++    def save_weights(self, weights: StrategyWeights) -> None:
++        """Persist strategy weights to configuration file.
++
++        Args:
++            weights: StrategyWeights object to save
++
++        Raises:
++            FileNotFoundError: If config file doesn't exist
++        """
++        if not self.config_path.exists():
++            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
++
++        with open(self.config_path) as f:
++            config = yaml.safe_load(f)
++
++        config["ensemble"]["strategies"] = {
++            "triple_confluence_scaler": weights.triple_confluence_scaler,
++            "wolf_pack_3_edge": weights.wolf_pack_3_edge,
++            "adaptive_ema_momentum": weights.adaptive_ema_momentum,
++            "vwap_bounce": weights.vwap_bounce,
++            "opening_range_breakout": weights.opening_range_breakout,
++        }
++
++        with open(self.config_path, "w") as f:
++            yaml.dump(config, f, default_flow_style=False)
++
++        logger.info("Saved weights to config: %s", self.config_path)
++
++    def update_weight(self, strategy: str, new_weight: float) -> None:
++        """Update a single strategy weight and persist to config.
++
++        Args:
++            strategy: Strategy name to update
++            new_weight: New weight value (0-1)
++
++        Raises:
++            FileNotFoundError: If config file doesn't exist
++            ValueError: If strategy name is invalid or weight is out of range
++        """
++        valid_strategies = [
++            "triple_confluence_scaler",
++            "wolf_pack_3_edge",
++            "adaptive_ema_momentum",
++            "vwap_bounce",
++            "opening_range_breakout",
++        ]
++
++        if strategy not in valid_strategies:
++            raise ValueError(
++                f"Invalid strategy: {strategy}. "
++                f"Valid strategies: {', '.join(valid_strategies)}"
++            )
++
++        if not 0 <= new_weight <= 1:
++            raise ValueError(f"Weight must be between 0 and 1, got {new_weight}")
++
++        # Load current weights
++        with open(self.config_path) as f:
++            config = yaml.safe_load(f)
++
++        # Update specific weight
++        config["ensemble"]["strategies"][strategy] = new_weight
++
++        # Save updated config
++        with open(self.config_path, "w") as f:
++            yaml.dump(config, f, default_flow_style=False)
++
++        logger.info("Updated %s weight to %.4f in %s", strategy, new_weight, self.config_path)
++
++    def normalize_weights(self, weights: StrategyWeights) -> StrategyWeights:
++        """Normalize weights to ensure they sum to 1.0 while preserving proportions.
++
++        Args:
++            weights: StrategyWeights object that may not sum to 1.0
++
++        Returns:
++            New StrategyWeights object normalized to sum to 1.0
++        """
++        total = (
++            weights.triple_confluence_scaler
++            + weights.wolf_pack_3_edge
++            + weights.adaptive_ema_momentum
++            + weights.vwap_bounce
++            + weights.opening_range_breakout
++        )
++
++        if total == 0:
++            # Edge case: all weights are 0, return equal weights
++            return StrategyWeights(
++                triple_confluence_scaler=0.20,
++                wolf_pack_3_edge=0.20,
++                adaptive_ema_momentum=0.20,
++                vwap_bounce=0.20,
++                opening_range_breakout=0.20,
++            )
++
++        normalized = StrategyWeights(
++            triple_confluence_scaler=weights.triple_confluence_scaler / total,
++            wolf_pack_3_edge=weights.wolf_pack_3_edge / total,
++            adaptive_ema_momentum=weights.adaptive_ema_momentum / total,
++            vwap_bounce=weights.vwap_bounce / total,
++            opening_range_breakout=weights.opening_range_breakout / total,
++        )
++
++        logger.info("Normalized weights from total %.6f to 1.0", total)
++        return normalized
++
++    def get_config(self) -> dict[str, Any]:
++        """Return current configuration as dictionary.
++
++        Returns:
++            Dictionary containing full configuration
++        """
++        if not self.config_path.exists():
++            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
++
++        with open(self.config_path) as f:
++            config = yaml.safe_load(f)
++
++        return config
++
++
++class WeightedConfidenceScorer:
++    """Weighted confidence scorer for ensemble trading signals.
++
++    This class implements the core weighted scoring logic for the ensemble
++    system, including composite confidence calculation, direction alignment
++    checking, weighted entry calculation, and threshold filtering.
++
++    Attributes:
++        config_path: Path to configuration file (default: config-sim.yaml)
++        weight_manager: WeightManager instance for weight management
++    """
++
++    def __init__(self, config_path: str = "config-sim.yaml") -> None:
++        """Initialize WeightedConfidenceScorer with configuration file path.
++
++        Args:
++            config_path: Path to YAML configuration file
++        """
++        self.config_path = Path(config_path)
++        self.weight_manager = WeightManager(config_path=str(self.config_path))
++        logger.info("WeightedConfidenceScorer initialized with config: %s", self.config_path)
++
++    def calculate_composite_confidence(
++        self, signals: list[EnsembleSignal], weights: StrategyWeights
++    ) -> float:
++        """Calculate composite confidence from multiple signals.
++
++        Takes the highest confidence signal from each strategy to avoid
++        double-counting when multiple signals from the same strategy
++        appear within the lookback window.
++
++        Args:
++            signals: List of ensemble signals from individual strategies
++            weights: Strategy weights to apply
++
++        Returns:
++            Composite confidence score (0-1 scale), or 0.0 if no signals
++        """
++        if not signals:
++            return 0.0
++
++        # Group signals by strategy, keeping only the highest confidence from each
++        strategy_best_signals = {}
++        for signal in signals:
++            strategy_name = signal.strategy_name
++            if strategy_name not in strategy_best_signals:
++                strategy_best_signals[strategy_name] = signal
++            elif signal.confidence > strategy_best_signals[strategy_name].confidence:
++                strategy_best_signals[strategy_name] = signal
++
++        # Calculate composite using only the best signal from each strategy
++        composite = 0.0
++        weight_map = {
++            "triple_confluence_scaler": weights.triple_confluence_scaler,
++            "wolf_pack_3_edge": weights.wolf_pack_3_edge,
++            "adaptive_ema_momentum": weights.adaptive_ema_momentum,
++            "vwap_bounce": weights.vwap_bounce,
++            "opening_range_breakout": weights.opening_range_breakout,
++        }
++
++        for signal in strategy_best_signals.values():
++            strategy_weight = weight_map.get(signal.strategy_name, 0.0)
++            composite += strategy_weight * signal.confidence
++
++        # Cap at 1.0 to handle edge cases where weights might slightly exceed 1.0
++        composite = min(composite, 1.0)
++
++        logger.debug(
++            "Calculated composite confidence: %.4f from %d unique strategies (from %d total signals)",
++            composite, len(strategy_best_signals), len(signals)
++        )
++        return composite
++
++    def check_direction_alignment(self, signals: list[EnsembleSignal]) -> bool:
++        """Check if all signals agree on direction (unanimous long or short).
++
++        Args:
++            signals: List of ensemble signals
++
++        Returns:
++            True if all signals have the same direction, False otherwise
++        """
++        if not signals:
++            return True
++
++        directions = {signal.direction for signal in signals}
++        is_aligned = len(directions) == 1
++
++        if not is_aligned:
++            long_strategies = [s.strategy_name for s in signals if s.direction == "long"]
++            short_strategies = [s.strategy_name for s in signals if s.direction == "short"]
++            logger.warning(
++                "Direction conflict detected: LONG: %s, SHORT: %s",
++                long_strategies,
++                short_strategies,
++            )
++
++        return is_aligned
++
++    def calculate_weighted_entry(
++        self, signals: list[EnsembleSignal], weights: StrategyWeights
++    ) -> float:
++        """Calculate weighted average entry price from all signals.
++
++        Args:
++            signals: List of ensemble signals
++            weights: Strategy weights to apply
++
++        Returns:
++            Weighted average entry price
++        """
++        if not signals:
++            return 0.0
++
++        weight_map = {
++            "triple_confluence_scaler": weights.triple_confluence_scaler,
++            "wolf_pack_3_edge": weights.wolf_pack_3_edge,
++            "adaptive_ema_momentum": weights.adaptive_ema_momentum,
++            "vwap_bounce": weights.vwap_bounce,
++            "opening_range_breakout": weights.opening_range_breakout,
++        }
++
++        weighted_sum = 0.0
++        total_weight = 0.0
++
++        for signal in signals:
++            strategy_weight = weight_map.get(signal.strategy_name, 0.0)
++            weighted_sum += strategy_weight * signal.entry_price
++            total_weight += strategy_weight
++
++        if total_weight == 0:
++            return 0.0
++
++        weighted_entry = weighted_sum / total_weight
++        logger.debug("Calculated weighted entry: %.2f from %d signals", weighted_entry, len(signals))
++        return weighted_entry
++
++    def score_signals(self, signals: list[EnsembleSignal]) -> EnsembleTradeSignal | None:
++        """Score ensemble signals and generate trade signal if appropriate.
++
++        This is the main entry point for the weighted confidence scorer.
++        It calculates composite confidence, checks direction alignment,
++        and generates an ensemble trade signal if conditions are met.
++
++        Args:
++            signals: List of ensemble signals from individual strategies
++
++        Returns:
++            EnsembleTradeSignal if valid, None otherwise
++        """
++        if not signals:
++            return None
++
++        # Load weights and threshold from config
++        weights = self.weight_manager.load_weights()
++        config = self.weight_manager.get_config()
++        threshold = config.get("ensemble", {}).get("confidence_threshold", 0.50)
++
++        # Use filter_signals which applies all logic
++        return self.filter_signals(signals, weights, threshold)
++
++    def apply_threshold_filter(self, composite_confidence: float, threshold: float) -> bool:
++        """Apply confidence threshold filtering.
++
++        Args:
++            composite_confidence: Calculated composite confidence
++            threshold: Minimum threshold required
++
++        Returns:
++            True if composite_confidence > threshold, False otherwise
++        """
++        passes = composite_confidence > threshold
++        logger.debug(
++            "Threshold filter: %.4f > %.4f = %s", composite_confidence, threshold, passes
++        )
++        return passes
++
++    def check_minimum_strategies(
++        self, signals: list[EnsembleSignal], min_count: int
++    ) -> bool:
++        """Check if minimum number of strategies signaled.
++
++        Args:
++            signals: List of ensemble signals
++            min_count: Minimum number of signals required
++
++        Returns:
++            True if len(signals) >= min_count, False otherwise
++        """
++        passes = len(signals) >= min_count
++        logger.debug("Minimum strategies check: %d >= %d = %s", len(signals), min_count, passes)
++        return passes
++
++    def filter_signals(
++        self, signals: list[EnsembleSignal], weights: StrategyWeights, threshold: float
++    ) -> EnsembleTradeSignal | None:
++        """Filter signals and generate ensemble trade signal if all checks pass.
++
++        Args:
++            signals: List of ensemble signals
++            weights: Strategy weights
++            threshold: Confidence threshold
++
++        Returns:
++            EnsembleTradeSignal if all filters pass, None otherwise
++        """
++        if not signals:
++            return None
++
++        # Check direction alignment
++        if not self.check_direction_alignment(signals):
++            logger.info("Signal rejected: direction conflict")
++            return None
++
++        # Calculate composite confidence
++        composite = self.calculate_composite_confidence(signals, weights)
++
++        # Apply threshold filter
++        if not self.apply_threshold_filter(composite, threshold):
++            logger.info("Signal rejected: composite confidence %.4f below threshold %.4f", composite, threshold)
++            return None
++
++        # Calculate weighted entry
++        weighted_entry = self.calculate_weighted_entry(signals, weights)
++
++        # Calculate weighted SL/TP (use weighted average from signals for now)
++        # In Story 2.4, this will be refined with proper exit logic
++        weighted_sl = sum(s.stop_loss for s in signals) / len(signals)
++        weighted_tp = sum(s.take_profit for s in signals) / len(signals)
++
++        # Determine direction (all signals agree at this point)
++        direction = signals[0].direction
++
++        # Build strategy confidences and weights dicts
++        strategy_confidences = {s.strategy_name: s.confidence for s in signals}
++        strategy_weights_map = {
++            "triple_confluence_scaler": weights.triple_confluence_scaler,
++            "wolf_pack_3_edge": weights.wolf_pack_3_edge,
++            "adaptive_ema_momentum": weights.adaptive_ema_momentum,
++            "vwap_bounce": weights.vwap_bounce,
++            "opening_range_breakout": weights.opening_range_breakout,
++        }
++
++        # Filter to only contributing strategies
++        contributing_weights = {
++            s.strategy_name: strategy_weights_map[s.strategy_name] for s in signals
++        }
++
++        ensemble_signal = EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=signals[0].timestamp,
++            direction=direction,
++            entry_price=weighted_entry,
++            stop_loss=weighted_sl,
++            take_profit=weighted_tp,
++            composite_confidence=composite,
++            contributing_strategies=[s.strategy_name for s in signals],
++            strategy_confidences=strategy_confidences,
++            strategy_weights=contributing_weights,
++            bar_timestamp=signals[0].bar_timestamp,
++        )
++
++        logger.info(
++            "Ensemble signal generated: %s, confidence=%.4f, strategies=%d",
++            direction,
++            composite,
++            len(signals),
++        )
++
++        return ensemble_signal
++
++    def reload_config(self) -> None:
++        """Reload configuration from config file.
++
++        This reloads the weight manager configuration, updating weights
++        and threshold from the config file.
++        """
++        logger.info("Reloading configuration from %s", self.config_path)
++        self.weight_manager = WeightManager(config_path=str(self.config_path))
++
++    def get_config(self) -> dict[str, Any]:
++        """Get current configuration as dictionary.
++
++        Returns:
++            Configuration dictionary
++        """
++        return self.weight_manager.get_config()
++
++    def set_threshold(self, new_threshold: float) -> None:
++        """Set new confidence threshold.
++
++        Args:
++            new_threshold: New threshold value (0-1)
++
++        Raises:
++            ValueError: If threshold is not between 0 and 1
++        """
++        if not 0 <= new_threshold <= 1:
++            raise ValueError(f"Threshold must be between 0 and 1, got {new_threshold}")
++
++        config = self.weight_manager.get_config()
++        config["ensemble"]["confidence_threshold"] = new_threshold
++
++        # Save to file
++        with open(self.config_path, "w") as f:
++            yaml.dump(config, f, default_flow_style=False)
++
++        logger.info("Confidence threshold updated to %.4f", new_threshold)
++
++    def get_threshold(self) -> float:
++        """Get current confidence threshold.
++
++        Returns:
++            Current threshold value
++        """
++        config = self.weight_manager.get_config()
++        return config.get("ensemble", {}).get("confidence_threshold", 0.50)
+diff --git a/tests/integration/test_weighted_scoring_integration.py b/tests/integration/test_weighted_scoring_integration.py
+new file mode 100644
+index 0000000..552d80e
+--- /dev/null
++++ b/tests/integration/test_weighted_scoring_integration.py
+@@ -0,0 +1,300 @@
++"""Integration tests for Weighted Confidence Scorer.
++
++Tests the complete weighted scoring pipeline with ensemble signals
++from multiple strategies.
++"""
++
++import tempfile
++from datetime import datetime
++from pathlib import Path
++
++import pytest
++import yaml
++
++from src.detection.models import EnsembleSignal, EnsembleTradeSignal
++from src.detection.weighted_confidence_scorer import (
++    StrategyWeights,
++    WeightManager,
++    WeightedConfidenceScorer,
++)
++
++
++class TestWeightedScoringIntegration:
++    """Integration tests for weighted confidence scoring."""
++
++    @pytest.fixture
++    def temp_config_dir(self):
++        """Create temporary directory for config files."""
++        with tempfile.TemporaryDirectory() as tmpdir:
++            yield tmpdir
++
++    @pytest.fixture
++    def config_path(self, temp_config_dir):
++        """Create config file for testing."""
++        config = {
++            "ensemble": {
++                "strategies": {
++                    "triple_confluence_scaler": 0.20,
++                    "wolf_pack_3_edge": 0.20,
++                    "adaptive_ema_momentum": 0.20,
++                    "vwap_bounce": 0.20,
++                    "opening_range_breakout": 0.20,
++                },
++                "confidence_threshold": 0.50,
++                "minimum_strategies": 1,
++            }
++        }
++
++        config_path = Path(temp_config_dir) / "config-sim.yaml"
++        with open(config_path, "w") as f:
++            yaml.dump(config, f)
++
++        return config_path
++
++    @pytest.fixture
++    def all_five_strategies_signals(self):
++        """Create signals from all 5 strategies (unanimous)."""
++        return [
++            EnsembleSignal(
++                strategy_name="triple_confluence_scaler",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                confidence=0.80,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="wolf_pack_3_edge",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11852.0,
++                stop_loss=11832.0,
++                take_profit=11892.0,
++                confidence=0.75,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="adaptive_ema_momentum",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11851.0,
++                stop_loss=11831.0,
++                take_profit=11891.0,
++                confidence=0.78,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="vwap_bounce",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.5,
++                stop_loss=11830.5,
++                take_profit=11890.5,
++                confidence=0.72,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="opening_range_breakout",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11853.0,
++                stop_loss=11833.0,
++                take_profit=11893.0,
++                confidence=0.76,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++        ]
++
++    def test_full_pipeline_with_all_five_strategies(self, config_path, all_five_strategies_signals):
++        """Test complete weighted scoring pipeline with all 5 strategies."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        ensemble_signal = scorer.score_signals(all_five_strategies_signals)
++
++        assert ensemble_signal is not None
++        assert ensemble_signal.direction == "long"
++        assert ensemble_signal.composite_confidence > 0.50  # Should pass threshold
++        assert len(ensemble_signal.contributing_strategies) == 5
++        assert ensemble_signal.is_unanimous() is True
++        assert ensemble_signal.strategy_name == "Ensemble-Weighted Confidence"
++
++    def test_full_pipeline_with_two_strategies(self, config_path):
++        """Test complete weighted scoring pipeline with 2 strategies."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        signals = [
++            EnsembleSignal(
++                strategy_name="triple_confluence_scaler",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                confidence=0.85,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="wolf_pack_3_edge",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11852.0,
++                stop_loss=11832.0,
++                take_profit=11892.0,
++                confidence=0.82,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++        ]
++
++        ensemble_signal = scorer.score_signals(signals)
++
++        # Composite: 0.20 * 0.85 + 0.20 * 0.82 = 0.334, below 0.50 threshold
++        assert ensemble_signal is None  # Should be rejected due to low confidence
++
++    def test_configuration_change_affects_scoring(self, config_path, all_five_strategies_signals):
++        """Test that changing configuration affects scoring behavior."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        # First, verify signal passes with default threshold
++        scorer.set_threshold(0.30)
++        ensemble_signal = scorer.score_signals(all_five_strategies_signals)
++        assert ensemble_signal is not None
++
++        # Now increase threshold above composite confidence
++        scorer.set_threshold(0.90)
++        ensemble_signal = scorer.score_signals(all_five_strategies_signals)
++        assert ensemble_signal is None  # Should be rejected with higher threshold
++
++    def test_weight_change_affects_composite_confidence(self, config_path, all_five_strategies_signals):
++        """Test that changing weights affects composite confidence."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        # Get initial composite confidence
++        scorer.set_threshold(0.10)  # Low threshold to allow signal
++        initial_signal = scorer.score_signals(all_five_strategies_signals)
++        initial_confidence = initial_signal.composite_confidence
++
++        # Change weights to favor triple_confluence_scaler
++        new_weights = StrategyWeights(
++            triple_confluence_scaler=0.40,
++            wolf_pack_3_edge=0.15,
++            adaptive_ema_momentum=0.15,
++            vwap_bounce=0.15,
++            opening_range_breakout=0.15,
++        )
++        scorer.weight_manager.save_weights(new_weights)
++        scorer.reload_config()
++
++        # Get new composite confidence
++        new_signal = scorer.score_signals(all_five_strategies_signals)
++        new_confidence = new_signal.composite_confidence
++
++        # Confidences should be different due to weight change
++        # Since triple_confluence_scaler has high confidence (0.80) and higher weight (0.40),
++        # the new composite should be higher
++        assert new_confidence != initial_confidence
++
++    def test_mixed_direction_signals_rejected(self, config_path):
++        """Test that mixed long/short signals are rejected."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        signals = [
++            EnsembleSignal(
++                strategy_name="triple_confluence_scaler",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                confidence=0.90,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="wolf_pack_3_edge",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="short",
++                entry_price=11845.0,
++                stop_loss=11865.0,
++                take_profit=11805.0,  # 2:1 ratio for short (40pt reward / 20pt risk)
++                confidence=0.90,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++        ]
++
++        ensemble_signal = scorer.score_signals(signals)
++        assert ensemble_signal is None  # Should be rejected due to direction conflict
++
++    def test_ensemble_signal_contains_all_required_fields(self, config_path, all_five_strategies_signals):
++        """Test that ensemble signal contains all required fields."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++        scorer.set_threshold(0.30)
++
++        ensemble_signal = scorer.score_signals(all_five_strategies_signals)
++
++        # Check all required fields exist
++        assert ensemble_signal.strategy_name == "Ensemble-Weighted Confidence"
++        assert ensemble_signal.timestamp is not None
++        assert ensemble_signal.direction in ["long", "short"]
++        assert ensemble_signal.entry_price > 0
++        assert ensemble_signal.stop_loss > 0
++        assert ensemble_signal.take_profit > 0
++        assert 0 <= ensemble_signal.composite_confidence <= 1
++        assert len(ensemble_signal.contributing_strategies) > 0
++        assert len(ensemble_signal.strategy_confidences) > 0
++        assert len(ensemble_signal.strategy_weights) > 0
++        assert ensemble_signal.bar_timestamp is not None
++
++    def test_performance_target(self, config_path, all_five_strategies_signals):
++        """Test that scoring meets performance target (<10ms per bar)."""
++        import time
++
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        start_time = time.perf_counter()
++        ensemble_signal = scorer.score_signals(all_five_strategies_signals)
++        end_time = time.perf_counter()
++
++        elapsed_ms = (end_time - start_time) * 1000
++
++        assert ensemble_signal is not None
++        assert elapsed_ms < 10.0, f"Scoring took {elapsed_ms:.2f}ms, target is <10ms"
++
++    def test_empty_signals_returns_none(self, config_path):
++        """Test that empty signals list returns None."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        ensemble_signal = scorer.score_signals([])
++        assert ensemble_signal is None
++
++    def test_single_strategy_signal(self, config_path):
++        """Test scoring with only one strategy signal."""
++        scorer = WeightedConfidenceScorer(config_path=str(config_path))
++
++        signals = [
++            EnsembleSignal(
++                strategy_name="triple_confluence_scaler",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                confidence=0.90,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++        ]
++
++        ensemble_signal = scorer.score_signals(signals)
++
++        # Composite: 0.20 * 0.90 = 0.18, below 0.50 threshold
++        assert ensemble_signal is None  # Should be rejected due to low confidence
+diff --git a/tests/unit/test_weighted_scorer.py b/tests/unit/test_weighted_scorer.py
+new file mode 100644
+index 0000000..85753b7
+--- /dev/null
++++ b/tests/unit/test_weighted_scorer.py
+@@ -0,0 +1,727 @@
++"""Unit tests for Weighted Confidence Scorer.
++
++Tests for weight management, configuration loading, validation, and
++strategy weight normalization.
++"""
++
++import os
++import tempfile
++from pathlib import Path
++from datetime import datetime
++
++import pytest
++import yaml
++from pydantic import ValidationError
++
++from src.detection.weighted_confidence_scorer import (
++    StrategyWeights,
++    WeightManager,
++)
++from src.detection.models import EnsembleTradeSignal, EnsembleSignal
++
++
++class TestStrategyWeights:
++    """Test StrategyWeights Pydantic model."""
++
++    def test_valid_equal_weights(self):
++        """Test creation with valid equal weights (0.20 each)."""
++        weights = StrategyWeights(
++            triple_confluence_scaler=0.20,
++            wolf_pack_3_edge=0.20,
++            adaptive_ema_momentum=0.20,
++            vwap_bounce=0.20,
++            opening_range_breakout=0.20,
++        )
++        assert weights.triple_confluence_scaler == 0.20
++        assert weights.wolf_pack_3_edge == 0.20
++        assert weights.adaptive_ema_momentum == 0.20
++        assert weights.vwap_bounce == 0.20
++        assert weights.opening_range_breakout == 0.20
++
++    def test_weights_sum_to_one(self):
++        """Test that weights must sum to 1.0."""
++        with pytest.raises(ValidationError, match="sum to 1.0"):
++            StrategyWeights(
++                triple_confluence_scaler=0.30,
++                wolf_pack_3_edge=0.30,
++                adaptive_ema_momentum=0.30,
++                vwap_bounce=0.30,
++                opening_range_breakout=0.30,  # Sum = 1.5, should fail
++            )
++
++    def test_weights_must_be_positive(self):
++        """Test that weights must be between 0 and 1."""
++        with pytest.raises(ValidationError):
++            StrategyWeights(
++                triple_confluence_scaler=-0.10,
++                wolf_pack_3_edge=0.30,
++                adaptive_ema_momentum=0.30,
++                vwap_bounce=0.30,
++                opening_range_breakout=0.20,
++            )
++
++    def test_weights_must_not_exceed_one(self):
++        """Test that individual weights cannot exceed 1.0."""
++        with pytest.raises(ValidationError):
++            StrategyWeights(
++                triple_confluence_scaler=1.5,
++                wolf_pack_3_edge=0.0,
++                adaptive_ema_momentum=0.0,
++                vwap_bounce=0.0,
++                opening_range_breakout=0.0,
++            )
++
++    def test_valid_unequal_weights(self):
++        """Test creation with valid unequal weights that sum to 1.0."""
++        weights = StrategyWeights(
++            triple_confluence_scaler=0.25,
++            wolf_pack_3_edge=0.20,
++            adaptive_ema_momentum=0.15,
++            vwap_bounce=0.30,
++            opening_range_breakout=0.10,
++        )
++        assert weights.triple_confluence_scaler == 0.25
++        assert weights.vwap_bounce == 0.30
++
++    def test_weights_sum_with_floating_point_tolerance(self):
++        """Test that weights sum validation has floating point tolerance."""
++        # Small floating point errors should be acceptable
++        weights = StrategyWeights(
++            triple_confluence_scaler=0.2000000001,
++            wolf_pack_3_edge=0.20,
++            adaptive_ema_momentum=0.20,
++            vwap_bounce=0.20,
++            opening_range_breakout=0.1999999999,
++        )
++        assert weights is not None
++
++
++class TestWeightManager:
++    """Test WeightManager class for configuration-driven weight management."""
++
++    @pytest.fixture
++    def temp_config_dir(self):
++        """Create temporary directory for config files."""
++        with tempfile.TemporaryDirectory() as tmpdir:
++            yield tmpdir
++
++    @pytest.fixture
++    def valid_config_path(self, temp_config_dir):
++        """Create a valid config file for testing."""
++        config = {
++            "ensemble": {
++                "strategies": {
++                    "triple_confluence_scaler": 0.20,
++                    "wolf_pack_3_edge": 0.20,
++                    "adaptive_ema_momentum": 0.20,
++                    "vwap_bounce": 0.20,
++                    "opening_range_breakout": 0.20,
++                },
++                "confidence_threshold": 0.50,
++                "minimum_strategies": 1,
++            }
++        }
++
++        config_path = Path(temp_config_dir) / "config-sim.yaml"
++        with open(config_path, "w") as f:
++            yaml.dump(config, f)
++
++        return config_path
++
++    @pytest.fixture
++    def invalid_config_path(self, temp_config_dir):
++        """Create an invalid config file (weights don't sum to 1.0)."""
++        config = {
++            "ensemble": {
++                "strategies": {
++                    "triple_confluence_scaler": 0.50,
++                    "wolf_pack_3_edge=0.30": 0.30,
++                    "adaptive_ema_momentum": 0.30,
++                    "vwap_bounce": 0.30,
++                    "opening_range_breakout": 0.30,
++                },
++                "confidence_threshold": 0.50,
++                "minimum_strategies": 1,
++            }
++        }
++
++        config_path = Path(temp_config_dir) / "config-invalid.yaml"
++        with open(config_path, "w") as f:
++            yaml.dump(config, f)
++
++        return config_path
++
++    def test_load_weights_from_config(self, valid_config_path):
++        """Test loading weights from valid config file."""
++        manager = WeightManager(config_path=str(valid_config_path))
++        weights = manager.load_weights()
++
++        assert weights.triple_confluence_scaler == 0.20
++        assert weights.wolf_pack_3_edge == 0.20
++        assert weights.adaptive_ema_momentum == 0.20
++        assert weights.vwap_bounce == 0.20
++        assert weights.opening_range_breakout == 0.20
++
++    def test_load_weights_raises_error_on_invalid_config(self, invalid_config_path):
++        """Test that loading invalid config raises ValueError."""
++        manager = WeightManager(config_path=str(invalid_config_path))
++
++        with pytest.raises(ValueError, match="Weights must sum to 1.0"):
++            manager.load_weights()
++
++    def test_save_weights_persists_to_config(self, valid_config_path, temp_config_dir):
++        """Test saving weights to config file."""
++        manager = WeightManager(config_path=str(valid_config_path))
++
++        new_weights = StrategyWeights(
++            triple_confluence_scaler=0.25,
++            wolf_pack_3_edge=0.20,
++            adaptive_ema_momentum=0.15,
++            vwap_bounce=0.30,
++            opening_range_breakout=0.10,
++        )
++
++        manager.save_weights(new_weights)
++
++        # Reload and verify
++        manager2 = WeightManager(config_path=str(valid_config_path))
++        reloaded = manager2.load_weights()
++
++        assert reloaded.triple_confluence_scaler == 0.25
++        assert reloaded.vwap_bounce == 0.30
++        assert reloaded.adaptive_ema_momentum == 0.15
++
++    def test_update_single_weight(self, valid_config_path):
++        """Test updating a single strategy weight.
++
++        Note: update_weight changes one weight in the config file, but
++        the weights may no longer sum to 1.0. This is expected - the
++        caller should normalize_weights() after updating if needed.
++        """
++        manager = WeightManager(config_path=str(valid_config_path))
++
++        # Update weight - this changes the config directly
++        manager.update_weight("triple_confluence_scaler", 0.25)
++
++        # Load the raw config to verify the update
++        config = manager.get_config()
++        assert config["ensemble"]["strategies"]["triple_confluence_scaler"] == 0.25
++
++    def test_normalize_weights_adjusts_to_sum_to_one(self, valid_config_path):
++        """Test that normalize_weights adjusts weights to sum to 1.0."""
++        manager = WeightManager(config_path=str(valid_config_path))
++
++        # Use model_construct to create weights that don't sum to 1.0 (bypasses validation)
++        # This is allowed for testing internal normalization logic
++        weights = StrategyWeights.model_construct(
++            triple_confluence_scaler=0.30,
++            wolf_pack_3_edge=0.30,
++            adaptive_ema_momentum=0.20,
++            vwap_bounce=0.15,
++            opening_range_breakout=0.15,  # Sum = 1.1
++        )
++
++        normalized = manager.normalize_weights(weights)
++
++        # Should sum to 1.0
++        total = (
++            normalized.triple_confluence_scaler
++            + normalized.wolf_pack_3_edge
++            + normalized.adaptive_ema_momentum
++            + normalized.vwap_bounce
++            + normalized.opening_range_breakout
++        )
++
++        assert abs(total - 1.0) < 1e-6
++
++        # Proportions should be preserved
++        # 0.30/0.30 = 1.0, so normalized values should be equal
++        assert (
++            normalized.triple_confluence_scaler / normalized.wolf_pack_3_edge
++            == 0.30 / 0.30
++        )
++
++    def test_get_config_returns_dict(self, valid_config_path):
++        """Test that get_config returns configuration as dict."""
++        manager = WeightManager(config_path=str(valid_config_path))
++        config = manager.get_config()
++
++        assert isinstance(config, dict)
++        assert "ensemble" in config
++        assert "strategies" in config["ensemble"]
++        assert config["ensemble"]["confidence_threshold"] == 0.50
++
++    def test_missing_config_file_raises_error(self, temp_config_dir):
++        """Test that missing config file raises FileNotFoundError."""
++        missing_path = Path(temp_config_dir) / "nonexistent.yaml"
++        manager = WeightManager(config_path=str(missing_path))
++
++        with pytest.raises(FileNotFoundError):
++            manager.load_weights()
++
++
++class TestEnsembleTradeSignal:
++    """Test EnsembleTradeSignal Pydantic model."""
++
++    def test_valid_ensemble_signal(self):
++        """Test creation of valid ensemble trade signal."""
++        signal = EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11830.0,
++            take_profit=11890.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++        )
++
++        assert signal.strategy_name == "Ensemble-Weighted Confidence"
++        assert signal.direction == "long"
++        assert signal.composite_confidence == 0.75
++        assert len(signal.contributing_strategies) == 2
++
++    def test_composite_confidence_must_be_between_0_and_1(self):
++        """Test that composite_confidence must be between 0 and 1."""
++        with pytest.raises(ValidationError):
++            EnsembleTradeSignal(
++                strategy_name="Ensemble-Weighted Confidence",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                composite_confidence=1.5,  # Invalid: > 1.0
++                contributing_strategies=["triple_confluence_scaler"],
++                strategy_confidences={"triple_confluence_scaler": 0.80},
++                strategy_weights={"triple_confluence_scaler": 0.20},
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            )
++
++    def test_at_least_one_contributing_strategy_required(self):
++        """Test that at least one contributing strategy is required."""
++        with pytest.raises(ValidationError):
++            EnsembleTradeSignal(
++                strategy_name="Ensemble-Weighted Confidence",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                composite_confidence=0.75,
++                contributing_strategies=[],  # Invalid: empty list
++                strategy_confidences={},
++                strategy_weights={},
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            )
++
++    def test_all_contributing_strategies_must_have_confidence(self):
++        """Test that all contributing strategies have confidence values."""
++        with pytest.raises(ValidationError):
++            EnsembleTradeSignal(
++                strategy_name="Ensemble-Weighted Confidence",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                composite_confidence=0.75,
++                contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++                strategy_confidences={"triple_confluence_scaler": 0.80},  # Missing wolf_pack_3_edge
++                strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            )
++
++    def test_contributing_count_method(self):
++        """Test contributing_count helper method."""
++        signal = EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11830.0,
++            take_profit=11890.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge", "adaptive_ema_momentum"],
++            strategy_confidences={
++                "triple_confluence_scaler": 0.80,
++                "wolf_pack_3_edge": 0.70,
++                "adaptive_ema_momentum": 0.75,
++            },
++            strategy_weights={
++                "triple_confluence_scaler": 0.20,
++                "wolf_pack_3_edge": 0.20,
++                "adaptive_ema_momentum": 0.20,
++            },
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++        )
++
++        assert signal.contributing_count() == 3
++
++    def test_is_unanimous_method(self):
++        """Test is_unanimous helper method."""
++        # Test with all 5 strategies
++        signal = EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11830.0,
++            take_profit=11890.0,
++            composite_confidence=0.90,
++            contributing_strategies=[
++                "triple_confluence_scaler",
++                "wolf_pack_3_edge",
++                "adaptive_ema_momentum",
++                "vwap_bounce",
++                "opening_range_breakout",
++            ],
++            strategy_confidences={
++                "triple_confluence_scaler": 0.80,
++                "wolf_pack_3_edge": 0.75,
++                "adaptive_ema_momentum": 0.70,
++                "vwap_bounce": 0.72,
++                "opening_range_breakout": 0.78,
++            },
++            strategy_weights={
++                "triple_confluence_scaler": 0.20,
++                "wolf_pack_3_edge": 0.20,
++                "adaptive_ema_momentum": 0.20,
++                "vwap_bounce": 0.20,
++                "opening_range_breakout": 0.20,
++            },
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++        )
++
++        assert signal.is_unanimous() is True
++
++    def test_is_not_unanimous_with_fewer_strategies(self):
++        """Test is_unanimous returns False with fewer than 5 strategies."""
++        signal = EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11830.0,
++            take_profit=11890.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.20, "wolf_pack_3_edge": 0.20},
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++        )
++
++        assert signal.is_unanimous() is False
++
++    def test_get_weighted_entry_method(self):
++        """Test get_weighted_entry helper method."""
++        signal = EnsembleTradeSignal(
++            strategy_name="Ensemble-Weighted Confidence",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="long",
++            entry_price=11850.0,
++            stop_loss=11830.0,
++            take_profit=11890.0,
++            composite_confidence=0.75,
++            contributing_strategies=["triple_confluence_scaler", "wolf_pack_3_edge"],
++            strategy_confidences={"triple_confluence_scaler": 0.80, "wolf_pack_3_edge": 0.70},
++            strategy_weights={"triple_confluence_scaler": 0.60, "wolf_pack_3_edge": 0.40},
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++        )
++
++        # This should recalculate based on a hypothetical underlying entry prices
++        # For now, it returns the entry_price since we don't store individual strategy entries
++        weighted = signal.get_weighted_entry()
++        assert weighted == 11850.0
++
++
++class TestWeightedConfidenceScorer:
++    """Test WeightedConfidenceScorer class for weighted scoring logic."""
++
++    @pytest.fixture
++    def valid_config_path(self, tmp_path):
++        """Create a valid config file for testing."""
++        config = {
++            "ensemble": {
++                "strategies": {
++                    "triple_confluence_scaler": 0.20,
++                    "wolf_pack_3_edge": 0.20,
++                    "adaptive_ema_momentum": 0.20,
++                    "vwap_bounce": 0.20,
++                    "opening_range_breakout": 0.20,
++                },
++                "confidence_threshold": 0.50,
++                "minimum_strategies": 1,
++            }
++        }
++
++        config_path = tmp_path / "config-sim.yaml"
++        with open(config_path, "w") as f:
++            yaml.dump(config, f)
++
++        return config_path
++
++    @pytest.fixture
++    def sample_signals(self):
++        """Create sample ensemble signals for testing."""
++        return [
++            EnsembleSignal(
++                strategy_name="triple_confluence_scaler",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11850.0,
++                stop_loss=11830.0,
++                take_profit=11890.0,
++                confidence=0.80,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++            EnsembleSignal(
++                strategy_name="wolf_pack_3_edge",
++                timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                direction="long",
++                entry_price=11852.0,
++                stop_loss=11832.0,
++                take_profit=11892.0,
++                confidence=0.75,
++                bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++                metadata={},
++            ),
++        ]
++
++    def test_calculate_composite_confidence(self, valid_config_path, sample_signals):
++        """Test composite confidence calculation from multiple signals."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++        weights = scorer.weight_manager.load_weights()
++
++        composite = scorer.calculate_composite_confidence(sample_signals, weights)
++
++        # Expected: 0.20 * 0.80 + 0.20 * 0.75 = 0.31
++        expected = 0.20 * 0.80 + 0.20 * 0.75
++        assert abs(composite - expected) < 1e-6
++
++    def test_calculate_composite_confidence_no_signals(self, valid_config_path):
++        """Test composite confidence with no signals returns 0."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++        weights = scorer.weight_manager.load_weights()
++
++        composite = scorer.calculate_composite_confidence([], weights)
++        assert composite == 0.0
++
++    def test_check_direction_alignment_all_long(self, valid_config_path, sample_signals):
++        """Test direction alignment check with all long signals."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        is_aligned = scorer.check_direction_alignment(sample_signals)
++        assert is_aligned is True
++
++    def test_check_direction_alignment_mixed(self, valid_config_path, sample_signals):
++        """Test direction alignment check with mixed long/short signals."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        # Add a short signal to create conflict
++        short_signal = EnsembleSignal(
++            strategy_name="adaptive_ema_momentum",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="short",
++            entry_price=11855.0,
++            stop_loss=11875.0,
++            take_profit=11815.0,
++            confidence=0.70,
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            metadata={},
++        )
++
++        mixed_signals = sample_signals + [short_signal]
++        is_aligned = scorer.check_direction_alignment(mixed_signals)
++
++        assert is_aligned is False
++
++    def test_calculate_weighted_entry(self, valid_config_path, sample_signals):
++        """Test weighted entry price calculation."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++        weights = scorer.weight_manager.load_weights()
++
++        weighted_entry = scorer.calculate_weighted_entry(sample_signals, weights)
++
++        # Expected: 0.20 * 11850 + 0.20 * 11852 = 2370.2 / 0.40 = 11851.0
++        expected = (0.20 * 11850.0 + 0.20 * 11852.0) / 0.40
++        assert abs(weighted_entry - expected) < 1e-6
++
++    def test_score_signals_generates_ensemble_signal(self, valid_config_path, sample_signals):
++        """Test that score_signals generates valid EnsembleTradeSignal."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        # Lower threshold to allow signal generation (0.31 > 0.30)
++        scorer.set_threshold(0.30)
++        ensemble_signal = scorer.score_signals(sample_signals)
++
++        assert ensemble_signal is not None
++        assert ensemble_signal.direction == "long"
++        assert ensemble_signal.composite_confidence > 0
++        assert len(ensemble_signal.contributing_strategies) == 2
++        assert ensemble_signal.strategy_name == "Ensemble-Weighted Confidence"
++
++    def test_score_signals_returns_none_for_no_signals(self, valid_config_path):
++        """Test that score_signals returns None when no signals provided."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        ensemble_signal = scorer.score_signals([])
++        assert ensemble_signal is None
++
++    def test_apply_threshold_filter_pass(self, valid_config_path):
++        """Test threshold filter passes when confidence above threshold."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        result = scorer.apply_threshold_filter(0.75, 0.50)
++        assert result is True
++
++    def test_apply_threshold_filter_fail(self, valid_config_path):
++        """Test threshold filter fails when confidence below threshold."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        result = scorer.apply_threshold_filter(0.40, 0.50)
++        assert result is False
++
++    def test_check_minimum_strategies_pass(self, valid_config_path, sample_signals):
++        """Test minimum strategies check passes."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        result = scorer.check_minimum_strategies(sample_signals, 1)
++        assert result is True
++
++    def test_check_minimum_strategies_fail(self, valid_config_path, sample_signals):
++        """Test minimum strategies check fails."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        result = scorer.check_minimum_strategies(sample_signals, 3)
++        assert result is False
++
++    def test_filter_signals_with_conflict(self, valid_config_path, sample_signals):
++        """Test that filter_signals returns None for conflicting directions."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        # Add a short signal to create conflict
++        short_signal = EnsembleSignal(
++            strategy_name="adaptive_ema_momentum",
++            timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            direction="short",
++            entry_price=11855.0,
++            stop_loss=11875.0,
++            take_profit=11815.0,
++            confidence=0.70,
++            bar_timestamp=datetime(2026, 3, 31, 14, 30, 0),
++            metadata={},
++        )
++
++        mixed_signals = sample_signals + [short_signal]
++        weights = scorer.weight_manager.load_weights()
++
++        result = scorer.filter_signals(mixed_signals, weights, 0.50)
++        assert result is None  # Should be rejected due to direction conflict
++
++    def test_filter_signals_below_threshold(self, valid_config_path, sample_signals):
++        """Test that filter_signals returns None when below threshold."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        # Use very high threshold that won't be met
++        weights = scorer.weight_manager.load_weights()
++        result = scorer.filter_signals(sample_signals, weights, 0.95)
++
++        assert result is None  # Should be rejected due to low confidence
++
++    def test_filter_signals_success(self, valid_config_path, sample_signals):
++        """Test that filter_signals generates valid signal."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        weights = scorer.weight_manager.load_weights()
++        result = scorer.filter_signals(sample_signals, weights, 0.30)
++
++        assert result is not None
++        assert isinstance(result, EnsembleTradeSignal)
++        assert result.direction == "long"
++        assert result.composite_confidence > 0.30
++
++    def test_reload_config(self, valid_config_path):
++        """Test configuration reload."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        # Get initial threshold
++        initial_threshold = scorer.get_threshold()
++        assert initial_threshold == 0.50
++
++        # Modify config file
++        with open(valid_config_path) as f:
++            config = yaml.safe_load(f)
++        config["ensemble"]["confidence_threshold"] = 0.60
++        with open(valid_config_path, "w") as f:
++            yaml.dump(config, f)
++
++        # Reload config
++        scorer.reload_config()
++
++        # Check new threshold
++        new_threshold = scorer.get_threshold()
++        assert new_threshold == 0.60
++
++    def test_set_threshold(self, valid_config_path):
++        """Test setting threshold directly."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        scorer.set_threshold(0.70)
++        assert scorer.get_threshold() == 0.70
++
++    def test_set_threshold_invalid(self, valid_config_path):
++        """Test that setting invalid threshold raises ValueError."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        with pytest.raises(ValueError, match="Threshold must be between 0 and 1"):
++            scorer.set_threshold(1.5)
++
++    def test_get_config(self, valid_config_path):
++        """Test getting current configuration."""
++        from src.detection.weighted_confidence_scorer import WeightedConfidenceScorer
++
++        scorer = WeightedConfidenceScorer(config_path=str(valid_config_path))
++
++        config = scorer.get_config()
++        assert isinstance(config, dict)
++        assert "ensemble" in config
++        assert config["ensemble"]["confidence_threshold"] == 0.50

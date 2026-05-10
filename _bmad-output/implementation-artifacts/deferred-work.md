@@ -106,3 +106,57 @@ LB40 OR combos on wide TFs (89-min) produce 0% filter rate — the lookback wind
 - **Market entry vs limit entry divergence** — SIM bracket uses a market order; local sim assumes FVG midpoint limit fill. SIM P&L will differ from local sim by slippage. Acceptable for paper trading comparison, but document the divergence when reporting.
 - **httpx client per call** — `_submit_sim_bracket` creates a new `AsyncClient` per submission. Pre-existing pattern in this file. Consider sharing a session-level client if order frequency increases.
 - **No env guard on SIM_ACCOUNT_ID** — account ID is hardcoded. The `sim-api.tradestation.com` base URL is the environment guard. Consistent with tier1/tier2 pattern.
+
+---
+
+## ⚠ SPRINT 1 FAIL — INVESTIGATION REPORT (2026-05-10)
+
+**Fold 3 date range:** May 9 – July 8, 2025 (TimeSeriesSplit(5) OOS fold 3 of 5)
+
+**What fold 3 corresponds to:** BTC consolidation at $98k–$112k after the Nov 2024 post-election pump (+43% in ~3 weeks). Fold 3 has the highest density of "low vol" days in the entire dataset: June 2025 had 12 consecutive low-regime days as daily ATR% compressed to 1.76% avg (vs 2.61% for the full fold period).
+
+**The regime gate DOES help in fold 3:** Fold 3 baseline PF = 0.893 (losing month) → regime-gated PF = 1.368. The gate correctly identifies that low-vol days in fold 3 are bad trading days for this setup.
+
+**Why the holdout fails (the inversion):**
+
+The 252-day ATR percentile window still includes the Nov–Dec 2024 extreme-volatility period for every date in the holdout (Nov 2025 – May 2026). That violent pump acts as a persistent high-water mark, causing holdout days that are "normal" volatility to be classified as "low" relative to the 2024 spike. But these holdout "low" days are productive:
+
+| Holdout trades | N | PF | WR |
+|---|---|---|---|
+| Regime-gated (medium only) | 71 | **1.084** | 28.2% |
+| Filtered-out (extreme+low) | 48 | **1.344** | 37.5% |
+| Low-day trades specifically | 15 | **3.056** | 33.3% |
+
+The regime gate removes the best-performing trades from the holdout. No threshold setting corrects this:
+
+| Threshold | Holdout N | Holdout PF | Gate 1 (≥1.40)? |
+|---|---|---|---|
+| P20/P80 | 72 | 1.169 | FAIL |
+| P10/P90 | 96 | 1.319 | FAIL |
+| P5/P95 | 112 | 1.129 | FAIL |
+| No filter | 119 | 1.200 | FAIL |
+
+**Root cause:** The 252-day lookback is not appropriate for a 24/7 perpetual futures market that experienced an exceptional regime change (Nov 2024 BTC election pump). The rolling window requires ~252 days to "forget" the extreme event, during which the percentile thresholds misclassify normal-vol holdout days as "low regime." This is a structural limitation of absolute-percentile vol filtering on assets with non-stationary vol distributions.
+
+**The baseline raw strategy has edge:** Holdout PF 1.200 without any filter. The vol regime gate as designed is the wrong instrument for this dataset and market structure.
+
+**Decision framework verdict:** SPRINT 1: FAIL. Per framework: no deployment path. Investigate and document before proceeding.
+
+**Paths forward (human decision required):**
+
+1. **Sprint 4 (NY PM window, 11:00–12:00 CDT):** Independent of Sprint 1 outcome. The research doc identified 16:00–17:00 UTC as the true BTC statistical edge window; NY PM 11:00–12:00 CDT = 16:00–17:00 UTC. If NY PM holdout PF ≥ 1.40 raw (no vol filter), Sprint 1's vol gate becomes irrelevant — the kill zone change alone delivers the needed edge.
+2. **Shorter adaptive window (60–90 days):** A 60-day ATR percentile would "forget" the Nov 2024 event 2 months faster. But requires spec renegotiation and retesting.
+3. **Regime-relative filter (z-score vs recent mean, not absolute percentile):** Filter setups where current ATR% is > 1.5 std devs above its own 60-day mean. Adapts to the local regime rather than a global distribution.
+4. **Accept raw strategy, move directly to Sprints 2–3 with reduced scope:** The raw strategy has WFE=0.51 and holdout PF=1.200. It doesn't meet the terminal gate (1.40) but it has real edge. The ML layer (Sprints 2–3) could close the 0.20 PF gap without vol filtering.
+
+**Recommendation:** Run Sprint 4 (NY PM window) first. It answers the kill-zone question with zero code changes and no holdout contamination from the regime gate. If NY PM passes, the terminal gate is met without Sprint 1's vol filter.
+
+---
+
+## Deferred from: code review of spec-btc-sprint3-lr-model (2026-05-10)
+
+- **`roc_auc_score` on full train set not guarded against single-class labels** — CV loop at `train_btc_ml.py:575` wraps the AUC call in try/except; the full-train AUC on line 629 does not. If feature extraction drops enough trades to produce a label-constant train set (all win or all loss), the call raises `ValueError`. Low probability given `MIN_TRAIN_TRADES=100`, but inconsistent with the fold-level guard. [`train_btc_ml.py:629`]
+- **`atr14_100` synthetic fallback for `fill_idx` 100–113** — `compute_atr14(bars, fill_idx - 100, 14)` calls `compute_atr14(bars, 0..13, 14)`, which returns `bars[idx].close * 0.005` (synthetic fallback) when `idx < 14`. The feature extraction guard `fill_idx < 100` does not prevent this; the minimum safe value is `fill_idx >= 114`. Affects a small number of early trades; `vol_expansion` is silently distorted. [`train_btc_ml.py:extract_features`]
+- **`FEATURE_COLS` is dead code after Sprint 3** — `FEATURE_COLS` (16 features) is defined but no longer used anywhere in the training pipeline; `LR_FEATURE_COLS` is now the active feature set. `extract_features()` still populates all 16 keys, so the definition is only confusing, not incorrect. Delete `FEATURE_COLS` or rename to `ALL_EXTRACT_COLS` to clarify intent. [`train_btc_ml.py:296`]
+- **`threshold.json` saves unvalidated fallback threshold with no flag** — When `tune_threshold` finds no qualifying threshold (< 50 filtered trades at any threshold bucket), it returns `(0.5, 0.0)`. The saved JSON has `threshold=0.5, cv_oos_pf_filtered=0.0`. A downstream consumer loading this file cannot distinguish a validated 0.5 from the fallback. Add `"threshold_validated": false` to the JSON when `best_cv_pf == 0.0`. [`train_btc_ml.py:tune_threshold`, `train_btc_ml.py:669`]
+- **`mss_to_fvg_bars` can produce negative values** — `mss_to_fvg_bars = min(fvg_idx - mss["index"], 10)` has no lower-bound clamp. If `fvg_idx < mss["index"]` (e.g. due to re-labeling), the feature goes negative. Default is `5` but live values can be negative, creating an asymmetric distribution. Fix: `min(max(fvg_idx - mss["index"], 0), 10)`. Pre-existing in `extract_features()`. [`train_btc_ml.py:394`]

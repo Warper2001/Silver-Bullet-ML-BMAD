@@ -17,9 +17,11 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytz
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import TimeSeriesSplit
-from xgboost import XGBClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -310,6 +312,15 @@ FEATURE_COLS = [
     "price_vs_prior_day_pct",
 ]
 
+LR_FEATURE_COLS = [
+    "swing_dist_atr",
+    "mss_to_fvg_bars",
+    "vol_expansion",
+    "day_of_week",
+    "stop_distance",
+    "momentum_20",
+]
+
 
 def build_daily_ranges(bars: list, volumes: np.ndarray) -> dict:
     """Compute {cdt_date_str: (day_high, day_low)} for prior-day features."""
@@ -538,7 +549,7 @@ def main() -> None:
         sys.exit(1)
 
     train_df = pd.DataFrame(train_records)
-    X_train = train_df[FEATURE_COLS].values
+    X_train = train_df[LR_FEATURE_COLS].values
     y_train = train_df["label"].values
     pnls_train = train_df["pnl"].tolist()
 
@@ -553,23 +564,10 @@ def main() -> None:
         y_tr, y_val = y_train[tr_idx], y_train[val_idx]
         pnl_val = [pnls_train[i] for i in val_idx]
 
-        n_pos_tr = int(y_tr.sum())
-        n_neg_tr = len(y_tr) - n_pos_tr
-        spw = n_neg_tr / max(n_pos_tr, 1)
-        model_fold = XGBClassifier(
-            n_estimators=200,
-            max_depth=3,
-            learning_rate=0.05,
-            subsample=0.7,
-            colsample_bytree=0.7,
-            min_child_weight=5,
-            reg_alpha=0.5,
-            reg_lambda=2.0,
-            scale_pos_weight=spw,
-            random_state=42,
-            eval_metric="auc",
-            verbosity=0,
-        )
+        model_fold = Pipeline([
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(C=0.1, max_iter=1000, random_state=42)),
+        ])
         model_fold.fit(X_tr, y_tr)
         probs = model_fold.predict_proba(X_val)[:, 1]
 
@@ -607,23 +605,10 @@ def main() -> None:
 
     # ── Train final model on full train set ───────────────────────────────────
     logger.info("Training final model on full train set...")
-    n_pos_full = int(y_train.sum())
-    n_neg_full = len(y_train) - n_pos_full
-    spw_full = n_neg_full / max(n_pos_full, 1)
-    model = XGBClassifier(
-        n_estimators=200,
-        max_depth=3,
-        learning_rate=0.05,
-        subsample=0.7,
-        colsample_bytree=0.7,
-        min_child_weight=5,
-        reg_alpha=0.5,
-        reg_lambda=2.0,
-        scale_pos_weight=spw_full,
-        random_state=42,
-        eval_metric="auc",
-        verbosity=0,
-    )
+    model = Pipeline([
+        ("scaler", StandardScaler()),
+        ("lr", LogisticRegression(C=0.1, max_iter=1000, random_state=42)),
+    ])
     model.fit(X_train, y_train)
     train_probs_full = model.predict_proba(X_train)[:, 1]
     train_auc_full = roc_auc_score(y_train, train_probs_full)
@@ -646,7 +631,7 @@ def main() -> None:
     holdout_filtered_pnls: list[float] = []
 
     if holdout_records:
-        X_holdout = pd.DataFrame(holdout_records)[FEATURE_COLS].values
+        X_holdout = pd.DataFrame(holdout_records)[LR_FEATURE_COLS].values
         holdout_probs = model.predict_proba(X_holdout)[:, 1]
         holdout_filtered_pnls = [
             r["pnl"] for r, p in zip(holdout_records, holdout_probs) if p >= best_threshold
@@ -679,8 +664,8 @@ def main() -> None:
     logger.info(f"Threshold saved: {MODEL_DIR}/threshold.json")
 
     feat_imp = pd.DataFrame({
-        "feature": FEATURE_COLS,
-        "importance": model.feature_importances_,
+        "feature": LR_FEATURE_COLS,
+        "importance": np.abs(model.named_steps["lr"].coef_[0]),
     }).sort_values("importance", ascending=False)
     feat_imp.to_csv(MODEL_DIR / "feature_importance.csv", index=False)
     logger.info(f"Feature importance saved: {MODEL_DIR}/feature_importance.csv")
@@ -690,7 +675,7 @@ def main() -> None:
     print("BTC SILVER BULLET ML TRAINING REPORT")
     print("=" * 70)
     print(f"\nConfig:  NY AM 09:00-10:00 CDT | stop_mult={STOP_MULT} | uncapped")
-    print(f"Model:   XGBoost | n_estimators=200 | max_depth=3 | lr=0.05 | scale_pos_weight={spw_full:.1f}")
+    print(f"Model:   LogisticRegression | C=0.1 | StandardScaler | features={len(LR_FEATURE_COLS)}")
     print(f"CV:      TimeSeriesSplit(5)")
     print(f"CV AUC:  {cv_mean_auc:.4f}  (train AUC full fit: {train_auc_full:.4f})")
     print(f"Threshold: {best_threshold:.2f}  (CV OOS PF: {best_cv_pf:.3f})")
@@ -711,8 +696,9 @@ def main() -> None:
     print()
 
     print("── FEATURE IMPORTANCE ──────────────────────────────────────────────")
+    max_imp = feat_imp["importance"].max() or 1.0
     for _, row in feat_imp.iterrows():
-        bar = "█" * int(row["importance"] * 40)
+        bar = "█" * int(row["importance"] / max_imp * 40)
         print(f"  {row['feature']:<22} {row['importance']:.4f}  {bar}")
     print()
 
@@ -720,6 +706,31 @@ def main() -> None:
     print(f"  {MODEL_DIR}/model.joblib")
     print(f"  {MODEL_DIR}/threshold.json")
     print(f"  {MODEL_DIR}/feature_importance.csv")
+    print()
+
+    # ── Sprint 3 gate verdict ─────────────────────────────────────────────────
+    SPRINT3_GAP_GATE    = 0.10   # primary: train/CV AUC gap < 0.10
+    SPRINT3_AUC_FLOOR   = 0.54   # floor:   CV mean AUC ≥ 0.54
+    SPRINT3_HOLDOUT_ADV = 1.479  # advisory: holdout filtered PF baseline
+
+    auc_gap = train_auc_full - cv_mean_auc
+    gate1_pass = auc_gap < SPRINT3_GAP_GATE
+    gate2_pass = cv_mean_auc >= SPRINT3_AUC_FLOOR
+    print("── SPRINT 3 GATE VERDICT ───────────────────────────────────────────")
+    print(f"  Gate 1 — Train/CV AUC gap < {SPRINT3_GAP_GATE:.2f}:  gap={auc_gap:.4f}  {'PASS' if gate1_pass else 'FAIL'}")
+    print(f"  Gate 2 — CV mean AUC ≥ {SPRINT3_AUC_FLOOR:.2f}:       AUC={cv_mean_auc:.4f}   {'PASS' if gate2_pass else 'FAIL'}")
+    if not holdout_filtered_pnls:
+        print(f"  Advisory — Holdout PF: NO TRADES PASSED FILTER (threshold={best_threshold:.2f})")
+    else:
+        holdout_pf_delta = holdout_pf_filtered - SPRINT3_HOLDOUT_ADV
+        advisory_ok = holdout_pf_filtered >= SPRINT3_HOLDOUT_ADV - 0.10
+        print(f"  Advisory — Holdout PF vs baseline {SPRINT3_HOLDOUT_ADV:.3f}: "
+              f"filtered_PF={holdout_pf_filtered:.3f}  delta={holdout_pf_delta:+.3f}  "
+              f"({'OK' if advisory_ok else 'DEGRADED >0.10'})")
+
+    sprint3_pass = gate1_pass and gate2_pass
+    print()
+    print(f"  SPRINT 3: {'PASS' if sprint3_pass else 'FAIL'}")
     print("=" * 70)
 
 

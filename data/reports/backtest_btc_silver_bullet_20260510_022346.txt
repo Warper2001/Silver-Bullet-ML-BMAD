@@ -1,0 +1,44 @@
+========================================================================
+BTC (PF_XBTUSD) SILVER BULLET BASE BACKTEST — NO ML FILTER
+========================================================================
+Data:    2024-11-08 → 2026-05-10
+Config:  BTC_TICK=0.5  CONTRACT_VALUE=$1.0  COMMISSION=$2.0  MIN_RR=2.0
+Windows: London AM 03-04 CDT | NY AM 09-10 CDT | Asia 19-20 CDT
+
+EXECUTIVE SUMMARY
+------------------------------------------------------------------------
+  Total trades:      1266
+  Win rate:          29.6%
+  Profit factor:     1.085
+  Sharpe ratio:      0.617
+  Total P&L:         $5,057.50
+  Avg P&L/trade:     $3.99
+  Avg win:           $172.18
+  Avg loss:          $-66.79
+  Max drawdown:      $-4,917.50
+  Trades/day:        2.37
+  Avg hold (bars):   6.7  (~7 min)
+  Trading days:      534
+  Date range:        548 days
+
+EXIT BREAKDOWN
+------------------------------------------------------------------------
+  stop_loss               890  (70.3%)
+  target                  374  (29.5%)
+  time_exit                 2  (0.2%)
+
+KILL ZONE BREAKDOWN
+------------------------------------------------------------------------
+  Asia         | trades= 438  win=30.4%  PF=1.002  avg=$    0.07  total=$     31.00
+  London AM    | trades= 419  win=28.9%  PF=0.982  avg=$   -0.64  total=$   -267.00
+  NY AM        | trades= 409  win=29.6%  PF=1.209  avg=$   12.94  total=$  5,293.50
+
+INSTITUTIONAL GRADE ASSESSMENT
+------------------------------------------------------------------------
+  FAIL  Profit Factor ≥ 1.5
+  FAIL  Win Rate ≥ 40%
+  FAIL  Sharpe ≥ 1.0
+  PASS  Max DD ≤ $5,000
+
+  FAIL — 1/4 thresholds met
+========================================================================

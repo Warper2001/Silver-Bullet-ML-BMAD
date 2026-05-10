@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+import pytz
 import yaml
 from dotenv import load_dotenv
 
@@ -45,6 +46,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BTC_TICK = 0.5  # PF_XBTUSD minimum price increment
+_CHICAGO = pytz.timezone("America/Chicago")
 
 
 def round_tick(price: float, tick: float = BTC_TICK) -> float:
@@ -59,8 +61,8 @@ def _load_config(path: str = "config_kraken.yaml") -> dict:
 def _parse_kill_zones(kill_zones_cfg: list[dict]) -> list[tuple[str, int, int, int, int]]:
     """Parse kill zone config entries into (name, start_h, start_m, end_h, end_m) tuples.
 
-    Times in config are CDT (UTC-5). These are stored as-is; comparison against
-    current time is done by converting UTC → CDT.
+    Times in config are America/Chicago local time. Comparison against current
+    time is done by converting UTC → America/Chicago (handles CDT/CST automatically).
     """
     parsed = []
     for kz in kill_zones_cfg:
@@ -72,21 +74,17 @@ def _parse_kill_zones(kill_zones_cfg: list[dict]) -> list[tuple[str, int, int, i
 
 
 def _cdt_date(now_utc: datetime) -> str:
-    """Return the CDT calendar date string for a UTC timestamp (CDT = UTC-5)."""
-    cdt = now_utc + timedelta(hours=-5)
-    return cdt.date().isoformat()
+    """Return the America/Chicago calendar date string for a UTC timestamp."""
+    return now_utc.astimezone(_CHICAGO).date().isoformat()
 
 
 def _is_in_kill_zone(
     now_utc: datetime,
     kill_zones: list[tuple[str, int, int, int, int]],
 ) -> tuple[bool, str | None]:
-    """Check whether now_utc falls inside any CDT kill zone.
-
-    CDT = UTC-5. All config times are expressed as CDT hours.
-    """
-    cdt = now_utc + timedelta(hours=-5)
-    cdt_minutes = cdt.hour * 60 + cdt.minute
+    """Check whether now_utc falls inside any America/Chicago kill zone window."""
+    local = now_utc.astimezone(_CHICAGO)
+    cdt_minutes = local.hour * 60 + local.minute
 
     for name, s_h, s_m, e_h, e_m in kill_zones:
         start_min = s_h * 60 + s_m
@@ -104,7 +102,8 @@ class KrakenSilverBulletTrader:
         self.config = config
         self.symbol: str = config["symbol"]
         self.tick: float = config["tick"]
-        self.position_size: int = config.get("position_size", 1)
+        self.position_size: int = int(config.get("position_size", 1))  # API lot count
+        self.btc_size: float = float(config.get("btc_size", 1.0))    # BTC units for P&L
         self.rr_min: float = config["risk"]["rr_min"]
         self.daily_loss_limit: float = config["risk"]["daily_loss_limit"]
         self.kill_zones = _parse_kill_zones(config["kill_zones"])
@@ -365,9 +364,9 @@ class KrakenSilverBulletTrader:
         # 5. R:R enforcement
         fvg_gap = setup.entry_zone_top - setup.entry_zone_bottom
         if setup.direction == "bullish":
-            stop_loss = round_tick(setup.entry_zone_bottom - 0.5 * fvg_gap)
+            stop_loss = round_tick(setup.entry_zone_bottom - 0.75 * fvg_gap)
         else:
-            stop_loss = round_tick(setup.entry_zone_top + 0.5 * fvg_gap)
+            stop_loss = round_tick(setup.entry_zone_top + 0.75 * fvg_gap)
 
         risk = abs(fvg_midpoint - stop_loss)
         if risk == 0:
@@ -409,7 +408,7 @@ class KrakenSilverBulletTrader:
     async def run(self) -> None:
         logger.info("=" * 70)
         logger.info("Kraken Futures Silver Bullet Paper Trader")
-        logger.info(f"Symbol: {self.symbol} | Tick: {self.tick} | Size: {self.position_size}")
+        logger.info(f"Symbol: {self.symbol} | Tick: {self.tick} | API size: {self.position_size} contract(s) | BTC size: {self.btc_size} BTC")
         logger.info(f"Kill zones (CDT): {[(kz[0], kz[1], kz[3]) for kz in self.kill_zones]}")
         logger.info(f"R:R min: {self.rr_min} | Daily loss limit: ${self.daily_loss_limit}")
         logger.info("=" * 70)
@@ -475,7 +474,7 @@ class KrakenSilverBulletTrader:
                         )
 
                         if tp_hit:
-                            profit = abs(trade["target_price"] - trade["entry_price"])
+                            profit = abs(trade["target_price"] - trade["entry_price"]) * self.btc_size
                             self.total_pnl += profit
                             self.daily_pnl += profit
                             self.total_trades += 1
@@ -485,7 +484,7 @@ class KrakenSilverBulletTrader:
                                 await client.orders.cancel_order(trade["sl_id"])
                             self.active_trades.remove(trade)
                         elif sl_hit:
-                            loss = abs(trade["entry_price"] - trade["stop_loss"])
+                            loss = abs(trade["entry_price"] - trade["stop_loss"]) * self.btc_size
                             self.total_pnl -= loss
                             self.daily_pnl -= loss
                             self.total_trades += 1

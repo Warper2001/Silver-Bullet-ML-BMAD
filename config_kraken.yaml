@@ -1,19 +1,23 @@
 symbol: PF_XBTUSD
 tick: 0.5
-position_size: 1  # contracts
+position_size: 1    # API contract count (integer — Kraken PF_XBTUSD minimum lot = 1)
+btc_size: 0.1       # BTC position size for P&L display ($0.10 P&L per $1 price move)
 
-# Kill zones in CDT (Central Daylight Time = UTC-5)
+# Kill zones in America/Chicago local time (CDT=UTC-5 summer, CST=UTC-6 winter)
+# Only NY AM has been validated in backtest (holdout PF 1.479).
+# London AM and Asia are candidates for future validation — do not enable
+# until independently backtested on the holdout period.
 kill_zones:
-  - name: "London AM"
-    start: "03:00"
-    end: "04:00"
   - name: "NY AM"
     start: "09:00"
     end: "10:00"
-  - name: "Asia"
-    start: "19:00"
-    end: "20:00"
+  # - name: "London AM"   # unvalidated — backtest pending
+  #   start: "03:00"
+  #   end: "04:00"
+  # - name: "Asia"        # unvalidated — backtest pending
+  #   start: "19:00"
+  #   end: "20:00"
 
 risk:
-  daily_loss_limit: 500
+  daily_loss_limit: 50    # scaled to btc_size=0.1 (was $500 at 1.0 BTC)
   rr_min: 2.0

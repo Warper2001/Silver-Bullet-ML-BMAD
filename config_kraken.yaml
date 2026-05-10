@@ -1,0 +1,19 @@
+symbol: PF_XBTUSD
+tick: 0.5
+position_size: 1  # contracts
+
+# Kill zones in CDT (Central Daylight Time = UTC-5)
+kill_zones:
+  - name: "London AM"
+    start: "03:00"
+    end: "04:00"
+  - name: "NY AM"
+    start: "09:00"
+    end: "10:00"
+  - name: "Asia"
+    start: "19:00"
+    end: "20:00"
+
+risk:
+  daily_loss_limit: 500
+  rr_min: 2.0

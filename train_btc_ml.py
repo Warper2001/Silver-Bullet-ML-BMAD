@@ -180,6 +180,7 @@ def execute_for_ml(bars: list, setups: list) -> list:
 
             trades.append({
                 "fill_bar_idx": fill_idx,
+                "setup_bar_idx": setup_idx,
                 "entry_price": entry_price,
                 "stop_loss": stop_loss,
                 "target_price": target_price,
@@ -189,6 +190,8 @@ def execute_for_ml(bars: list, setups: list) -> list:
                 "pnl": pnl,
                 "exit_reason": exit_reason,
                 "killzone_window": window,
+                "mss_event": setup.get("mss_event"),
+                "fvg_event": setup.get("fvg_event"),
             })
 
         except Exception as exc:
@@ -223,27 +226,53 @@ FEATURE_COLS = [
     "rr_at_entry",
     "direction",
     "atr14_rel_gap",
+    "vol_expansion",
     "momentum_20",
+    "h1_momentum",
     "trend_slope_50",
     "session_time_frac",
     "day_of_week",
     "swing_dist_atr",
-    "bull_bar_proxy_20",
+    "volume_ratio",
+    "mss_break_pct",
+    "mss_to_fvg_bars",
+    "price_vs_prior_day_pct",
 ]
 
 
-def extract_features(trade: dict, bars: list, swing_highs: list, swing_lows: list) -> dict | None:
+def build_daily_ranges(bars: list, volumes: np.ndarray) -> dict:
+    """Compute {cdt_date_str: (day_high, day_low)} for prior-day features."""
+    from collections import defaultdict
+    daily: dict = defaultdict(lambda: [float("-inf"), float("inf")])
+    for i, bar in enumerate(bars):
+        d = _cdt(bar.timestamp).date().isoformat()
+        if bar.high > daily[d][0]:
+            daily[d][0] = bar.high
+        if bar.low < daily[d][1]:
+            daily[d][1] = bar.low
+    return dict(daily)
+
+
+def extract_features(
+    trade: dict,
+    bars: list,
+    swing_highs: list,
+    swing_lows: list,
+    volumes: np.ndarray,
+    daily_ranges: dict,
+    sorted_dates: list,
+) -> dict | None:
     fill_idx = trade["fill_bar_idx"]
-    if fill_idx < 50:
+    if fill_idx < 100:
         return None
 
     gap_size = trade["gap_size"]
     stop_distance = abs(trade["entry_price"] - trade["stop_loss"])
     atr14 = compute_atr14(bars, fill_idx)
+    atr14_100 = compute_atr14(bars, max(fill_idx - 100, 14), 14)
 
-    momentum_20 = (
-        (bars[fill_idx].close - bars[fill_idx - 20].close) / bars[fill_idx - 20].close
-    )
+    momentum_20 = (bars[fill_idx].close - bars[fill_idx - 20].close) / bars[fill_idx - 20].close
+    h1_momentum = (bars[fill_idx].close - bars[fill_idx - 60].close) / bars[fill_idx - 60].close
 
     closes_50 = [bars[j].close for j in range(fill_idx - 49, fill_idx + 1)]
     slope_raw = np.polyfit(range(50), closes_50, 1)[0]
@@ -264,22 +293,55 @@ def extract_features(trade: dict, bars: list, swing_highs: list, swing_lows: lis
     )
     swing_dist_atr = min(near_high, near_low) / (atr14 + 1e-9)
 
-    bull_bar_proxy = sum(
-        1 for j in range(fill_idx - 20, fill_idx) if bars[j].close > bars[j].open
-    ) / 20
+    # Real volume ratio: 20-bar avg / 100-bar avg (is current volume elevated?)
+    vol_20 = float(np.mean(volumes[max(0, fill_idx - 20): fill_idx])) if fill_idx >= 20 else 1e-9
+    vol_100 = float(np.mean(volumes[max(0, fill_idx - 100): fill_idx])) if fill_idx >= 100 else vol_20
+    volume_ratio = vol_20 / (vol_100 + 1e-9)
+
+    # Volatility expansion: current ATR vs ATR from 100 bars ago
+    vol_expansion = atr14 / (atr14_100 + 1e-9)
+
+    # MSS setup quality features
+    mss = trade.get("mss_event")
+    mss_break_pct = 0.0
+    mss_to_fvg_bars = 5  # default mid-range
+    if mss:
+        swing_px = mss["swing_point"]["price"]
+        mss_break_pct = abs(mss["breakout_price"] - swing_px) / (swing_px + 1e-9)
+        fvg_idx = trade.get("setup_bar_idx", fill_idx)
+        mss_to_fvg_bars = min(fvg_idx - mss["index"], 10)
+
+    # Prior day high/low position (where is entry in prior day's range?)
+    cdt_date_str = cdt.date().isoformat()
+    price_vs_prior_day_pct = 0.5  # default mid-range
+    try:
+        date_pos = sorted_dates.index(cdt_date_str)
+        if date_pos > 0:
+            prior_date = sorted_dates[date_pos - 1]
+            pdh, pdl = daily_ranges[prior_date]
+            day_range = pdh - pdl
+            if day_range > 0:
+                price_vs_prior_day_pct = (cur_price - pdl) / day_range
+    except (ValueError, KeyError):
+        pass
 
     return {
-        "fvg_gap_size":      gap_size,
-        "stop_distance":     stop_distance,
-        "rr_at_entry":       trade["rr_target"],
-        "direction":         1 if trade["direction"] == "bullish" else 0,
-        "atr14_rel_gap":     atr14 / (gap_size + 1e-9),
-        "momentum_20":       momentum_20,
-        "trend_slope_50":    trend_slope_50,
-        "session_time_frac": session_time_frac,
-        "day_of_week":       day_of_week,
-        "swing_dist_atr":    swing_dist_atr,
-        "bull_bar_proxy_20": bull_bar_proxy,
+        "fvg_gap_size":           gap_size,
+        "stop_distance":          stop_distance,
+        "rr_at_entry":            trade["rr_target"],
+        "direction":              1 if trade["direction"] == "bullish" else 0,
+        "atr14_rel_gap":          atr14 / (gap_size + 1e-9),
+        "vol_expansion":          vol_expansion,
+        "momentum_20":            momentum_20,
+        "h1_momentum":            h1_momentum,
+        "trend_slope_50":         trend_slope_50,
+        "session_time_frac":      session_time_frac,
+        "day_of_week":            day_of_week,
+        "swing_dist_atr":         swing_dist_atr,
+        "volume_ratio":           volume_ratio,
+        "mss_break_pct":          mss_break_pct,
+        "mss_to_fvg_bars":        float(mss_to_fvg_bars),
+        "price_vs_prior_day_pct": price_vs_prior_day_pct,
     }
 
 
@@ -342,10 +404,19 @@ def main() -> None:
     logger.info(f"Config: NY AM 09:00-10:00 CDT | stop_mult={STOP_MULT} | target_cap=uncapped")
     logger.info(f"Split: train < {SPLIT_TS.date()} | holdout ≥ {SPLIT_TS.date()}")
 
-    # ── Load and detect ───────────────────────────────────────────────────────
+    # ── Load bars + volume array ──────────────────────────────────────────────
     logger.info("Loading bars...")
     bars = load_csv_as_bars(DATA_PATH)
     logger.info(f"Bars loaded: {len(bars):,}")
+
+    # Load raw volume (DollarBar.volume is set to 0 by load_csv_as_bars)
+    raw_df = pd.read_csv(DATA_PATH, usecols=["volume"])
+    volumes = raw_df["volume"].to_numpy(dtype=np.float64)
+    volumes = volumes[: len(bars)]  # guard against length mismatch
+
+    logger.info("Building daily price ranges (for prior-day features)...")
+    daily_ranges = build_daily_ranges(bars, volumes)
+    sorted_dates = sorted(daily_ranges.keys())
 
     logger.info("Detecting patterns (runs once on all bars)...")
     swing_highs, swing_lows = detect_swing_points(bars)
@@ -381,9 +452,9 @@ def main() -> None:
     logger.info("Extracting features for train trades...")
     train_records = []
     for trade in train_trades:
-        feats = extract_features(trade, bars, swing_highs, swing_lows)
+        feats = extract_features(trade, bars, swing_highs, swing_lows, volumes, daily_ranges, sorted_dates)
         if feats is None:
-            logger.debug(f"Skipped trade at fill_bar_idx={trade['fill_bar_idx']} (< 50 bars)")
+            logger.debug(f"Skipped trade at fill_bar_idx={trade['fill_bar_idx']} (insufficient history)")
             continue
         feats["label"] = 1 if trade["pnl"] > 0 else 0
         feats["pnl"] = trade["pnl"]
@@ -411,12 +482,19 @@ def main() -> None:
         y_tr, y_val = y_train[tr_idx], y_train[val_idx]
         pnl_val = [pnls_train[i] for i in val_idx]
 
+        n_pos_tr = int(y_tr.sum())
+        n_neg_tr = len(y_tr) - n_pos_tr
+        spw = n_neg_tr / max(n_pos_tr, 1)
         model_fold = XGBClassifier(
-            n_estimators=300,
-            max_depth=4,
+            n_estimators=200,
+            max_depth=3,
             learning_rate=0.05,
-            subsample=0.8,
-            colsample_bytree=0.8,
+            subsample=0.7,
+            colsample_bytree=0.7,
+            min_child_weight=5,
+            reg_alpha=0.5,
+            reg_lambda=2.0,
+            scale_pos_weight=spw,
             random_state=42,
             eval_metric="auc",
             verbosity=0,
@@ -458,12 +536,19 @@ def main() -> None:
 
     # ── Train final model on full train set ───────────────────────────────────
     logger.info("Training final model on full train set...")
+    n_pos_full = int(y_train.sum())
+    n_neg_full = len(y_train) - n_pos_full
+    spw_full = n_neg_full / max(n_pos_full, 1)
     model = XGBClassifier(
-        n_estimators=300,
-        max_depth=4,
+        n_estimators=200,
+        max_depth=3,
         learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
+        subsample=0.7,
+        colsample_bytree=0.7,
+        min_child_weight=5,
+        reg_alpha=0.5,
+        reg_lambda=2.0,
+        scale_pos_weight=spw_full,
         random_state=42,
         eval_metric="auc",
         verbosity=0,
@@ -476,7 +561,7 @@ def main() -> None:
     logger.info("Extracting features for holdout trades...")
     holdout_records = []
     for trade in holdout_trades:
-        feats = extract_features(trade, bars, swing_highs, swing_lows)
+        feats = extract_features(trade, bars, swing_highs, swing_lows, volumes, daily_ranges, sorted_dates)
         if feats is None:
             continue
         feats["pnl"] = trade["pnl"]
@@ -534,7 +619,7 @@ def main() -> None:
     print("BTC SILVER BULLET ML TRAINING REPORT")
     print("=" * 70)
     print(f"\nConfig:  NY AM 09:00-10:00 CDT | stop_mult={STOP_MULT} | uncapped")
-    print(f"Model:   XGBoost | n_estimators=300 | max_depth=4 | lr=0.05")
+    print(f"Model:   XGBoost | n_estimators=200 | max_depth=3 | lr=0.05 | scale_pos_weight={spw_full:.1f}")
     print(f"CV:      TimeSeriesSplit(5)")
     print(f"CV AUC:  {cv_mean_auc:.4f}  (train AUC full fit: {train_auc_full:.4f})")
     print(f"Threshold: {best_threshold:.2f}  (CV OOS PF: {best_cv_pf:.3f})")

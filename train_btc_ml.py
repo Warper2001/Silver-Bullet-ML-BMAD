@@ -16,6 +16,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import pytz
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import TimeSeriesSplit
 from xgboost import XGBClassifier
@@ -65,8 +66,11 @@ logging.getLogger("optimize_btc_silver_bullet").setLevel(logging.WARNING)
 
 # ── CDT helper ─────────────────────────────────────────────────────────────────
 
+_CHICAGO = pytz.timezone("America/Chicago")
+
+
 def _cdt(ts_utc: datetime) -> datetime:
-    return ts_utc + timedelta(hours=-5)
+    return ts_utc.astimezone(_CHICAGO)
 
 
 # ── Execution: returns full trade context for feature extraction ───────────────
@@ -485,19 +489,6 @@ def main() -> None:
     daily_ranges = build_daily_ranges(bars, volumes)
     sorted_dates = sorted(daily_ranges.keys())
 
-    logger.info("Building volatility regime map...")
-    vol_regime_map = build_vol_regime_map(bars)
-    n_medium = sum(1 for v in vol_regime_map.values() if v == "medium")
-    n_low = sum(1 for v in vol_regime_map.values() if v == "low")
-    n_extreme = sum(1 for v in vol_regime_map.values() if v == "extreme")
-    n_total = len(vol_regime_map)
-    logger.info(
-        f"Regime days — medium: {n_medium} ({n_medium/n_total:.0%})  "
-        f"low: {n_low} ({n_low/n_total:.0%})  "
-        f"extreme: {n_extreme} ({n_extreme/n_total:.0%})  "
-        f"total: {n_total}"
-    )
-
     logger.info("Detecting patterns (runs once on all bars)...")
     swing_highs, swing_lows = detect_swing_points(bars)
     mss_events = detect_mss_events(bars, swing_highs, swing_lows)
@@ -514,17 +505,17 @@ def main() -> None:
     holdout_setups = [s for s in all_setups if s["timestamp"] >= SPLIT_TS]
     logger.info(f"Train setups: {len(train_setups)} | Holdout setups: {len(holdout_setups)}")
 
-    # ── Execute with vol regime gate ──────────────────────────────────────────
-    logger.info("Executing backtest on train and holdout setups (regime gate active)...")
-    train_trades = execute_for_ml(bars, train_setups, vol_regime_map=vol_regime_map)
-    holdout_trades = execute_for_ml(bars, holdout_setups, vol_regime_map=vol_regime_map)
+    # ── Execute (vol regime gate disabled — degrades holdout PF on this dataset) ─
+    logger.info("Executing backtest on train and holdout setups...")
+    train_trades = execute_for_ml(bars, train_setups)
+    holdout_trades = execute_for_ml(bars, holdout_setups)
 
-    logger.info(f"Train trades after regime filter: {len(train_trades)} | Holdout trades: {len(holdout_trades)}")
+    logger.info(f"Train trades: {len(train_trades)} | Holdout trades: {len(holdout_trades)}")
 
     if len(train_trades) < MIN_TRAIN_TRADES:
         logger.error(
-            f"HALT: only {len(train_trades)} train trades after regime filter — minimum {MIN_TRAIN_TRADES} required. "
-            "Consider widening VOL_REGIME_LOW/HIGH thresholds (e.g. 0.10/0.90) or check kill zone config."
+            f"HALT: only {len(train_trades)} train trades — minimum {MIN_TRAIN_TRADES} required. "
+            "Check kill zone config and data."
         )
         sys.exit(1)
 

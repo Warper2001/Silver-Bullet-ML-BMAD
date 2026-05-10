@@ -6,7 +6,7 @@ PF_XBTUSD using 1-minute Kraken candle data.
 
 Key differences from MNQ version:
 - Data: CSV (not JSON)
-- Kill zones: CDT (UTC-5), London AM / NY AM / Asia from config_kraken.yaml
+- Kill zones: America/Chicago (CDT=UTC-5 summer, CST=UTC-6 winter), London AM / NY AM / Asia
 - Contract: BTC_CONTRACT_VALUE=1.0, BTC_TICK=0.5, COMMISSION=$2.00
 - No ML filter
 
@@ -21,8 +21,11 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+import pytz
 import yaml
 from tqdm import tqdm
+
+_CHICAGO = pytz.timezone("America/Chicago")
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -60,16 +63,16 @@ def _load_kill_zones(config_path: str = "config_kraken.yaml"):
 
 
 def _in_kill_zone(ts_utc: datetime, kill_zones: list) -> tuple[bool, Optional[str]]:
-    cdt = ts_utc + timedelta(hours=-5)
-    cdt_min = cdt.hour * 60 + cdt.minute
+    local = ts_utc.astimezone(_CHICAGO)
+    local_min = local.hour * 60 + local.minute
     for name, sh, sm, eh, em in kill_zones:
-        if sh * 60 + sm <= cdt_min < eh * 60 + em:
+        if sh * 60 + sm <= local_min < eh * 60 + em:
             return True, name
     return False, None
 
 
 def _cdt_date(ts_utc: datetime) -> str:
-    return (ts_utc + timedelta(hours=-5)).date().isoformat()
+    return ts_utc.astimezone(_CHICAGO).date().isoformat()
 
 
 def load_csv_as_bars(csv_path: str) -> list[DollarBar]:

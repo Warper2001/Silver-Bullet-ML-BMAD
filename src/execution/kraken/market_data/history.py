@@ -10,7 +10,7 @@ from src.execution.kraken.models import KrakenBar
 
 logger = logging.getLogger(__name__)
 
-CHARTS_URL = "https://futures.kraken.com/derivatives/api/v3/charts"
+CHARTS_BASE = "https://futures.kraken.com/api/charts/v1/trade"
 
 
 class KrakenHistoryClient:
@@ -24,6 +24,9 @@ class KrakenHistoryClient:
     ) -> list[KrakenBar]:
         """Fetch the most recent `count` completed 1-minute bars.
 
+        URL format: GET /api/charts/v1/trade/{symbol}/{resolution}
+        Params: from/to as Unix timestamps in seconds.
+
         Args:
             symbol: e.g. "PF_XBTUSD"
             interval: Kraken resolution string ("1m", "5m", etc.)
@@ -32,20 +35,14 @@ class KrakenHistoryClient:
         Returns:
             List of KrakenBar, oldest-first, length ≤ count.
         """
-        now_ms = int(time.time() * 1000)
-        # Fetch 60 seconds × count bars worth of history
-        interval_ms = 60_000  # 1m in milliseconds
-        from_ms = now_ms - interval_ms * (count + 1)
+        now_s = int(time.time())
+        from_s = now_s - 60 * (count + 2)  # small buffer to ensure we get enough bars
 
-        params = {
-            "symbol": symbol,
-            "resolution": interval,
-            "from": from_ms,
-            "to": now_ms,
-        }
+        url = f"{CHARTS_BASE}/{symbol}/{interval}"
+        params = {"from": from_s, "to": now_s}
 
         try:
-            response = await self._client.get(CHARTS_URL, params=params, timeout=15.0)
+            response = await self._client.get(url, params=params, timeout=15.0)
         except httpx.RequestError as exc:
             raise KrakenAPIError(0, str(exc)) from exc
 
@@ -54,9 +51,13 @@ class KrakenHistoryClient:
 
         data = response.json()
         candles = data.get("candles", [])
-        bars = [KrakenBar.from_candle(c) for c in candles]
+        bars = []
+        for c in candles:
+            try:
+                bars.append(KrakenBar.from_candle(c))
+            except (ValueError, Exception):
+                continue
 
-        # Return the `count` most-recent bars (last bar may still be forming — skip it)
-        # Keep bars[:-1] (completed) then take last `count`.
+        # Drop the last bar (may still be forming); return `count` most-recent completed
         completed = bars[:-1] if len(bars) > 1 else bars
         return completed[-count:]

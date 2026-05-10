@@ -564,11 +564,12 @@ class KrakenSilverBulletTrader:
             from_ms = now_ms - 300 * 60_000  # 300 minutes ago
 
             import httpx as _httpx
-            from src.execution.kraken.market_data.history import CHARTS_URL
+            from src.execution.kraken.market_data.history import CHARTS_BASE
+            preload_url = f"{CHARTS_BASE}/{self.symbol}/1m"
             async with _httpx.AsyncClient() as tmp:
                 response = await tmp.get(
-                    CHARTS_URL,
-                    params={"symbol": self.symbol, "resolution": "1m", "from": from_ms, "to": now_ms},
+                    preload_url,
+                    params={"from": from_ms // 1000, "to": now_ms // 1000},
                     timeout=30.0,
                 )
             if response.status_code != 200:

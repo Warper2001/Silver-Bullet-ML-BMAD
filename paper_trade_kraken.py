@@ -107,6 +107,7 @@ class KrakenSilverBulletTrader:
         self.rr_min: float = config["risk"]["rr_min"]
         self.daily_loss_limit: float = config["risk"]["daily_loss_limit"]
         self.kill_zones = _parse_kill_zones(config["kill_zones"])
+        self.trade_days: list[int] | None = config.get("trade_days")  # 0=Mon…6=Sun; None = all days
 
         self.running = False
 
@@ -337,6 +338,13 @@ class KrakenSilverBulletTrader:
         if not within_kz:
             return
 
+        # 1b. Day-of-week filter (America/Chicago calendar day)
+        if self.trade_days is not None:
+            local_dow = datetime.now(timezone.utc).astimezone(_CHICAGO).weekday()  # 0=Mon
+            if local_dow not in self.trade_days:
+                logger.debug(f"DOW filter: weekday {local_dow} not in trade_days — skipping")
+                return
+
         # 2. Daily loss limit
         if self.daily_pnl <= -self.daily_loss_limit:
             logger.warning("Daily loss limit reached — skipping new setups")
@@ -410,7 +418,9 @@ class KrakenSilverBulletTrader:
         logger.info("Kraken Futures Silver Bullet Paper Trader")
         logger.info(f"Symbol: {self.symbol} | Tick: {self.tick} | API size: {self.position_size} contract(s) | BTC size: {self.btc_size} BTC")
         logger.info(f"Kill zones (CDT): {[(kz[0], kz[1], kz[3]) for kz in self.kill_zones]}")
-        logger.info(f"R:R min: {self.rr_min} | Daily loss limit: ${self.daily_loss_limit}")
+        dow_names = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        days_str = ", ".join(dow_names[d] for d in self.trade_days) if self.trade_days is not None else "all"
+        logger.info(f"Trade days: {days_str} | R:R min: {self.rr_min} | Daily loss limit: ${self.daily_loss_limit}")
         logger.info("=" * 70)
 
         self.running = True

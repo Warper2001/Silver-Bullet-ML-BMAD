@@ -22,6 +22,11 @@
 - **Kill zone breakdown omits windows with zero trades** — report only shows windows that have trades; edge case if one window fires 0 trades over the backtest period. [`backtest_btc_silver_bullet.py`]
 - **swing_high `>=` allows flat-top ties** — inflates MSS count on flat-price bars; matches source-of-truth behavior. [`backtest_btc_silver_bullet.py`]
 
+## Deferred from: spec-mnq-paper-trader-stop-fix (2026-05-11)
+
+- **`risk == 0` guard is now dead code** — `paper_trade_winning_strategy.py:331` checks `if risk == 0: return` after computing risk from `abs(fvg_midpoint - stop_loss)`. With `STOP_MULT=0.75` and the `fvg_gap > 0` guard above, risk is always > 0 for any valid setup. The guard is harmless but confusing; remove when next touching this block. [`paper_trade_winning_strategy.py:331`]
+- **ML integration uses wrong attribute/method names** — `paper_trade_winning_strategy.py` calls `self.ml_inference.feature_engineer` (actual: `_feature_engineer`) and `self.ml_inference.predict(features)` (actual: `predict_probability(signal, horizon)` with a different call signature). ML filtering is permanently disabled by the latch until this is fixed. Requires understanding the `SilverBulletSetup → Signal → predict_probability` call chain before re-enabling. [`paper_trade_winning_strategy.py:289-305`, `src/ml/inference.py:77,133`]
+
 ## Deferred from: code review of spec-kraken-futures-paper-trader (2026-05-10)
 
 - **`_find_next_liquidity_pool` last-bar false swing** — rightmost bar always passes `bar.high > 0` guard (right=0 sentinel), producing an artificially close TP target. Pre-existing in `paper_trade_winning_strategy.py`. [`paper_trade_kraken.py`]

@@ -3,18 +3,23 @@ tick: 0.5
 position_size: 1    # API contract count (integer — Kraken PF_XBTUSD minimum lot = 1)
 btc_size: 0.1       # BTC position size for P&L display ($0.10 P&L per $1 price move)
 
+# Day-of-week filter (America/Chicago calendar day, 0=Monday … 6=Sunday)
+# Backtest holdout PF by day: Mon 2.472, Tue 3.050, Wed 1.122, Thu 0.938 (losing), Fri 1.435
+# Thursday removed — only day below PF 1.0 in holdout AND weakest in training.
+# Wed/Fri retained pending live-trade confirmation.
+trade_days: [0, 1, 2, 4]  # Mon, Tue, Wed, Fri — no Thursday
+
 # Kill zones in America/Chicago local time (CDT=UTC-5 summer, CST=UTC-6 winter)
-# Only NY AM has been validated in backtest (holdout PF 1.479).
-# London AM and Asia are candidates for future validation — do not enable
-# until independently backtested on the holdout period.
+# NY AM validated holdout PF 1.479; London AM validated holdout PF 1.568.
+# Asia unvalidated — do not enable until independently backtested.
 kill_zones:
   - name: "NY AM"
     start: "09:00"
     end: "10:00"
-  # - name: "London AM"   # unvalidated — backtest pending
-  #   start: "03:00"
-  #   end: "04:00"
-  # - name: "Asia"        # unvalidated — backtest pending
+  - name: "London AM"
+    start: "03:00"
+    end: "04:00"
+  # - name: "Asia"        # unvalidated — holdout PF 1.123, train PF 0.917 (train losing)
   #   start: "19:00"
   #   end: "20:00"
 

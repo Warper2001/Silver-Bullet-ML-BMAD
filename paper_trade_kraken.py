@@ -371,10 +371,13 @@ class KrakenSilverBulletTrader:
 
         # 5. R:R enforcement
         fvg_gap = setup.entry_zone_top - setup.entry_zone_bottom
+        if fvg_gap <= 0:
+            logger.warning(f"Invalid FVG geometry (gap={fvg_gap:.1f}) — skipping setup")
+            return
         if setup.direction == "bullish":
-            stop_loss = round_tick(setup.entry_zone_bottom - 0.75 * fvg_gap)
+            stop_loss = round_tick(setup.entry_zone_bottom - 0.5 * fvg_gap)
         else:
-            stop_loss = round_tick(setup.entry_zone_top + 0.75 * fvg_gap)
+            stop_loss = round_tick(setup.entry_zone_top + 0.5 * fvg_gap)
 
         risk = abs(fvg_midpoint - stop_loss)
         if risk == 0:
@@ -522,6 +525,21 @@ class KrakenSilverBulletTrader:
                         )
 
                         if is_touched:
+                            # Guard: fill bar also breaches stop — skip bad fill (matches backtest)
+                            stop_breached = (
+                                pending["setup"].direction == "bullish"
+                                and bar.low <= pending["stop_loss"]
+                            ) or (
+                                pending["setup"].direction == "bearish"
+                                and bar.high >= pending["stop_loss"]
+                            )
+                            if stop_breached:
+                                logger.info(
+                                    f"Fill-bar stop breach — skipping bad fill "
+                                    f"({pending['setup'].direction} SL={pending['stop_loss']:.1f})"
+                                )
+                                self.pending_setups.remove(pending)
+                                continue
                             logger.info(
                                 f"TRADE ENTERED: {pending['setup'].direction.upper()} @ {pending['fvg_midpoint']:.1f}"
                             )

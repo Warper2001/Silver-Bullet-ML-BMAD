@@ -316,7 +316,7 @@ class WinningSilverBulletTrader:
         target_price = round_tick(target_price)
 
         # 5. R:R Enforcement (Minimum 2:1)
-        # Stop anchored to FVG geometry (matches backtest): bottom-0.75×gap (bullish) / top+0.75×gap (bearish)
+        # Stop anchored to FVG geometry (matches backtest): bottom-0.5×gap (bullish) / top+0.5×gap (bearish)
         fvg_gap = setup.entry_zone_top - setup.entry_zone_bottom
         if fvg_gap <= 0:
             logger.warning(
@@ -325,9 +325,9 @@ class WinningSilverBulletTrader:
             )
             return
         if setup.direction == "bullish":
-            stop_loss = round_tick(setup.entry_zone_bottom - 0.75 * fvg_gap)
+            stop_loss = round_tick(setup.entry_zone_bottom - 0.5 * fvg_gap)
         else:
-            stop_loss = round_tick(setup.entry_zone_top + 0.75 * fvg_gap)
+            stop_loss = round_tick(setup.entry_zone_top + 0.5 * fvg_gap)
         risk = abs(fvg_midpoint - stop_loss)
         if risk == 0: return
         

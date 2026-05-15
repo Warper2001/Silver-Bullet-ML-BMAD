@@ -62,26 +62,35 @@ def compute_lr_channel(closes: np.ndarray, length: int) -> LRChannel:
     sx2 = L * (L - 1) * (2 * L - 1) / 6.0
     denom = L * sx2 - sx * sx
 
-    # sliding_window_view: zero-copy (n-L+1, L) view; windows[k] = closes[k:k+L]
+    # sliding_window_view: zero-copy (m, L) view; windows[k] = closes[k:k+L]
     windows = sliding_window_view(closes, length)   # shape (m, L), m = n - L + 1
 
-    sy  = windows.sum(axis=1)           # (m,)
-    xy  = windows @ x_vec               # (m,)  dot-product per row
-    s   = (L * xy - sx * sy) / denom   # slope  (m,)
-    b   = (sy - s * sx) / L            # intercept (m,)
-    m   = s * (L - 1) + b              # mid = linreg value at newest bar (m,)
+    # Cheap reductions — whole-array is fine (output is 1-D, no large temps)
+    sy = windows.sum(axis=1)            # (m,)
+    xy = windows @ x_vec                # (m,)
+    s  = (L * xy - sx * sy) / denom    # slope (m,)
+    b  = (sy - s * sx) / L             # intercept (m,)
+    mv = s * (L - 1) + b               # mid value at newest bar (m,)
 
-    # Population dev: sqrt(mean(residuals²)) per window
-    predicted = s[:, None] * x_vec + b[:, None]    # (m, L)
-    d = np.sqrt(((windows - predicted) ** 2).mean(axis=1))  # (m,)
+    # Chunked dev — avoids a full (m, L) ≈ GB-scale temporary at year-scale data.
+    # Each chunk allocates at most CHUNK*L*8*2 bytes (window copy + residuals).
+    # At CHUNK=20_000, L=500 → ~160 MB peak; L=300 → ~96 MB.
+    CHUNK = 20_000
+    m_len = len(windows)
+    d = np.empty(m_len)
+    for ci in range(0, m_len, CHUNK):
+        sl   = slice(ci, ci + CHUNK)
+        wc   = np.ascontiguousarray(windows[sl])       # (chunk, L) contiguous copy
+        pred = s[sl, None] * x_vec + b[sl, None]       # (chunk, L)
+        d[ci : ci + CHUNK] = np.sqrt(((wc - pred) ** 2).mean(axis=1))
 
-    w = 2.0 * d / np.sqrt(1.0 + s * s) / L        # width: (upper-lower)=2d
+    w = 2.0 * d / np.sqrt(1.0 + s * s) / L            # width: (upper-lower) = 2d
 
     start = length - 1
     slope[start:]    = s
-    mid[start:]      = m
-    upper[start:]    = m + d
-    lower[start:]    = m - d
+    mid[start:]      = mv
+    upper[start:]    = mv + d
+    lower[start:]    = mv - d
     dev[start:]      = d
     width[start:]    = w
     momentum[start:] = s * w

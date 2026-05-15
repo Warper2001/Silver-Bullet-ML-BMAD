@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 
 
 class LRChannel(NamedTuple):
@@ -54,40 +55,36 @@ def compute_lr_channel(closes: np.ndarray, length: int) -> LRChannel:
     if n < length:
         return LRChannel(upper, lower, mid, slope, dev, width, momentum)
 
-    # Pre-compute Pine-matching x sums (x = 0..length-1, oldest=0, newest=length-1)
+    # Pre-compute OLS constants (x = 0..L-1, oldest=0, newest=L-1)
     L = float(length)
-    sx = 0.5 * L * (L - 1)           # sum(0..L-1)
+    x_vec = np.arange(length, dtype=np.float64)
+    sx  = 0.5 * L * (L - 1)
     sx2 = L * (L - 1) * (2 * L - 1) / 6.0
-
-    # x vector for residual computation
-    x_vec = np.arange(length, dtype=np.float64)   # [0, 1, ..., L-1]
     denom = L * sx2 - sx * sx
 
-    for i in range(length - 1, n):
-        window = closes[i - length + 1 : i + 1]   # oldest → newest
-        sy = window.sum()
-        xy = float(x_vec @ window)
+    # sliding_window_view: zero-copy (n-L+1, L) view; windows[k] = closes[k:k+L]
+    windows = sliding_window_view(closes, length)   # shape (m, L), m = n - L + 1
 
-        s = (L * xy - sx * sy) / denom
-        b = (sy - s * sx) / L
+    sy  = windows.sum(axis=1)           # (m,)
+    xy  = windows @ x_vec               # (m,)  dot-product per row
+    s   = (L * xy - sx * sy) / denom   # slope  (m,)
+    b   = (sy - s * sx) / L            # intercept (m,)
+    m   = s * (L - 1) + b              # mid = linreg value at newest bar (m,)
 
-        # Pine linreg(src, len, 0) = value at x = L-1 (newest bar)
-        m_val = s * (L - 1) + b
+    # Population dev: sqrt(mean(residuals²)) per window
+    predicted = s[:, None] * x_vec + b[:, None]    # (m, L)
+    d = np.sqrt(((windows - predicted) ** 2).mean(axis=1))  # (m,)
 
-        # Population dev: sqrt(mean((window - predicted)^2))
-        predicted = s * x_vec + b
-        residuals = window - predicted
-        d = np.sqrt(np.mean(residuals ** 2))
+    w = 2.0 * d / np.sqrt(1.0 + s * s) / L        # width: (upper-lower)=2d
 
-        slope[i] = s
-        mid[i] = m_val
-        upper[i] = m_val + d
-        lower[i] = m_val - d
-        dev[i] = d
-
-        w = abs(upper[i] - lower[i]) / np.sqrt(1.0 + s * s) / L
-        width[i] = w
-        momentum[i] = s * w
+    start = length - 1
+    slope[start:]    = s
+    mid[start:]      = m
+    upper[start:]    = m + d
+    lower[start:]    = m - d
+    dev[start:]      = d
+    width[start:]    = w
+    momentum[start:] = s * w
 
     return LRChannel(upper, lower, mid, slope, dev, width, momentum)
 

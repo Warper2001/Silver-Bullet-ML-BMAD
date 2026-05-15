@@ -1,4 +1,12 @@
 
+## Deferred from: code review of spec-lr-channel-btc-signal-module (2026-05-15)
+
+- **`compute_lr_channel` O(n·length) Python loop** — docstring incorrectly says "vectorised"; actual implementation is a Python loop with per-iteration NumPy slice/dot. Acceptable for a ~18k-bar research backtest but will be prohibitively slow at 500k+ bars. Replace with `np.lib.stride_tricks` strided view + matrix multiply for a true vectorised implementation before this module is used in any live pipeline. [`src/research/lr_channel.py:compute_lr_channel`]
+- **`denom` zero-divide for `length=1`** — `denom = L*sx2 - sx*sx = 0` when length=1; produces silent NaN. Not a real use case for this strategy (lengths 300/100/30) but could silently corrupt results if someone passes length=1. Add a `if length < 2: raise ValueError` guard. [`src/research/lr_channel.py:64`]
+- **`notional_value=float(row.close)` semantic mismatch** — `DollarBar.notional_value` is designed to hold dollar notional of the bar (the $50M threshold); setting it to spot price misuses the field. Pre-existing pattern from `backtest_btc_silver_bullet.py:load_csv_as_bars`. Fix when `notional_value` is first consumed downstream. [`backtest_lr_channel_btc.py:load_csv_as_bars`]
+- **Daily Sharpe uses entry_ts.date() grouping** — trades entered late in a session but exiting the next day have PnL attributed to the entry date, distorting daily variance. Standard fix: group by exit date. Acceptable simplification for exploration phase. [`backtest_lr_channel_btc.py:analyze_and_print`]
+- **Non-overlapping guard is 1 bar over-conservative** — `entry_bar <= last_exit_bar` skips an entry whose fill at `entry_bar+1` would be the bar after the exit. Could be `entry_bar < last_exit_bar` to allow one more entry per cycle. Impact is a few missed signals per run. [`backtest_lr_channel_btc.py:_run_sequential:114`]
+
 ## Deferred from: code review of spec-btc-vol-regime-gate-sprint1 (2026-05-10)
 
 - **Asymmetric baseline comparison due to dedup** — `execute_param` applies a one-trade-per-window-per-day dedup. Removing regime-filtered setups from some days alters which setups trigger the cap on other days, making the baseline vs. regime-gated comparison subtly asymmetric. Not a bug in the gate logic, but the PF improvement vs. baseline may be partially a dedup artifact rather than a pure regime signal. Investigate if the Sprint 1 FAIL margin is close to ambiguous. [`btc_regime_gate_backtest.py:filter_by_regime`, `optimize_btc_silver_bullet.py:execute_param`]

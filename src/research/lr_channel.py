@@ -1,0 +1,192 @@
+"""Linear regression channel math — pure, deterministic, side-effect-free.
+
+Implements OLS channels (any length) matching Pine Script's ta.linreg formula:
+  slope  = (n*xy - sx*sy) / (n*sx2 - sx**2)
+  intercept = (sy - slope*sx) / n
+  mid_i  = slope*(n-1) + intercept   (end-of-window predicted value)
+  dev    = sqrt(mean(residuals**2))  — population (biased) stddev
+  width  = (upper - lower) / sqrt(1 + slope**2) / n
+  momentum = slope * width
+"""
+
+from __future__ import annotations
+
+from typing import NamedTuple
+
+import numpy as np
+
+
+class LRChannel(NamedTuple):
+    upper: np.ndarray
+    lower: np.ndarray
+    mid: np.ndarray
+    slope: np.ndarray
+    dev: np.ndarray
+    width: np.ndarray
+    momentum: np.ndarray
+
+
+def compute_lr_channel(closes: np.ndarray, length: int) -> LRChannel:
+    """Compute a rolling linear-regression channel over *closes*.
+
+    Returns arrays of the same length as *closes*; the first ``length - 1``
+    entries of each array are ``NaN`` (warm-up period).
+
+    Parameters
+    ----------
+    closes:
+        1-D float64 array of bar close prices, oldest index 0.
+    length:
+        Regression window length (e.g. 300, 100, 30).
+    """
+    closes = np.asarray(closes, dtype=np.float64)
+    n = len(closes)
+    out_shape = (n,)
+
+    upper = np.full(out_shape, np.nan)
+    lower = np.full(out_shape, np.nan)
+    mid = np.full(out_shape, np.nan)
+    slope = np.full(out_shape, np.nan)
+    dev = np.full(out_shape, np.nan)
+    width = np.full(out_shape, np.nan)
+    momentum = np.full(out_shape, np.nan)
+
+    if n < length:
+        return LRChannel(upper, lower, mid, slope, dev, width, momentum)
+
+    # Pre-compute Pine-matching x sums (x = 0..length-1, oldest=0, newest=length-1)
+    L = float(length)
+    sx = 0.5 * L * (L - 1)           # sum(0..L-1)
+    sx2 = L * (L - 1) * (2 * L - 1) / 6.0
+
+    # x vector for residual computation
+    x_vec = np.arange(length, dtype=np.float64)   # [0, 1, ..., L-1]
+    denom = L * sx2 - sx * sx
+
+    for i in range(length - 1, n):
+        window = closes[i - length + 1 : i + 1]   # oldest → newest
+        sy = window.sum()
+        xy = float(x_vec @ window)
+
+        s = (L * xy - sx * sy) / denom
+        b = (sy - s * sx) / L
+
+        # Pine linreg(src, len, 0) = value at x = L-1 (newest bar)
+        m_val = s * (L - 1) + b
+
+        # Population dev: sqrt(mean((window - predicted)^2))
+        predicted = s * x_vec + b
+        residuals = window - predicted
+        d = np.sqrt(np.mean(residuals ** 2))
+
+        slope[i] = s
+        mid[i] = m_val
+        upper[i] = m_val + d
+        lower[i] = m_val - d
+        dev[i] = d
+
+        w = abs(upper[i] - lower[i]) / np.sqrt(1.0 + s * s) / L
+        width[i] = w
+        momentum[i] = s * w
+
+    return LRChannel(upper, lower, mid, slope, dev, width, momentum)
+
+
+def detect_signals(
+    closes: np.ndarray,
+    timestamps,
+    ch300: LRChannel,
+    ch100: LRChannel,
+    ch30: LRChannel,
+    entry_line: str = "lower",
+    mtf_slope_filter: bool = True,
+) -> tuple[list[dict], list[dict]]:
+    """Detect entry and exit signals on confirmed bar closes.
+
+    Parameters
+    ----------
+    closes:
+        Close prices array (same length as channel arrays).
+    timestamps:
+        Sequence of bar timestamps (same length).
+    ch300, ch100, ch30:
+        LRChannel outputs for 300-bar, 100-bar, 30-bar windows.
+    entry_line:
+        Which 300-bar channel line triggers a long entry:
+        ``'lower'``  — close crosses *below* lower rail (mean-reversion),
+        ``'mid'``    — close crosses *above* midline from below,
+        ``'upper'``  — close crosses *above* upper rail (breakout).
+    mtf_slope_filter:
+        When ``True``, only emit entries where ch100.slope > 0 AND ch30.slope > 0.
+
+    Returns
+    -------
+    entries : list of dicts with keys ``bar_idx``, ``timestamp``, ``entry_line``, ``trigger``
+    exits   : list of dicts with keys ``bar_idx``, ``timestamp``, ``reason``
+              (bar_idx is the signal bar; the backtest fills at bar_idx+1 open)
+    """
+    if entry_line not in ("lower", "mid", "upper"):
+        raise ValueError(f"entry_line must be 'lower', 'mid', or 'upper'; got {entry_line!r}")
+
+    closes = np.asarray(closes, dtype=np.float64)
+    n = len(closes)
+    entries: list[dict] = []
+    exits: list[dict] = []
+
+    for i in range(1, n):
+        # Skip if any required channel value is NaN at t or t-1
+        if np.isnan(ch300.mid[i]) or np.isnan(ch300.mid[i - 1]):
+            continue
+
+        # --- Entry detection ---
+        if entry_line == "lower":
+            triggered = (
+                closes[i - 1] >= ch300.lower[i - 1]
+                and closes[i] < ch300.lower[i]
+            )
+            trigger_label = "crossunder_lower"
+        elif entry_line == "mid":
+            triggered = (
+                closes[i - 1] <= ch300.mid[i - 1]
+                and closes[i] > ch300.mid[i]
+            )
+            trigger_label = "crossover_mid"
+        else:  # upper
+            triggered = (
+                closes[i - 1] <= ch300.upper[i - 1]
+                and closes[i] > ch300.upper[i]
+            )
+            trigger_label = "crossover_upper"
+
+        if triggered:
+            passes_filter = True
+            if mtf_slope_filter:
+                s100 = ch100.slope[i]
+                s30 = ch30.slope[i]
+                passes_filter = (
+                    not np.isnan(s100)
+                    and not np.isnan(s30)
+                    and s100 > 0
+                    and s30 > 0
+                )
+            if passes_filter:
+                entries.append({
+                    "bar_idx": i,
+                    "timestamp": timestamps[i],
+                    "entry_line": entry_line,
+                    "trigger": trigger_label,
+                })
+
+        # --- Exit detection: close crosses above 300-bar midline ---
+        if (
+            not np.isnan(ch300.mid[i - 1])
+            and closes[i - 1] <= ch300.mid[i - 1]
+            and closes[i] > ch300.mid[i]
+        ):
+            exits.append({
+                "bar_idx": i,
+                "timestamp": timestamps[i],
+                "reason": "midline_return",
+            })
+
+    return entries, exits

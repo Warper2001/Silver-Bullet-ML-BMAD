@@ -7,7 +7,7 @@ PF_XBTUSD using 1-minute Kraken candle data.
 Key differences from MNQ version:
 - Data: CSV (not JSON)
 - Kill zones: America/Chicago (CDT=UTC-5 summer, CST=UTC-6 winter), London AM / NY AM / Asia
-- Contract: BTC_CONTRACT_VALUE=1.0, BTC_TICK=0.5, COMMISSION=$2.00
+- Contract: BTC_CONTRACT_VALUE=0.1 (0.1 BTC), BTC_TICK=0.5, COMMISSION=$2.00
 - No ML filter
 
 Output: data/reports/backtest_btc_silver_bullet_{ts}.txt + .csv
@@ -39,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BTC_TICK = 0.5
-BTC_CONTRACT_VALUE = 1.0  # $1 per point per contract (PF_XBTUSD USD-linear)
+BTC_CONTRACT_VALUE = 1.0  # $1 per point per contract — scale via paper trader btc_size
 COMMISSION = 2.0
 POSITION_SIZE = 1
 LIMIT_CANCEL_BARS = 15

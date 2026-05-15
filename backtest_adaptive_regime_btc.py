@@ -6,11 +6,11 @@ ResearchGate DOI:10.13140/RG.2.2.35154.41922
 
 Logic:
 1. Resample 1-min Kraken data to 15-min bars
-2. Compute normalized price slope over rolling window
-3. Classify regime (UP/DOWN/SIDEWAYS) using historical percentile bands
-4. Apply daily HTF trend filter: EMA(50) vs EMA(100) on daily bars
-5. Enter long (UP+BULL) or short (DOWN+BEAR) when regimes align
-6. Exit via ATR trailing stop evaluated on each 15m bar close
+2. Classify regime (UP/DOWN/SIDEWAYS) using dual-timeframe OLS slope
+   from LRChannelRegimeDetector (replaces noisy HMM / percentile approach)
+3. Apply daily HTF trend filter: EMA(50) vs EMA(100) on daily bars
+4. Enter long (UP+BULL) or short (DOWN+BEAR) when regimes align
+5. Exit via ATR trailing stop evaluated on each 15m bar close
 
 Data: data/kraken/PF_XBTUSD_1min.csv (Nov 2024 – May 2026)
 Split: train < 2025-11-08 | holdout >= 2025-11-08 (same as silver bullet)
@@ -18,12 +18,16 @@ Position: 0.1 BTC | Commission: 0.05% taker per side
 """
 
 import logging
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
+sys.path.insert(0, str(Path(__file__).parent))
+from src.ml.regime_detection.lr_channel_detector import LRChannelRegimeDetector
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -33,10 +37,8 @@ DATA_PATH      = "data/kraken/PF_XBTUSD_1min.csv"
 RESAMPLE_TF    = "15min"
 SPLIT_DATE     = "2025-11-08"
 
-SLOPE_WINDOW   = 20          # 15m bars for slope calc (20 × 15min = 5 hr)
-SLOPE_HISTORY  = 100         # bars for rolling percentile calibration
-PCT_UP         = 70          # slope percentile threshold for UP regime
-PCT_DOWN       = 30          # slope percentile threshold for DOWN regime
+FAST_LR_LEN    = 50          # OLS window for fast regime (50 × 15min = 12.5 hr)
+SLOW_LR_LEN    = 200         # OLS window for slow regime (200 × 15min = 50 hr ≈ 2 days)
 
 ATR_PERIOD     = 14
 ATR_MULTIPLIER = 2.5
@@ -76,21 +78,29 @@ def compute_atr(df: pd.DataFrame, period: int) -> pd.Series:
     return tr.ewm(span=period, min_periods=period).mean()
 
 
-def compute_regime(close: pd.Series) -> pd.Series:
-    """Slope-based regime: UP / DOWN / SIDEWAYS using rolling percentile bands.
+def compute_regime(df: pd.DataFrame) -> pd.Series:
+    """Dual-timeframe OLS slope regime: UP / DOWN / SIDEWAYS.
 
-    Thresholds are computed from slope.shift(1) so that slope[t] is compared
-    to a quantile derived only from slope[t-HISTORY..t-1] — no look-ahead.
+    Uses LRChannelRegimeDetector — both fast (50-bar) and slow (200-bar)
+    OLS channels must agree on direction for an UP or DOWN label.
+    No look-ahead: slope[t] is computed from closes[t-len+1..t] only.
     """
-    slope = (close - close.shift(SLOPE_WINDOW)) / (close.shift(SLOPE_WINDOW) * SLOPE_WINDOW)
-    # Shift by 1 before rolling: threshold at t uses only history up to t-1
-    slope_hist  = slope.shift(1)
-    up_thresh   = slope_hist.rolling(SLOPE_HISTORY).quantile(PCT_UP   / 100.0)
-    down_thresh = slope_hist.rolling(SLOPE_HISTORY).quantile(PCT_DOWN / 100.0)
-    regime = pd.Series("SIDEWAYS", index=close.index, dtype=object)
-    regime[slope > up_thresh]   = "UP"
-    regime[slope < down_thresh] = "DOWN"
-    return regime
+    detector = LRChannelRegimeDetector(fast_len=FAST_LR_LEN, slow_len=SLOW_LR_LEN)
+    labels = detector.fit_predict(df["close"].values)
+    stats = detector.regime_stats(labels)
+    logger.info(
+        "Regime distribution — UP: %(UP)s%% | DOWN: %(DOWN)s%% | SIDEWAYS: %(SIDEWAYS)s%%  "
+        "(avg run: UP=%(up_run).1f bars, DOWN=%(down_run).1f bars, SIDEWAYS=%(sw_run).1f bars)",
+        {
+            "UP":       stats["pct"]["UP"],
+            "DOWN":     stats["pct"]["DOWN"],
+            "SIDEWAYS": stats["pct"]["SIDEWAYS"],
+            "up_run":   stats["avg_run_bars"]["UP"],
+            "down_run": stats["avg_run_bars"]["DOWN"],
+            "sw_run":   stats["avg_run_bars"]["SIDEWAYS"],
+        },
+    )
+    return pd.Series(labels, index=df.index, dtype=object)
 
 
 def compute_htf_trend(df_daily: pd.DataFrame) -> pd.Series:
@@ -109,7 +119,7 @@ def compute_htf_trend(df_daily: pd.DataFrame) -> pd.Series:
 def run_backtest(df_15m: pd.DataFrame, df_daily: pd.DataFrame) -> pd.DataFrame:
     df = df_15m.copy()
     df["atr"]    = compute_atr(df, ATR_PERIOD)
-    df["regime"] = compute_regime(df["close"])
+    df["regime"] = compute_regime(df)
 
     daily_trend = compute_htf_trend(df_daily)
     # Map daily trend forward to each 15m bar via date
@@ -334,8 +344,9 @@ def main() -> None:
     logger.info(f"\nTrade log saved → {csv_path}")
 
     print(f"\n  Parameters used:")
-    print(f"    Slope window:   {SLOPE_WINDOW} bars × 15m = {SLOPE_WINDOW*15/60:.1f} hr")
-    print(f"    Percentile:     UP > {PCT_UP}th | DOWN < {PCT_DOWN}th  (history: {SLOPE_HISTORY} bars)")
+    print(f"    Regime detector: LR channel OLS slope (dual-timeframe)")
+    print(f"    Fast LR window: {FAST_LR_LEN} bars × 15m = {FAST_LR_LEN*15/60:.1f} hr")
+    print(f"    Slow LR window: {SLOW_LR_LEN} bars × 15m = {SLOW_LR_LEN*15/60:.1f} hr")
     print(f"    ATR:            period={ATR_PERIOD}, multiplier={ATR_MULTIPLIER}×")
     print(f"    HTF filter:     daily EMA({HTF_FAST_MA}) vs EMA({HTF_SLOW_MA})")
     print(f"    Position:       {BTC_SIZE} BTC | Commission: {COMMISSION_PCT*100:.3f}%/side")

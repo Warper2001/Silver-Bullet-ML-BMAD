@@ -82,7 +82,7 @@ def load_csv_as_bars(csv_path: str) -> list[DollarBar]:
                 high=float(row.high),
                 low=float(row.low),
                 close=float(row.close),
-                volume=float(row.volume),
+                volume=int(round(row.volume * 1e8)),  # store as satoshis to preserve precision
                 notional_value=float(row.close),
                 is_forward_filled=False,
             ))

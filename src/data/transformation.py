@@ -66,6 +66,10 @@ class DollarBarTransformer:
         self._transformation_start_time: Optional[datetime] = None
         self._last_log_time = datetime.now()
 
+        # TradeStation quote stream reports cumulative daily Volume, not per-tick volume.
+        # Track the previous raw volume so we can accumulate only the delta per update.
+        self._prev_raw_volume: Optional[int] = None
+
     async def consume(self) -> None:
         """Consume MarketData stream and transform to Dollar Bars.
 
@@ -125,7 +129,16 @@ class DollarBarTransformer:
             logger.warning("Market data missing last price, skipping")
             return
 
-        volume = market_data.volume
+        raw_volume = market_data.volume
+        if self._prev_raw_volume is None:
+            # First tick of the session: baseline the cumulative volume, contribute zero.
+            # The quote stream sends total daily volume; we need only the per-update delta.
+            self._prev_raw_volume = raw_volume
+            volume_delta = 0
+        else:
+            volume_delta = max(0, raw_volume - self._prev_raw_volume)
+            self._prev_raw_volume = raw_volume
+        volume = volume_delta
         notional = price * volume * MNQ_MULTIPLIER
 
         # Initialize new bar if idle
@@ -185,6 +198,20 @@ class DollarBarTransformer:
             reason: Why bar completed (threshold or timeout)
         """
         if self._state != BarBuilderState.ACCUMULATING:
+            return
+
+        # Discard bars with no real volume (e.g. first-tick baseline with delta=0,
+        # or timeout before any trades were received).
+        if self._bar_notional <= 0:
+            logger.debug(f"Skipping zero-notional bar (reason={reason})")
+            self._state = BarBuilderState.IDLE
+            self._bar_open = None
+            self._bar_high = None
+            self._bar_low = None
+            self._bar_close = None
+            self._bar_volume = 0
+            self._bar_notional = 0.0
+            self._bar_start_time = None
             return
 
         # Mark as completed to prevent race conditions

@@ -751,7 +751,8 @@ class FeatureEngineer:
 
         # Convert to numpy array for ML prediction
         # Select only numeric features (exclude timestamp, trading_session)
-        # IMPORTANT: Must match the 52 features the model was trained with
+        # IMPORTANT: Must match the 52 features the model was trained with.
+        # The 5 LR channel features below were added after training and must NOT be included.
         feature_columns = [
             'open', 'high', 'low', 'close', 'volume', 'notional_value',
             'atr', 'atr_ratio', 'returns', 'high_low_range', 'close_position',
@@ -768,10 +769,6 @@ class FeatureEngineer:
             'close_position_ma_20', 'close_position_std_20',
             'is_london_am', 'is_ny_am', 'is_ny_pm',
             'hour_sin', 'hour_cos', 'day_sin', 'day_cos',
-            # LR channel regime-context features
-            'lr_slope_50', 'lr_slope_100',
-            'lr_dev_50', 'lr_dev_100',
-            'lr_price_pos_50',
         ]
 
         # Filter to available columns

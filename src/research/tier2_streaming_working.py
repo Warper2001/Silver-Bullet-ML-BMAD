@@ -119,10 +119,43 @@ class MetaLabelingFilter:
             try:
                 self.model = joblib.load(model_path)
                 logger.info(f"ML filter loaded from {model_path} (threshold={threshold})")
+                # Load validated threshold from JSON; overrides constructor default
+                _thr_json = Path(__file__).parent.parent.parent / "models/xgboost/tier2_threshold.json"
+                if _thr_json.exists():
+                    try:
+                        import json as _json
+                        _data = _json.loads(_thr_json.read_text())
+                        self.threshold = float(_data["threshold"])
+                        logger.info(
+                            f"ML threshold loaded from JSON: {self.threshold} "
+                            f"(validated {_data.get('validated_date', '?')})"
+                        )
+                    except Exception as _e:
+                        logger.warning(f"Threshold JSON read failed: {_e} — using {self.threshold}")
             except Exception as e:
                 logger.warning(f"ML model load failed: {e} — falling back to pass-through")
         else:
             logger.warning(f"ML model not found at {model_path} — falling back to pass-through")
+
+    def _log_decision(self, timestamp, proba: float, decision: str) -> None:
+        """Append filter decision to logs/tier2_filter_log.csv."""
+        import csv as _csv
+        log_path = Path(__file__).parent.parent.parent / "logs/tier2_filter_log.csv"
+        row = {
+            "timestamp":       str(timestamp),
+            "filter_decision": decision,
+            "probability":     round(proba, 4),
+            "threshold":       self.threshold,
+        }
+        write_header = not log_path.exists()
+        try:
+            with log_path.open("a", newline="") as _f:
+                _w = _csv.DictWriter(_f, fieldnames=list(row.keys()))
+                if write_header:
+                    _w.writeheader()
+                _w.writerow(row)
+        except Exception as _e:
+            logger.warning(f"Filter log write failed: {_e}")
 
     def predict_proba(self, features: dict) -> float:
         """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
@@ -463,21 +496,25 @@ class Tier2StreamingTrader:
             if fvg:
                 features = self._extract_features(bars, bar, fvg, "bullish")
                 proba = self.ml_filter.predict_proba(features)
-                if proba >= ML_THRESHOLD:
+                if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
                 else:
-                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
+                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
         if self.h1_bearish_sweep_active:  # independent of bullish — fixes pre-existing elif gap
             fvg = self._detect_fvg(bars, bullish=False)
             if fvg:
                 features = self._extract_features(bars, bar, fvg, "bearish")
                 proba = self.ml_filter.predict_proba(features)
-                if proba >= ML_THRESHOLD:
+                if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
                 else:
-                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
+                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

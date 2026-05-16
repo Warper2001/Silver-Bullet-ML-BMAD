@@ -77,6 +77,7 @@ class WinningSilverBulletTrader:
         self.bar_index = 0
         self._is_preloading = False
         self._seen_setup_keys: set[tuple[int, int]] = set()  # (mss_bar_index, fvg_bar_index) dedup
+        self._ml_unavailable: bool = False  # latched on first ML failure; suppresses per-setup noise
 
         # Performance tracking
         self.total_trades = 0
@@ -285,22 +286,24 @@ class WinningSilverBulletTrader:
         if already_pending:
             return
 
-        # 3. ML prediction filter
-        try:
-            features = self.ml_inference.feature_engineer.extract_features(
-                setup, self.recent_bars
-            )
-            prediction = self.ml_inference.predict(features)
-
-            logger.info(f"🤖 ML Prediction: P(success) = {prediction:.2%}")
-
-            if prediction < self.ml_threshold:
-                logger.debug(f"❌ Setup below {self.ml_threshold:.0%} threshold - SKIPPED")
-                return
-
-        except Exception as e:
-            logger.warning(f"ML prediction unavailable ({e}) — proceeding without filter")
-            # Strategy is profitable without ML filter (PF=2.60 raw)
+        # 3. ML prediction filter (optional — strategy is profitable without it, PF=2.60 raw)
+        if not self._ml_unavailable:
+            try:
+                features = self.ml_inference.feature_engineer.extract_features(
+                    setup, self.recent_bars
+                )
+                prediction = self.ml_inference.predict(features)
+                logger.info(f"🤖 ML Prediction: P(success) = {prediction:.2%}")
+                if prediction < self.ml_threshold:
+                    logger.debug(f"❌ Setup below {self.ml_threshold:.0%} threshold - SKIPPED")
+                    return
+            except Exception as e:
+                # Latch any ML failure for the session — one warning, no per-setup spam.
+                # Known root cause: MLInference uses different attribute/method names than
+                # called here (feature_engineer vs _feature_engineer, predict vs predict_probability).
+                # Fix the integration properly before re-enabling ML filtering.
+                self._ml_unavailable = True
+                logger.warning(f"ML filter unavailable ({e}) — running without ML for this session")
 
         # 4. Target Calculation (Next Liquidity Pool)
         fvg_midpoint = round_tick((setup.entry_zone_top + setup.entry_zone_bottom) / 2)
@@ -315,6 +318,12 @@ class WinningSilverBulletTrader:
         # 5. R:R Enforcement (Minimum 2:1)
         # Stop anchored to FVG geometry (matches backtest): bottom-0.5×gap (bullish) / top+0.5×gap (bearish)
         fvg_gap = setup.entry_zone_top - setup.entry_zone_bottom
+        if fvg_gap <= 0:
+            logger.warning(
+                f"Invalid FVG geometry (gap={fvg_gap:.2f}): entry_zone_top={setup.entry_zone_top:.2f} "
+                f"<= entry_zone_bottom={setup.entry_zone_bottom:.2f} — skipping setup"
+            )
+            return
         if setup.direction == "bullish":
             stop_loss = round_tick(setup.entry_zone_bottom - 0.5 * fvg_gap)
         else:

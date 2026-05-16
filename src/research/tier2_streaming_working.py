@@ -36,7 +36,8 @@ ENTRY_PCT = 0.5  # Midpoint entry
 ATR_THRESHOLD = 0.5
 MAX_GAP_DOLLARS = 60.0
 MAX_HOLD_BARS = 120  # 2 Hours (matches final optimization)
-CONTRACTS_PER_TRADE = 1
+CONTRACTS_PER_TRADE = 5
+MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
 
 # MNQ Specifications
 MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
@@ -119,10 +120,108 @@ class MetaLabelingFilter:
             try:
                 self.model = joblib.load(model_path)
                 logger.info(f"ML filter loaded from {model_path} (threshold={threshold})")
+                # Load validated threshold from JSON; overrides constructor default
+                _thr_json = Path(__file__).parent.parent.parent / "models/xgboost/tier2_threshold.json"
+                if _thr_json.exists():
+                    try:
+                        import json as _json
+                        _data = _json.loads(_thr_json.read_text())
+                        self.threshold = float(_data["threshold"])
+                        logger.info(
+                            f"ML threshold loaded from JSON: {self.threshold} "
+                            f"(validated {_data.get('validated_date', '?')})"
+                        )
+                    except Exception as _e:
+                        logger.warning(f"Threshold JSON read failed: {_e} — using {self.threshold}")
             except Exception as e:
                 logger.warning(f"ML model load failed: {e} — falling back to pass-through")
         else:
             logger.warning(f"ML model not found at {model_path} — falling back to pass-through")
+
+    def _log_decision(self, timestamp, proba: float, decision: str) -> None:
+        """Append filter decision to logs/tier2_filter_log.csv."""
+        import csv as _csv
+        log_path = Path(__file__).parent.parent.parent / "logs/tier2_filter_log.csv"
+        row = {
+            "timestamp":       str(timestamp),
+            "filter_decision": decision,
+            "probability":     round(proba, 4),
+            "threshold":       self.threshold,
+        }
+        write_header = not log_path.exists()
+        try:
+            with log_path.open("a", newline="") as _f:
+                _w = _csv.DictWriter(_f, fieldnames=list(row.keys()))
+                if write_header:
+                    _w.writeheader()
+                _w.writerow(row)
+        except Exception as _e:
+            logger.warning(f"Filter log write failed: {_e}")
+
+class LRRegimeFilter:
+    """LR channel counter-trend pre-filter for Silver Bullet signals.
+
+    Reads config from models/xgboost/lr_regime_config.json.
+    Counter-trend: passes signals when LR regime DISAGREES with signal direction.
+    Shorting into uptrend and buying into downtrend = Silver Bullet edge.
+    SIDEWAYS regime → pass through (no trend to fade).
+    """
+
+    def __init__(self) -> None:
+        self.enabled  = False
+        self.fast_len = 390
+        self.slow_len = 1950
+        self.ml_threshold = 0.50
+        _cfg = Path(__file__).parent.parent.parent / "models/xgboost/lr_regime_config.json"
+        if _cfg.exists():
+            try:
+                import json as _json
+                _data = _json.loads(_cfg.read_text())
+                self.fast_len     = int(_data.get("fast_len", 390))
+                self.slow_len     = int(_data.get("slow_len", 1950))
+                self.ml_threshold = float(_data.get("ml_threshold", 0.50))
+                self.enabled      = bool(_data.get("enabled", True))
+                logger.info(
+                    f"LR regime filter loaded: fast={self.fast_len}, "
+                    f"slow={self.slow_len}, polarity=counter_trend, "
+                    f"ml_threshold={self.ml_threshold}, enabled={self.enabled} "
+                    f"(validated {_data.get('validated_date', '?')})"
+                )
+            except Exception as _e:
+                logger.warning(f"LR regime config load failed: {_e} — filter disabled")
+        else:
+            logger.info("lr_regime_config.json not found — LR regime filter disabled")
+
+    def allows(self, bars: list, signal_direction: str) -> bool:
+        """Return True if this signal should proceed past the regime pre-filter."""
+        if not self.enabled:
+            return True
+        if len(bars) < self.slow_len:
+            return True  # insufficient bar history during warm-up → pass through
+        try:
+            import numpy as _np
+            from src.ml.regime_detection.lr_channel_detector import LRChannelRegimeDetector
+            closes = _np.array([b.close for b in bars[-self.slow_len:]], dtype=float)
+            detector = LRChannelRegimeDetector(fast_len=self.fast_len, slow_len=self.slow_len)
+            regimes  = detector.fit_predict(closes)
+            regime   = regimes[-1]  # current bar regime
+        except Exception as _e:
+            logger.warning(f"LR regime computation failed: {_e} — passing signal through")
+            return True
+
+        # Counter-trend: pass when regime DISAGREES with signal direction
+        if regime == "UP":
+            passes = (signal_direction == "bearish")
+        elif regime == "DOWN":
+            passes = (signal_direction == "bullish")
+        else:  # SIDEWAYS → neutral, no trend to fade
+            passes = True
+
+        if not passes:
+            logger.info(
+                f"Signal FILTERED by LR regime | regime={regime}, direction={signal_direction}"
+            )
+        return passes
 
     def predict_proba(self, features: dict) -> float:
         """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
@@ -180,6 +279,7 @@ class Tier2StreamingTrader:
 
         # ML Filter
         self.ml_filter = MetaLabelingFilter(ML_MODEL_PATH)
+        self.lr_filter  = LRRegimeFilter()
 
         # Log active signal filters
         logger.info(f"Signal filters — BEARISH_ONLY={BEARISH_ONLY}, "
@@ -206,6 +306,11 @@ class Tier2StreamingTrader:
         self._h1_atr: float = 0.0
         self._h1_slope: float = 0.0
         self._current_day: Optional[datetime.date] = None
+
+        # Daily circuit breaker
+        self._daily_pnl: float = 0.0
+        self._daily_halted: bool = False
+        self._last_trading_date: Optional[datetime.date] = None
 
     async def initialize(self):
         logger.info("=" * 70)
@@ -437,12 +542,33 @@ class Tier2StreamingTrader:
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
             if other_id: await self._cancel_sim_order(other_id)
 
-        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE - TRANSACTION_COST
+        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE * CONTRACTS_PER_TRADE - TRANSACTION_COST
+        self._daily_pnl += pnl
         self.completed_trades.append(CompletedTrade(
             t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
         ))
         self.active_trade = None
-        logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f}")
+        logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._daily_pnl:.2f}")
+    def _check_daily_reset_and_halt(self, bar_et: datetime) -> bool:
+        """Reset daily P&L counter at the start of each new trading day.
+        Returns True if trading is halted for today."""
+        today = bar_et.date()
+        if self._last_trading_date != today:
+            if self._last_trading_date is not None:
+                logger.info(f"New trading day {today} — resetting daily P&L (was ${self._daily_pnl:.2f})")
+            self._daily_pnl = 0.0
+            self._daily_halted = False
+            self._last_trading_date = today
+        if self._daily_halted:
+            return True
+        if self._daily_pnl <= MAX_DAILY_LOSS:
+            logger.warning(
+                f"🛑 Daily loss limit hit: ${self._daily_pnl:.2f} ≤ ${MAX_DAILY_LOSS:.0f} — halting for today"
+            )
+            self._daily_halted = True
+            return True
+        return False
+
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self.active_trade: return
         bars = self.dollar_bars
@@ -453,6 +579,10 @@ class Tier2StreamingTrader:
         if bar_et.weekday() == 1:  # 1 = Tuesday
             return
 
+        # Daily circuit breaker: halt if daily loss limit reached
+        if self._check_daily_reset_and_halt(bar_et):
+            return
+
         # Seasonality gate: skip months with statistically zero edge (default: none blocked)
         if bar_et.month in BLOCKED_MONTHS:
             return
@@ -461,23 +591,31 @@ class Tier2StreamingTrader:
         if not BEARISH_ONLY and self.h1_bullish_sweep_active:
             fvg = self._detect_fvg(bars, bullish=True)
             if fvg:
+                if not self.lr_filter.allows(bars, "bullish"):
+                    return
                 features = self._extract_features(bars, bar, fvg, "bullish")
                 proba = self.ml_filter.predict_proba(features)
-                if proba >= ML_THRESHOLD:
+                if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
                 else:
-                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
+                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
         if self.h1_bearish_sweep_active:  # independent of bullish — fixes pre-existing elif gap
             fvg = self._detect_fvg(bars, bullish=False)
             if fvg:
+                if not self.lr_filter.allows(bars, "bearish"):
+                    return
                 features = self._extract_features(bars, bar, fvg, "bearish")
                 proba = self.ml_filter.predict_proba(features)
-                if proba >= ML_THRESHOLD:
+                if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
                 else:
-                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
+                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

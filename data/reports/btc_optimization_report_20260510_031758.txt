@@ -1,0 +1,32 @@
+========================================================================
+BTC SILVER BULLET PARAMETER OPTIMIZATION REPORT
+Train: Nov 2024 – Nov 8 2025 | Holdout: Nov 8 2025 – May 2026
+Grid: 252 combos | Qualified (≥30 trades): 252
+========================================================================
+
+TOP 10 TRAIN CONFIGURATIONS
+------------------------------------------------------------------------
+  NY AM                            NY=09:30-10:00    cap=0.0  stop=0.75 | PF=1.730  WR=39.0%  N= 136  P&L=$ 5,235.00
+  NY AM                            NY=09:30-10:00    cap=0.0  stop=1.00 | PF=1.680  WR=36.1%  N= 108  P&L=$ 4,049.00
+  NY AM                            NY=09:30-10:00    cap=4.0  stop=0.75 | PF=1.635  WR=41.9%  N= 136  P&L=$ 4,498.00
+  NY AM                            NY=09:30-10:00    cap=2.0  stop=0.75 | PF=1.627  WR=47.8%  N= 136  P&L=$ 3,973.50
+  NY AM                            NY=09:30-10:00    cap=3.0  stop=0.75 | PF=1.588  WR=42.6%  N= 136  P&L=$ 4,133.00
+  NY AM                            NY=09:30-10:00    cap=4.0  stop=1.00 | PF=1.567  WR=38.0%  N= 108  P&L=$ 3,340.00
+  NY AM                            NY=09:00-10:00    cap=0.0  stop=1.00 | PF=1.548  WR=30.5%  N= 190  P&L=$ 5,846.50
+  NY AM                            NY=09:30-10:00    cap=3.0  stop=1.00 | PF=1.509  WR=40.7%  N= 108  P&L=$ 2,945.00
+  NY AM                            NY=09:00-10:00    cap=4.0  stop=1.00 | PF=1.499  WR=33.7%  N= 190  P&L=$ 5,235.00
+  London AM+NY AM                  NY=09:30-10:00    cap=0.0  stop=1.00 | PF=1.433  WR=32.6%  N= 343  P&L=$ 6,206.00
+
+========================================================================
+BEST CONFIG — HOLDOUT VALIDATION (OUT-OF-SAMPLE)
+========================================================================
+  Windows:      NY AM
+  NY AM window: 09:30-10:00
+  Target cap:   uncapped
+  Stop mult:    0.75×gap
+
+  TRAIN   | N= 136  PF=1.730  WR=39.0%  P&L=$ 5,235.00
+  HOLDOUT | N=  74  PF=1.073  WR=29.7%  P&L=$   391.00
+
+  CAUTION: OOS profit factor < 1.2 — review before committing to ML training.
+========================================================================

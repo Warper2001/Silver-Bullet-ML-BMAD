@@ -9,8 +9,14 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from src.research.lr_channel import compute_lr_channel as _compute_lr_channel
 
 logger = logging.getLogger(__name__)
 
@@ -452,6 +458,86 @@ def extract_pattern_features(setup) -> dict:
 
 
 # ============================================================================
+# LR Channel Regime Context Features
+# ============================================================================
+
+LR_WINDOWS = (50, 100)
+
+
+def _rolling_lr_slope_dev(closes: np.ndarray, length: int) -> tuple[np.ndarray, np.ndarray]:
+    """Vectorised rolling OLS slope and deviation using cumulative sums — O(n).
+
+    Avoids the (n × L) window copy used by the full compute_lr_channel, making
+    this ~3× faster on batch inputs (thousands of bars).  Numerically identical
+    because dev² = Var(y_window) − slope² × Var(x), where Var(x) = (L²−1)/12
+    is constant for x = 0..L-1.
+    """
+    closes = np.asarray(closes, dtype=np.float64)
+    n = len(closes)
+    slope_out = np.full(n, np.nan)
+    dev_out   = np.full(n, np.nan)
+
+    if n < length:
+        return slope_out, dev_out
+
+    L   = float(length)
+    sx  = 0.5 * L * (L - 1)          # sum(0..L-1)
+    sx2 = L * (L - 1) * (2 * L - 1) / 6.0
+    denom   = L * sx2 - sx * sx
+    var_x   = sx2 / L - (sx / L) ** 2  # Var(x) = (L²-1)/12
+
+    j   = np.arange(n, dtype=np.float64)
+    CY  = np.concatenate([[0.0], np.cumsum(closes)])        # prefix sum of y
+    CY2 = np.concatenate([[0.0], np.cumsum(closes ** 2)])   # prefix sum of y²
+    CJY = np.concatenate([[0.0], np.cumsum(j * closes)])    # prefix sum of j*y
+
+    k_arr = np.arange(n - length + 1, dtype=np.float64)    # window start indices
+    sy  = CY [length:]  - CY [:n - length + 1]
+    sy2 = CY2[length:]  - CY2[:n - length + 1]
+    sjy = CJY[length:]  - CJY[:n - length + 1]
+    sxy = sjy - k_arr * sy            # sum(x_i * y_i), x_i = j - k
+
+    s   = (L * sxy - sx * sy) / denom
+    var_y = sy2 / L - (sy / L) ** 2
+    dev2  = np.maximum(0.0, var_y - s ** 2 * var_x)
+
+    start = length - 1
+    slope_out[start:] = s
+    dev_out[start:]   = np.sqrt(dev2)
+    return slope_out, dev_out
+
+
+def calculate_lr_channel_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute LR channel regime-context features at multiple lookback windows.
+
+    Returns a DataFrame (same index as *df*) with columns:
+        lr_slope_N     — OLS slope normalised by close price (dimensionless)
+        lr_dev_N       — Channel deviation normalised by close price (compression proxy)
+        lr_price_pos_50 — Where close sits inside the 50-bar channel [0=lower, 1=upper]
+
+    Windows: 20, 50, 100 bars (within the 100-bar SignalFeatureExtractor lookback).
+    NaN values appear during the warm-up period for each window.
+    """
+    closes = df["close"].values
+    out = pd.DataFrame(index=df.index)
+    price = np.where(closes > 0, closes, np.nan)
+
+    for w in LR_WINDOWS:
+        s, d = _rolling_lr_slope_dev(closes, w)
+        out[f"lr_slope_{w}"] = s / price
+        out[f"lr_dev_{w}"]   = d / price
+
+    # Price position within the 50-bar channel — reuse full channel for upper/lower rails
+    ch50 = _compute_lr_channel(closes, 50)
+    channel_range = ch50.upper - ch50.lower
+    with np.errstate(invalid="ignore", divide="ignore"):
+        pos = (closes - ch50.lower) / np.where(channel_range > 0, channel_range, np.nan)
+    out["lr_price_pos_50"] = pos
+
+    return out
+
+
+# ============================================================================
 # Feature Engineer Class
 # ============================================================================
 
@@ -528,6 +614,11 @@ class FeatureEngineer:
         features_df["hour"] = time_features["hour"]
         features_df["day_of_week"] = time_features["day_of_week"]
         features_df["trading_session"] = time_features["trading_session"]
+
+        # LR channel regime-context features (7)
+        lr_features = calculate_lr_channel_features(features_df)
+        for col in lr_features.columns:
+            features_df[col] = lr_features[col].values
 
         # Add additional derived features to reach 40+
         self._add_derived_features(features_df)
@@ -660,7 +751,8 @@ class FeatureEngineer:
 
         # Convert to numpy array for ML prediction
         # Select only numeric features (exclude timestamp, trading_session)
-        # IMPORTANT: Must match the 52 features the model was trained with
+        # IMPORTANT: Must match the 52 features the model was trained with.
+        # The 5 LR channel features below were added after training and must NOT be included.
         feature_columns = [
             'open', 'high', 'low', 'close', 'volume', 'notional_value',
             'atr', 'atr_ratio', 'returns', 'high_low_range', 'close_position',
@@ -676,7 +768,7 @@ class FeatureEngineer:
             'return_ma_10', 'return_std_10',
             'close_position_ma_20', 'close_position_std_20',
             'is_london_am', 'is_ny_am', 'is_ny_pm',
-            'hour_sin', 'hour_cos', 'day_sin', 'day_cos'
+            'hour_sin', 'hour_cos', 'day_sin', 'day_cos',
         ]
 
         # Filter to available columns

@@ -1,0 +1,8 @@
+{
+  "threshold": 0.5,
+  "cv_mean_auc": 0.5042161685233899,
+  "cv_oos_pf_unfiltered": 1.4295,
+  "cv_oos_pf_filtered": 0.0,
+  "cv_pass_rate": 0.0,
+  "train_auc_full": 0.6046
+}

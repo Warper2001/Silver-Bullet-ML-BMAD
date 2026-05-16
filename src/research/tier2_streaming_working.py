@@ -36,7 +36,8 @@ ENTRY_PCT = 0.5  # Midpoint entry
 ATR_THRESHOLD = 0.5
 MAX_GAP_DOLLARS = 60.0
 MAX_HOLD_BARS = 120  # 2 Hours (matches final optimization)
-CONTRACTS_PER_TRADE = 1
+CONTRACTS_PER_TRADE = 5
+MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
 
 # MNQ Specifications
 MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
@@ -306,6 +307,11 @@ class Tier2StreamingTrader:
         self._h1_slope: float = 0.0
         self._current_day: Optional[datetime.date] = None
 
+        # Daily circuit breaker
+        self._daily_pnl: float = 0.0
+        self._daily_halted: bool = False
+        self._last_trading_date: Optional[datetime.date] = None
+
     async def initialize(self):
         logger.info("=" * 70)
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
@@ -536,12 +542,33 @@ class Tier2StreamingTrader:
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
             if other_id: await self._cancel_sim_order(other_id)
 
-        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE - TRANSACTION_COST
+        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE * CONTRACTS_PER_TRADE - TRANSACTION_COST
+        self._daily_pnl += pnl
         self.completed_trades.append(CompletedTrade(
             t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
         ))
         self.active_trade = None
-        logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f}")
+        logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._daily_pnl:.2f}")
+    def _check_daily_reset_and_halt(self, bar_et: datetime) -> bool:
+        """Reset daily P&L counter at the start of each new trading day.
+        Returns True if trading is halted for today."""
+        today = bar_et.date()
+        if self._last_trading_date != today:
+            if self._last_trading_date is not None:
+                logger.info(f"New trading day {today} — resetting daily P&L (was ${self._daily_pnl:.2f})")
+            self._daily_pnl = 0.0
+            self._daily_halted = False
+            self._last_trading_date = today
+        if self._daily_halted:
+            return True
+        if self._daily_pnl <= MAX_DAILY_LOSS:
+            logger.warning(
+                f"🛑 Daily loss limit hit: ${self._daily_pnl:.2f} ≤ ${MAX_DAILY_LOSS:.0f} — halting for today"
+            )
+            self._daily_halted = True
+            return True
+        return False
+
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self.active_trade: return
         bars = self.dollar_bars
@@ -550,6 +577,10 @@ class Tier2StreamingTrader:
         # Tuesday filter: consistently PF<1.0 across all 5 months of backtest data
         bar_et = bar.timestamp.astimezone(ET_TZ)
         if bar_et.weekday() == 1:  # 1 = Tuesday
+            return
+
+        # Daily circuit breaker: halt if daily loss limit reached
+        if self._check_daily_reset_and_halt(bar_et):
             return
 
         # Seasonality gate: skip months with statistically zero edge (default: none blocked)

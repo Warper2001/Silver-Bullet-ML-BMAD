@@ -31,8 +31,8 @@ HISTORY_PATH = Path("data/ml_training/doe_run_08_fullyear_history.csv")
 HMM_MODEL    = Path("models/hmm/regime_model_1min")
 OUT_PATH     = Path("data/ml_training/doe_run_08_regime_enriched.csv")
 
-LR_FAST = 50
-LR_SLOW = 200
+LR_FAST = 390   # 1 regular MNQ session (6.5 h × 60 min) — intraday trend
+LR_SLOW = 1950  # 5 sessions (1 trading week) — multi-day regime
 HMM_WARMUP = 25   # minimum bars for HMM feature rolling windows
 
 
@@ -75,7 +75,7 @@ def main() -> None:
 
     lr_at_signal = []
     for idx in signal_bar_idx:
-        if idx < LR_SLOW:
+        if idx < 0 or idx < LR_SLOW:
             lr_at_signal.append("SIDEWAYS")   # insufficient warm-up
         else:
             lr_at_signal.append(all_lr[idx])

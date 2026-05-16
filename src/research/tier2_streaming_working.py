@@ -157,6 +157,71 @@ class MetaLabelingFilter:
         except Exception as _e:
             logger.warning(f"Filter log write failed: {_e}")
 
+class LRRegimeFilter:
+    """LR channel counter-trend pre-filter for Silver Bullet signals.
+
+    Reads config from models/xgboost/lr_regime_config.json.
+    Counter-trend: passes signals when LR regime DISAGREES with signal direction.
+    Shorting into uptrend and buying into downtrend = Silver Bullet edge.
+    SIDEWAYS regime → pass through (no trend to fade).
+    """
+
+    def __init__(self) -> None:
+        self.enabled  = False
+        self.fast_len = 390
+        self.slow_len = 1950
+        self.ml_threshold = 0.50
+        _cfg = Path(__file__).parent.parent.parent / "models/xgboost/lr_regime_config.json"
+        if _cfg.exists():
+            try:
+                import json as _json
+                _data = _json.loads(_cfg.read_text())
+                self.fast_len     = int(_data.get("fast_len", 390))
+                self.slow_len     = int(_data.get("slow_len", 1950))
+                self.ml_threshold = float(_data.get("ml_threshold", 0.50))
+                self.enabled      = bool(_data.get("enabled", True))
+                logger.info(
+                    f"LR regime filter loaded: fast={self.fast_len}, "
+                    f"slow={self.slow_len}, polarity=counter_trend, "
+                    f"ml_threshold={self.ml_threshold}, enabled={self.enabled} "
+                    f"(validated {_data.get('validated_date', '?')})"
+                )
+            except Exception as _e:
+                logger.warning(f"LR regime config load failed: {_e} — filter disabled")
+        else:
+            logger.info("lr_regime_config.json not found — LR regime filter disabled")
+
+    def allows(self, bars: list, signal_direction: str) -> bool:
+        """Return True if this signal should proceed past the regime pre-filter."""
+        if not self.enabled:
+            return True
+        if len(bars) < self.slow_len:
+            return True  # insufficient bar history during warm-up → pass through
+        try:
+            import numpy as _np
+            from src.ml.regime_detection.lr_channel_detector import LRChannelRegimeDetector
+            closes = _np.array([b.close for b in bars[-self.slow_len:]], dtype=float)
+            detector = LRChannelRegimeDetector(fast_len=self.fast_len, slow_len=self.slow_len)
+            regimes  = detector.fit_predict(closes)
+            regime   = regimes[-1]  # current bar regime
+        except Exception as _e:
+            logger.warning(f"LR regime computation failed: {_e} — passing signal through")
+            return True
+
+        # Counter-trend: pass when regime DISAGREES with signal direction
+        if regime == "UP":
+            passes = (signal_direction == "bearish")
+        elif regime == "DOWN":
+            passes = (signal_direction == "bullish")
+        else:  # SIDEWAYS → neutral, no trend to fade
+            passes = True
+
+        if not passes:
+            logger.info(
+                f"Signal FILTERED by LR regime | regime={regime}, direction={signal_direction}"
+            )
+        return passes
+
     def predict_proba(self, features: dict) -> float:
         """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
         if self.model is None:
@@ -213,6 +278,7 @@ class Tier2StreamingTrader:
 
         # ML Filter
         self.ml_filter = MetaLabelingFilter(ML_MODEL_PATH)
+        self.lr_filter  = LRRegimeFilter()
 
         # Log active signal filters
         logger.info(f"Signal filters — BEARISH_ONLY={BEARISH_ONLY}, "
@@ -494,6 +560,8 @@ class Tier2StreamingTrader:
         if not BEARISH_ONLY and self.h1_bullish_sweep_active:
             fvg = self._detect_fvg(bars, bullish=True)
             if fvg:
+                if not self.lr_filter.allows(bars, "bullish"):
+                    return
                 features = self._extract_features(bars, bar, fvg, "bullish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
@@ -506,6 +574,8 @@ class Tier2StreamingTrader:
         if self.h1_bearish_sweep_active:  # independent of bullish — fixes pre-existing elif gap
             fvg = self._detect_fvg(bars, bullish=False)
             if fvg:
+                if not self.lr_filter.allows(bars, "bearish"):
+                    return
                 features = self._extract_features(bars, bar, fvg, "bearish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:

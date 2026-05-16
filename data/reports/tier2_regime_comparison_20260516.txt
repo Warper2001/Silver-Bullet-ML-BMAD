@@ -1,4 +1,4 @@
-MNQ Tier2 — Regime Comparison Walk-Forward  (2026-05-16 17:40)
+MNQ Tier2 — Regime Comparison Walk-Forward  (2026-05-16 17:52)
 ================================================================================
 Tracks: Baseline (no regime) | LR Channel (50/200-bar) | HMM (1-min model)
 Regime filter: permissive (SIDEWAYS/neutral = pass through)
@@ -16,7 +16,7 @@ Month      N_sig  N_reg  N_tak   Thr  Reg WR  Reg PF   Reg $  Tak WR  Tak PF   T
 TOTAL        507    507    377     —   52.5%   1.285    3363   52.3%   1.306    2740
   IR(taken): 0.091  MDD(taken): $-820  regime-pass: 507/507 (100.0%)  model-pass: 377/507 (74.4% of regime)
 
-── LR CHANNEL REGIME — permissive pre-filter then model ──
+── LR WITH-TREND — regime agrees with signal direction ──
 Month      N_sig  N_reg  N_tak   Thr  Reg WR  Reg PF   Reg $  Tak WR  Tak PF   Tak $
 ------------------------------------------------------------------------------------
 2025-07       97     61     61  0.40   57.4%   1.276     239   57.4%   1.276     239
@@ -28,6 +28,19 @@ Month      N_sig  N_reg  N_tak   Thr  Reg WR  Reg PF   Reg $  Tak WR  Tak PF   T
 ------------------------------------------------------------------------------------
 TOTAL        507    321    259     —   52.0%   1.210    1651   50.6%   1.179    1226
   IR(taken): 0.058  MDD(taken): $-1,017  regime-pass: 321/507 (63.3%)  model-pass: 259/321 (80.7% of regime)
+
+── LR COUNTER-TREND — regime disagrees with signal (Dr. Quinn hypothesis) ──
+Month      N_sig  N_reg  N_tak   Thr  Reg WR  Reg PF   Reg $  Tak WR  Tak PF   Tak $
+------------------------------------------------------------------------------------
+2025-07       97     69     69  0.40   60.9%   1.345     357   60.9%   1.345     357
+2025-08       83     60     14  0.50   43.3%   0.869    -183   35.7%   0.698    -138
+2025-09       67     57     57  0.40   42.1%   1.083      83   42.1%   1.083      83
+2025-10      105     84     43  0.50   48.8%   1.215     441   46.5%   1.135     138
+2025-11       89     60     33  0.50   60.0%   1.747    1292   60.6%   1.761     855
+2025-12       66     55     25  0.50   45.5%   0.925    -131   48.0%   1.074      93
+------------------------------------------------------------------------------------
+TOTAL        507    385    241     —   50.4%   1.207    1858   51.0%   1.236    1389
+  IR(taken): 0.071  MDD(taken): $-519  regime-pass: 385/507 (75.9%)  model-pass: 241/385 (62.6% of regime)
 
 ── HMM REGIME — permissive pre-filter then model ──
 Month      N_sig  N_reg  N_tak   Thr  Reg WR  Reg PF   Reg $  Tak WR  Tak PF   Tak $
@@ -42,17 +55,17 @@ Month      N_sig  N_reg  N_tak   Thr  Reg WR  Reg PF   Reg $  Tak WR  Tak PF   T
 TOTAL        507    277    175     —   51.3%   1.345    2331   52.0%   1.505    2228
   IR(taken): 0.145  MDD(taken): $-721  regime-pass: 277/507 (54.6%)  model-pass: 175/277 (63.2% of regime)
 
-── Side-by-side Aggregate Summary ──────────────────────────────────
-Metric                     Baseline   LR Channel   HMM Regime
-------------------------------------------------------------
-Signals (test months)           507          507          507
-Regime-pass                     507          321          277
-Model-taken                     377          259          175
-Win Rate                      52.3%        50.6%        52.0%
-Profit Factor                 1.306        1.179        1.505
-Total P&L ($)                 2,740        1,226        2,228
-Info Ratio (per-trade)        0.091        0.058        0.145
-Max Drawdown ($)               -820       -1,017         -721
-------------------------------------------------------------
-PF delta vs baseline              —       -0.128       +0.199
-P&L delta vs baseline             —       -1,514         -512
+── Side-by-side Aggregate Summary ──────────────────────────────────────────
+Metric                     Baseline  LR With-Trend   LR Counter        HMM
+------------------------------------------------------------------------
+Signals (test months)           507            507          507        507
+Regime-pass                     507            321          385        277
+Model-taken                     377            259          241        175
+Win Rate                      52.3%          50.6%        51.0%      52.0%
+Profit Factor                 1.306          1.179        1.236      1.505
+Total P&L ($)                 2,740          1,226        1,389      2,228
+Info Ratio (per-trade)        0.091          0.058        0.071      0.145
+Max Drawdown ($)               -820         -1,017         -519       -721
+------------------------------------------------------------------------
+PF delta vs baseline              —         -0.128       -0.071     +0.199
+P&L delta vs baseline             —         -1,514       -1,351       -512

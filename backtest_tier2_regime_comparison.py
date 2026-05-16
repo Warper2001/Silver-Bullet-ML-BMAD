@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
-"""Three-track walk-forward comparison: baseline vs LR channel vs HMM regime pre-filter.
+"""Four-track walk-forward comparison: baseline vs LR (with-trend) vs LR (counter-trend) vs HMM.
 
 Methodology (identical to backtest_tier2_wf_adaptive.py):
   - 6-month minimum training window, first test month = July 2025
   - Per-month adaptive threshold on val tail (last 2 months of training fold)
   - Zero look-ahead: regime labels are computed from bars before signal timestamp
 
-Three tracks per test month:
-  1. Baseline   — all signals, 8 ICT features + adaptive threshold
-  2. LR regime  — regime pre-filter, then same model + adaptive threshold
-  3. HMM regime — regime pre-filter, then same model + adaptive threshold
+Four tracks per test month:
+  1. Baseline      — all signals, 8 ICT features + adaptive threshold
+  2. LR with-trend — regime AGREES with signal direction (original hypothesis)
+  3. LR counter    — regime DISAGREES with signal direction (counter-trend hypothesis)
+  4. HMM regime    — HMM pre-filter, then same model + adaptive threshold
 
-Regime filter logic (permissive):
-  LR "UP"        → agrees with bullish signals  (bearish filtered out)
-  LR "DOWN"      → agrees with bearish signals  (bullish filtered out)
-  LR "SIDEWAYS"  → neutral, both directions pass
-  HMM 1          → trending_up   → agrees with bullish
-  HMM 0 or 2     → trending_down → agrees with bearish
-  HMM -1         → neutral (warm-up or load failure), both directions pass
+LR with-trend (original):
+  LR "UP"   + bullish  → PASS  |  LR "UP"   + bearish → FILTER
+  LR "DOWN" + bearish  → PASS  |  LR "DOWN" + bullish  → FILTER
+  LR "SIDEWAYS"        → PASS  (neutral)
+
+LR counter-trend (inverted):
+  LR "UP"   + bearish  → PASS  |  LR "UP"   + bullish  → FILTER
+  LR "DOWN" + bullish  → PASS  |  LR "DOWN" + bearish  → FILTER
+  LR "SIDEWAYS"        → PASS  (neutral — no strong trend to fade)
 
 Inputs:
   data/ml_training/doe_run_08_fullyear_features.csv
@@ -57,7 +60,7 @@ DEFAULT_THRESHOLD    = 0.50
 AUC_WARN_THRESHOLD   = 0.48
 AUC_WARN_STREAK      = 3
 
-TRACKS = ["baseline", "lr_regime", "hmm_regime"]
+TRACKS = ["baseline", "lr_regime", "lr_counter", "hmm_regime"]
 
 
 # ── Helpers (identical to backtest_tier2_wf_adaptive.py) ─────────────────────
@@ -110,7 +113,7 @@ def select_threshold(proba_val: np.ndarray, pnl_val: np.ndarray) -> tuple[float,
 
 
 def regime_agrees(lr_or_hmm_regime, signal_direction: str) -> bool:
-    """Return True if the regime is neutral or aligns with signal direction."""
+    """Return True if the regime is neutral or aligns with signal direction (with-trend)."""
     # LR channel
     if lr_or_hmm_regime == "UP":
         return signal_direction == "bullish"
@@ -119,11 +122,25 @@ def regime_agrees(lr_or_hmm_regime, signal_direction: str) -> bool:
     if lr_or_hmm_regime == "SIDEWAYS":
         return True   # neutral → pass through
     # HMM integer
-    if lr_or_hmm_regime == 1:     # trending_up
+    if lr_or_hmm_regime == 1:       # trending_up
         return signal_direction == "bullish"
     if lr_or_hmm_regime in (0, 2):  # trending_down (both states)
         return signal_direction == "bearish"
     return True  # -1 or unknown → neutral, pass through
+
+
+def regime_counter(lr_regime, signal_direction: str) -> bool:
+    """Return True if the LR regime DISAGREES with signal direction (counter-trend).
+
+    Silver Bullet setups are contrarian — the strongest edge may be when price is
+    sweeping liquidity in one direction and the setup fades it in the opposite direction.
+    SIDEWAYS = no strong trend to fade → pass through (permissive).
+    """
+    if lr_regime == "UP":
+        return signal_direction == "bearish"   # shorting into uptrend = counter-trend pass
+    if lr_regime == "DOWN":
+        return signal_direction == "bullish"   # buying into downtrend = counter-trend pass
+    return True  # SIDEWAYS → no trend to fade, pass through
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -256,6 +273,9 @@ def run_walkforward(
             elif track == "lr_regime":
                 regime_pass_val  = np.array([regime_agrees(r, d) for r, d in zip(lr_val, dir_val)])
                 regime_pass_test = np.array([regime_agrees(r, d) for r, d in zip(lr_test, dir_test)])
+            elif track == "lr_counter":
+                regime_pass_val  = np.array([regime_counter(r, d) for r, d in zip(lr_val, dir_val)])
+                regime_pass_test = np.array([regime_counter(r, d) for r, d in zip(lr_test, dir_test)])
             else:  # hmm_regime
                 regime_pass_val  = np.array([regime_agrees(r, d) for r, d in zip(hmm_val, dir_val)])
                 regime_pass_test = np.array([regime_agrees(r, d) for r, d in zip(hmm_test, dir_test)])
@@ -300,14 +320,16 @@ def run_walkforward(
                 "_pnl_taken_arr": pnl_taken.tolist(),
             })
 
-        # Progress line (baseline track for readability)
-        br = track_results["baseline"][-1]
+        # Progress line
+        br   = track_results["baseline"][-1]
         lr_r = track_results["lr_regime"][-1]
+        lc_r = track_results["lr_counter"][-1]
         hm_r = track_results["hmm_regime"][-1]
         print(
             f"  {test_month}  n={n_total}  "
             f"base PF={br['pf_taken']:.3f} ({br['n_taken']})  "
-            f"LR PF={lr_r['pf_taken']:.3f} ({lr_r['n_taken']}/{lr_r['n_regime']})  "
+            f"LR-with PF={lr_r['pf_taken']:.3f} ({lr_r['n_taken']}/{lr_r['n_regime']})  "
+            f"LR-ctr PF={lc_r['pf_taken']:.3f} ({lc_r['n_taken']}/{lc_r['n_regime']})  "
             f"HMM PF={hm_r['pf_taken']:.3f} ({hm_r['n_taken']}/{hm_r['n_regime']})"
         )
 
@@ -332,9 +354,10 @@ def build_report(track_results: dict[str, list[dict]]) -> str:
 
     # Per-track detailed table
     for track_key, label in [
-        ("baseline",  "BASELINE — 8 ICT features, no regime pre-filter"),
-        ("lr_regime", "LR CHANNEL REGIME — permissive pre-filter then model"),
-        ("hmm_regime","HMM REGIME — permissive pre-filter then model"),
+        ("baseline",   "BASELINE — 8 ICT features, no regime pre-filter"),
+        ("lr_regime",  "LR WITH-TREND — regime agrees with signal direction"),
+        ("lr_counter", "LR COUNTER-TREND — regime disagrees with signal (Dr. Quinn hypothesis)"),
+        ("hmm_regime", "HMM REGIME — permissive pre-filter then model"),
     ]:
         results = track_results[track_key]
         unfil_arr  = agg(results, "_pnl_unfil_arr")
@@ -389,23 +412,24 @@ def build_report(track_results: dict[str, list[dict]]) -> str:
 
     base = summary_row("baseline")
     lr   = summary_row("lr_regime")
+    lc   = summary_row("lr_counter")
     hmm  = summary_row("hmm_regime")
 
     sections += [
-        "── Side-by-side Aggregate Summary ──────────────────────────────────",
-        f"{'Metric':<22} {'Baseline':>12} {'LR Channel':>12} {'HMM Regime':>12}",
-        f"{'-'*60}",
-        f"{'Signals (test months)':<22} {base['n_sig']:>12} {lr['n_sig']:>12} {hmm['n_sig']:>12}",
-        f"{'Regime-pass':<22} {base['n_reg']:>12} {lr['n_reg']:>12} {hmm['n_reg']:>12}",
-        f"{'Model-taken':<22} {base['n_tak']:>12} {lr['n_tak']:>12} {hmm['n_tak']:>12}",
-        f"{'Win Rate':<22} {base['wr']:>12.1%} {lr['wr']:>12.1%} {hmm['wr']:>12.1%}",
-        f"{'Profit Factor':<22} {base['pf']:>12.3f} {lr['pf']:>12.3f} {hmm['pf']:>12.3f}",
-        f"{'Total P&L ($)':<22} {base['pnl']:>12,.0f} {lr['pnl']:>12,.0f} {hmm['pnl']:>12,.0f}",
-        f"{'Info Ratio (per-trade)':<22} {base['ir']:>12.3f} {lr['ir']:>12.3f} {hmm['ir']:>12.3f}",
-        f"{'Max Drawdown ($)':<22} {base['mdd']:>12,.0f} {lr['mdd']:>12,.0f} {hmm['mdd']:>12,.0f}",
-        f"{'-'*60}",
-        f"{'PF delta vs baseline':<22} {'—':>12} {lr['pf']-base['pf']:>+12.3f} {hmm['pf']-base['pf']:>+12.3f}",
-        f"{'P&L delta vs baseline':<22} {'—':>12} {lr['pnl']-base['pnl']:>+12,.0f} {hmm['pnl']-base['pnl']:>+12,.0f}",
+        "── Side-by-side Aggregate Summary ──────────────────────────────────────────",
+        f"{'Metric':<22} {'Baseline':>12} {'LR With-Trend':>14} {'LR Counter':>12} {'HMM':>10}",
+        f"{'-'*72}",
+        f"{'Signals (test months)':<22} {base['n_sig']:>12} {lr['n_sig']:>14} {lc['n_sig']:>12} {hmm['n_sig']:>10}",
+        f"{'Regime-pass':<22} {base['n_reg']:>12} {lr['n_reg']:>14} {lc['n_reg']:>12} {hmm['n_reg']:>10}",
+        f"{'Model-taken':<22} {base['n_tak']:>12} {lr['n_tak']:>14} {lc['n_tak']:>12} {hmm['n_tak']:>10}",
+        f"{'Win Rate':<22} {base['wr']:>12.1%} {lr['wr']:>14.1%} {lc['wr']:>12.1%} {hmm['wr']:>10.1%}",
+        f"{'Profit Factor':<22} {base['pf']:>12.3f} {lr['pf']:>14.3f} {lc['pf']:>12.3f} {hmm['pf']:>10.3f}",
+        f"{'Total P&L ($)':<22} {base['pnl']:>12,.0f} {lr['pnl']:>14,.0f} {lc['pnl']:>12,.0f} {hmm['pnl']:>10,.0f}",
+        f"{'Info Ratio (per-trade)':<22} {base['ir']:>12.3f} {lr['ir']:>14.3f} {lc['ir']:>12.3f} {hmm['ir']:>10.3f}",
+        f"{'Max Drawdown ($)':<22} {base['mdd']:>12,.0f} {lr['mdd']:>14,.0f} {lc['mdd']:>12,.0f} {hmm['mdd']:>10,.0f}",
+        f"{'-'*72}",
+        f"{'PF delta vs baseline':<22} {'—':>12} {lr['pf']-base['pf']:>+14.3f} {lc['pf']-base['pf']:>+12.3f} {hmm['pf']-base['pf']:>+10.3f}",
+        f"{'P&L delta vs baseline':<22} {'—':>12} {lr['pnl']-base['pnl']:>+14,.0f} {lc['pnl']-base['pnl']:>+12,.0f} {hmm['pnl']-base['pnl']:>+10,.0f}",
     ]
 
     return "\n".join(sections)

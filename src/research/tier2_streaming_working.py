@@ -35,8 +35,8 @@ TP_MULTIPLIER = 5.0
 ENTRY_PCT = 0.5  # Midpoint entry
 ATR_THRESHOLD = 0.5
 MAX_GAP_DOLLARS = 60.0
-MAX_HOLD_BARS = 120    # 2 Hours active trade time-stop (tuned in final optimization)
-MAX_PENDING_BARS = 120  # Max bars to wait for limit entry fill (not yet backtested — inherits active hold for now)
+MAX_HOLD_BARS = 60     # Active trade time-stop from fill — grid search optimum (2025 full year)
+MAX_PENDING_BARS = 240  # Max bars to wait for limit entry fill — grid search optimum (2025 full year)
 CONTRACTS_PER_TRADE = 5
 MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
 
@@ -435,7 +435,11 @@ class Tier2StreamingTrader:
         """Resample 1m bars to H1 and detect liquidity sweeps in the last completed H1 bar."""
         if not self.dollar_bars: return
 
-        df = pd.DataFrame([vars(b) for b in self.dollar_bars])
+        # Cap to last 3000 1m bars (~50 H1 bars) — swing detection only needs recent history.
+        # Without the cap, DataFrame construction is O(n) on all accumulated bars, making the
+        # full-year backtest O(n²) overall.
+        recent_bars = self.dollar_bars[-3000:]
+        df = pd.DataFrame([vars(b) for b in recent_bars])
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         h1 = df.set_index('timestamp').resample('1h').agg({
             'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'

@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
 
+import logging
+
 import numpy as np
 import pytz
 
@@ -22,11 +24,22 @@ import src.research.tier2_streaming_working as tier2_mod
 from src.research.tier2_streaming_working import Tier2StreamingTrader
 from src.data.models import DollarBar
 
+# Suppress all logging output during grid search — the logger writes ~130k lines/run
+# to the shared log file, making each combination 100× slower than it needs to be.
+logging.disable(logging.CRITICAL)
+
 LOCAL_CSV = Path("data/processed/dollar_bars/1_minute/mnq_1min_2025.csv")
 ET_TZ = pytz.timezone("US/Eastern")
 
-PENDING_GRID = [15, 30, 45, 60, 90, 120, 180]
-HOLD_GRID    = [60, 90, 120, 150, 180]
+# Refined search: Phase 1 (hold sensitivity at pending=180) +
+#                 Phase 2 (pending sensitivity at hold=60)
+GRID_COMBOS = [
+    # Only the missing last row
+    (240, 60),
+]
+# Deduplicate while preserving order (180,60 appears in both phases)
+seen = set()
+GRID_COMBOS = [(p, h) for p, h in GRID_COMBOS if not (p, h) in seen and not seen.add((p, h))]
 
 
 class RunResult(NamedTuple):
@@ -141,17 +154,15 @@ async def main() -> None:
     bars = load_bars()
     print(f"Loaded {len(bars):,} bars  ({bars[0].timestamp.date()} → {bars[-1].timestamp.date()})\n")
 
-    total = len(PENDING_GRID) * len(HOLD_GRID)
+    total = len(GRID_COMBOS)
     results: list[RunResult] = []
 
-    for i, pending in enumerate(PENDING_GRID):
-        for j, hold in enumerate(HOLD_GRID):
-            n = i * len(HOLD_GRID) + j + 1
-            print(f"  [{n:2d}/{total}]  pending={pending:3d}  hold={hold:3d} …", end="  ", flush=True)
-            r = await run_one(bars, pending, hold)
-            results.append(r)
-            pf_str = f"{r.profit_factor:.3f}" if r.profit_factor != float("inf") else "  inf"
-            print(f"trades={r.trades:3d}  WR={r.win_rate:.1%}  PF={pf_str}  net=${r.net_pnl:+,.0f}  maxDD=${r.max_drawdown:,.0f}")
+    for n, (pending, hold) in enumerate(GRID_COMBOS, 1):
+        print(f"  [{n:2d}/{total}]  pending={pending:3d}  hold={hold:3d} …", end="  ", flush=True)
+        r = await run_one(bars, pending, hold)
+        results.append(r)
+        pf_str = f"{r.profit_factor:.3f}" if r.profit_factor != float("inf") else "  inf"
+        print(f"trades={r.trades:3d}  WR={r.win_rate:.1%}  PF={pf_str}  net=${r.net_pnl:+,.0f}  maxDD=${r.max_drawdown:,.0f}")
 
     # ── Ranked results ─────────────────────────────────────────────────────────
     print()
@@ -167,21 +178,24 @@ async def main() -> None:
         pf_str = f"{r.profit_factor:6.3f}" if r.profit_factor != float("inf") else "   inf"
         print(f"  {r.pending_bars:>7}  {r.hold_bars:>4}  {r.trades:>6}  {r.win_rate:>5.1%}  {pf_str}  ${r.net_pnl:>+10,.0f}  ${r.max_drawdown:>8,.0f}")
 
-    # ── 2D Profit Factor heatmap ───────────────────────────────────────────────
+    # ── Phase summaries ────────────────────────────────────────────────────────
     print()
     print("=" * 75)
-    print("PROFIT FACTOR HEATMAP  (rows=MAX_PENDING_BARS, cols=MAX_HOLD_BARS)")
+    print("PHASE 1 — hold sensitivity  (pending=180, hold varies)")
     print("=" * 75)
-    col_header = "  PENDING \\ HOLD  " + "".join(f"  {h:>5}" for h in HOLD_GRID)
-    print(col_header)
-    print("  " + "-" * (len(col_header) - 2))
-    for pending in PENDING_GRID:
-        row_vals = []
-        for hold in HOLD_GRID:
-            r = next(x for x in results if x.pending_bars == pending and x.hold_bars == hold)
-            pf = r.profit_factor
-            row_vals.append(f"  {pf:>5.2f}" if pf != float("inf") else "   inf")
-        print(f"  {pending:>7}" + " " * 9 + "".join(row_vals))
+    p1 = [r for r in results if r.pending_bars == 180]
+    for r in sorted(p1, key=lambda x: x.hold_bars):
+        pf_str = f"{r.profit_factor:6.3f}" if r.profit_factor != float("inf") else "   inf"
+        print(f"  hold={r.hold_bars:>3}  trades={r.trades:3d}  WR={r.win_rate:.1%}  PF={pf_str}  net=${r.net_pnl:>+9,.0f}  maxDD=${r.max_drawdown:>8,.0f}")
+
+    print()
+    print("=" * 75)
+    print("PHASE 2 — pending sensitivity  (hold=60, pending varies)")
+    print("=" * 75)
+    p2 = [r for r in results if r.hold_bars == 60]
+    for r in sorted(p2, key=lambda x: x.pending_bars):
+        pf_str = f"{r.profit_factor:6.3f}" if r.profit_factor != float("inf") else "   inf"
+        print(f"  pending={r.pending_bars:>3}  trades={r.trades:3d}  WR={r.win_rate:.1%}  PF={pf_str}  net=${r.net_pnl:>+9,.0f}  maxDD=${r.max_drawdown:>8,.0f}")
 
     # ── Best configuration ─────────────────────────────────────────────────────
     best = ranked[0]

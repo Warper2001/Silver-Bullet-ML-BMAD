@@ -35,13 +35,15 @@ TP_MULTIPLIER = 5.0
 ENTRY_PCT = 0.5  # Midpoint entry
 ATR_THRESHOLD = 0.5
 MAX_GAP_DOLLARS = 60.0
-MAX_HOLD_BARS = 120  # 2 Hours (matches final optimization)
+MAX_HOLD_BARS = 120    # 2 Hours active trade time-stop (tuned in final optimization)
+MAX_PENDING_BARS = 120  # Max bars to wait for limit entry fill (not yet backtested — inherits active hold for now)
 CONTRACTS_PER_TRADE = 5
 MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
 
 # MNQ Specifications
 MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
 MNQ_DOLLAR_VALUE = 2.0          # $2 per index point — P&L scaling and gap-size dollar filter
+MNQ_TICK_SIZE = 0.25            # minimum price increment — all order prices must be multiples of this
 
 # Transaction Costs
 COMMISSION_PER_CONTRACT = 0.40
@@ -158,6 +160,20 @@ class MetaLabelingFilter:
         except Exception as _e:
             logger.warning(f"Filter log write failed: {_e}")
 
+    def predict_proba(self, features: dict) -> float:
+        """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
+        if self.model is None:
+            return 1.0
+        try:
+            df_feat = pd.DataFrame([features])[self.FEATURE_COLS].copy()
+            df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
+            # Model is a Pipeline(StandardScaler + LogisticRegression)
+            return float(self.model.predict_proba(df_feat)[0, 1])
+        except Exception as e:
+            logger.warning(f"ML inference failed: {e} — returning pass-through")
+            return 1.0
+
+
 class LRRegimeFilter:
     """LR channel counter-trend pre-filter for Silver Bullet signals.
 
@@ -223,19 +239,6 @@ class LRRegimeFilter:
             )
         return passes
 
-    def predict_proba(self, features: dict) -> float:
-        """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
-        if self.model is None:
-            return 1.0
-        try:
-            df_feat = pd.DataFrame([features])[self.FEATURE_COLS].copy()
-            df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
-            # Model is a Pipeline(StandardScaler + LogisticRegression)
-            return float(self.model.predict_proba(df_feat)[0, 1])
-        except Exception as e:
-            logger.warning(f"ML inference failed: {e} — returning pass-through")
-            return 1.0
-
 
 @dataclass
 class ActiveTrade:
@@ -250,6 +253,7 @@ class ActiveTrade:
     sim_tp_order_id: Optional[str] = None
     sim_sl_order_id: Optional[str] = None
     sim_entry_fill: Optional[float] = None
+    pending_entry: bool = True  # True until limit order fills
 
 
 @dataclass
@@ -467,7 +471,8 @@ class Tier2StreamingTrader:
 
         # Check the last COMPLETED H1 bar for sweeps (not the still-forming bar)
         last = completed.iloc[-1]
-        now_utc = datetime.now(timezone.utc)
+        # Use bar timestamp for expiry — wall-clock time breaks during backfill replay
+        now_utc = self.dollar_bars[-1].timestamp if self.dollar_bars else datetime.now(timezone.utc)
 
         new_bullish_sweep = False
         new_bearish_sweep = False
@@ -510,6 +515,28 @@ class Tier2StreamingTrader:
         if not self.active_trade: return False
         t = self.active_trade
         t.bars_held += 1
+
+        # ── Pending limit entry: wait for price to reach FVG midpoint ──────────
+        if t.pending_entry:
+            filled = (
+                (t.direction == "SHORT" and bar.high >= t.entry_price) or
+                (t.direction == "LONG"  and bar.low  <= t.entry_price)
+            )
+            if filled:
+                t.pending_entry = False
+                t.bars_held = 0  # reset so MAX_HOLD_BARS counts from fill, not signal
+                logger.info(f"✅ Limit entry FILLED at {t.entry_price:.2f}")
+                # Fall through to TP/SL check — might hit in the same bar
+            elif t.bars_held >= MAX_PENDING_BARS:
+                for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
+                    if oid: await self._cancel_sim_order(oid)
+                self.active_trade = None
+                logger.info(f"⏱ Limit entry expired ({MAX_PENDING_BARS} bars, not filled)")
+                return False
+            else:
+                return False  # still waiting for fill
+
+        # ── Active trade: check TP / SL / time-stop ───────────────────────────
         closed = False
         if t.direction == "LONG":
             if bar.low <= t.sl_price:
@@ -748,7 +775,8 @@ class Tier2StreamingTrader:
             "AccountID": SIM_ACCOUNT_ID,
             "Symbol": SYMBOL,
             "Quantity": str(CONTRACTS_PER_TRADE),
-            "OrderType": "Market",
+            "OrderType": "Limit",
+            "LimitPrice": str(entry_price),
             "TradeAction": entry_action,
             "TimeInForce": {"Duration": "DAY"},
             "Route": "Intelligent",
@@ -833,6 +861,11 @@ class Tier2StreamingTrader:
             logger.warning(f"⚠️ SIM close order exception: {e}")
             return None
 
+    @staticmethod
+    def _snap_tick(price: float) -> float:
+        """Round price to nearest MNQ tick (0.25). Avoids float artifacts."""
+        return round(round(price / MNQ_TICK_SIZE) * MNQ_TICK_SIZE, 10)
+
     async def _enter_trade(self, fvg: dict, bar: DollarBar, idx: int, is_backfill: bool):
         self._last_entry_bar = len(self.dollar_bars)
         if is_backfill: return
@@ -840,15 +873,17 @@ class Tier2StreamingTrader:
         direction = "LONG" if fvg["direction"] == "bullish" else "SHORT"
         gap_size = fvg["top"] - fvg["bottom"]
         if direction == "LONG":
-            ent = fvg["top"] - gap_size * ENTRY_PCT
-            tp, sl = ent + gap_size * TP_MULTIPLIER, ent - gap_size * SL_MULTIPLIER
+            ent = self._snap_tick(fvg["top"] - gap_size * ENTRY_PCT)
+            tp  = self._snap_tick(ent + gap_size * TP_MULTIPLIER)
+            sl  = self._snap_tick(ent - gap_size * SL_MULTIPLIER)
         else:
-            ent = fvg["bottom"] + gap_size * ENTRY_PCT
-            tp, sl = ent - gap_size * TP_MULTIPLIER, ent + gap_size * SL_MULTIPLIER
+            ent = self._snap_tick(fvg["bottom"] + gap_size * ENTRY_PCT)
+            tp  = self._snap_tick(ent - gap_size * TP_MULTIPLIER)
+            sl  = self._snap_tick(ent + gap_size * SL_MULTIPLIER)
 
         e_id, tp_id, sl_id = await self._submit_bracket_order(direction, ent, tp, sl)
         self.active_trade = ActiveTrade(idx, bar.timestamp, direction, ent, tp, sl, sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id)
-        logger.info(f"🔔 TIER 2 ENTRY: {direction} at ${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
+        logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
 
     def _print_final_report(self):
         logger.info("Tier 2 Paper Trading Session Ended.")

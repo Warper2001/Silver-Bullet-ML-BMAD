@@ -29,9 +29,9 @@ from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
 
 # Configuration (OPTIMIZED TIER 2)
-TIER2_CONFIG = "SL5.0x_TP5.0x_Midpoint_H1Sweep_MLFilter"
+TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1Sweep_MLFilter"
 SL_MULTIPLIER = 5.0
-TP_MULTIPLIER = 5.0
+TP_MULTIPLIER = 6.0
 ENTRY_PCT = 0.5  # Midpoint entry
 ATR_THRESHOLD = 0.5
 MAX_GAP_DOLLARS = 60.0
@@ -39,6 +39,10 @@ MAX_HOLD_BARS = 60     # Active trade time-stop from fill — grid search optimu
 MAX_PENDING_BARS = 240  # Max bars to wait for limit entry fill — grid search optimum (2025 full year)
 CONTRACTS_PER_TRADE = 5
 MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
+
+VOL_REGIME_LOOKBACK  = 120   # H1 bars of ATR history for percentile (~5 trading days)
+VOL_REGIME_THRESHOLD = 0.75  # block signals when ATR percentile rank > 75th pct
+MIN_GAP_ATR_RATIO    = 0.15  # FVG gap must be ≥ 15% of H1 ATR
 
 # MNQ Specifications
 MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
@@ -309,6 +313,8 @@ class Tier2StreamingTrader:
         self._daily_ranges: list[float] = [] # max 20
         self._h1_atr: float = 0.0
         self._h1_slope: float = 0.0
+        self._h1_atr_history: list[float] = []   # rolling H1 ATR values for percentile gate
+        self._vol_regime_high: bool = False       # True when current ATR > 75th pct of history
         self._current_day: Optional[datetime.date] = None
 
         # Daily circuit breaker
@@ -457,7 +463,15 @@ class Tier2StreamingTrader:
                                   np.abs(completed['low'] - completed['close'].shift(1))))
         h1_atr_val = tr.rolling(20, min_periods=5).mean().iloc[-1]
         self._h1_atr = float(h1_atr_val) if not np.isnan(h1_atr_val) else 0.0
-        
+
+        if self._h1_atr > 0:
+            self._h1_atr_history.append(self._h1_atr)
+            if len(self._h1_atr_history) > VOL_REGIME_LOOKBACK:
+                self._h1_atr_history.pop(0)
+        if len(self._h1_atr_history) >= 20:
+            pct_rank = sum(1 for v in self._h1_atr_history if v < self._h1_atr) / len(self._h1_atr_history)
+            self._vol_regime_high = pct_rank > VOL_REGIME_THRESHOLD
+
         if len(completed) >= 6 and self._h1_atr > 0:
             closes = completed['close'].values[-6:]
             slope = np.polyfit(range(6), closes, 1)[0]
@@ -618,6 +632,10 @@ class Tier2StreamingTrader:
         if bar_et.month in BLOCKED_MONTHS:
             return
 
+        # Volatility regime gate: skip all signals when H1 ATR in top quartile of recent history
+        if self._vol_regime_high:
+            return
+
         # Direction gate: bearish-only by default (full-year 2025: bearish PF 1.43 vs bullish 1.06)
         if not BEARISH_ONLY and self.h1_bullish_sweep_active:
             fvg = self._detect_fvg(bars, bullish=True)
@@ -744,6 +762,7 @@ class Tier2StreamingTrader:
         # ATR filter in raw points; dollar ceiling uses MNQ_DOLLAR_VALUE ($2/pt) to match backtest
         if gap_pts < ATR_THRESHOLD * self._calculate_atr(bars): return None
         if gap_pts * MNQ_DOLLAR_VALUE > MAX_GAP_DOLLARS: return None
+        if self._h1_atr > 0 and gap_pts < MIN_GAP_ATR_RATIO * self._h1_atr: return None
 
         return {"direction": "bullish" if bullish else "bearish", "top": top, "bottom": bot}
 

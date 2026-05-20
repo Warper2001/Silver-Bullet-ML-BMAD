@@ -1,0 +1,24 @@
+========================================================================
+S13 TIMEFRAME REPLICATION — Program C Phase 1 Falsification Test
+Pre-registration SHA : 910e95c
+Holdout file         : data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv
+S12 prerequisite     : patterns_survive (real PF 1.2154 > p90 1.1350)
+========================================================================
+
+  TF (min)         PF   Trades    MAX_HOLD
+----------------------------------------------
+         1     1.2154       96  60 bars = 60 min
+         5     0.5688       32  60 bars = 300 min
+        15     1.8157       14  60 bars = 900 min
+
+best_TF_PF : 1.8157  (best at 15-min)
+
+────────────────────────────────────────────────────────────────────────
+S13 VERDICT (pre-committed decision rule — preregistration_phase1.md §S13):
+  design_phase2_ml_test — best_TF_PF 1.8157 ≥ 1.1
+────────────────────────────────────────────────────────────────────────
+
+ACTION REQUIRED:
+  1. Commit data/sealed_holdout/ACCESS_LOG.md to git (make record permanent).
+  2. Update ACCESS_LOG.md 'pending' → verdict above.
+  3. Proceed to Phase 2 ML hypothesis design.

@@ -190,6 +190,13 @@ Low-severity findings from three-agent review; symmetric or conservative-bias on
 - **Fill-bar SL miss** — SL checked before TP on same bar; if entry bar simultaneously triggers both, SL takes priority. Minor optimistic bias on real strategy (a tiny subset of bars). Pre-existing in deployed system. [`s12_random_entry_control.py:run_real_strategy`]
 - **`BEARISH_ONLY` not declared as a named constant** — value `True` is inline in `run_real_strategy`; behavioral compliance is present. Cosmetic. Add `BEARISH_ONLY = True` to frozen-params block if the file is revisited. [`s12_random_entry_control.py:run_real_strategy`]
 
+## Deferred from: S13 adversarial review (2026-05-20)
+
+Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test`) is unaffected.
+
+- **ATR filter is resolution-dependent** — `calc_atr` on 5-min bars produces ~3–5× larger ATR values than on 1-min bars; the `ATR_THRESHOLD * atr` filter is therefore stricter at coarser resolutions. By design per pre-registration ("same multipliers, same parameters"). FVG gaps also scale proportionally at coarser resolutions, so the effective filter rate is not obviously worse. Investigate if per-resolution trade counts are unusually low (S13: 96/32/14 at 1-min/5-min/15-min). [`s13_timeframe_replication.py:run_strategy`]
+- **MAX_PENDING_BARS=240 spans 60 hr at 15-min resolution** — 240 × 15min = 3600min ≈ 2.5 calendar days. A limit order set Monday morning can remain pending Thursday morning, spanning multiple sessions. By design per pre-registration ("same multipliers"). Documented in spec comment. Revisit if 15-min edge is ever promoted to live trading. [`s13_timeframe_replication.py:run_strategy`]
+
 ## Deferred from: Program C Phase 1 — S12/S13 split (2026-05-20)
 
 **S13 — Timeframe Replication** (`s13_timeframe_replication.py`): runs only if S12 returns `patterns_survive`.

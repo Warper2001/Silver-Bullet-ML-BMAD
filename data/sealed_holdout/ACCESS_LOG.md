@@ -79,6 +79,7 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-05-20 13:47 UTC | 910e95c | gate smoke-test | Verify Phase 0.5 gate accepts preregistration SHA 910e95c; not the S12 test run | gate accepted; 191 trades on full 1-yr window |
 | 2026-05-20 15:35 UTC | 910e95c | s12 script | S12 failed run (pandas bug, no results) | aborted — no results |
 | 2026-05-20 15:37 UTC | 910e95c | s12 script | S12 full run — `--preregistration 910e95c` | patterns_survive: real PF 1.2154 > p90 1.1350 (96 trades vs ~1000 per seed) |
+| 2026-05-20 16:11 UTC | 910e95c | s13 script | S13 full run — `--preregistration 910e95c` | design_phase2_ml_test: best_TF_PF 1.8157 (15-min, 14 trades); 1-min PF 1.2154 (96 trades); 5-min PF 0.5688 (32 trades) |
 
 ---
 

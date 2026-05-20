@@ -13,11 +13,21 @@ Produces:
   data/reports/equity_curve_1year_YYYYMMDD.csv — daily cumPnL + drawdown
 
 Usage:
-  .venv/bin/python backtest_tier2_1year_validation.py
+  .venv/bin/python backtest_tier2_1year_validation.py [--preregistration <git-sha>]
+
+  --preregistration is REQUIRED when the date range includes bars on or after
+  2026-03-01 (the sealed holdout cutoff). Supply the SHA of a git commit that
+  contains a pre-registration document in _bmad-output/preregistration*.md or
+  data/sealed_holdout/PREREGISTRATION*.md. See data/sealed_holdout/ACCESS_LOG.md
+  for the full access protocol.
 """
+import argparse
 import asyncio
 import csv
+import fnmatch
 import logging
+import re
+import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -42,6 +52,93 @@ END_DATE   = datetime(2026, 5, 19, 23, 59, 59, tzinfo=timezone.utc)
 CSV_2025 = Path("data/processed/dollar_bars/1_minute/mnq_1min_2025.csv")
 CSV_2026 = Path("data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv")
 REPORTS_DIR = Path("data/reports")
+
+# Sealed holdout gate (Program C Phase 0.5)
+HOLDOUT_CUTOFF  = datetime(2026, 3, 1, tzinfo=timezone.utc)
+ACCESS_LOG_PATH = Path("data/sealed_holdout/ACCESS_LOG.md")
+
+_PREREG_PATTERNS = (
+    "_bmad-output/preregistration*.md",
+    "data/sealed_holdout/PREREGISTRATION*.md",
+)
+
+
+def _exit_access_denied(msg: str) -> None:
+    print(f"\n{'='*70}", file=sys.stderr)
+    print("SEALED HOLDOUT ACCESS DENIED", file=sys.stderr)
+    print(f"{'='*70}", file=sys.stderr)
+    print(msg, file=sys.stderr)
+    print(f"\nSee {ACCESS_LOG_PATH} for the full access protocol.", file=sys.stderr)
+    print(f"{'='*70}\n", file=sys.stderr)
+    sys.exit(1)
+
+
+def verify_preregistration(sha: str) -> None:
+    """Confirm sha is a real commit and contains a pre-registration document."""
+    # Guard against non-hex input being passed to git subprocesses
+    if not re.fullmatch(r"[0-9a-f]{4,40}", sha, re.IGNORECASE):
+        _exit_access_denied(
+            f"'{sha}' is not a valid git SHA (expected 4–40 hex characters).\n"
+            f"Commit your pre-registration document first, then supply that commit's SHA."
+        )
+
+    try:
+        # 1. Confirm the SHA resolves to a commit object in the local repo
+        result = subprocess.run(
+            ["git", "cat-file", "-t", sha],
+            capture_output=True, text=True, check=False,
+        )
+    except FileNotFoundError:
+        _exit_access_denied("'git' is not installed or not on PATH — cannot verify pre-registration.")
+
+    if result.returncode != 0 or result.stdout.strip() != "commit":
+        _exit_access_denied(
+            f"SHA '{sha}' was not found in the local git repo (or is not a commit).\n"
+            f"Commit your pre-registration document first, then supply that commit's SHA."
+        )
+
+    # 2. Confirm the commit contains a pre-registration document
+    files_result = subprocess.run(
+        ["git", "show", sha, "--name-only", "--format="],
+        capture_output=True, text=True, check=False,
+    )
+    file_lines = [ln.strip() for ln in files_result.stdout.splitlines() if ln.strip()]
+    found = any(
+        fnmatch.fnmatch(f, pattern)
+        for f in file_lines
+        for pattern in _PREREG_PATTERNS
+    )
+    if not found:
+        _exit_access_denied(
+            f"Commit {sha[:8]} contains no pre-registration document.\n"
+            f"Expected a file matching one of:\n"
+            + "\n".join(f"  {p}" for p in _PREREG_PATTERNS)
+            + f"\n\nFiles in that commit:\n"
+            + ("\n".join(f"  {f}" for f in file_lines[:20]) or "  (none)")
+        )
+
+
+def append_access_log(sha: str, argv: list[str]) -> None:
+    """Insert a timestamped access record into the ACCESS_LOG table."""
+    if not ACCESS_LOG_PATH.exists():
+        _exit_access_denied(
+            f"{ACCESS_LOG_PATH} does not exist.\n"
+            "Run Program C Phase 0.4 to establish the sealed holdout before accessing it."
+        )
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    argv_str = " ".join(argv[1:]).replace("|", "\\|")  # escape pipe chars; protect table
+    log_row  = f"| {date_str} | {sha} | backtest script | `{argv_str}` | pending |\n"
+
+    # Insert after the last markdown table row so the entry stays inside the table
+    lines = ACCESS_LOG_PATH.read_text().splitlines(keepends=True)
+    last_table_idx = max((i for i, ln in enumerate(lines) if ln.startswith("|")), default=None)
+    if last_table_idx is not None:
+        lines.insert(last_table_idx + 1, log_row)
+    else:
+        lines.append(log_row)
+    ACCESS_LOG_PATH.write_text("".join(lines))
+    print(f"Access recorded → {ACCESS_LOG_PATH}  (SHA {sha[:12]})")
+    print(f"  ACTION REQUIRED: commit {ACCESS_LOG_PATH} to git to make this access record permanent.")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -280,6 +377,19 @@ def build_report(trades, start: datetime, end: datetime) -> tuple[str, list[dict
 
 
 async def main():
+    parser = argparse.ArgumentParser(description="Tier 2 MNQ 1-year validation backtest")
+    parser.add_argument(
+        "--preregistration",
+        metavar="GIT_SHA",
+        default=None,
+        help=(
+            "SHA of a git commit containing a pre-registration document. "
+            "Required when the date range includes data on or after "
+            f"{HOLDOUT_CUTOFF.date()} (sealed holdout cutoff)."
+        ),
+    )
+    args = parser.parse_args()
+
     print(f"Loading bars {START_DATE.date()} → {END_DATE.date()} …", flush=True)
 
     bars: list[DollarBar] = []
@@ -296,6 +406,23 @@ async def main():
 
     bars.sort(key=lambda b: b.timestamp)
     print(f"  Combined : {len(bars):,} bars  ({bars[0].timestamp.date()} → {bars[-1].timestamp.date()})\n")
+
+    sys.stdout.flush()  # ensure bar-count lines print before any gate error on stderr
+
+    # Sealed holdout gate — must run after bars are sorted
+    if any(b.timestamp >= HOLDOUT_CUTOFF for b in bars):
+        if args.preregistration is None:
+            _exit_access_denied(
+                f"This run includes bars on or after {HOLDOUT_CUTOFF.date()} (sealed holdout).\n\n"
+                "To access holdout data you must:\n"
+                "  1. Commit a pre-registration document to git specifying your hypothesis,\n"
+                "     decision rule, and frozen parameters.\n"
+                "  2. Re-run with:  --preregistration <commit-sha>\n\n"
+                "Pre-registration file must match one of:\n"
+                + "\n".join(f"  {p}" for p in _PREREG_PATTERNS)
+            )
+        verify_preregistration(args.preregistration)
+        append_access_log(args.preregistration, sys.argv)
 
     print("Running backtest …", flush=True)
     trades = await run_backtest(bars)

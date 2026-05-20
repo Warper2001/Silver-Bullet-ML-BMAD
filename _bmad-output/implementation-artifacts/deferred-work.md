@@ -178,3 +178,9 @@ The regime gate removes the best-performing trades from the holdout. No threshol
 
 - **`fvg_fill_pct` values outside [0,1]** — actual range in `doe_run_08_fullyear_features.csv` is −14.67 to 17.0. Suggest reviewing the upstream DOE feature export to ensure correct denominator in fill-percentage calculation. Unbounded outliers are absorbed by `StandardScaler` but inflate feature variance. [`data/ml_training/doe_run_08_fullyear_features.csv`]
 - **Positional row alignment between feature/history CSVs** — `load_data()` copies `year_month` from `hist` to `feat` by position (`feat["year_month"] = hist["year_month"].values`). Safe while both CSVs are always exported together in the same sort order, but brittle if either file is ever re-exported independently. Add a shared index key (e.g., signal UUID or timestamp) for join-based alignment. [`backtest_tier2_wf_adaptive.py:load_data`]
+
+## Deferred from: Program C Phase 1 — split decision (2026-05-20)
+
+**Goal B — S12 and S13 test scripts** (depends on pre-registration commit SHA from Goal A):
+- `s12_random_entry_control.py`: 50-seed random-entry baseline on sealed holdout. At every bar passing the real strategy's time filters (no Tuesday, no vol-regime block, market hours), enter randomly (coin flip for direction), using ATR-based SL (5×ATR) and TP (6×ATR) and MAX_HOLD_BARS=60. Compute PF per seed. Report distribution, median, 90th pct, real strategy PF, and verdict per decision tree.
+- `s13_timeframe_replication.py`: Replay real Tier2 strategy on holdout at 1-min (already available), 5-min, and 15-min resolutions. Resample holdout CSV. H1-sweep stays as hourly sweep regardless of signal-bar timeframe. Report PF per timeframe and best-TF PF for decision tree.

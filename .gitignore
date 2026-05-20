@@ -132,6 +132,7 @@ dmypy.json
 # Project specific
 data/raw/*
 data/processed/*
+data/sealed_holdout/*.csv
 data/features/*
 data/logs/*
 data/models/*

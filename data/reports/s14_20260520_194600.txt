@@ -1,0 +1,25 @@
+======================================================================
+S14 Unfiltered FVG Control — Program C Phase 2 Pre-Decision Test
+Pre-registration SHA: dbfa46f
+Pre-registration doc: _bmad-output/preregistration_s14_unfiltered_fvg.md
+Holdout: data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv
+======================================================================
+
+── S14 Results ─────────────────────────────────────────────────────
+  S14 unfiltered FVG PF   : 1.0513
+  S14 trade count         : 150
+  Win rate                : 51.3%
+  Net P&L (1 contract)    : $481.50
+
+── Comparison to S12 Reference (pre-committed) ─────────────────────
+  S12 p90 random baseline : 1.1350
+  S12 filtered PF         : 1.2154  (96 trades)
+  HF min trades threshold : 80
+
+── S14 Verdict (pre-committed decision rule) ────────────────────────
+  Verdict: no_unfiltered_edge
+  S14 PF 1.0513 ≤ S12 p90 random 1.1350.
+  The FVG pattern has no edge without the H1 sweep.
+  Direction: Proceed to Phase 2 ML on the filtered 191-trade set.
+
+======================================================================

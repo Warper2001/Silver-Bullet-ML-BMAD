@@ -80,6 +80,8 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-05-20 15:35 UTC | 910e95c | s12 script | S12 failed run (pandas bug, no results) | aborted — no results |
 | 2026-05-20 15:37 UTC | 910e95c | s12 script | S12 full run — `--preregistration 910e95c` | patterns_survive: real PF 1.2154 > p90 1.1350 (96 trades vs ~1000 per seed) |
 | 2026-05-20 16:11 UTC | 910e95c | s13 script | S13 full run — `--preregistration 910e95c` | design_phase2_ml_test: best_TF_PF 1.8157 (15-min, 14 trades); 1-min PF 1.2154 (96 trades); 5-min PF 0.5688 (32 trades) |
+| 2026-05-20 19:39 UTC | dbfa46f | s14 script | S14 gate smoke-test — `--preregistration dbfa46f` (head -5 only) | gate accepted; 75,081 bars loaded |
+| 2026-05-20 19:46 UTC | dbfa46f | s14 script | S14 full run — `--preregistration dbfa46f` | no_unfiltered_edge: PF 1.0513 (150 trades) ≤ S12 p90 random 1.1350; H1 sweep is load-bearing |
 
 ---
 

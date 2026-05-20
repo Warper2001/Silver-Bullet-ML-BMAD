@@ -179,8 +179,23 @@ The regime gate removes the best-performing trades from the holdout. No threshol
 - **`fvg_fill_pct` values outside [0,1]** — actual range in `doe_run_08_fullyear_features.csv` is −14.67 to 17.0. Suggest reviewing the upstream DOE feature export to ensure correct denominator in fill-percentage calculation. Unbounded outliers are absorbed by `StandardScaler` but inflate feature variance. [`data/ml_training/doe_run_08_fullyear_features.csv`]
 - **Positional row alignment between feature/history CSVs** — `load_data()` copies `year_month` from `hist` to `feat` by position (`feat["year_month"] = hist["year_month"].values`). Safe while both CSVs are always exported together in the same sort order, but brittle if either file is ever re-exported independently. Add a shared index key (e.g., signal UUID or timestamp) for join-based alignment. [`backtest_tier2_wf_adaptive.py:load_data`]
 
-## Deferred from: Program C Phase 1 — split decision (2026-05-20)
+## Deferred from: S12 adversarial review (2026-05-20)
 
-**Goal B — S12 and S13 test scripts** (depends on pre-registration commit SHA from Goal A):
-- `s12_random_entry_control.py`: 50-seed random-entry baseline on sealed holdout. At every bar passing the real strategy's time filters (no Tuesday, no vol-regime block, market hours), enter randomly (coin flip for direction), using ATR-based SL (5×ATR) and TP (6×ATR) and MAX_HOLD_BARS=60. Compute PF per seed. Report distribution, median, 90th pct, real strategy PF, and verdict per decision tree.
-- `s13_timeframe_replication.py`: Replay real Tier2 strategy on holdout at 1-min (already available), 5-min, and 15-min resolutions. Resample holdout CSV. H1-sweep stays as hourly sweep regardless of signal-bar timeframe. Report PF per timeframe and best-TF PF for decision tree.
+Low-severity findings from three-agent review; symmetric or conservative-bias only — S12 verdict is unaffected.
+
+- **H1 boundary 1-hour lag** — `build_h1_df` returns `iloc[:-1]`; H1 state updates only after a full H1 bar closes, introducing up to 1 hour of lag. Symmetric across real strategy and all 50 seeds; does not bias the S12 comparison. Fix if single-TF absolute-trade-count matters. [`s12_random_entry_control.py:build_h1_df`]
+- **EDT/EST market-hours boundary** — `is_market_open` uses UTC-hour thresholds (22, 23) without DST correction; shifts market-open window ±1 hr in EDT vs EST months. Pre-existing in the deployed strategy (`tier2_streaming_working.py`); symmetric across real and random paths — both use the same `is_market_open`. [`s12_random_entry_control.py:is_market_open`]
+- **O(n²) `build_h1_df`** — rebuilds H1 OHLC from scratch on every H1 boundary crossing. Acceptable for a one-shot 75k-bar run (~seconds). Incremental build needed before any live streaming use. [`s12_random_entry_control.py:build_h1_df`]
+- **Daily circuit breaker absent** — deployed strategy halts at -$750/day; S12 real-strategy run has no circuit breaker. Conservative bias only (fewer real-strategy trades → real PF is pessimistic relative to live). Does not invalidate `patterns_survive` verdict. [`s12_random_entry_control.py:run_real_strategy`]
+- **Fill-bar SL miss** — SL checked before TP on same bar; if entry bar simultaneously triggers both, SL takes priority. Minor optimistic bias on real strategy (a tiny subset of bars). Pre-existing in deployed system. [`s12_random_entry_control.py:run_real_strategy`]
+- **`BEARISH_ONLY` not declared as a named constant** — value `True` is inline in `run_real_strategy`; behavioral compliance is present. Cosmetic. Add `BEARISH_ONLY = True` to frozen-params block if the file is revisited. [`s12_random_entry_control.py:run_real_strategy`]
+
+## Deferred from: Program C Phase 1 — S12/S13 split (2026-05-20)
+
+**S13 — Timeframe Replication** (`s13_timeframe_replication.py`): runs only if S12 returns `patterns_survive`.
+- Resample holdout CSV to 5-min and 15-min OHLCV (open=first, high=max, low=min, close=last, volume=sum)
+- At each resolution: run H1 sweep detection (H1 bars built from that resolution's bars) + bearish FVG detection with frozen params (ATR_THRESHOLD=0.5, MIN_GAP_ATR_RATIO=0.15, MAX_GAP_DOLLARS=60, SL_MULT=5.0, TP_MULT=6.0, same Tuesday block, same vol-regime gate, MAX_HOLD=60 bars of that resolution)
+- 1-min result is available from S12's real-strategy run
+- Report PF per timeframe, best_TF_PF = max of non-None PFs, verdict (≥ 1.1 → design_phase2_ml_test; < 1.1 → PIVOT)
+- Gate: same `--preregistration 910e95c` + ACCESS_LOG append, same self-contained implementation pattern as S12
+- Spec draft: `spec-program-c-phase-1-s12-s13.md` (S13 tasks already written; trim S12 tasks and rename if resuming)

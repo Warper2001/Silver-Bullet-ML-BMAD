@@ -76,6 +76,7 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | Date | SHA (pre-registration) | Accessor | Purpose | Result |
 |---|---|---|---|---|
 | 2026-05-20 | — | Program C Phase 0.4 setup | Establish sealed holdout; extract rows to this directory; no hypothesis tested | N/A — setup only |
+| 2026-05-20 13:47 UTC | 910e95c | gate smoke-test | Verify Phase 0.5 gate accepts preregistration SHA 910e95c; not the S12 test run | gate accepted; 191 trades on full 1-yr window |
 
 ---
 

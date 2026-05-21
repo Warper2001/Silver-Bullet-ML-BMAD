@@ -84,6 +84,7 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-05-20 19:46 UTC | dbfa46f | s14 script | S14 full run — `--preregistration dbfa46f` | no_unfiltered_edge: PF 1.0513 (150 trades) ≤ S12 p90 random 1.1350; H1 sweep is load-bearing |
 | 2026-05-21 03:16 UTC | 9e61012 | s18 script | `--preregistration 9e61012` | insufficient_sample: PF 1.3121 (2 trades) |
 | 2026-05-21 03:28 UTC | 39a1039 | s19 script | `--preregistration 39a1039` | insufficient_sample: PF 3.1888 (5 trades) |
+| 2026-05-21 04:01 UTC | 57bd819 | s22 script | `--preregistration 57bd819` | edge_exceeds_insample: PF 1.2742 (15 trades) |
 
 ---
 

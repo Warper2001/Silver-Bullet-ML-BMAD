@@ -1,0 +1,50 @@
+====================================================================================================
+S26 Kill-Zone Filter — Pre-Registration Baseline Validation
+Generated: 2026-05-21 15:51:59
+Source:    data/ml_training/s23_meta_labels_2025.csv  (109 in-sample trades, 2025 pre-cutoff)
+====================================================================================================
+
+S26 FILTER DEFINITION (pre-committed):
+  Kill zones:   hour_et in {10, 11, 14}  →  10:00-12:00 ET + 14:00-15:00 ET
+  Blocked days: dow_et == 0 (Monday)   [Tuesday already blocked by S25 system]
+
+OVERALL BASELINE (all in-sample trades, no filter):
+  All trades (S25 equivalent)               N=109 (100% of all)  PF=1.1656  WR_TP= 20.2%  WR_pnl= 47.7%  AvgPnL=   +9.62  AnnPnL_1x=   +1048  AnnPnL_5c=$   +5242  Sharpe≈ 0.65  Exits={'TIME': 64, 'SL': 23, 'TP': 22}
+
+S26 SUBGROUP:
+  S26 eligible  (KZ + not Mon)              N= 50 (46% of all)  PF=1.6273  WR_TP= 28.0%  WR_pnl= 50.0%  AvgPnL=  +32.57  AnnPnL_1x=   +1628  AnnPnL_5c=$   +8142  Sharpe≈ 1.42  Exits={'TIME': 25, 'TP': 14, 'SL': 11}
+  S26 excluded  (non-KZ or Mon)             N= 59 (54% of all)  PF=0.8448  WR_TP= 13.6%  WR_pnl= 45.8%  AvgPnL=   -9.83  AnnPnL_1x=    -580  AnnPnL_5c=$   -2900  Sharpe≈-0.52  Exits={'TIME': 39, 'SL': 12, 'TP': 8}
+
+KILL-ZONE BREAKDOWN (within S26 eligible):
+    hour_et=10:00-11:00 ET                  N= 26 (24% of all)  PF=1.8711  WR_TP= 30.8%  WR_pnl= 42.3%  AvgPnL=  +37.96  AnnPnL_1x=    +987  AnnPnL_5c=$   +4935  Sharpe≈ 1.27  Exits={'TIME': 13, 'TP': 8, 'SL': 5}
+    hour_et=11:00-12:00 ET                  N= 12 (11% of all)  PF=1.7710  WR_TP= 25.0%  WR_pnl= 58.3%  AvgPnL=  +34.79  AnnPnL_1x=    +418  AnnPnL_5c=$   +2088  Sharpe≈ 0.76  Exits={'TIME': 7, 'TP': 3, 'SL': 2}
+    hour_et=14:00-15:00 ET                  N= 12 (11% of all)  PF=1.2431  WR_TP= 25.0%  WR_pnl= 58.3%  AvgPnL=  +18.67  AnnPnL_1x=    +224  AnnPnL_5c=$   +1120  Sharpe≈ 0.33  Exits={'TIME': 5, 'SL': 4, 'TP': 3}
+
+DAY-OF-WEEK BREAKDOWN (S26 eligible trades only):
+    Wed                                     N= 20 (18% of all)  PF=1.2428  WR_TP= 25.0%  WR_pnl= 40.0%  AvgPnL=  +14.55  AnnPnL_1x=    +291  AnnPnL_5c=$   +1455  Sharpe≈ 0.40  Exits={'TIME': 9, 'SL': 6, 'TP': 5}
+    Thu                                     N= 15 (14% of all)  PF=2.0085  WR_TP= 33.3%  WR_pnl= 53.3%  AvgPnL=  +47.27  AnnPnL_1x=    +709  AnnPnL_5c=$   +3545  Sharpe≈ 1.10  Exits={'TIME': 7, 'TP': 5, 'SL': 3}
+    Fri                                     N= 15 (14% of all)  PF=1.9050  WR_TP= 26.7%  WR_pnl= 60.0%  AvgPnL=  +41.90  AnnPnL_1x=    +628  AnnPnL_5c=$   +3142  Sharpe≈ 0.96  Exits={'TIME': 9, 'TP': 4, 'SL': 2}
+
+====================================================================================================
+PRE-REGISTRATION REFERENCE NUMBERS (copy into preregistration_s26_kz_filtered_live.md)
+====================================================================================================
+  In-sample year:              2025 (pre-cutoff, 109 total trades)
+  S26 eligible trades (N):     50
+  Profit Factor:               1.6273
+  Win Rate (TP hit):           28.0%
+  Win Rate (pnl > 0):          50.0%
+  Annualized Sharpe (proxy):   1.42
+  Annual P&L (1x, raw):        $+1628
+  Annual P&L (5 contracts):    $+8142
+  Avg trades/day (filtered):   0.20
+  Avg trades/month (filtered): 4.2
+  Exit breakdown:              {'TIME': 25, 'TP': 14, 'SL': 11}
+
+  S25 equivalent (unfiltered):  N=109, PF=1.1656, Sharpe≈0.37
+  S26 PF lift vs S25:          +0.4617 PF points
+  S26 Sharpe lift vs S25:      +1.05
+
+  Expected live frequency at filtered rate:
+    Conservative (60% of backtest): 0.12/day → N=20 in ~169 days
+    Backtest rate:                  0.20/day → N=20 in ~101 days
+====================================================================================================

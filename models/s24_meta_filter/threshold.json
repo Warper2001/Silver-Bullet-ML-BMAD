@@ -1,0 +1,6 @@
+{
+  "threshold": 0.45,
+  "oos_pf_unfiltered": 1.2058,
+  "oos_pf_filtered": 1.2158,
+  "n_insample_trades": 109
+}

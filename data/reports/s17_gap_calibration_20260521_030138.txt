@@ -1,0 +1,66 @@
+================================================================================
+S17 Gap Filter Calibration — Program C Phase 2a (Round 3)
+Data: data/processed/dollar_bars/1_minute/mnq_1min_2025.csv
+Bars: 289,230  (2025-01-01 → 2025-12-31)
+Architecture: H4 sweep + M15 entry (fixed)  |  12 combinations
+Pre-cutoff only — NO holdout access
+================================================================================
+
+Combination                    PF     N    WR%  Sharpe      t     IR  DSR
+-------------------------------------------------------------------------
+H4·NoConf·M15·g0.15        1.0753    63   41.3    0.23   0.23   8.53    
+H4·NoConf·M15·g0.20        1.2496    53   45.3    0.63   0.63   9.10    
+H4·NoConf·M15·g0.25        1.4946    45   46.7    1.04   1.04  10.03    
+H4·NoConf·M15·g0.30        1.8492    29   48.3    1.27   1.27   9.96    
+H4·NoConf·M15·g0.35        3.3401    19   52.6    1.96   1.95  14.56    
+H4·M15·M15·g0.15           1.1155    56   42.9    0.32   0.32   8.35    
+H4·M15·M15·g0.20           1.3226    49   46.9    0.76   0.76   9.26    
+H4·M15·M15·g0.25           1.6221    41   48.8    1.18   1.18  10.39    
+H4·M15·M15·g0.30           2.2781    26   53.8    1.61   1.60  11.62    
+H4·M15·M15·g0.35           4.1836    18   55.6    2.22   2.21  17.75    
+H4·M5·M15·g0.25            1.5730    44   47.7    1.15   1.15  10.43    
+H4·M5·M15·g0.30            2.0088    28   50.0    1.41   1.40  10.63    
+
+DSR * = t > 2.69 (Bonferroni alpha/12)  |  IR = PF × √N (information-ratio proxy)
+
+── Dose-Response: PF and N by gap_ratio ────────────────────────────────
+
+  H4·NoConf·M15:
+  gap_ratio      PF     N     IR   trend
+       0.15  1.0753    63   8.53        
+       0.20  1.2496    53   9.10       ↑
+       0.25  1.4946    45  10.03       ↑
+       0.30  1.8492    29   9.96       ↑
+       0.35  3.3401    19  14.56       ↑
+
+  H4·M15·M15:
+  gap_ratio      PF     N     IR   trend
+       0.15  1.1155    56   8.35        
+       0.20  1.3226    49   9.26       ↑
+       0.25  1.6221    41  10.39       ↑
+       0.30  2.2781    26  11.62       ↑
+       0.35  4.1836    18  17.75       ↑
+
+  H4·M5·M15:
+  gap_ratio      PF     N     IR   trend
+       0.25  1.5730    44  10.43        
+       0.30  2.0088    28  10.63       ↑
+
+── Pre-Registration Candidate ──────────────────────────────────────────
+
+  PRE-REGISTRATION CANDIDATE: H4·M5·M15·g0.25
+    PF   = 1.5730
+    N    = 44
+    IR   = 10.43  (highest PF×√N with N≥30)
+    WR   = 47.7%
+    DSR  = no (screening only)
+
+    Suggested holdout hypothesis: PF > 1.1350 (S12 p90 random baseline)
+    Suggested pre-registration:   _bmad-output/preregistration_h4-m5-m15-g0p25.md
+
+  Runner-up candidates (N ≥ 30, sorted by IR):
+    H4·M15·M15·g0.25            PF=1.6221  N=41  IR=10.39
+    H4·NoConf·M15·g0.25         PF=1.4946  N=45  IR=10.03
+    H4·M15·M15·g0.20            PF=1.3226  N=49  IR=9.26
+
+================================================================================

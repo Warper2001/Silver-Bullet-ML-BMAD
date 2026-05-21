@@ -29,7 +29,7 @@ from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
 
 # Configuration (OPTIMIZED TIER 2)
-TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1Sweep_MLFilter"
+TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25"  # S25 pre-reg SHA 69972c3
 SL_MULTIPLIER = 5.0
 TP_MULTIPLIER = 6.0
 ENTRY_PCT = 0.5  # Midpoint entry
@@ -42,7 +42,7 @@ MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
 
 VOL_REGIME_LOOKBACK  = 120   # H1 bars of ATR history for percentile (~5 trading days)
 VOL_REGIME_THRESHOLD = 0.75  # block signals when ATR percentile rank > 75th pct
-MIN_GAP_ATR_RATIO    = 0.15  # FVG gap must be ≥ 15% of H1 ATR
+MIN_GAP_ATR_RATIO    = 0.25  # FVG gap must be ≥ 25% of H1 ATR (S25: S21 DOE peak, g0.25)
 
 # MNQ Specifications
 MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
@@ -317,6 +317,10 @@ class Tier2StreamingTrader:
         self._vol_regime_high: bool = False       # True when current ATR > 75th pct of history
         self._current_day: Optional[datetime.date] = None
 
+        # M15 CHoCH confirmation state (S25 architecture)
+        self._m15_choch_active: bool = False
+        self._m15_last_bar_ts: datetime = _epoch
+
         # Daily circuit breaker
         self._daily_pnl: float = 0.0
         self._daily_halted: bool = False
@@ -330,6 +334,7 @@ class Tier2StreamingTrader:
         logger.info(f"Symbol: {SYMBOL}")
         logger.info(f"Max hold: {MAX_HOLD_BARS} bars | SL/TP mult: {SL_MULTIPLIER}x")
         logger.info(f"Entry Level: {ENTRY_PCT*100}% (Mean Threshold)")
+        logger.info(f"M15 CHoCH: REQUIRED (S25) | MIN_GAP_ATR_RATIO={MIN_GAP_ATR_RATIO}")
         logger.info(f"ML Filter: {'ACTIVE' if self.ml_filter.model else 'PASS-THROUGH'} | threshold={ML_THRESHOLD}")
         logger.info("=" * 70)
 
@@ -410,6 +415,7 @@ class Tier2StreamingTrader:
                         self._session_open_price = bar.open
 
                     self._update_h1_structure()
+                    self._update_m15_choch()
                     await self._advance_active_trade(bar)
                     await self._detect_and_enter(bar, is_backfill=self._is_backfill)
 
@@ -526,8 +532,86 @@ class Tier2StreamingTrader:
         if new_bearish_sweep:
             self.h1_bearish_sweep_active = True
             self._bearish_sweep_expires = last_h1_ts + sweep_window
+            self._m15_choch_active = False   # new sweep resets CHoCH state
+            self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
         elif now_utc > self._bearish_sweep_expires:
             self.h1_bearish_sweep_active = False
+            self._m15_choch_active = False   # expired sweep resets CHoCH state
+            self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
+
+    def _update_m15_choch(self):
+        """
+        Scan M15 bars for bearish CHoCH (S25 architecture).
+        CHoCH = last completed M15 bar closes below the most recent M15 swing low
+        by ≥ 0.3 × M15 ATR.
+
+        Only runs when H1 bearish sweep is active and CHoCH has not yet fired.
+        When CHoCH fires, sets self._m15_choch_active = True (latches until sweep expires).
+        """
+        if not self.h1_bearish_sweep_active or self._m15_choch_active:
+            return
+        if len(self.dollar_bars) < 30:
+            return
+
+        recent = self.dollar_bars[-3000:]
+        df = pd.DataFrame([vars(b) for b in recent])
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        m15 = (
+            df.set_index("timestamp")
+            .resample("15min")
+            .agg({"open": "first", "high": "max", "low": "min", "close": "last"})
+            .dropna()
+            .reset_index()
+        )
+
+        # Need ≥ 7 completed M15 bars (5 for swing, 1 for ATR baseline, 1 excluded as forming)
+        completed = m15.iloc[:-1]   # exclude currently-forming M15 bar
+        n = len(completed)
+        if n < 7:
+            return
+
+        # Only process if the latest completed M15 bar is newer than last checked
+        last_m15_ts = completed.iloc[-1]["timestamp"].to_pydatetime()
+        if last_m15_ts.tzinfo is None:
+            last_m15_ts = last_m15_ts.replace(tzinfo=timezone.utc)
+        if last_m15_ts <= self._m15_last_bar_ts:
+            return
+        self._m15_last_bar_ts = last_m15_ts
+
+        # M15 ATR (20-bar, or all available if fewer)
+        period = min(20, n - 1)
+        trs = []
+        for i in range(n - period, n):
+            h  = float(completed.iloc[i]["high"])
+            l  = float(completed.iloc[i]["low"])
+            pc = float(completed.iloc[i - 1]["close"])
+            trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+        m15_atr = float(np.mean(trs)) if trs else 0.0
+        if m15_atr <= 0:
+            return
+
+        # Most recent M15 swing low: 2-bar symmetric radius, must be ≥ 2 bars old
+        SWING_R = 2
+        lows = completed["low"].values.astype(float)
+        swing_low = None
+        for i in range(n - 1 - SWING_R, SWING_R - 1, -1):
+            lo = lows[i]
+            if all(lows[i + k] >= lo for k in range(-SWING_R, SWING_R + 1) if k != 0):
+                swing_low = lo
+                break
+
+        if swing_low is None:
+            return
+
+        # CHoCH check: last completed M15 bar closes below swing_low − 0.3×ATR
+        last_close = float(completed.iloc[-1]["close"])
+        CHOCH_ATR_MULT = 0.3
+        if last_close < swing_low - CHOCH_ATR_MULT * m15_atr:
+            self._m15_choch_active = True
+            logger.info(
+                f"🔑 M15 CHoCH confirmed: close={last_close:.2f} < "
+                f"swing_low={swing_low:.2f} − 0.3×ATR({m15_atr:.2f}={swing_low - CHOCH_ATR_MULT*m15_atr:.2f})"
+            )
 
     async def _advance_active_trade(self, bar: DollarBar) -> bool:
         if not self.active_trade: return False
@@ -651,7 +735,7 @@ class Tier2StreamingTrader:
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
-        if self.h1_bearish_sweep_active:  # independent of bullish — fixes pre-existing elif gap
+        if self.h1_bearish_sweep_active and self._m15_choch_active:  # S25: M15 CHoCH required
             fvg = self._detect_fvg(bars, bullish=False)
             if fvg:
                 if not self.lr_filter.allows(bars, "bearish"):

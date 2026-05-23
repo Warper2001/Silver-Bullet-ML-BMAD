@@ -1,6 +1,6 @@
 # Story 3.2: Pre-Registration Document Generator (prereg_seal.py)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,35 +41,35 @@ So that no parameter can be changed after the OOS run begins without visible evi
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 — Implement `prereg_seal.py` at repo root (ACs #1–#6)
-  - [ ] Add `seal(config: StrategyConfig, output_path: Path, name: str, strategy_core_path: Path, holdout_dir: Path) -> int` function — core logic, returns 0 on success, 1 on error
-  - [ ] Pre-flight: call `protect_holdout.verify(holdout_dir)` → exit 1 with error message if non-zero
-  - [ ] Extract holdout date range: glob `holdout_dir/*.csv`, parse dates from filenames using `_extract_date()` pattern from `protect_holdout.py`
-  - [ ] Compute hash (a): `dataclasses.asdict(config)` → convert `datetime.time` values to `"HH:MM"` strings → sort keys → `json.dumps(separators=(',', ':'))` → SHA-256 hex
-  - [ ] Compute hash (b): read `strategy_core_path` bytes → SHA-256 hex
-  - [ ] Compute hash (c): `subprocess.run(['git', 'rev-parse', 'HEAD'], ...)` → strip whitespace
-  - [ ] Check dirty tree: `subprocess.run(['git', 'status', '--porcelain'], ...)` → non-empty output → print WARNING (do not exit)
-  - [ ] Generate Markdown document (see template in Dev Notes)
-  - [ ] Write document to `output_path` (create parent dirs if needed)
-  - [ ] Add `main()` with argparse: `--name` (required), `--output` (default: `_bmad-output/preregistration_{name}.md`), `--config-json` (optional: JSON override of StrategyConfig fields)
+- [x] Task 1 — Implement `prereg_seal.py` at repo root (ACs #1–#6)
+  - [x] Add `seal(config: StrategyConfig, output_path: Path, name: str, strategy_core_path: Path, holdout_dir: Path) -> int` function — core logic, returns 0 on success, 1 on error
+  - [x] Pre-flight: call `protect_holdout.verify(holdout_dir)` → exit 1 with error message if non-zero
+  - [x] Extract holdout date range: glob `holdout_dir/*.csv`, parse dates from filenames using `_extract_date()` pattern from `protect_holdout.py`
+  - [x] Compute hash (a): `dataclasses.asdict(config)` → convert `datetime.time` values to `"HH:MM"` strings → sort keys → `json.dumps(separators=(',', ':'))` → SHA-256 hex
+  - [x] Compute hash (b): read `strategy_core_path` bytes → SHA-256 hex
+  - [x] Compute hash (c): `subprocess.run(['git', 'rev-parse', 'HEAD'], ...)` → strip whitespace
+  - [x] Check dirty tree: `subprocess.run(['git', 'status', '--porcelain'], ...)` → non-empty output → print WARNING (do not exit)
+  - [x] Generate Markdown document (see template in Dev Notes)
+  - [x] Write document to `output_path` (create parent dirs if needed)
+  - [x] Add `main()` with argparse: `--name` (required), `--output` (default: `_bmad-output/preregistration_{name}.md`), `--config-json` (optional: JSON override of StrategyConfig fields)
 
-- [ ] Task 2 — Unit tests `tests/unit/test_prereg_seal.py` (AC #7)
-  - [ ] `test_hash_a_deterministic`: two calls with same config → same hash (a)
-  - [ ] `test_hash_b_deterministic`: two calls with same source path → same hash (b)
-  - [ ] `test_dirty_tree_warning`: mock `git status --porcelain` returning non-empty → check WARNING in output, exit 0
-  - [ ] `test_holdout_verify_gate`: call `seal()` with a tmp holdout dir containing a 644 CSV → verify exit 1
-  - [ ] `test_document_contains_all_fields`: run `seal()` on tmp dir → read output → assert all StrategyConfig field names present
-  - [ ] `test_date_extraction`: CSV filename `mnq_1min_holdout_20260301_plus.csv` → date extracted as `"2026-03-01"`
-  - [ ] Run: `.venv/bin/python -m pytest tests/unit/test_prereg_seal.py -v`
+- [x] Task 2 — Unit tests `tests/unit/test_prereg_seal.py` (AC #7)
+  - [x] `test_hash_a_deterministic`: two calls with same config → same hash (a)
+  - [x] `test_hash_b_deterministic`: two calls with same source path → same hash (b)
+  - [x] `test_dirty_tree_warning`: mock `git status --porcelain` returning non-empty → check WARNING in output, exit 0
+  - [x] `test_holdout_verify_gate`: call `seal()` with a tmp holdout dir containing a 644 CSV → verify exit 1
+  - [x] `test_document_contains_all_fields`: run `seal()` on tmp dir → read output → assert all StrategyConfig field names present
+  - [x] `test_date_extraction`: CSV filename `mnq_1min_holdout_20260301_plus.csv` → date extracted as `"2026-03-01"`
+  - [x] Run: `.venv/bin/python -m pytest tests/unit/test_prereg_seal.py -v` → 22 passed
 
-- [ ] Task 3 — Smoke test against real project (ACs #1–#5)
-  - [ ] Run: `PYTHONPATH=. .venv/bin/python prereg_seal.py --name smoke-test-3-2 --output /tmp/prereg_test.md`
-  - [ ] Confirm: document written, contains all StrategyConfig fields, three hashes present, holdout date range present
-  - [ ] Confirm: hash (a) and (b) identical on second run (determinism)
-  - [ ] Delete /tmp/prereg_test.md (smoke test only; not committed)
+- [x] Task 3 — Smoke test against real project (ACs #1–#5)
+  - [x] Run: `PYTHONPATH=. .venv/bin/python prereg_seal.py --name smoke-test-3-2 --output /tmp/prereg_test.md` → SEAL PASS
+  - [x] Confirm: document written, all 21 StrategyConfig fields present, three hashes in table, holdout date 2026-03-01
+  - [x] Confirm: hash (a) `ff2d1a4e...` and (b) `df5153e5...` identical on second run ✓
+  - [x] Deleted /tmp/prereg_test.md (smoke test only)
 
-- [ ] Task 4 — Full regression test suite
-  - [ ] `.venv/bin/python -m pytest tests/unit/test_prereg_seal.py tests/unit/test_protect_holdout.py tests/unit/test_strategy_core_tuesday.py tests/integration/test_baseline_backtesting.py -q`
+- [x] Task 4 — Full regression test suite
+  - [x] `.venv/bin/python -m pytest tests/unit/test_prereg_seal.py tests/unit/test_protect_holdout.py tests/unit/test_strategy_core_tuesday.py tests/integration/test_baseline_backtesting.py -q` → 55 passed
 
 ## Dev Notes
 
@@ -355,7 +355,7 @@ Story 3.3 (`oos_checkpoint.py`) will verify the three hashes from the pre-reg do
 
 ### Agent Model Used
 
-claude-sonnet-4-6 (2026-05-23, create-story)
+claude-sonnet-4-6 (2026-05-23, create-story + dev-story)
 
 ### Debug Log References
 
@@ -363,8 +363,18 @@ claude-sonnet-4-6 (2026-05-23, create-story)
 
 ### Completion Notes List
 
-(none)
+- `prereg_seal.py` implemented at repo root with `seal()` accepting `holdout_dir: Path` for testability.
+- `_config_to_json()`: `dataclasses.asdict()` + `time→"HH:MM"` conversion + `sort_keys=True` + no whitespace → deterministic SHA-256.
+- Pre-flight calls `protect_holdout.verify(holdout_dir)` directly (import, not subprocess) → exits 1 with ERROR if unprotected.
+- `_git_is_dirty()` / `_git_head()` use `subprocess.run(..., check=False)` — never `check=True`.
+- `--config-json` override: merges JSON into StrategyConfig defaults, handles time-string→time re-conversion.
+- 22 unit tests pass using `tmp_path` + `unittest.mock.patch` for git functions.
+- Smoke test confirmed: all 21 StrategyConfig fields in document, three hashes present, date extraction correct, hash (a)+(b) deterministic across two runs.
+- 55/55 regression tests green.
 
 ### File List
 
-(to be filled by dev agent)
+- `prereg_seal.py` (NEW — repo root)
+- `tests/unit/test_prereg_seal.py` (NEW)
+- `_bmad-output/implementation-artifacts/3-2-pre-registration-document-generator-prereg-seal.md` (UPDATED)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (UPDATED)

@@ -1,6 +1,6 @@
 # Story 7.1: Phase 2 Pre-Registration + 15m BacktestEngine Adapter
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -122,6 +122,17 @@ claude-sonnet-4-6 (2026-05-23)
 
 ### Debug Log References
 
+- Pre-registration commit: `5b581f4d88e5bf66216e23c4b66eb331ffb9b43b` (before holdout data read)
+
 ### Completion Notes List
 
+1. Pre-registration sealed at `5b581f4d` before any holdout data was accessed. Prior 15m access (old S13, 14 trades) disclosed in pre-reg doc.
+2. `holdout_15m_oos_test.py` reuses same UTC-temp-file pattern from `timeframe_replication.py`. Appends to `data/sealed_holdout/ACCESS_LOG.md` before printing any results.
+3. Pass/fail threshold pre-committed: PF > 1.1.
+4. No modifications to `strategy_core.py`, `backtest_engine.py`, or `tier2_streaming_working.py`. Confirmed via `git status --short src/research/`.
+
 ### File List
+
+- `_bmad-output/preregistration_phase2_15m.md` — NEW (committed at `5b581f4d`)
+- `src/research/holdout_15m_oos_test.py` — NEW
+- *(Story 7.2 produces `_bmad-output/s_phase2_15m_verdict_<date>.md` and ACCESS_LOG entry)*

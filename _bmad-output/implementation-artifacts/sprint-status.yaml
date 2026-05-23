@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-23T20:00:00Z'
+last_updated: '2026-05-23T22:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -70,8 +70,8 @@ development_status:
 
   # Epic 3: Pre-Registration & OOS Validation Protocol
   # FRs: FR24-FR28 | NFRs: NFR7, NFR8, NFR14, NFR15
-  epic-3: backlog
-  3-1-sealed-holdout-directory-and-protect-holdout: backlog
+  epic-3: in-progress
+  3-1-sealed-holdout-directory-and-protect-holdout: review
   3-2-pre-registration-document-generator-prereg-seal: backlog
   3-3-oos-checkpoint-verification: backlog
   3-4-oos-verdict-report-generator: backlog

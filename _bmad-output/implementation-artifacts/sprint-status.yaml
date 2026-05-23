@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-23T00:00:00Z'
+last_updated: '2026-05-23T12:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -95,13 +95,20 @@ development_status:
   5-4-qualifying-day-tracker-and-live-execution-mode-toggle: backlog
   epic-5-retrospective: optional
 
-  # Epic 6: Program C Phase 1 — Falsification (gates Epic 2-5)
-  # Delivers pivot-vs-survive verdict via S12 random-entry control + S13 timeframe replication.
-  # Decision rule (pre-committed in problem-solution-2026-05-20.md):
-  #   PF < median(random) → VERDICT: pivot | PF > p90(random) → VERDICT: patterns survive
-  #   p50–p90 → ambiguous = TREATED AS FAIL = pivot
-  epic-6: in-progress
-  6-1-s12-random-entry-control-test: review
-  6-2-s13-timeframe-replication-5m-15m: review
-  6-3-phase-1-verdict-synthesis-pivot-decision: backlog
+  # Epic 6: Program C Phase 1 — Falsification (CLOSED 2026-05-23)
+  # S12: AMBIGUOUS=PIVOT (PF=0.937 at 70th pct of null). S13: PATTERNS SURVIVE (5m PF=1.026, 15m PF=1.179).
+  # Combined verdict: PIVOT → P1 (15m FVG+H1-sweep OOS test). See _bmad-output/phase1_verdict_20260523.md.
+  epic-6: done
+  6-1-s12-random-entry-control-test: done
+  6-2-s13-timeframe-replication-5m-15m: done
+  6-3-phase-1-verdict-synthesis-pivot-decision: done
   epic-6-retrospective: optional
+
+  # Epic 7: Program C Phase 2 — 15m FVG+H1-sweep OOS Validation (P1 pivot)
+  # Gates: Phase 1 verdict (phase1_verdict_20260523.md). Pass/fail: PF > 1.1 on sealed holdout.
+  # Pre-registration required before accessing data/sealed_holdout/.
+  epic-7: backlog
+  7-1-phase2-prereg-and-15m-backtest-engine-adapter: backlog
+  7-2-sealed-holdout-oos-test-15m: backlog
+  7-3-phase2-verdict-continue-or-pivot: backlog
+  epic-7-retrospective: optional

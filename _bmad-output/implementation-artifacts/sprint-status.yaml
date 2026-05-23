@@ -54,14 +54,15 @@ development_status:
   1-5-live-trader-refactor-import-strategy-core-state-persistence-bounded-buffer: done
   epic-1-retrospective: optional
 
-  # BLOCKED: Epic 2-5 cannot start until Epic 6 (Phase 1 falsification) delivers verdict.
-  # Per Program C discipline (problem-solution-2026-05-20.md): no parameter/filter changes
-  # based on in-sample evidence alone. Phase 1 must determine pivot vs survive first.
+  # UNBLOCKED 2026-05-23: Phase 2 OOS test PASS (15m PF=2.586 on holdout, SHA 5b581f4d).
+  # See _bmad-output/phase2_verdict_20260523.md. Epic 2 must be reframed for 15m as primary TF.
+  # No parameter changes without pre-registration. All OOS tests require holdout pre-reg gate.
 
   # Epic 2: Phase 1 Strategy Enhancements — Statistical Power Recovery
   # FRs: FR1-FR5, FR8, FR12 | NFRs: NFR1, NFR5, NFR19
-  epic-2: backlog
-  2-1-bidirectional-fvg-detection-remove-bearish-only: backlog
+  # ⚠️ REFRAME REQUIRED: First story must re-scope for 15m primary timeframe (not 1m).
+  epic-2: in-progress
+  2-1-bidirectional-fvg-detection-remove-bearish-only: ready-for-dev
   2-2-am-kill-zone-filter-dst-aware: backlog
   2-3-m15-confirmation-layer-and-resample: backlog
   2-4-volatility-regime-gate-parameterization-relaxed-filter-constants: backlog
@@ -107,8 +108,8 @@ development_status:
   # Epic 7: Program C Phase 2 — 15m FVG+H1-sweep OOS Validation (P1 pivot)
   # Gates: Phase 1 verdict (phase1_verdict_20260523.md). Pass/fail: PF > 1.1 on sealed holdout.
   # Pre-registration required before accessing data/sealed_holdout/.
-  epic-7: in-progress
-  7-1-phase2-prereg-and-15m-backtest-engine-adapter: review
-  7-2-sealed-holdout-oos-test-15m: backlog
-  7-3-phase2-verdict-continue-or-pivot: backlog
+  epic-7: done
+  7-1-phase2-prereg-and-15m-backtest-engine-adapter: done
+  7-2-sealed-holdout-oos-test-15m: done
+  7-3-phase2-verdict-continue-or-pivot: done
   epic-7-retrospective: optional

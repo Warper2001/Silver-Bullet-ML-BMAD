@@ -1,7 +1,7 @@
 # Pre-Registration: S-VOL-15m — Relaxed Filter Constants at 15m
 
 **Registered:** 2026-05-23
-**Git SHA (sealed):** `<fill after commit>`
+**Git SHA (sealed):** `b44acc6`
 **Experiment ID:** S-VOL-15m
 
 ---

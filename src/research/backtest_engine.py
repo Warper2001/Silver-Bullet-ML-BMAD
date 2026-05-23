@@ -767,7 +767,7 @@ class BacktestEngine:
             if i < 20:
                 continue  # need ≥ 20 bars for ATR
 
-            if bar_ts.weekday() == 1:  # Tuesday filter
+            if config.tuesday_exclusion and bar_ts.weekday() == 1:  # Tuesday filter
                 continue
 
             # Daily circuit-breaker

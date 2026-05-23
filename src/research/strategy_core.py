@@ -98,6 +98,7 @@ class StrategyConfig:
     commission_per_roundtrip: float = 4.0  # $0.40/contract × 5 contracts × 2 sides (AR13)
     enable_kill_zone_filter: bool = False  # if True, blocks entries outside kill zone
     m15_confirmation: bool = False  # if True, blocks entries where prior M15 bar misaligns with H1 sweep
+    tuesday_exclusion: bool = True  # if True, skips Tuesday entry candidates (default preserves existing behavior)
 
 
 @dataclass(frozen=True)

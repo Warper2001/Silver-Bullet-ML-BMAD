@@ -65,7 +65,7 @@ development_status:
   2-1-bidirectional-fvg-detection-remove-bearish-only: done
   2-2-am-kill-zone-filter-dst-aware: review
   2-3-m15-confirmation-layer-and-resample: review
-  2-4-volatility-regime-gate-parameterization-relaxed-filter-constants: backlog
+  2-4-volatility-regime-gate-parameterization-relaxed-filter-constants: review
   epic-2-retrospective: optional
 
   # Epic 3: Pre-Registration & OOS Validation Protocol

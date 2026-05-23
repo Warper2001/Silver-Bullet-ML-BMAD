@@ -88,4 +88,4 @@ The next experiment must be pre-registered independently before running.
 
 ## Pre-Registration SHA
 
-`[to be filled after git commit]`
+`df66bd9` (full: `df66bd9e…` — see `git log --oneline -1`)

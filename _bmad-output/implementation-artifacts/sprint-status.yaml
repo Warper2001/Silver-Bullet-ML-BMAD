@@ -107,8 +107,8 @@ development_status:
   # Epic 7: Program C Phase 2 — 15m FVG+H1-sweep OOS Validation (P1 pivot)
   # Gates: Phase 1 verdict (phase1_verdict_20260523.md). Pass/fail: PF > 1.1 on sealed holdout.
   # Pre-registration required before accessing data/sealed_holdout/.
-  epic-7: backlog
-  7-1-phase2-prereg-and-15m-backtest-engine-adapter: backlog
+  epic-7: in-progress
+  7-1-phase2-prereg-and-15m-backtest-engine-adapter: in-progress
   7-2-sealed-holdout-oos-test-15m: backlog
   7-3-phase2-verdict-continue-or-pivot: backlog
   epic-7-retrospective: optional

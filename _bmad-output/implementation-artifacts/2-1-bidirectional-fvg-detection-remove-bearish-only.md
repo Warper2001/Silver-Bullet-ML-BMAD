@@ -1,6 +1,6 @@
 # Story 2.1: Bidirectional FVG Detection — Statistical Power Recovery (15m)
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -105,6 +105,24 @@ claude-sonnet-4-6 (2026-05-23)
 
 ### Debug Log References
 
+- Pre-registration commit: `9a94d2e7e75f073a717337a198610c81641d060a`
+
 ### Completion Notes List
 
+1. Pre-registration sealed at `9a94d2e7` before any backtest ran.
+2. **VERDICT: H₀ SUPPORTED.** Bidirectional fails all three criteria:
+   - Count: 81 trades = 1.33× (need ≥ 1.5×)
+   - Total PF: 0.985 ≤ 1.0
+   - Bullish PF: 0.826 ≤ 1.0 (direction consistency fails)
+3. The bearish component still performs well (51 trades, PF=1.106). Bullish FVG setups at 15m
+   are a net drag — bullish H1 sweeps + bullish FVGs do not produce edge in 2025 training.
+4. **Implication for Epic 2:** `bearish_only=True` should be KEPT. It is a load-bearing filter,
+   not an arbitrary restriction. Statistical power recovery must come from other means (Story 2-2:
+   AM kill zone, Story 2-3: M15 confirmation, etc.).
+5. No modifications to strategy_core.py, backtest_engine.py, or tier2_streaming_working.py.
+
 ### File List
+
+- `_bmad-output/preregistration_s_bidir_15m.md` — NEW (committed at `9a94d2e7`)
+- `src/research/bidir_15m_test.py` — NEW
+- `_bmad-output/s_bidir_15m_verdict_20260523.md` — NEW (produced by running script)

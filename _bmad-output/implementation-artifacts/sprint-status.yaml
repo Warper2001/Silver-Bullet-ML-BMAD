@@ -62,7 +62,7 @@ development_status:
   # FRs: FR1-FR5, FR8, FR12 | NFRs: NFR1, NFR5, NFR19
   # ⚠️ REFRAME REQUIRED: First story must re-scope for 15m primary timeframe (not 1m).
   epic-2: in-progress
-  2-1-bidirectional-fvg-detection-remove-bearish-only: ready-for-dev
+  2-1-bidirectional-fvg-detection-remove-bearish-only: review
   2-2-am-kill-zone-filter-dst-aware: backlog
   2-3-m15-confirmation-layer-and-resample: backlog
   2-4-volatility-regime-gate-parameterization-relaxed-filter-constants: backlog

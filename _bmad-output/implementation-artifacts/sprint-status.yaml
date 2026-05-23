@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-23T19:00:00Z'
+last_updated: '2026-05-23T20:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -64,7 +64,7 @@ development_status:
   epic-2: in-progress
   2-1-bidirectional-fvg-detection-remove-bearish-only: done
   2-2-am-kill-zone-filter-dst-aware: review
-  2-3-m15-confirmation-layer-and-resample: backlog
+  2-3-m15-confirmation-layer-and-resample: review
   2-4-volatility-regime-gate-parameterization-relaxed-filter-constants: backlog
   epic-2-retrospective: optional
 

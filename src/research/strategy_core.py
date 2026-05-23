@@ -97,6 +97,7 @@ class StrategyConfig:
     kill_zone_end_et: time = time(11, 0)
     commission_per_roundtrip: float = 4.0  # $0.40/contract × 5 contracts × 2 sides (AR13)
     enable_kill_zone_filter: bool = False  # if True, blocks entries outside kill zone
+    m15_confirmation: bool = False  # if True, blocks entries where prior M15 bar misaligns with H1 sweep
 
 
 @dataclass(frozen=True)
@@ -136,6 +137,14 @@ class ExitDecision:
 
     reason: ExitReason
     exit_price: float
+
+
+@dataclass(frozen=True)
+class M15Confirmation:
+    """M15 bar confirmation result. Returned by ``check_m15_confirmation`` (Story 2.3)."""
+
+    confirmed: bool
+    direction: Direction | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +243,49 @@ def resample_to_h1(bars: pd.DataFrame) -> pd.DataFrame:
     )
     h1.index.name = "timestamp"
     return h1
+
+
+def resample_to_m15(bars: pd.DataFrame) -> pd.DataFrame:
+    """Resample bars to 15-minute OHLCV candles.
+
+    Same aggregation as ``resample_to_h1`` but at 15-minute frequency.
+    No timezone conversion performed (AR19); bars must arrive tz-aware.
+
+    Parameters
+    ----------
+    bars:
+        Canonical bars with tz-aware DatetimeIndex named ``timestamp`` (AR9).
+
+    Returns
+    -------
+    pd.DataFrame
+        15-min OHLCV with tz-aware DatetimeIndex named ``timestamp``.
+        Aggregation: open=first, high=max, low=min, close=last, volume=sum.
+        Periods with no data are dropped.
+
+    Raises
+    ------
+    ValueError
+        On empty input, NaN in OHLCV/volume, or missing columns.
+    """
+    _validate_bars(bars, min_rows=1)
+    df = bars.copy()
+    if not (isinstance(df.index, pd.DatetimeIndex) and df.index.name == "timestamp"):
+        df = df.set_index("timestamp")
+    m15 = (
+        df[["open", "high", "low", "close", "volume"]]
+        .resample("15min")
+        .agg(
+            open=("open", "first"),
+            high=("high", "max"),
+            low=("low", "min"),
+            close=("close", "last"),
+            volume=("volume", "sum"),
+        )
+        .dropna(subset=["open", "high", "low", "close"])
+    )
+    m15.index.name = "timestamp"
+    return m15
 
 
 def detect_fvg(
@@ -599,6 +651,51 @@ def kill_zone_filter(
     bar_ny = bar_timestamp.astimezone(_NY_TZ)
     bar_time = bar_ny.time()
     return config.kill_zone_start_et <= bar_time < config.kill_zone_end_et
+
+
+def check_m15_confirmation(
+    h1_sweep: SweepSignal,
+    m15_bars: pd.DataFrame,
+) -> M15Confirmation:
+    """Check if the last completed M15 bar closes in the H1 sweep direction.
+
+    For a bearish sweep: confirmed when last M15 bar close < open (closes bearish).
+    For a bullish sweep: confirmed when last M15 bar close > open (closes bullish).
+    A doji (close == open) is NOT confirmed for either direction.
+
+    Returns ``M15Confirmation(confirmed=False)`` when ``m15_bars`` is empty —
+    the caller must decide whether to block or allow entry.
+
+    Parameters
+    ----------
+    h1_sweep:
+        The active H1 liquidity sweep (from ``detect_liquidity_sweep``).
+    m15_bars:
+        Completed M15 bars up to (but not including) the current bar.
+        Must have canonical AR9 schema (timestamp index, OHLCV columns).
+
+    Returns
+    -------
+    M15Confirmation
+        ``confirmed=True`` + aligned ``direction`` when last bar aligns;
+        ``confirmed=False, direction=None`` otherwise.
+    """
+    if len(m15_bars) == 0:
+        return M15Confirmation(confirmed=False)
+
+    last = m15_bars.iloc[-1]
+    close = float(last["close"])
+    open_ = float(last["open"])
+
+    if h1_sweep.direction == Direction.BEARISH:
+        confirmed = close < open_
+    else:
+        confirmed = close > open_
+
+    return M15Confirmation(
+        confirmed=confirmed,
+        direction=h1_sweep.direction if confirmed else None,
+    )
 
 
 # ---------------------------------------------------------------------------

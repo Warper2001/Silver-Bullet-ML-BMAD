@@ -28,11 +28,13 @@ from src.research.strategy_core import (
     SweepSignal,
     calc_atr,
     check_exit,
+    check_m15_confirmation,
     detect_fvg,
     detect_liquidity_sweep,
     kill_zone_filter,
     make_entry_decision,
     resample_to_h1,
+    resample_to_m15,
     volatility_regime_filter,
 )
 
@@ -627,6 +629,7 @@ class BacktestEngine:
         # Pre-compute full H1 once (O(n)) and slice at each boundary (O(log n))
         # rather than re-running resample_to_h1 on a rolling 3000-bar buffer each hour.
         full_h1 = resample_to_h1(bars)
+        full_m15 = resample_to_m15(bars)
         col_low: int = cast(int, bars.columns.get_loc("low"))
         col_high: int = cast(int, bars.columns.get_loc("high"))
 
@@ -636,6 +639,7 @@ class BacktestEngine:
         active_gap: float = 0.0
         active_sweep_ago: int = 0
         active_kz: bool = False
+        active_m15: bool = False
         active_vol_pct: float = 0.0
         pending: bool = False
         pending_bars: int = 0
@@ -717,6 +721,7 @@ class BacktestEngine:
                                 active_gap,
                                 active_sweep_ago,
                                 active_kz,
+                                active_m15,
                                 active_vol_pct,
                             )
                             daily_pnl += trades[-1].pnl_usd
@@ -745,6 +750,7 @@ class BacktestEngine:
                             active_gap,
                             active_sweep_ago,
                             active_kz,
+                            active_m15,
                             active_vol_pct,
                         )
                         daily_pnl += trades[-1].pnl_usd
@@ -818,8 +824,20 @@ class BacktestEngine:
             if config.enable_kill_zone_filter and not kz:
                 continue  # outside kill zone — skip this entry candidate
 
+            # M15 confirmation gate
+            m15_ok = True
+            if config.m15_confirmation:
+                m15_idx = int(full_m15.index.searchsorted(bar_ts))
+                m15_slice = full_m15.iloc[:m15_idx]
+                if len(m15_slice) >= 1:
+                    m15_ok = check_m15_confirmation(sweep, m15_slice).confirmed
+                else:
+                    m15_ok = False
+
             # Entry decision
-            entry = make_entry_decision(sweep, fvg, config, vol_ok=vol_ok_cached)
+            entry = make_entry_decision(
+                sweep, fvg, config, vol_ok=vol_ok_cached, m15_conf=m15_ok
+            )
             if entry is None:
                 continue
 
@@ -829,6 +847,7 @@ class BacktestEngine:
             active_gap = fvg.gap_size
             active_sweep_ago = sweep.bars_ago
             active_kz = kz
+            active_m15 = m15_ok
             active_vol_pct = (
                 self._compute_vol_pct(h1_bars, config) if h1_bars is not None else 0.0
             )
@@ -936,6 +955,7 @@ class BacktestEngine:
         gap: float,
         sweep_ago: int,
         kz: bool,
+        m15_ok: bool,
         vol_pct: float,
     ) -> None:
         assert ts_entry is not None, "_append_trade called with null ts_entry"
@@ -959,7 +979,7 @@ class BacktestEngine:
                 pnl_usd=round(pnl, 2),
                 exit_reason=exit_dec.reason.value,
                 h1_sweep_bars_ago=sweep_ago,
-                m15_confirmed=False,
+                m15_confirmed=m15_ok,
                 kill_zone_active=kz,
                 vol_regime_pct=vol_pct,
                 contracts=active.contracts,

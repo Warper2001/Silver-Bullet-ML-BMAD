@@ -4,12 +4,12 @@ import pytest
 from datetime import datetime, timedelta
 
 from src.data.models import DollarBar
-from src.research.backtest_engine import BacktestEngine, Trade
+from src.research.backtest_engine import LegacyTradeLedger, Trade
 from src.research.performance_analyzer import PerformanceMetrics, PerformanceAnalyzer
 
 
-class TestBacktestEngine:
-    """Tests for BacktestEngine class."""
+class TestLegacyTradeLedger:
+    """Tests for LegacyTradeLedger class."""
 
     @pytest.fixture
     def sample_bars(self) -> list[DollarBar]:
@@ -33,14 +33,14 @@ class TestBacktestEngine:
 
     def test_backtest_engine_initialization(self):
         """Test backtest engine initialization."""
-        engine = BacktestEngine()
+        engine = LegacyTradeLedger()
 
         assert engine is not None
         assert len(engine.trades) == 0
 
     def test_process_trades(self, sample_bars):
         """Test processing trades through backtest engine."""
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         # Simulate some trades
         trade1 = Trade(
@@ -63,7 +63,7 @@ class TestBacktestEngine:
 
     def test_calculate_total_pnl(self, sample_bars):
         """Test total P&L calculation."""
-        engine = BacktestEngine()
+        engine = LegacyTradeLedger()
 
         # Add winning trade
         trade1 = Trade(
@@ -230,7 +230,7 @@ class TestEndToEndBacktesting:
         # This would require actual strategy implementations
         # For now, just verify the workflow structure
 
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         # Simulate backtest
         base_time = datetime(2026, 3, 31, 10, 0, 0)

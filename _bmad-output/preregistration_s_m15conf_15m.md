@@ -99,4 +99,4 @@ The next experiment must be pre-registered independently before running.
 
 ## Pre-Registration SHA
 
-`[to be filled after git commit]`
+`cfe7cb3`

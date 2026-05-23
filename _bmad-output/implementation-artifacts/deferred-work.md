@@ -1,4 +1,11 @@
 
+## Deferred from: code review of 3-3-oos-checkpoint-verification (2026-05-24)
+
+- **`_config_to_json` only converts top-level `time` fields** — nested dataclass `time` values survive unconverted; `json.dumps` would raise `TypeError` if StrategyConfig ever gains a nested dataclass with a `time` field. Latent — no nested dataclasses today. Fix when StrategyConfig structure changes. [`oos_checkpoint.py:41–44`]
+- **`_git_is_dirty` false-passes outside a git repo** — `git status --porcelain` exits non-zero with empty stdout when not in a repo; `bool("")` is `False`, so the function reports "clean" incorrectly. Unrealistic scenario: this script is always run from repo root. [`oos_checkpoint.py:59–63`]
+- **`protect_holdout.verify()` not mocked in tests** — tests pass a `tmp_path` holdout dir to the real `verify()`, which checks date-cutoff logic (`HOLDOUT_CUTOFF = "2026-03-01"`). Test CSV named `mnq_1min_holdout_20260301_plus.csv` satisfies this accidentally. A bump to `HOLDOUT_CUTOFF` in `protect_holdout.py` would silently break these tests. Consider mocking `protect_holdout.verify` directly. [`tests/unit/test_oos_checkpoint.py`]
+- **Hash regex accepts any-length hex** — `HASH_PATTERNS` uses `[0-9a-f]+` (no length constraint); a truncated hash parses silently and fails check with "mismatch" rather than "malformed hash". Comparison still fails correctly; user just sees a less helpful error. Add `{64}` quantifier for SHA-256 or an explicit length guard. [`oos_checkpoint.py:33–37`]
+
 ## Deferred from: code review of spec-lr-channel-btc-signal-module (2026-05-15)
 
 - **`compute_lr_channel` O(n·length) Python loop** — docstring incorrectly says "vectorised"; actual implementation is a Python loop with per-iteration NumPy slice/dot. Acceptable for a ~18k-bar research backtest but will be prohibitively slow at 500k+ bars. Replace with `np.lib.stride_tricks` strided view + matrix multiply for a true vectorised implementation before this module is used in any live pipeline. [`src/research/lr_channel.py:compute_lr_channel`]
@@ -178,6 +185,12 @@ The regime gate removes the best-performing trades from the holdout. No threshol
 
 - **`fvg_fill_pct` values outside [0,1]** — actual range in `doe_run_08_fullyear_features.csv` is −14.67 to 17.0. Suggest reviewing the upstream DOE feature export to ensure correct denominator in fill-percentage calculation. Unbounded outliers are absorbed by `StandardScaler` but inflate feature variance. [`data/ml_training/doe_run_08_fullyear_features.csv`]
 - **Positional row alignment between feature/history CSVs** — `load_data()` copies `year_month` from `hist` to `feat` by position (`feat["year_month"] = hist["year_month"].values`). Safe while both CSVs are always exported together in the same sort order, but brittle if either file is ever re-exported independently. Add a shared index key (e.g., signal UUID or timestamp) for join-based alignment. [`backtest_tier2_wf_adaptive.py:load_data`]
+
+## Deferred from: code review of 2-1-bidirectional-fvg-detection-remove-bearish-only (2026-05-23)
+
+- **`calc_sharpe` single-day edge case** — if all trades fall on one calendar day, `std` of a single-element list returns 0 or NaN; no guard before `calc_sharpe` call. Pre-existing pattern shared with `timeframe_replication.py`; low practical risk for 15m training window with 81 trades spread over 2025. [`src/research/bidir_15m_test.py:79`]
+- **Timezone date bucketing for daily Sharpe uses UTC date** — `t.timestamp_entry.date()` returns UTC date; bars were resampled in `America/New_York`. Trades near midnight ET may be bucketed on the wrong calendar day, slightly distorting daily Sharpe. Pre-existing pattern from `timeframe_replication.py`. [`src/research/bidir_15m_test.py:77`]
+- **`backtest_engine.py` carries an unstaged modification (git status M)** — modification predates this story and is not part of this diff; should be investigated separately to confirm it is not an accidental parameter drift. [`src/research/backtest_engine.py`]
 
 ## Deferred from: S12 adversarial review (2026-05-20)
 

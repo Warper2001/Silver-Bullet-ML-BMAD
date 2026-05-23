@@ -124,6 +124,35 @@ def test_fail_source_hash_mismatch(tmp_path, capsys):
     assert "Source hash mismatch" in out
 
 
+def test_fail_source_hash_tampered_file(tmp_path, capsys):
+    """strategy_core.py bytes replaced via tmp fixture → check (b) fails (AC #5 spec form).
+
+    Prereg doc holds the real source hash; the tmp file contains different bytes.
+    Proves _compute_source_hash actually reads and hashes the file at checkpoint time.
+    """
+    make_protected_csv(tmp_path)
+
+    # Write a tampered copy of strategy_core.py to tmp_path
+    tampered = tmp_path / "strategy_core.py"
+    tampered.write_bytes(b"# tampered\npass\n")
+
+    # Prereg doc holds the REAL source hash (not the tampered one)
+    doc_path = tmp_path / "prereg.md"
+    doc_path.write_text(make_prereg_doc(correct_config_hash(), correct_source_hash(), SEALED_HEAD))
+
+    from oos_checkpoint import checkpoint
+
+    with (
+        patch("oos_checkpoint._git_is_dirty", return_value=False),
+        patch("oos_checkpoint._git_head", return_value=SEALED_HEAD),
+    ):
+        rc = checkpoint(doc_path, tampered, tmp_path)
+
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Source hash mismatch" in out
+
+
 def test_fail_dirty_tree(tmp_path, capsys):
     """Dirty git tree → check (c) fails with 'dirty'."""
     make_protected_csv(tmp_path)

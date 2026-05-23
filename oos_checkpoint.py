@@ -58,9 +58,9 @@ def _git_head() -> str:
 
 
 def _git_is_dirty() -> bool:
-    """Return True if the working tree has uncommitted changes."""
+    """Return True if the working tree has uncommitted changes to tracked files."""
     result = subprocess.run(
-        ["git", "status", "--porcelain"], capture_output=True, text=True, check=False
+        ["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True, check=False
     )
     return bool(result.stdout.strip())
 

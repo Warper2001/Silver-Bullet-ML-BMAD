@@ -1,6 +1,6 @@
 # Story 3.3: OOS Checkpoint Verification (oos_checkpoint.py)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -69,6 +69,15 @@ So that no OOS run can proceed if strategy parameters have drifted, the source c
 - [x] Task 4 — Full regression test suite
   - [x] `.venv/bin/python -m pytest tests/unit/test_oos_checkpoint.py tests/unit/test_prereg_seal.py tests/unit/test_protect_holdout.py tests/unit/test_strategy_core_tuesday.py tests/integration/test_baseline_backtesting.py -q`
   - [x] All tests pass with no regressions
+
+### Review Findings
+
+- [x] [Review][Decision] AC #5 test uses wrong-hash shortcut instead of spec-required bytes-replaced tmp fixture — resolved: added `test_fail_source_hash_tampered_file` (option A); original test retained
+- [x] [Review][Patch] `_git_is_dirty` flags untracked files as dirty, making check (c) permanently fail in any dev env with untracked files [oos_checkpoint.py:59–63] — fixed: changed to `git status --porcelain --untracked-files=no`
+- [x] [Review][Defer] `_config_to_json` only converts top-level `time` fields; nested dataclass `time` values would survive unconverted (latent — StrategyConfig has no nested dataclasses today) [oos_checkpoint.py:41–44] — deferred, pre-existing
+- [x] [Review][Defer] `_git_is_dirty` returns `False` (clean) when git exits non-zero (not-a-repo), silently passing check (c) [oos_checkpoint.py:59–63] — deferred, unrealistic scenario for a tool always run from repo root
+- [x] [Review][Defer] `protect_holdout.verify()` not mocked in tests; coupled to its date-cutoff logic (test CSV named `mnq_1min_holdout_20260301_plus.csv` satisfies cutoff accidentally) [tests/unit/test_oos_checkpoint.py] — deferred, tests pass correctly today
+- [x] [Review][Defer] Hash regex `[0-9a-f]+` accepts any-length hex; corrupted/truncated hash parses silently and fails check with "mismatch" instead of "malformed hash" [oos_checkpoint.py:33–37] — deferred, comparison still fails correctly
 
 ## Dev Notes
 

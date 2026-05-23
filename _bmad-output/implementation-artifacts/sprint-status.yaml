@@ -1,0 +1,107 @@
+# generated: 2026-05-21T00:00:00Z
+# last_updated: 2026-05-22T00:00:00Z
+# project: Silver-Bullet-ML-BMAD
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /root/Silver-Bullet-ML-BMAD/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: '2026-05-21T00:00:00Z'
+last_updated: '2026-05-23T00:00:00Z'
+project: Silver-Bullet-ML-BMAD
+project_key: NOKEY
+tracking_system: file-system
+story_location: /root/Silver-Bullet-ML-BMAD/_bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Deterministic Strategy Core & Backtest Foundation
+  # FRs: FR6, FR7, FR23, FR41 | ARs: AR1-AR21 | NFRs: NFR3, NFR4, NFR15, NFR18
+  # CLOSED 2026-05-22: All 15 adversarial review issues fixed; 75 tests green; mypy clean;
+  # full-year science confirms PF<1.0 (2025: 0.937, 2026 YTD: 0.866). Program C Phase 1 next.
+  epic-1: done
+  1-1-strategyconfig-dataclass-and-core-data-types: done
+  1-2-strategy-core-resampling-detection-filter-extraction: done
+  1-3-strategy-core-entry-exit-decisions-metrics-unit-tests: done
+  1-4-backtest-engine-csv-loader-simulation-loop-parity-gate: done
+  1-5-live-trader-refactor-import-strategy-core-state-persistence-bounded-buffer: done
+  epic-1-retrospective: optional
+
+  # BLOCKED: Epic 2-5 cannot start until Epic 6 (Phase 1 falsification) delivers verdict.
+  # Per Program C discipline (problem-solution-2026-05-20.md): no parameter/filter changes
+  # based on in-sample evidence alone. Phase 1 must determine pivot vs survive first.
+
+  # Epic 2: Phase 1 Strategy Enhancements — Statistical Power Recovery
+  # FRs: FR1-FR5, FR8, FR12 | NFRs: NFR1, NFR5, NFR19
+  epic-2: backlog
+  2-1-bidirectional-fvg-detection-remove-bearish-only: backlog
+  2-2-am-kill-zone-filter-dst-aware: backlog
+  2-3-m15-confirmation-layer-and-resample: backlog
+  2-4-volatility-regime-gate-parameterization-relaxed-filter-constants: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Pre-Registration & OOS Validation Protocol
+  # FRs: FR24-FR28 | NFRs: NFR7, NFR8, NFR14, NFR15
+  epic-3: backlog
+  3-1-sealed-holdout-directory-and-protect-holdout: backlog
+  3-2-pre-registration-document-generator-prereg-seal: backlog
+  3-3-oos-checkpoint-verification: backlog
+  3-4-oos-verdict-report-generator: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Live Paper Trading System & Real-Time Observability
+  # FRs: FR9-FR16, FR22, FR29-FR40 | NFRs: NFR2, NFR6, NFR9-NFR13, NFR16, NFR17
+  epic-4: backlog
+  4-1-bracket-order-submission-and-position-reconciliation: backlog
+  4-2-trade-logging-and-state-persistence-crash-recovery: backlog
+  4-3-daily-circuit-breaker-and-emergency-stop-cli: backlog
+  4-4-real-time-pnl-and-performance-metrics-display: backlog
+  4-5-stale-data-detection-token-refresh-data-gap-handling: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: TopStep Combine Compliance Suite (Phase 2 — unlocked by OOS verdict GO)
+  # FRs: FR17-FR21 | Inherits: NFR9, NFR11, NFR12 from Epic 4
+  epic-5: backlog
+  5-1-intraday-trailing-drawdown-floor-tracker: backlog
+  5-2-consistency-rule-monitor-auto-position-size-reduction: backlog
+  5-3-dynamic-contract-limit-xfa-scaling-plan: backlog
+  5-4-qualifying-day-tracker-and-live-execution-mode-toggle: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Program C Phase 1 — Falsification (gates Epic 2-5)
+  # Delivers pivot-vs-survive verdict via S12 random-entry control + S13 timeframe replication.
+  # Decision rule (pre-committed in problem-solution-2026-05-20.md):
+  #   PF < median(random) → VERDICT: pivot | PF > p90(random) → VERDICT: patterns survive
+  #   p50–p90 → ambiguous = TREATED AS FAIL = pivot
+  epic-6: in-progress
+  6-1-s12-random-entry-control-test: review
+  6-2-s13-timeframe-replication-5m-15m: review
+  6-3-phase-1-verdict-synthesis-pivot-decision: backlog
+  epic-6-retrospective: optional

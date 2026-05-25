@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-25T12:00:00Z'
+last_updated: '2026-05-25T13:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -82,7 +82,7 @@ development_status:
   epic-4: in-progress
   4-1-bracket-order-submission-and-position-reconciliation: done
   4-2-trade-logging-and-state-persistence-crash-recovery: done
-  4-3-daily-circuit-breaker-and-emergency-stop-cli: backlog
+  4-3-daily-circuit-breaker-and-emergency-stop-cli: ready-for-dev
   4-4-real-time-pnl-and-performance-metrics-display: backlog
   4-5-stale-data-detection-token-refresh-data-gap-handling: backlog
   epic-4-retrospective: optional

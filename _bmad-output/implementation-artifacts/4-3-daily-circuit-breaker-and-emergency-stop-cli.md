@@ -1,6 +1,6 @@
 # Story 4.3: Daily Circuit Breaker and Emergency Stop CLI
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -84,82 +84,39 @@ Then all tests pass covering:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Introduce `RiskManager` class in `tier2_streaming_working.py` (AC: #1, #2, #3, #6)
-  - [ ] Add `RiskManager` class AFTER `TradeLogger`, BEFORE `TradeStationClient` (same file — AR3)
-  - [ ] Fields: `_daily_pnl: float = 0.0`, `_daily_halted: bool = False`, `_last_trading_date: Optional[date] = None`
-  - [ ] `is_halted` property: returns `self._daily_halted`
-  - [ ] `daily_pnl` property: returns `self._daily_pnl`
-  - [ ] `register_close(pnl: float) -> None`: adds pnl to `_daily_pnl` (does NOT call `_persist()` — caller saves state)
-  - [ ] `check_and_update(bar_et: datetime, max_daily_loss: float) -> bool`: day-reset logic (copy from `_check_daily_reset_and_halt`); when tripping (`daily_pnl <= max_daily_loss`), set `_daily_halted = True` and call `self._persist()` immediately before returning True
-  - [ ] `halt_manually() -> None`: sets `_daily_halted = True`, calls `self._persist()`
-  - [ ] `restore_from_state(state: dict, today: date) -> None`: parses `last_trading_date` from state dict; if same calendar day as `today`, restores `_daily_pnl`, `_daily_halted`, `_last_trading_date`
-  - [ ] `to_state_dict() -> dict`: returns `{"daily_pnl": ..., "daily_halted": ..., "last_trading_date": ...}`
-  - [ ] `_persist() -> None`: calls `StatePersistence.save_state(self.to_state_dict())` — wraps in try/except, logs warning on failure
+- [x] Task 1: Introduce `RiskManager` class in `tier2_streaming_working.py` (AC: #1, #2, #3, #6)
+  - [x] Add `RiskManager` class AFTER `TradeLogger`, BEFORE `TradeStationClient` (same file — AR3)
+  - [x] Fields: `_daily_pnl: float = 0.0`, `_daily_halted: bool = False`, `_last_trading_date: Optional[date] = None`
+  - [x] `is_halted` property: returns `self._daily_halted`
+  - [x] `daily_pnl` property: returns `self._daily_pnl`
+  - [x] `register_close(pnl: float) -> None`: adds pnl to `_daily_pnl`
+  - [x] `check_and_update(bar_et: datetime, max_daily_loss: float) -> bool`: day-reset logic; calls `_persist()` when tripping
+  - [x] `halt_manually() -> None`: sets `_daily_halted = True`, calls `self._persist()`
+  - [x] `restore_from_state(state: dict, today: date) -> None`: same-day restoration
+  - [x] `to_state_dict() -> dict`: returns risk state dict
+  - [x] `_persist() -> None`: calls `StatePersistence.save_state(self.to_state_dict())` with try/except
 
-- [ ] Task 2: Migrate `Tier2StreamingTrader` to use `_risk_manager` (AC: #7)
-  - [ ] Add `self._risk_manager: RiskManager = RiskManager()` to `__init__()` (after `self._trade_logger`)
-  - [ ] REMOVE `self._daily_pnl`, `self._daily_halted`, `self._last_trading_date` bare fields
-  - [ ] `_close_active_trade()`: replace `self._daily_pnl += pnl` with `self._risk_manager.register_close(pnl)`; update `save_state()` call to use `**self._risk_manager.to_state_dict()` merged into the state dict; remove the bare field references
-  - [ ] `_detect_and_enter()`: replace `self._check_daily_reset_and_halt(bar_et)` with `self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss)`
-  - [ ] `_recover_from_state()`: replace the inline risk-state restoration block with `self._risk_manager.restore_from_state(state, today)`
-  - [ ] `_check_daily_reset_and_halt()`: DELETE this method (logic now lives in `RiskManager.check_and_update()`)
-  - [ ] Any remaining `self._daily_pnl` / `self._daily_halted` / `self._last_trading_date` references: update to `self._risk_manager.daily_pnl` / `self._risk_manager.is_halted` / `self._risk_manager._last_trading_date` as appropriate
-  - [ ] Verify: existing `save_state()` calls in `_enter_trade()` and `_close_active_trade()` still include risk state (use `**self._risk_manager.to_state_dict()` merge pattern)
+- [x] Task 2: Migrate `Tier2StreamingTrader` to use `_risk_manager` (AC: #7)
+  - [x] Add `self._risk_manager: RiskManager = RiskManager()` to `__init__()`
+  - [x] REMOVE `self._daily_pnl`, `self._daily_halted`, `self._last_trading_date` bare fields
+  - [x] `_close_active_trade()`: `register_close(pnl)`, `**to_state_dict()` in save_state
+  - [x] `_detect_and_enter()`: `check_and_update(bar_et, max_daily_loss)`
+  - [x] `_recover_from_state()`: `restore_from_state(state, today)`
+  - [x] `_check_daily_reset_and_halt()`: DELETED
+  - [x] `_enter_trade()` save_state: `**self._risk_manager.to_state_dict()`
 
-- [ ] Task 3: Rewrite `src/cli/emergency_stop.py` (AC: #4, #5)
-  - [ ] Replace entire file — the existing implementation uses old infrastructure (`src.risk.emergency_stop.EmergencyStop`)
-  - [ ] New implementation structure:
-    ```python
-    import argparse, asyncio, sys
-    from pathlib import Path
-    from datetime import datetime, timezone
-    import httpx
-    from src.research.tier2_streaming_working import (
-        TradeStationAuthV3 is imported via auth_v3, TradeStationClient,
-        StatePersistence, TradeLogger, TradeRecord, RiskManager,
-        SIM_ACCOUNT_ID, _default_account_config, ET_TZ,
-    )
-    ```
-  - [ ] `async def _run_emergency_stop(force: bool) -> int`: the async implementation
-    - Load credentials: `auth = TradeStationAuthV3.from_file('.access_token')`
-    - Create `async with httpx.AsyncClient(timeout=30.0) as http`
-    - Authenticate: `await auth.authenticate()`
-    - Create `TradeStationClient(auth, _default_account_config("MNQM26"), http)`
-    - Try: `await client.cancel_all_pending_orders(SIM_ACCOUNT_ID)` — if fails and not `--force`, propagate; if fails and `--force`, print warning, set `api_ok=False`
-    - Load state: `state = StatePersistence.load_state()`
-    - If state has `direction` and `entry_price is not None` and `entry_time`: it's an active trade
-      - Try: `close_oid = await client.close_position_at_market(state["direction"], SIM_ACCOUNT_ID)` (skip if api_ok=False)
-      - Append MANUAL exit to TradeLogger: create `TradeRecord(timestamp_entry=..., timestamp_exit=now, exit_reason="MANUAL", pnl_usd=0.0, ...)` and call `TradeLogger().append_trade(record)`
-    - Call `RiskManager().halt_manually()` — this writes `daily_halted=True` to state file
-    - Print `"EMERGENCY STOP COMPLETE"`
-    - Return 0 if api_ok else 1
-  - [ ] `def main()`: arg-parse `--force` flag; call `sys.exit(asyncio.run(_run_emergency_stop(args.force)))`
-  - [ ] Handle `--force`: catch all API exceptions, log to stderr, still persist halt, return exit code 1
-  - [ ] `if __name__ == "__main__": main()`
+- [x] Task 3: Rewrite `src/cli/emergency_stop.py` (AC: #4, #5)
+  - [x] Full rewrite using `TradeStationClient`, `StatePersistence`, `TradeLogger`, `TradeRecord`, `RiskManager`
+  - [x] `_run_emergency_stop(force: bool) -> int` async function
+  - [x] cancel_all_pending_orders → close_position_at_market if active → halt_manually → print COMPLETE
+  - [x] `--force` flag: persist halt even on API failure, exit code 1
 
-- [ ] Task 4: Write unit tests in `tests/unit/test_circuit_breaker_emergency_stop.py` (AC: #8)
-  - [ ] `TestRiskManager`:
-    - [ ] `test_circuit_breaker_trips_when_pnl_below_threshold` — register_close brings pnl below limit, check_and_update returns True
-    - [ ] `test_circuit_breaker_does_not_trip_above_threshold` — pnl still above limit, check_and_update returns False
-    - [ ] `test_day_reset_clears_halted_flag` — halted on day D, check_and_update with day D+1 → is_halted=False, pnl=0.0
-    - [ ] `test_restore_from_state_same_day_restores_risk` — state has today's date, pnl and halted restored
-    - [ ] `test_restore_from_state_new_day_does_not_restore` — state has yesterday → pnl=0.0, halted=False
-    - [ ] `test_persist_called_when_circuit_breaker_trips` — patch StatePersistence.save_state, verify called when check_and_update trips
-    - [ ] `test_halt_manually_persists` — patch StatePersistence.save_state, verify called by halt_manually()
-    - [ ] `test_to_state_dict_includes_all_keys` — verify dict has daily_pnl, daily_halted, last_trading_date keys
-  - [ ] `TestEmergencyStopCLI`:
-    - [ ] `test_emergency_stop_cancels_orders_and_halts` — mock client, cancel_all_pending_orders called, state updated, prints COMPLETE
-    - [ ] `test_emergency_stop_closes_position_when_active_trade_in_state` — state has direction/entry_price/entry_time, close_position_at_market called
-    - [ ] `test_emergency_stop_appends_manual_exit_to_trade_logger` — TradeLogger.append_trade called with MANUAL exit when position closed
-    - [ ] `test_emergency_stop_force_flag_persists_halt_on_api_failure` — API raises exception, --force → halt persisted, exit code 1
-    - [ ] `test_emergency_stop_no_active_trade_skips_close` — state is risk-only (no direction), close_position_at_market NOT called
+- [x] Task 4: Write unit tests in `tests/unit/test_circuit_breaker_emergency_stop.py` (AC: #8)
+  - [x] 17 tests covering all RiskManager behaviors and all emergency stop CLI paths
 
-- [ ] Task 5: Run tests and verify no regressions (AC: #8)
-  - [ ] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_circuit_breaker_emergency_stop.py -v` → all pass
-  - [ ] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_trade_logging_state_persistence.py -v` → 16/16 pass (no regressions)
-  - [ ] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_orchestrator_order_management.py -v` → 16/16 pass
-  - [ ] `PYTHONPATH=. .venv/bin/python -c "import src.research.tier2_streaming_working"` → import OK
-  - [ ] `PYTHONPATH=. .venv/bin/python -c "import src.cli.emergency_stop"` → import OK
+- [x] Task 5: Run tests and verify no regressions (AC: #8)
+  - [x] 17/17 new tests pass
+  - [x] 118/118 unit tests pass (no regressions)
 
 ## Dev Notes
 

@@ -267,8 +267,8 @@ class TestCrashRecovery:
         with patch.object(StatePersistence, "load_state", return_value=state):
             await trader._recover_from_state()
 
-        assert trader._daily_halted is True
-        assert trader._daily_pnl == pytest.approx(-800.0)
+        assert trader._risk_manager.is_halted is True
+        assert trader._risk_manager.daily_pnl == pytest.approx(-800.0)
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_resets_on_new_day(self):
@@ -285,8 +285,8 @@ class TestCrashRecovery:
             await trader._recover_from_state()
 
         # Different date → risk state NOT restored
-        assert trader._daily_halted is False
-        assert trader._daily_pnl == pytest.approx(0.0)
+        assert trader._risk_manager.is_halted is False
+        assert trader._risk_manager.daily_pnl == pytest.approx(0.0)
 
     @pytest.mark.asyncio
     async def test_crash_recovery_risk_only_state_no_reconciliation(self):
@@ -304,7 +304,7 @@ class TestCrashRecovery:
             await trader._recover_from_state()
 
         trader._ts_client.reconcile_state.assert_not_called()
-        assert trader._daily_pnl == pytest.approx(-300.0)
+        assert trader._risk_manager.daily_pnl == pytest.approx(-300.0)
         assert trader.active_trade is None
 
     @pytest.mark.asyncio

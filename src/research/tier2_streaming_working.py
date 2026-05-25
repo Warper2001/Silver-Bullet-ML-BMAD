@@ -270,6 +270,99 @@ class TradeLogger:
             logger.warning("Trade log write failed: %s", e)
 
 
+class RiskManager:
+    """Phase 1 daily circuit breaker (FR16, NFR12, architecture Risk Layer decision).
+
+    Tracks daily P&L and halts new entries when the configured loss threshold is reached.
+    Persists halt state immediately so a crash between trip and next trade close does not
+    reset the circuit breaker on restart.
+
+    Phase 2 extension (trailing DD, consistency rule, dynamic contracts) adds evaluators
+    inside check_and_update() without changing the public surface.
+    """
+
+    def __init__(self) -> None:
+        self._daily_pnl: float = 0.0
+        self._daily_halted: bool = False
+        self._last_trading_date: Optional[datetime.date] = None
+
+    @property
+    def is_halted(self) -> bool:
+        return self._daily_halted
+
+    @property
+    def daily_pnl(self) -> float:
+        return self._daily_pnl
+
+    def register_close(self, pnl: float) -> None:
+        """Update daily P&L after a trade closes. Caller saves full state."""
+        self._daily_pnl += pnl
+
+    def check_and_update(self, bar_et: datetime, max_daily_loss: float) -> bool:
+        """Reset on new calendar day, then check circuit breaker. Returns True if halted."""
+        today = bar_et.date()
+        if self._last_trading_date is not None and self._last_trading_date != today:
+            logger.info(
+                "New trading day %s — resetting daily P&L (was $%.2f)", today, self._daily_pnl
+            )
+            self._daily_pnl = 0.0
+            self._daily_halted = False
+        self._last_trading_date = today
+        if self._daily_halted:
+            return True
+        if self._daily_pnl <= max_daily_loss:
+            logger.warning(
+                "🛑 Daily loss limit hit: $%.2f ≤ $%.0f — halting for today",
+                self._daily_pnl, max_daily_loss,
+            )
+            self._daily_halted = True
+            self._persist()
+            return True
+        return False
+
+    def halt_manually(self) -> None:
+        """Externally halt entries for today. Called by emergency stop CLI (FR22)."""
+        self._daily_halted = True
+        self._persist()
+
+    def restore_from_state(self, state: dict, today: datetime.date) -> None:
+        """Restore daily risk state from persisted dict on startup (crash recovery, NFR12)."""
+        saved_date_str = state.get("last_trading_date")
+        if not saved_date_str:
+            return
+        try:
+            saved_date = (
+                datetime.fromisoformat(saved_date_str).date()
+                if isinstance(saved_date_str, str)
+                else saved_date_str
+            )
+            if saved_date == today:
+                self._daily_pnl = float(state.get("daily_pnl", 0.0))
+                self._daily_halted = bool(state.get("daily_halted", False))
+                self._last_trading_date = today
+                logger.info(
+                    "Restored daily risk state: pnl=%.2f halted=%s",
+                    self._daily_pnl, self._daily_halted,
+                )
+        except (ValueError, TypeError) as e:
+            logger.warning("Could not parse last_trading_date from state: %s", e)
+
+    def to_state_dict(self) -> dict:
+        """Return risk fields for inclusion in the persisted state dict."""
+        return {
+            "daily_pnl": self._daily_pnl,
+            "daily_halted": self._daily_halted,
+            "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
+        }
+
+    def _persist(self) -> None:
+        """Persist current risk state immediately (called when circuit breaker trips or halt_manually)."""
+        try:
+            StatePersistence.save_state(self.to_state_dict())
+        except Exception as e:
+            logger.warning("RiskManager: failed to persist halt state: %s", e)
+
+
 class TradeStationClient:
     """Sole network-touching component. Owns auth, bracket-order submission, order
     cancellation, market-close, and per-cycle broker reconciliation (AR3, FR9–FR12).
@@ -744,11 +837,6 @@ class Tier2StreamingTrader:
         self._m15_choch_active: bool = False
         self._m15_last_bar_ts: datetime = _epoch
 
-        # Daily circuit breaker
-        self._daily_pnl: float = 0.0
-        self._daily_halted: bool = False
-        self._last_trading_date: Optional[datetime.date] = None
-
         # strategy_core integration (Story 1.5)
         self._cached_sweep: Optional[SweepSignal] = None        # most recent sweep from detect_liquidity_sweep
         self._active_entry_decision: Optional[EntryDecision] = None  # EntryDecision for active trade (check_exit)
@@ -759,6 +847,7 @@ class Tier2StreamingTrader:
         # State persistence and trade logging (AR14, AR15)
         self._state_persistence = StatePersistence()
         self._trade_logger: TradeLogger = TradeLogger()
+        self._risk_manager: RiskManager = RiskManager()
 
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
@@ -795,24 +884,7 @@ class Tier2StreamingTrader:
 
         # Restore daily risk state if from the same calendar day (AC#6)
         today = datetime.now(timezone.utc).astimezone(ET_TZ).date()
-        saved_date_str = state.get("last_trading_date")
-        if saved_date_str:
-            try:
-                saved_date = (
-                    datetime.fromisoformat(saved_date_str).date()
-                    if isinstance(saved_date_str, str)
-                    else saved_date_str
-                )
-                if saved_date == today:
-                    self._daily_pnl = float(state.get("daily_pnl", 0.0))
-                    self._daily_halted = bool(state.get("daily_halted", False))
-                    self._last_trading_date = today
-                    logger.info(
-                        "Restored daily risk state: pnl=%.2f halted=%s",
-                        self._daily_pnl, self._daily_halted,
-                    )
-            except (ValueError, TypeError) as e:
-                logger.warning("Could not parse last_trading_date from state: %s", e)
+        self._risk_manager.restore_from_state(state, today)
 
         # Reconcile active trade if state has trade fields (AC#4, AC#5)
         # Patch: guard entry_price with `is not None` (0.0 is falsy); guard entry_time to avoid KeyError
@@ -1180,7 +1252,7 @@ class Tier2StreamingTrader:
 
         cfg = self._strategy_config
         pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * self._point_value * self._contracts - cfg.commission_per_roundtrip
-        self._daily_pnl += pnl
+        self._risk_manager.register_close(pnl)
         self.completed_trades.append(CompletedTrade(
             t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
         ))
@@ -1189,14 +1261,10 @@ class Tier2StreamingTrader:
         # Persist risk state after close so daily circuit breaker survives restart (NFR12, AC#7)
         # Patch: save_state() wrapped so failure never prevents the trade record from being written
         try:
-            StatePersistence.save_state({
-                "daily_pnl": self._daily_pnl,
-                "daily_halted": self._daily_halted,
-                "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
-            })
+            StatePersistence.save_state(self._risk_manager.to_state_dict())
         except Exception as e:
             logger.warning("State persistence failed after trade close (trade record will still be written): %s", e)
-        logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._daily_pnl:.2f}")
+        logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._risk_manager.daily_pnl:.2f}")
         _exit_reason_str = reason.upper() if reason in ("tp", "sl") else "TIME_STOP" if reason == "time" else reason.upper()
         self._trade_logger.append_trade(TradeRecord(
             timestamp_entry=t.entry_time,
@@ -1217,26 +1285,7 @@ class Tier2StreamingTrader:
         ))
 
     # _log_trade() removed in Story 4-2 — replaced by TradeLogger.append_trade() (AC#1, AC#2)
-
-    def _check_daily_reset_and_halt(self, bar_et: datetime) -> bool:
-        """Reset daily P&L counter at the start of each new trading day.
-        Returns True if trading is halted for today."""
-        today = bar_et.date()
-        if self._last_trading_date != today:
-            if self._last_trading_date is not None:
-                logger.info(f"New trading day {today} — resetting daily P&L (was ${self._daily_pnl:.2f})")
-            self._daily_pnl = 0.0
-            self._daily_halted = False
-            self._last_trading_date = today
-        if self._daily_halted:
-            return True
-        if self._daily_pnl <= self._strategy_config.max_daily_loss:
-            logger.warning(
-                f"🛑 Daily loss limit hit: ${self._daily_pnl:.2f} ≤ ${self._strategy_config.max_daily_loss:.0f} — halting for today"
-            )
-            self._daily_halted = True
-            return True
-        return False
+    # _check_daily_reset_and_halt() removed in Story 4-3 — replaced by RiskManager.check_and_update() (AC#1)
 
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self.active_trade: return
@@ -1249,7 +1298,7 @@ class Tier2StreamingTrader:
             return
 
         # Daily circuit breaker: halt if daily loss limit reached
-        if self._check_daily_reset_and_halt(bar_et):
+        if self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss):
             return
 
         # Seasonality gate: skip months with statistically zero edge (default: none blocked)
@@ -1462,9 +1511,7 @@ class Tier2StreamingTrader:
             "m15_confirmed": _m15_confirmed,
             "kill_zone_active": _kill_zone_active,
             "vol_regime_pct": _vol_regime_pct,
-            "daily_pnl": self._daily_pnl,
-            "daily_halted": self._daily_halted,
-            "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
+            **self._risk_manager.to_state_dict(),
         })
         logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction_str} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
 

@@ -1,127 +1,113 @@
-"""Command-line interface for emergency stop control.
+"""Emergency stop CLI for the Tier2StreamingTrader paper-trading system.
 
-This module provides CLI commands for manually activating and
-deactivating the emergency stop button.
+Usage:
+    python -m src.cli.emergency_stop [--force]
+
+Actions taken:
+  1. Cancel all pending SIM orders via TradeStation API.
+  2. If an active trade is found in persisted state, close position at market
+     and write a MANUAL exit record to the trade log.
+  3. Persist daily_halted=True via RiskManager so the system stays halted
+     even after a restart.
+
+--force: persist the halt even if the API calls fail; exit code 1 on API error.
 """
 
 import argparse
+import asyncio
 import sys
-from pathlib import Path
+from datetime import datetime, timezone
 
-# Add src to path for imports (must come before module imports)
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import httpx
 
-# Disable E402 for this conditional import
-# flake8: noqa
-from src.risk.emergency_stop import EmergencyStop  # noqa: E402
+from src.research.tier2_streaming_working import (
+    RiskManager,
+    SIM_ACCOUNT_ID,
+    StatePersistence,
+    TradeLogger,
+    TradeRecord,
+    TradeStationAuthV3,
+    TradeStationClient,
+    _default_account_config,
+)
 
 
-def activate_emergency_stop(reason: str) -> None:
-    """Activate emergency stop from command line.
+async def _run_emergency_stop(force: bool = False) -> int:
+    """Execute the emergency stop sequence. Returns exit code (0=success, 1=API error)."""
+    auth = TradeStationAuthV3.from_file(".access_token")
+    await auth.authenticate()
 
-    Args:
-        reason: Reason for activating emergency stop
+    account_config = _default_account_config("MNQM26")
+    exit_code = 0
 
-    Example:
-        $ python -m src.cli.emergency_stop activate "Manual intervention"
-        Emergency stop activated at 2026-03-17 14:30:00 UTC
-    """
-    stop = EmergencyStop(
-        audit_trail_path="data/audit/emergency_stop.csv",
-        state_path="data/state/emergency_stop.json"
+    async with httpx.AsyncClient(timeout=30.0) as http_client:
+        ts_client = TradeStationClient(auth, account_config, http_client)
+
+        try:
+            cancelled = await ts_client.cancel_all_pending_orders(SIM_ACCOUNT_ID)
+            print(f"Cancelled {len(cancelled)} pending order(s): {cancelled}")
+        except Exception as exc:
+            print(f"WARNING: cancel_all_pending_orders failed: {exc}", file=sys.stderr)
+            exit_code = 1
+            if not force:
+                # Still persist the halt before returning
+                rm = RiskManager()
+                rm.halt_manually()
+                return exit_code
+
+        # Check for an active trade in persisted state
+        state = StatePersistence.load_state()
+        if state and state.get("direction") and state.get("entry_price") is not None:
+            direction = state["direction"]
+            try:
+                await ts_client.close_position_at_market(direction, SIM_ACCOUNT_ID)
+
+                # Log the manual exit
+                entry_time_str = state.get("entry_time", "")
+                try:
+                    entry_time = datetime.fromisoformat(entry_time_str) if entry_time_str else datetime.now(timezone.utc)
+                except (ValueError, TypeError):
+                    entry_time = datetime.now(timezone.utc)
+
+                trade_logger = TradeLogger()
+                trade_logger.append_trade(TradeRecord(
+                    timestamp_entry=entry_time,
+                    timestamp_exit=datetime.now(timezone.utc),
+                    direction=direction,
+                    entry_price=float(state.get("entry_price", 0.0)),
+                    exit_price=0.0,
+                    tp_price=float(state.get("tp_price", 0.0)),
+                    sl_price=float(state.get("sl_price", 0.0)),
+                    gap_size=float(state.get("gap_size", 0.0)),
+                    pnl_usd=0.0,
+                    exit_reason="MANUAL",
+                    h1_sweep_bars_ago=int(state.get("h1_sweep_bars_ago", 0)),
+                    m15_confirmed=bool(state.get("m15_confirmed", False)),
+                    kill_zone_active=bool(state.get("kill_zone_active", False)),
+                    vol_regime_pct=float(state.get("vol_regime_pct", 0.0)),
+                    contracts=int(state.get("contracts", 5)),
+                ))
+            except Exception as exc:
+                print(f"WARNING: close_position_at_market failed: {exc}", file=sys.stderr)
+                exit_code = 1
+
+    rm = RiskManager()
+    rm.halt_manually()
+
+    print("EMERGENCY STOP COMPLETE")
+    return exit_code
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Emergency stop for Tier2StreamingTrader")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Persist halt even if API calls fail (exit code 1 on failure)",
     )
-    stop.activate(reason)
-
-    print("Emergency stop activated")
-    print("Reason: {}".format(reason))
-
-
-def deactivate_emergency_stop() -> None:
-    """Deactivate emergency stop from command line.
-
-    Example:
-        $ python -m src.cli.emergency_stop deactivate
-        Emergency stop deactivated at 2026-03-17 14:35:00 UTC
-    """
-    stop = EmergencyStop(
-        audit_trail_path="data/audit/emergency_stop.csv",
-        state_path="data/state/emergency_stop.json"
-    )
-    stop.deactivate()
-
-    print("Emergency stop deactivated")
-
-
-def check_emergency_stop_status() -> None:
-    """Check and display emergency stop status.
-
-    Example:
-        $ python -m src.cli.emergency_stop status
-        Emergency stop status: ACTIVE
-        Activated: 2026-03-17 14:30:00 UTC
-        Reason: Manual intervention
-        Time stopped: 300 seconds
-    """
-    stop = EmergencyStop(
-        audit_trail_path="data/audit/emergency_stop.csv",
-        state_path="data/state/emergency_stop.json"
-    )
-    status = stop.get_status()
-
-    if status['is_stopped']:
-        print("Emergency stop status: ACTIVE")
-        print("Activated: {}".format(status['stop_time']))
-        print("Reason: {}".format(status['stop_reason']))
-        print("Time stopped: {} seconds".format(
-            status['time_stopped_seconds']
-        ))
-    else:
-        print("Emergency stop status: INACTIVE")
-
-
-def main():
-    """Main CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Emergency stop control for trading system"
-    )
-
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
-
-    # Activate command
-    activate_parser = subparsers.add_parser(
-        'activate',
-        help='Activate emergency stop'
-    )
-    activate_parser.add_argument(
-        'reason',
-        help='Reason for activating emergency stop'
-    )
-
-    # Deactivate command
-    subparsers.add_parser(
-        'deactivate',
-        help='Deactivate emergency stop'
-    )
-
-    # Status command
-    subparsers.add_parser(
-        'status',
-        help='Check emergency stop status'
-    )
-
-    # Parse arguments
     args = parser.parse_args()
-
-    # Execute command
-    if args.command == 'activate':
-        activate_emergency_stop(args.reason)
-    elif args.command == 'deactivate':
-        deactivate_emergency_stop()
-    elif args.command == 'status':
-        check_emergency_stop_status()
-    else:
-        parser.print_help()
+    sys.exit(asyncio.run(_run_emergency_stop(force=args.force)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

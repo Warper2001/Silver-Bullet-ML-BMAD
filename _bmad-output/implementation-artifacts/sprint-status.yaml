@@ -81,7 +81,7 @@ development_status:
   # FRs: FR9-FR16, FR22, FR29-FR40 | NFRs: NFR2, NFR6, NFR9-NFR13, NFR16, NFR17
   epic-4: in-progress
   4-1-bracket-order-submission-and-position-reconciliation: done
-  4-2-trade-logging-and-state-persistence-crash-recovery: ready-for-dev
+  4-2-trade-logging-and-state-persistence-crash-recovery: review
   4-3-daily-circuit-breaker-and-emergency-stop-cli: backlog
   4-4-real-time-pnl-and-performance-metrics-display: backlog
   4-5-stale-data-detection-token-refresh-data-gap-handling: backlog

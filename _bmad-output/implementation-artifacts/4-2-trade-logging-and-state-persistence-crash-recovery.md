@@ -1,6 +1,6 @@
 # Story 4.2: Trade Logging and StatePersistence with Crash Recovery
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -77,68 +77,55 @@ Then all tests pass covering:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `TradeRecord` dataclass and `TradeLogger` class (AC: #1, #2)
-  - [ ] Define `@dataclass class TradeRecord` near top of file (after `TradeState`) with fields: `timestamp_entry: datetime`, `timestamp_exit: datetime`, `direction: str`, `entry_price: float`, `exit_price: float`, `tp_price: float`, `sl_price: float`, `gap_size: float`, `pnl_usd: float`, `exit_reason: str`, `h1_sweep_bars_ago: int`, `m15_confirmed: bool`, `kill_zone_active: bool`, `vol_regime_pct: float`, `contracts: int`
-  - [ ] Create `TradeLogger` class (placed AFTER `StatePersistence`, BEFORE `TradeStationClient`) with `_LOG_PATH = Path(...) / "logs/tier2_trade_log.csv"` and `_COLUMNS = ["timestamp_entry", "timestamp_exit", ...]` (PRD column order)
-  - [ ] Implement `TradeLogger.append_trade(self, record: TradeRecord) -> None` — opens CSV in append mode, checks `f.tell() == 0` to decide whether to write header, writes the row
-  - [ ] Error handling: wrap write in try/except, log warning on failure — never raise from this method
-  - [ ] Remove or stub out `Tier2StreamingTrader._log_trade()` — the new TradeLogger replaces it
+- [x] Task 1: Create `TradeRecord` dataclass and `TradeLogger` class (AC: #1, #2)
+  - [x] Define `@dataclass class TradeRecord` near top of file (after `TradeState`) with fields: `timestamp_entry: datetime`, `timestamp_exit: datetime`, `direction: str`, `entry_price: float`, `exit_price: float`, `tp_price: float`, `sl_price: float`, `gap_size: float`, `pnl_usd: float`, `exit_reason: str`, `h1_sweep_bars_ago: int`, `m15_confirmed: bool`, `kill_zone_active: bool`, `vol_regime_pct: float`, `contracts: int`
+  - [x] Create `TradeLogger` class (placed AFTER `StatePersistence`, BEFORE `TradeStationClient`) with `_LOG_PATH = Path(...) / "logs/tier2_trade_log.csv"` and `_COLUMNS = ["timestamp_entry", "timestamp_exit", ...]` (PRD column order)
+  - [x] Implement `TradeLogger.append_trade(self, record: TradeRecord) -> None` — opens CSV in append mode, checks `f.tell() == 0` to decide whether to write header, writes the row
+  - [x] Error handling: wrap write in try/except, log warning on failure — never raise from this method
+  - [x] Remove or stub out `Tier2StreamingTrader._log_trade()` — the new TradeLogger replaces it
 
-- [ ] Task 2: Extend `StatePersistence.save_state()` schema to include risk state (AC: #3, #6, #7)
-  - [ ] Extend the state dict written in `_enter_trade()` (line 1281) to include: `"daily_pnl": self._daily_pnl`, `"daily_halted": self._daily_halted`, `"last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None`
-  - [ ] After `_close_active_trade()` runs and `StatePersistence.clear_state()` is called, replace that clear with a save of risk-only state (no active_trade keys) so daily P&L survives a restart after a closed trade. Pattern: `StatePersistence.save_state({"daily_pnl": ..., "daily_halted": ..., "last_trading_date": ...})`
-  - [ ] Note: `StatePersistence` class itself needs NO changes — only the call sites change
+- [x] Task 2: Extend `StatePersistence.save_state()` schema to include risk state (AC: #3, #6, #7)
+  - [x] Extend the state dict written in `_enter_trade()` (line 1281) to include: `"daily_pnl": self._daily_pnl`, `"daily_halted": self._daily_halted`, `"last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None`
+  - [x] After `_close_active_trade()` runs and `StatePersistence.clear_state()` is called, replace that clear with a save of risk-only state (no active_trade keys) so daily P&L survives a restart after a closed trade. Pattern: `StatePersistence.save_state({"daily_pnl": ..., "daily_halted": ..., "last_trading_date": ...})`
+  - [x] Note: `StatePersistence` class itself needs NO changes — only the call sites change
 
-- [ ] Task 3: Implement crash recovery in `initialize()` (AC: #4, #5, #6)
-  - [ ] After `self._ts_client = TradeStationClient(...)` is created in `initialize()`, call `StatePersistence.load_state()`
-  - [ ] If state is None → no state, continue normally
-  - [ ] If state has `daily_pnl` / `daily_halted` / `last_trading_date` fields AND `last_trading_date` matches today's date → restore `self._daily_pnl`, `self._daily_halted`, `self._last_trading_date`
-  - [ ] If state has active-trade keys (`direction`, `entry_price`, `tp_price`, `sl_price`, `sim_entry_order_id`) → call `await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)`
-  - [ ] If reconcile returns ACTIVE → reconstruct `self.active_trade = ActiveTrade(...)` from state fields; log `"✅ Crash recovery: resumed active trade from persisted state"`
-  - [ ] If reconcile returns FLAT or PENDING-only → log `"⚠️ RECONCILIATION_WARNING: state shows active trade but broker has no position"`, call `StatePersistence.clear_state()`
-  - [ ] If `load_state()` returns state with no active-trade keys (risk-only state from post-close save) → restore risk state only, no reconciliation needed
-  - [ ] All reconciliation calls must be `await` — `initialize()` is already `async`
+- [x] Task 3: Implement crash recovery in `initialize()` (AC: #4, #5, #6)
+  - [x] After `self._ts_client = TradeStationClient(...)` is created in `initialize()`, call `StatePersistence.load_state()`
+  - [x] If state is None → no state, continue normally
+  - [x] If state has `daily_pnl` / `daily_halted` / `last_trading_date` fields AND `last_trading_date` matches today's date → restore `self._daily_pnl`, `self._daily_halted`, `self._last_trading_date`
+  - [x] If state has active-trade keys (`direction`, `entry_price`, `tp_price`, `sl_price`, `sim_entry_order_id`) → call `await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)`
+  - [x] If reconcile returns ACTIVE → reconstruct `self.active_trade = ActiveTrade(...)` from state fields; log `"✅ Crash recovery: resumed active trade from persisted state"`
+  - [x] If reconcile returns FLAT or PENDING-only → log `"⚠️ RECONCILIATION_WARNING: state shows active trade but broker has no position"`, call `StatePersistence.clear_state()`
+  - [x] If `load_state()` returns state with no active-trade keys (risk-only state from post-close save) → restore risk state only, no reconciliation needed
+  - [x] All reconciliation calls must be `await` — `initialize()` is already `async`
 
-- [ ] Task 4: Wire `TradeLogger` into `Tier2StreamingTrader` and update trade close path (AC: #1, #2)
-  - [ ] Add `self._trade_logger: TradeLogger = TradeLogger()` to `Tier2StreamingTrader.__init__()` (after `self._state_persistence`)
-  - [ ] Update `_close_active_trade()` to build a `TradeRecord` from the closed trade fields and call `self._trade_logger.append_trade(record)` instead of `self._log_trade(...)`
-  - [ ] The fields needed for `TradeRecord` that `_close_active_trade()` must supply:
-    - `timestamp_entry`: `t.entry_time`
-    - `timestamp_exit`: `bar.timestamp`
-    - `direction`: `t.direction`
-    - `entry_price`: `t.entry_price`
-    - `exit_price`: price (the closing price)
-    - `tp_price`: `t.tp_price`
-    - `sl_price`: `t.sl_price`
-    - `gap_size`: need to add `gap_size` field to `ActiveTrade` dataclass (set in `_enter_trade()`)
-    - `pnl_usd`: pnl
-    - `exit_reason`: reason (already a string)
-    - `h1_sweep_bars_ago`: add `h1_sweep_bars_ago` to `ActiveTrade` (set in `_enter_trade()` from `self._cached_sweep.bars_ago` if available)
-    - `m15_confirmed`: add `m15_confirmed` to `ActiveTrade` (= `self._m15_choch_active` at entry time)
-    - `kill_zone_active`: add `kill_zone_active` to `ActiveTrade` (= `kill_zone_filter(bar.timestamp)` at entry time)
-    - `vol_regime_pct`: add `vol_regime_pct` to `ActiveTrade` (= `self._last_vol_regime_pct` or 0.0)
-    - `contracts`: `self._contracts`
+- [x] Task 4: Wire `TradeLogger` into `Tier2StreamingTrader` and update trade close path (AC: #1, #2)
+  - [x] Add `self._trade_logger: TradeLogger = TradeLogger()` to `Tier2StreamingTrader.__init__()` (after `self._state_persistence`)
+  - [x] Update `_close_active_trade()` to build a `TradeRecord` from the closed trade fields and call `self._trade_logger.append_trade(record)` instead of `self._log_trade(...)`
+  - [x] All 15 TradeRecord fields populated; `kill_zone_filter` imported; `_last_vol_regime_pct` tracked in `_update_h1_structure()` using same percentile formula as `volatility_regime_filter`
 
-- [ ] Task 5: Write unit tests in `tests/unit/test_trade_logging_state_persistence.py` (AC: #8)
-  - [ ] `TestTradeLogger`:
-    - [ ] `test_append_trade_writes_correct_columns` — verify CSV row has all PRD fields in order
-    - [ ] `test_append_trade_header_written_once` — call twice, verify header appears exactly once
-    - [ ] `test_append_trade_no_raise_on_write_error` — mock `open()` to raise, verify no exception propagates
-  - [ ] `TestStatePersistence`:
-    - [ ] `test_save_load_roundtrip` — save dict with risk + trade fields, load it back, assert equal
-    - [ ] `test_clear_state_removes_file` — save then clear, verify load_state() returns None
-  - [ ] `TestCrashRecovery`:
-    - [ ] `test_crash_recovery_active_broker_position_restores_active_trade` — mock load_state with trade fields + reconcile_state returns ACTIVE → `trader.active_trade is not None`
-    - [ ] `test_crash_recovery_flat_broker_logs_warning_and_clears` — mock load_state with trade fields + reconcile_state returns FLAT → RECONCILIATION_WARNING logged, clear_state called
-    - [ ] `test_crash_recovery_no_state_skips_reconciliation` — mock load_state returns None → reconcile_state NOT called
-    - [ ] `test_circuit_breaker_survives_restart_same_day` — mock load_state with `daily_halted=True`, same today date → `_check_daily_reset_and_halt()` returns True
-    - [ ] `test_circuit_breaker_resets_on_new_day` — mock load_state with `daily_halted=True`, yesterday's date → halted flag resets to False
+- [x] Task 5: Write unit tests in `tests/unit/test_trade_logging_state_persistence.py` (AC: #8)
+  - [x] `TestTradeLogger`:
+    - [x] `test_append_trade_writes_correct_columns` — verify CSV row has all PRD fields in order
+    - [x] `test_append_trade_header_written_once` — call twice, verify header appears exactly once
+    - [x] `test_append_trade_header_not_written_to_nonempty_file` — pre-existing file, no second header
+    - [x] `test_append_trade_no_raise_on_write_error` — _LOG_PATH pointed at dir, no exception propagates
+  - [x] `TestStatePersistence`:
+    - [x] `test_save_load_roundtrip` — save dict with risk + trade fields, load it back, assert equal
+    - [x] `test_clear_state_removes_file` — save then clear, verify load_state() returns None
+  - [x] `TestCrashRecovery`:
+    - [x] `test_crash_recovery_active_broker_position_restores_active_trade` — broker ACTIVE → active_trade reconstructed
+    - [x] `test_crash_recovery_flat_broker_logs_warning_and_clears` — broker FLAT → RECONCILIATION_WARNING, clear_state called
+    - [x] `test_crash_recovery_no_state_skips_reconciliation` — None state → reconcile NOT called
+    - [x] `test_circuit_breaker_survives_restart_same_day` — ET same day → halted flag restored
+    - [x] `test_circuit_breaker_resets_on_new_day` — past date → halted flag NOT restored
+    - [x] `test_crash_recovery_risk_only_state_no_reconciliation` — risk-only state → pnl restored, no reconcile
 
-- [ ] Task 6: Run tests and verify no regressions (AC: #8)
-  - [ ] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_trade_logging_state_persistence.py -v`
-  - [ ] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_orchestrator_order_management.py -v` — 16 tests green
-  - [ ] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_strategy_core_detection.py tests/unit/test_config_loader.py -q` — no regressions
-  - [ ] `PYTHONPATH=. .venv/bin/python -c "import src.research.tier2_streaming_working"` — import OK
+- [x] Task 6: Run tests and verify no regressions (AC: #8)
+  - [x] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_trade_logging_state_persistence.py -v` → 12/12 pass
+  - [x] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_orchestrator_order_management.py -v` → 16/16 pass
+  - [x] `PYTHONPATH=. .venv/bin/python -m pytest tests/unit/test_strategy_core_detection.py tests/unit/test_config_loader.py -q` → 47 pass, 1 pre-existing failure (config_loader: strategy_config.yaml has 0.35, test expects 0.25 — unrelated to this story)
+  - [x] `PYTHONPATH=. .venv/bin/python -c "import src.research.tier2_streaming_working"` → import OK
 
 ## Dev Notes
 
@@ -521,9 +508,17 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Task 1: `TradeRecord` dataclass (15 fields, AC#1 order) and `TradeLogger` class created inside `tier2_streaming_working.py` (AR3 compliant). `TradeLogger.append_trade()` uses `f.tell() == 0` TOCTOU-safe header write (AC#2). `_log_trade()` method removed and replaced with one-line comment.
+- Task 2: `_enter_trade()` `save_state()` extended with `daily_pnl`, `daily_halted`, `last_trading_date`. `_close_active_trade()` now saves risk-only state instead of calling `clear_state()` (AC#7).
+- Task 3: `_recover_from_state()` async method added. Called from `initialize()` after `_ts_client` created. Restores daily risk if same ET calendar day. Calls `reconcile_state()` only if state has trade fields; ACTIVE → reconstruct `active_trade`; FLAT → RECONCILIATION_WARNING + clear (AC#4, AC#5). Risk-only state path skips reconciliation (AC#6).
+- Task 4: `self._trade_logger = TradeLogger()` added to `__init__`. `ActiveTrade` extended with 5 metadata fields (`gap_size`, `h1_sweep_bars_ago`, `m15_confirmed`, `kill_zone_active`, `vol_regime_pct`). `kill_zone_filter` added to strategy_core import. `_last_vol_regime_pct` tracked inline in `_update_h1_structure()` using same percentile formula as `volatility_regime_filter`. Exit reason mapped to PRD strings (TP/SL/TIME_STOP).
+- Task 5-6: 12 unit tests, all pass. 16 Story 4-1 regression tests pass. 1 pre-existing config_loader failure unrelated to this story (strategy_config.yaml has 0.35, test expects 0.25).
+
 ### File List
 
 - `src/research/tier2_streaming_working.py` (modified)
 - `tests/unit/test_trade_logging_state_persistence.py` (new)
 
 ### Change Log
+
+- 2026-05-25: Story 4-2 implemented — TradeLogger + crash recovery + risk state persistence. 12 new unit tests. (claude-sonnet-4-6)

@@ -42,6 +42,7 @@ from src.research.strategy_core import (
     check_exit,
     detect_fvg,
     detect_liquidity_sweep,
+    kill_zone_filter,
     make_entry_decision,
     resample_to_h1,
     volatility_regime_filter,
@@ -88,6 +89,29 @@ class TradeState:
     tp_order_id: Optional[str] = None
     sl_order_id: Optional[str] = None
     position_qty: int = 0
+
+
+@dataclass
+class TradeRecord:
+    """Completed trade record written to the trade log CSV (AR15, FR29).
+
+    Field order matches _COLUMNS in TradeLogger — do not reorder.
+    """
+    timestamp_entry: datetime
+    timestamp_exit: datetime
+    direction: str
+    entry_price: float
+    exit_price: float
+    tp_price: float
+    sl_price: float
+    gap_size: float
+    pnl_usd: float
+    exit_reason: str
+    h1_sweep_bars_ago: int
+    m15_confirmed: bool
+    kill_zone_active: bool
+    vol_regime_pct: float
+    contracts: int
 
 
 # TradeStation market data API
@@ -200,6 +224,50 @@ class StatePersistence:
             cls.STATE_PATH.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+class TradeLogger:
+    """Sole appender of the trade log CSV in PRD-mandated column order (AR15, FR29).
+
+    Single-writer pattern: only this class appends to tier2_trade_log.csv.
+    Header written only when file is empty (f.tell() == 0) — avoids TOCTOU race (AC#2).
+    """
+
+    _LOG_PATH = Path(__file__).parent.parent.parent / "logs" / "tier2_trade_log.csv"
+    _COLUMNS = [
+        "timestamp_entry", "timestamp_exit", "direction", "entry_price",
+        "exit_price", "tp_price", "sl_price", "gap_size", "pnl_usd",
+        "exit_reason", "h1_sweep_bars_ago", "m15_confirmed", "kill_zone_active",
+        "vol_regime_pct", "contracts",
+    ]
+
+    def append_trade(self, record: TradeRecord) -> None:
+        import csv as _csv
+        self._LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with self._LOG_PATH.open("a", newline="", encoding="utf-8") as f:
+                writer = _csv.DictWriter(f, fieldnames=self._COLUMNS)
+                if f.tell() == 0:
+                    writer.writeheader()
+                writer.writerow({
+                    "timestamp_entry":   record.timestamp_entry.isoformat(),
+                    "timestamp_exit":    record.timestamp_exit.isoformat(),
+                    "direction":         record.direction,
+                    "entry_price":       round(record.entry_price, 4),
+                    "exit_price":        round(record.exit_price, 4),
+                    "tp_price":          round(record.tp_price, 4),
+                    "sl_price":          round(record.sl_price, 4),
+                    "gap_size":          round(record.gap_size, 4),
+                    "pnl_usd":           round(record.pnl_usd, 2),
+                    "exit_reason":       record.exit_reason,
+                    "h1_sweep_bars_ago": record.h1_sweep_bars_ago,
+                    "m15_confirmed":     record.m15_confirmed,
+                    "kill_zone_active":  record.kill_zone_active,
+                    "vol_regime_pct":    round(record.vol_regime_pct, 4),
+                    "contracts":         record.contracts,
+                })
+        except Exception as e:
+            logger.warning("Trade log write failed: %s", e)
 
 
 class TradeStationClient:
@@ -591,6 +659,12 @@ class ActiveTrade:
     sim_sl_order_id: Optional[str] = None
     sim_entry_fill: Optional[float] = None
     pending_entry: bool = True  # True until limit order fills
+    # Trade-log metadata captured at entry (Story 4-2 — AC#1, AC#7)
+    gap_size: float = 0.0
+    h1_sweep_bars_ago: int = 0
+    m15_confirmed: bool = False
+    kill_zone_active: bool = False
+    vol_regime_pct: float = 0.0
 
 
 @dataclass
@@ -663,6 +737,7 @@ class Tier2StreamingTrader:
         self._h1_slope: float = 0.0
         self._h1_atr_history: list[float] = []   # rolling H1 ATR values for percentile gate
         self._vol_regime_high: bool = False       # True when current ATR > 75th pct of history
+        self._last_vol_regime_pct: float = 0.0   # ATR percentile at last H1 update (for trade log)
         self._current_day: Optional[datetime.date] = None
 
         # M15 CHoCH confirmation state (S25 architecture)
@@ -681,8 +756,9 @@ class Tier2StreamingTrader:
         # Per-bar timing (AR17)
         self._bar_processing_times: list[float] = []  # nanoseconds
 
-        # State persistence (AR14)
+        # State persistence and trade logging (AR14, AR15)
         self._state_persistence = StatePersistence()
+        self._trade_logger: TradeLogger = TradeLogger()
 
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
@@ -707,6 +783,59 @@ class Tier2StreamingTrader:
         self.client = httpx.AsyncClient(timeout=30.0)
         self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
         self.session_start_time = datetime.now()
+
+        # Crash recovery: load persisted state and reconcile with broker (FR38, NFR11, NFR12)
+        await self._recover_from_state()
+
+    async def _recover_from_state(self) -> None:
+        """Load persisted state and reconcile with broker. Called once in initialize() (AC#4–#6)."""
+        state = StatePersistence.load_state()
+        if state is None:
+            return
+
+        # Restore daily risk state if from the same calendar day (AC#6)
+        today = datetime.now(timezone.utc).astimezone(ET_TZ).date()
+        saved_date_str = state.get("last_trading_date")
+        if saved_date_str:
+            try:
+                saved_date = (
+                    datetime.fromisoformat(saved_date_str).date()
+                    if isinstance(saved_date_str, str)
+                    else saved_date_str
+                )
+                if saved_date == today:
+                    self._daily_pnl = float(state.get("daily_pnl", 0.0))
+                    self._daily_halted = bool(state.get("daily_halted", False))
+                    self._last_trading_date = today
+                    logger.info(
+                        "Restored daily risk state: pnl=%.2f halted=%s",
+                        self._daily_pnl, self._daily_halted,
+                    )
+            except (ValueError, TypeError) as e:
+                logger.warning("Could not parse last_trading_date from state: %s", e)
+
+        # Reconcile active trade if state has trade fields (AC#4, AC#5)
+        if state.get("direction") and state.get("entry_price"):
+            broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
+            if broker_state.status == "ACTIVE":
+                self.active_trade = ActiveTrade(
+                    bar_index=0,
+                    entry_time=datetime.fromisoformat(state["entry_time"]),
+                    direction=state["direction"],
+                    entry_price=float(state["entry_price"]),
+                    tp_price=float(state["tp_price"]),
+                    sl_price=float(state["sl_price"]),
+                    sim_entry_order_id=state.get("sim_entry_order_id"),
+                    sim_tp_order_id=state.get("sim_tp_order_id"),
+                    sim_sl_order_id=state.get("sim_sl_order_id"),
+                    pending_entry=False,
+                )
+                logger.info("✅ Crash recovery: resumed active trade from persisted state")
+            else:
+                logger.warning(
+                    "⚠️ RECONCILIATION_WARNING: state shows active trade but broker has no position"
+                )
+                StatePersistence.clear_state()
 
     async def start_streaming(self):
         self.running = True
@@ -848,6 +977,20 @@ class Tier2StreamingTrader:
         # Volatility regime via strategy_core (replaces inline ATR-history + pct_rank block)
         try:
             self._vol_regime_high = not volatility_regime_filter(h1_completed, self._strategy_config)
+            # Compute percentile for trade log (same formula as volatility_regime_filter)
+            _h = h1_completed["high"].to_numpy(dtype=float)
+            _lo = h1_completed["low"].to_numpy(dtype=float)
+            _c = h1_completed["close"].to_numpy(dtype=float)
+            _prev_c = np.roll(_c, 1).astype(float)
+            _prev_c[0] = np.nan
+            _tr = np.where(np.isnan(_prev_c), _h - _lo,
+                           np.maximum(_h - _lo, np.maximum(np.abs(_h - _prev_c), np.abs(_lo - _prev_c))))
+            _atr_s = pd.Series(_tr).rolling(20, min_periods=5).mean()
+            _hist = [v for v in _atr_s.dropna() if v > 0]
+            _hist = _hist[-self._strategy_config.vol_regime_lookback:]
+            if len(_hist) >= 20:
+                _cur = _hist[-1]
+                self._last_vol_regime_pct = sum(1 for v in _hist if v < _cur) / len(_hist)
         except ValueError:
             self._vol_regime_high = True  # safe default: block trading when vol filter errors
 
@@ -1021,44 +1164,33 @@ class Tier2StreamingTrader:
         ))
         self.active_trade = None
         self._active_entry_decision = None
-        StatePersistence.clear_state()  # no active trade to recover
+        # Persist risk state after close so daily circuit breaker survives restart (NFR12, AC#7)
+        StatePersistence.save_state({
+            "daily_pnl": self._daily_pnl,
+            "daily_halted": self._daily_halted,
+            "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
+        })
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._daily_pnl:.2f}")
-        self._log_trade(t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl)
+        _exit_reason_str = reason.upper() if reason in ("tp", "sl") else "TIME_STOP" if reason == "time" else reason.upper()
+        self._trade_logger.append_trade(TradeRecord(
+            timestamp_entry=t.entry_time,
+            timestamp_exit=bar.timestamp,
+            direction=t.direction,
+            entry_price=t.entry_price,
+            exit_price=price,
+            tp_price=t.tp_price,
+            sl_price=t.sl_price,
+            gap_size=t.gap_size,
+            pnl_usd=pnl,
+            exit_reason=_exit_reason_str,
+            h1_sweep_bars_ago=t.h1_sweep_bars_ago,
+            m15_confirmed=t.m15_confirmed,
+            kill_zone_active=t.kill_zone_active,
+            vol_regime_pct=t.vol_regime_pct,
+            contracts=self._contracts,
+        ))
 
-    def _log_trade(
-        self,
-        entry_time,
-        exit_time,
-        direction: str,
-        entry_price: float,
-        exit_price: float,
-        exit_reason: str,
-        bars_held: int,
-        pnl_usd: float,
-    ) -> None:
-        """Append completed trade to logs/tier2_trade_log.csv (includes instrument column)."""
-        import csv as _csv
-        log_path = Path(__file__).parent.parent.parent / "logs/tier2_trade_log.csv"
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        row = {
-            "timestamp":   str(exit_time),
-            "instrument":  self._symbol,
-            "direction":   direction,
-            "entry_price": round(entry_price, 4),
-            "exit_price":  round(exit_price, 4),
-            "exit_reason": exit_reason,
-            "bars_held":   bars_held,
-            "pnl_usd":     round(pnl_usd, 2),
-        }
-        write_header = not log_path.exists()
-        try:
-            with log_path.open("a", newline="") as _f:
-                _w = _csv.DictWriter(_f, fieldnames=list(row.keys()))
-                if write_header:
-                    _w.writeheader()
-                _w.writerow(row)
-        except Exception as _e:
-            logger.warning(f"Trade log write failed: {_e}")
+    # _log_trade() removed in Story 4-2 — replaced by TradeLogger.append_trade() (AC#1, AC#2)
 
     def _check_daily_reset_and_halt(self, bar_et: datetime) -> bool:
         """Reset daily P&L counter at the start of each new trading day.
@@ -1272,12 +1404,24 @@ class Tier2StreamingTrader:
         self._active_entry_decision = snapped_dec
 
         direction_str = "LONG" if entry_dec.direction == Direction.BULLISH else "SHORT"
+        # Capture entry-context metadata for trade log (AC#1, Story 4-2)
+        _gap_size = fvg.gap_size
+        _h1_sweep_bars_ago = self._cached_sweep.bars_ago if self._cached_sweep else 0
+        _m15_confirmed = self._m15_choch_active
+        _kill_zone_active = kill_zone_filter(bar.timestamp, self._strategy_config)
+        _vol_regime_pct = self._last_vol_regime_pct
+
         e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, SIM_ACCOUNT_ID)
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,
+            gap_size=_gap_size,
+            h1_sweep_bars_ago=_h1_sweep_bars_ago,
+            m15_confirmed=_m15_confirmed,
+            kill_zone_active=_kill_zone_active,
+            vol_regime_pct=_vol_regime_pct,
         )
-        # Persist active-trade state for crash recovery (AR14, AR15)
+        # Persist active-trade state + daily risk for crash recovery (AR14, AR15, NFR12)
         StatePersistence.save_state({
             "direction": direction_str,
             "entry_price": ent,
@@ -1287,6 +1431,9 @@ class Tier2StreamingTrader:
             "sim_entry_order_id": e_id,
             "sim_tp_order_id": tp_id,
             "sim_sl_order_id": sl_id,
+            "daily_pnl": self._daily_pnl,
+            "daily_halted": self._daily_halted,
+            "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
         })
         logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction_str} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
 

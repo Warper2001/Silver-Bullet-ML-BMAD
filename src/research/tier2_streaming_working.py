@@ -815,7 +815,12 @@ class Tier2StreamingTrader:
                 logger.warning("Could not parse last_trading_date from state: %s", e)
 
         # Reconcile active trade if state has trade fields (AC#4, AC#5)
-        if state.get("direction") and state.get("entry_price"):
+        # Patch: guard entry_price with `is not None` (0.0 is falsy); guard entry_time to avoid KeyError
+        if (
+            state.get("direction")
+            and state.get("entry_price") is not None
+            and state.get("entry_time")
+        ):
             broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
             if broker_state.status == "ACTIVE":
                 self.active_trade = ActiveTrade(
@@ -829,8 +834,25 @@ class Tier2StreamingTrader:
                     sim_tp_order_id=state.get("sim_tp_order_id"),
                     sim_sl_order_id=state.get("sim_sl_order_id"),
                     pending_entry=False,
+                    gap_size=float(state.get("gap_size", 0.0)),
+                    h1_sweep_bars_ago=int(state.get("h1_sweep_bars_ago", 0)),
+                    m15_confirmed=bool(state.get("m15_confirmed", False)),
+                    kill_zone_active=bool(state.get("kill_zone_active", False)),
+                    vol_regime_pct=float(state.get("vol_regime_pct", 0.0)),
                 )
                 logger.info("✅ Crash recovery: resumed active trade from persisted state")
+            elif broker_state.status == "PENDING":
+                # Orphaned pending limit order — cancel entry order and clear state
+                entry_id = state.get("sim_entry_order_id")
+                if entry_id:
+                    try:
+                        await self._ts_client.cancel_order(entry_id)
+                    except Exception as e:
+                        logger.warning("Could not cancel orphaned entry order %s: %s", entry_id, e)
+                logger.warning(
+                    "⚠️ RECONCILIATION_WARNING: state shows pending entry but broker order unconfirmed — cancelled and cleared"
+                )
+                StatePersistence.clear_state()
             else:
                 logger.warning(
                     "⚠️ RECONCILIATION_WARNING: state shows active trade but broker has no position"
@@ -1165,11 +1187,15 @@ class Tier2StreamingTrader:
         self.active_trade = None
         self._active_entry_decision = None
         # Persist risk state after close so daily circuit breaker survives restart (NFR12, AC#7)
-        StatePersistence.save_state({
-            "daily_pnl": self._daily_pnl,
-            "daily_halted": self._daily_halted,
-            "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
-        })
+        # Patch: save_state() wrapped so failure never prevents the trade record from being written
+        try:
+            StatePersistence.save_state({
+                "daily_pnl": self._daily_pnl,
+                "daily_halted": self._daily_halted,
+                "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
+            })
+        except Exception as e:
+            logger.warning("State persistence failed after trade close (trade record will still be written): %s", e)
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._daily_pnl:.2f}")
         _exit_reason_str = reason.upper() if reason in ("tp", "sl") else "TIME_STOP" if reason == "time" else reason.upper()
         self._trade_logger.append_trade(TradeRecord(
@@ -1431,6 +1457,11 @@ class Tier2StreamingTrader:
             "sim_entry_order_id": e_id,
             "sim_tp_order_id": tp_id,
             "sim_sl_order_id": sl_id,
+            "gap_size": _gap_size,
+            "h1_sweep_bars_ago": _h1_sweep_bars_ago,
+            "m15_confirmed": _m15_confirmed,
+            "kill_zone_active": _kill_zone_active,
+            "vol_regime_pct": _vol_regime_pct,
             "daily_pnl": self._daily_pnl,
             "daily_halted": self._daily_halted,
             "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,

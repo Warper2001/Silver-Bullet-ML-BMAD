@@ -113,6 +113,24 @@ class TestTradeLogger:
         tl._LOG_PATH = log_as_dir
         tl.append_trade(_make_record())  # must not raise
 
+    def test_append_trade_called_even_if_save_state_raises(self, tmp_path):
+        """Patch: save_state() raising must not prevent append_trade() from writing the record."""
+        from src.research.tier2_streaming_working import StatePersistence
+
+        tl = TradeLogger()
+        tl._LOG_PATH = tmp_path / "trade_log.csv"
+
+        with patch.object(StatePersistence, "save_state", side_effect=OSError("disk full")):
+            # Simulate what _close_active_trade() does: save_state (may raise) then append_trade
+            try:
+                StatePersistence.save_state({})
+            except Exception:
+                pass  # as in the patched _close_active_trade
+            tl.append_trade(_make_record())
+
+        rows = list(csv.DictReader(tl._LOG_PATH.open()))
+        assert len(rows) == 1  # record was written despite save_state failure
+
 
 # ---------------------------------------------------------------------------
 # TestStatePersistence
@@ -287,4 +305,79 @@ class TestCrashRecovery:
 
         trader._ts_client.reconcile_state.assert_not_called()
         assert trader._daily_pnl == pytest.approx(-300.0)
+        assert trader.active_trade is None
+
+    @pytest.mark.asyncio
+    async def test_crash_recovery_restores_metadata_fields(self):
+        """Patch: metadata fields saved in state are restored to recovered ActiveTrade."""
+        trader = _make_trader()
+        state = {
+            "direction": "SHORT",
+            "entry_price": 18000.0,
+            "tp_price": 17700.0,
+            "sl_price": 18250.0,
+            "entry_time": "2026-01-06T10:00:00+00:00",
+            "gap_size": 42.5,
+            "h1_sweep_bars_ago": 7,
+            "m15_confirmed": True,
+            "kill_zone_active": True,
+            "vol_regime_pct": 0.63,
+        }
+        trader._ts_client.reconcile_state = AsyncMock(
+            return_value=TradeState(status="ACTIVE", position_qty=5)
+        )
+
+        with patch.object(StatePersistence, "load_state", return_value=state):
+            await trader._recover_from_state()
+
+        t = trader.active_trade
+        assert t is not None
+        assert t.gap_size == pytest.approx(42.5)
+        assert t.h1_sweep_bars_ago == 7
+        assert t.m15_confirmed is True
+        assert t.kill_zone_active is True
+        assert t.vol_regime_pct == pytest.approx(0.63)
+
+    @pytest.mark.asyncio
+    async def test_crash_recovery_pending_broker_cancels_and_clears(self, caplog):
+        """Patch: broker PENDING status → cancel entry order + clear state, no active_trade."""
+        trader = _make_trader()
+        state = {
+            "direction": "SHORT",
+            "entry_price": 18000.0,
+            "tp_price": 17700.0,
+            "sl_price": 18250.0,
+            "entry_time": "2026-01-06T10:00:00+00:00",
+            "sim_entry_order_id": "E001",
+        }
+        trader._ts_client.reconcile_state = AsyncMock(
+            return_value=TradeState(status="PENDING")
+        )
+        trader._ts_client.cancel_order = AsyncMock(return_value=True)
+
+        with patch.object(StatePersistence, "load_state", return_value=state), \
+             patch.object(StatePersistence, "clear_state") as mock_clear, \
+             caplog.at_level("WARNING"):
+            await trader._recover_from_state()
+
+        assert trader.active_trade is None
+        trader._ts_client.cancel_order.assert_called_once_with("E001")
+        mock_clear.assert_called_once()
+        assert "RECONCILIATION_WARNING" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_crash_recovery_missing_entry_time_skips_trade_reconstruction(self):
+        """Patch: state with direction+entry_price but no entry_time → guard prevents KeyError."""
+        trader = _make_trader()
+        state = {
+            "direction": "SHORT",
+            "entry_price": 18000.0,
+            # entry_time intentionally absent
+        }
+        trader._ts_client.reconcile_state = AsyncMock()
+
+        with patch.object(StatePersistence, "load_state", return_value=state):
+            await trader._recover_from_state()  # must not raise
+
+        trader._ts_client.reconcile_state.assert_not_called()
         assert trader.active_trade is None

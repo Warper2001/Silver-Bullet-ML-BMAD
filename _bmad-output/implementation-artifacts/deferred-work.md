@@ -1,4 +1,10 @@
 
+## Deferred from: code review of 4-2-trade-logging-and-state-persistence-crash-recovery (2026-05-25)
+
+- **Vol percentile computation duplicated inline** — `volatility_regime_filter()` does not expose its internal `pct_rank`; `_last_vol_regime_pct` is populated by replicating the same formula inline in `_update_h1_structure()`. Risk: the two formulas could diverge on future changes. Needs refactor of `volatility_regime_filter` to return percentile, or extraction of a shared helper. [`tier2_streaming_working.py` _update_h1_structure]
+- **`exit_reason` mapping roundabout** — `_close_active_trade()` maps internal strings (`"tp"/"sl"/"time"`) back to PRD strings via hand-crafted ternary rather than using `ExitReason.value`. Values are correct; refactor would clean up the ExitReason→string→string pipeline. [`tier2_streaming_working.py:1174`]
+- **`kill_zone_filter` receives `datetime` not `pd.Timestamp`** — type annotation says `pd.Timestamp` but call site passes `datetime`; works at runtime via duck-typing. Pre-existing mismatch from Story 4-1. [`tier2_streaming_working.py` _enter_trade]
+
 ## Deferred from: code review of 4-1-bracket-order-submission-and-position-reconciliation (2026-05-25)
 
 - **`_ts_client=None` before `initialize()`** — same pre-existing pattern as `self.auth` and `self.client`; NoneType dereference if methods called before init. [`tier2_streaming_working.py` Tier2StreamingTrader.__init__]

@@ -1,6 +1,6 @@
 # Story 4.2: Trade Logging and StatePersistence with Crash Recovery
 
-Status: review
+Status: done
 
 ## Story
 
@@ -519,6 +519,18 @@ claude-sonnet-4-6
 - `src/research/tier2_streaming_working.py` (modified)
 - `tests/unit/test_trade_logging_state_persistence.py` (new)
 
+### Review Findings
+
+- [x] [Review][Patch] Metadata fields not persisted in state dict — `gap_size`, `h1_sweep_bars_ago`, `m15_confirmed`, `kill_zone_active`, `vol_regime_pct` absent from `save_state()` in `_enter_trade()` (line 1425). Recovered `ActiveTrade` gets defaults (0.0/False), corrupting those columns in the trade log CSV for any crash-recovered trade. Fix: add 5 fields to the dict at line 1425 and restore them from state in `_recover_from_state()`. [HIGH] [`src/research/tier2_streaming_working.py:1425,823`]
+- [x] [Review][Patch] `KeyError` on `state["entry_time"]` crashes `initialize()` — line 823 uses direct key access; if `entry_time` is missing from a partially-written state file the exception propagates through `_recover_from_state()` and kills startup. Fix: add `state.get("entry_time")` to guard condition so we never reach that line with a missing key. [HIGH] [`src/research/tier2_streaming_working.py:823`]
+- [x] [Review][Patch] PENDING broker status silently orphans live bracket orders — `else` branch at line 834 treats PENDING the same as FLAT (warn + clear_state), but the live limit order remains in the market uncancelled. Fix: explicit PENDING branch that cancels entry order via `_ts_client` before clearing state. [MEDIUM] [`src/research/tier2_streaming_working.py:834`]
+- [x] [Review][Patch] `save_state()` failure in `_close_active_trade()` silently loses trade record — if line 1168 `save_state()` raises, `append_trade()` at line 1175 is never reached and the trade is not logged. Fix: wrapped `save_state()` in try/except so `append_trade()` always executes. [MEDIUM] [`src/research/tier2_streaming_working.py:1168`]
+- [x] [Review][Patch] `entry_price=0.0` falsy check silently skips crash recovery — line 818 `if state.get("entry_price")` evaluates to False for 0.0; fixed to `state.get("entry_price") is not None`. [LOW] [`src/research/tier2_streaming_working.py:818`]
+- [x] [Review][Defer] Vol percentile computation duplicated inline [`src/research/tier2_streaming_working.py`] — deferred, pre-existing design constraint (`volatility_regime_filter` doesn't expose its internal pct_rank; inline replication was the only option without modifying that function's signature)
+- [x] [Review][Defer] `exit_reason` mapping roundabout (not using `ExitReason.value`) [`src/research/tier2_streaming_working.py:1174`] — deferred, pre-existing; produced values ("TP"/"SL"/"TIME_STOP") are correct PRD strings; refactor would require changing `_reason_map` and close-path callers
+- [x] [Review][Defer] `kill_zone_filter` receives `datetime` not `pd.Timestamp` [`src/research/tier2_streaming_working.py`] — deferred, pre-existing type annotation mismatch; works correctly at runtime
+
 ### Change Log
 
+- 2026-05-25: Code review completed — 5 patch findings, 3 deferred, 1 dismissed. Story moved back to in-progress. (claude-sonnet-4-6)
 - 2026-05-25: Story 4-2 implemented — TradeLogger + crash recovery + risk state persistence. 12 new unit tests. (claude-sonnet-4-6)

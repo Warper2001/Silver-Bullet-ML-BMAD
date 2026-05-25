@@ -16,11 +16,11 @@ import json
 import re
 import subprocess
 import sys
-from datetime import date, datetime, time, timezone
+from datetime import date, time
 from pathlib import Path
 
-HOLDOUT_DIR = Path("data/sealed_holdout")
-STRATEGY_CORE_PATH = Path("src/research/strategy_core.py")
+HOLDOUT_DIR = Path(__file__).parent / "data/sealed_holdout"
+STRATEGY_CORE_PATH = Path(__file__).parent / "src/research/strategy_core.py"
 
 
 def _config_to_json(config) -> str:
@@ -47,9 +47,12 @@ def _extract_holdout_dates(holdout_dir: Path) -> tuple[str, str]:
 
 def _git_head() -> str:
     """Return git HEAD commit SHA, or 'unknown' if not in a repo."""
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+        )
+    except (FileNotFoundError, OSError):
+        return "unknown"
     if result.returncode != 0:
         return "unknown"
     return result.stdout.strip()
@@ -57,9 +60,12 @@ def _git_head() -> str:
 
 def _git_is_dirty() -> bool:
     """Return True if the working tree has uncommitted changes."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain"], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, check=False
+        )
+    except (FileNotFoundError, OSError):
+        return True  # assume dirty when git is unavailable
     return bool(result.stdout.strip())
 
 
@@ -78,8 +84,7 @@ def _build_config(config_json: str | None):
     base = StrategyConfig()
     for k, v in defaults.items():
         if isinstance(getattr(base, k), time) and isinstance(v, str):
-            h, m = v.split(":")
-            defaults[k] = time(int(h), int(m))
+            defaults[k] = time.fromisoformat(v)
 
     return StrategyConfig(**defaults)
 
@@ -90,8 +95,13 @@ def seal(
     name: str,
     strategy_core_path: Path,
     holdout_dir: Path,
+    yaml_path: Path | None = None,
 ) -> int:
-    """Generate and write the pre-registration document. Returns 0 on success, 1 on error."""
+    """Generate and write the pre-registration document. Returns 0 on success, 1 on error.
+
+    When yaml_path is provided, hash_a is the SHA-256 of the YAML file bytes
+    (not the StrategyConfig JSON). This supports the weekly YAML-driven workflow.
+    """
     from protect_holdout import verify as verify_holdout
 
     # Pre-flight: holdout must be protected
@@ -103,11 +113,27 @@ def seal(
     if _git_is_dirty():
         print("WARNING: Working tree is dirty — sealed commit will not match HEAD")
 
-    # Compute hashes
-    config_json = _config_to_json(config)
-    hash_a = hashlib.sha256(config_json.encode()).hexdigest()
+    # Compute hash_a: YAML bytes when --config provided, else StrategyConfig JSON
+    if yaml_path is not None:
+        try:
+            yaml_bytes = yaml_path.read_bytes()
+        except FileNotFoundError:
+            print(f"ERROR: config YAML not found at {yaml_path}")
+            return 1
+        hash_a = hashlib.sha256(yaml_bytes).hexdigest()
+        hash_a_label = "(a) YAML config SHA-256"
+        hash_a_footnote = f"*Hash (a): SHA-256 of `{yaml_path}` file bytes.*"
+    else:
+        config_json = _config_to_json(config)
+        hash_a = hashlib.sha256(config_json.encode()).hexdigest()
+        hash_a_label = "(a) StrategyConfig SHA-256"
+        hash_a_footnote = "*Hash (a): canonical JSON of `dataclasses.asdict(config)` with `time` fields as `\"HH:MM\"`, sorted keys, no whitespace.*"
 
-    strategy_core_bytes = strategy_core_path.read_bytes()
+    try:
+        strategy_core_bytes = strategy_core_path.read_bytes()
+    except FileNotFoundError:
+        print(f"ERROR: strategy_core.py not found at {strategy_core_path}")
+        return 1
     hash_b = hashlib.sha256(strategy_core_bytes).hexdigest()
 
     git_head = _git_head()
@@ -176,11 +202,11 @@ def seal(
 
 | Hash | Value |
 |---|---|
-| (a) StrategyConfig SHA-256 | `{hash_a}` |
+| {hash_a_label} | `{hash_a}` |
 | (b) strategy_core.py SHA-256 | `{hash_b}` |
 | (c) Git HEAD commit | `{git_head}` |
 
-*Hash (a): canonical JSON of `dataclasses.asdict(config)` with `time` fields as `"HH:MM"`, sorted keys, no whitespace.*
+{hash_a_footnote}
 *Hash (b): SHA-256 of `{strategy_core_path}` source bytes.*
 *Hash (c): `git rev-parse HEAD` at seal time — commit this document to make it tamper-evident.*
 """
@@ -207,13 +233,24 @@ def main() -> None:
         default=None,
         help='JSON string of StrategyConfig field overrides (e.g. \'{"bearish_only": false}\')',
     )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to YAML config file; SHA-256 of YAML bytes used as hash_a instead of StrategyConfig JSON",
+    )
     args = parser.parse_args()
 
     output_path = args.output or Path(f"_bmad-output/preregistration_{args.name}.md")
-    config = _build_config(args.config_json)
+
+    if args.config is not None:
+        from src.research.config_loader import load_strategy_config
+        config = load_strategy_config(args.config)
+    else:
+        config = _build_config(args.config_json)
 
     sys.exit(
-        seal(config, output_path, args.name, STRATEGY_CORE_PATH, HOLDOUT_DIR)
+        seal(config, output_path, args.name, STRATEGY_CORE_PATH, HOLDOUT_DIR, yaml_path=args.config)
     )
 
 

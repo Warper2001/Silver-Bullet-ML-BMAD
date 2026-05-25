@@ -6,7 +6,7 @@ This backtester implements:
 - Triple-barrier exits (take-profit, stop-loss, time-based)
 - Transaction costs (commission + slippage)
 - Proper exit simulation using ExitSimulator
-- Trade recording using BacktestEngine
+- Trade recording using LegacyTradeLedger
 """
 
 import json
@@ -30,7 +30,7 @@ from src.detection.fvg_detection import (
     detect_bullish_fvg,
     detect_bearish_fvg,
 )
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 from src.research.exit_simulator import ExitSimulator
 
 # Configure logging
@@ -156,7 +156,7 @@ class Tier1FVGBacktester:
             use_tier1_filters: Whether to use TIER 1 filters (ATR + Volume)
         """
         self.use_tier1_filters = use_tier1_filters
-        self.engine = BacktestEngine(initial_capital=100000.0)
+        self.engine = LegacyTradeLedger(initial_capital=100000.0)
         self.exit_simulator = ExitSimulator(
             max_hold_bars=MAX_HOLD_BARS,
             sl_buffer_ticks=SLIPPAGE_TICKS,
@@ -271,7 +271,7 @@ class Tier1FVGBacktester:
         )
 
         # Manually adjust P&L for transaction costs
-        # (BacktestEngine.add_trade() doesn't include costs)
+        # (LegacyTradeLedger.add_trade() doesn't include costs)
         self.engine.trades[-1].pnl = pnl_final
 
         logger.debug(

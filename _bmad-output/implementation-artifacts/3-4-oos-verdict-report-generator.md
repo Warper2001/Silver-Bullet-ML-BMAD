@@ -1,6 +1,6 @@
 # Story 3.4: OOS Verdict Report Generator (oos_verdict.py)
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -281,7 +281,7 @@ Module-level imports for `checkpoint_or_abort`, `BacktestEngine`, and metric fun
 - AC #3: `_compute_metrics()` groups trades by `timestamp_exit.date()` for daily Sharpe; pre-accumulates equity with `itertools.accumulate` for `calc_max_drawdown_pct`.
 - AC #4/5: `_determine_verdict()` applies stopping rule first, then N-gate, then GO/NO-GO.
 - AC #6: Report written to `data/reports/oos_verdict_{YYYYMMDD}_{HHMMSS}.md` with prereg hashes, metrics table, threshold table, stopping rule status, and VERDICT line.
-15 new tests, 80 total tests pass, 0 regressions.
+18 new tests (added engine-exception log test, reports-dir auto-create test, and MaxDD initial-loss-streak test during adversarial review 2026-05-24); full regression suite passes, 0 regressions.
 
 ## File List
 
@@ -295,6 +295,20 @@ Module-level imports for `checkpoint_or_abort`, `BacktestEngine`, and metric fun
 | 2026-05-24 | Story created — Story 3.4, Epic 3 final story |
 | 2026-05-24 | Implementation complete — `oos_verdict.py` + 15 unit tests; 80/80 regression suite passes |
 
+### Review Findings
+
+- [x] [Review][Decision] MaxDD gate bypassed for initial losing streak — resolved: Option 2 applied. Added supplemental guard in `_compute_metrics`: if `min(equity) < 0 and max(equity) > 0`, also compute `abs(min) / max` and take the maximum. If equity never goes positive, MaxDD=1.0. New test `test_verdict_no_go_initial_loss_streak` verifies the fix. [`oos_verdict.py:_compute_metrics`]
+
+- [x] [Review][Patch] Vacuous `"GO" in log_text` assertion in `test_verdict_go` [tests/unit/test_oos_verdict.py:108] — fixed: changed to `assert "| GO:" in log_text` which does not match `"| NO-GO:"`.
+
+- [x] [Review][Patch] Test name mismatch: `test_verdict_stopping_rule_at_105_pf_1_04` uses PF≈0.94, not PF=1.04 [tests/unit/test_oos_verdict.py:197] — fixed: test now mocks `_compute_metrics` to return exactly `(1.04, 2.0, 0.05, 105)`, matching AC#5 spec precisely.
+
+- [x] [Review][Patch] `engine.run()` exception skips ACCESS_LOG entry — AR8 audit trail broken [oos_verdict.py:213] — fixed: `engine.run()` wrapped in try/except; on exception, appends `"ERROR: {e}"` to ACCESS_LOG before re-raising. New test `test_engine_run_exception_logs_access` verifies.
+
+- [x] [Review][Patch] `_append_access_log` inserts blank line before each row — breaks Markdown pipe table [oos_verdict.py:107] — fixed: `f.write("\n" + row)` → `f.write(row + "\n")`.
+
+- [x] [Review][Defer] `_parse_prereg` called twice — once by `checkpoint_or_abort` internally, once by `verdict()` [oos_verdict.py:209] — deferred, pre-existing design of `oos_checkpoint.py`; changing the public API is out of scope for this story.
+
 ## Status
 
-review
+done

@@ -72,12 +72,23 @@ So that no OOS run can proceed if strategy parameters have drifted, the source c
 
 ### Review Findings
 
+**Round 1 (commit e508c1a):**
+
 - [x] [Review][Decision] AC #5 test uses wrong-hash shortcut instead of spec-required bytes-replaced tmp fixture — resolved: added `test_fail_source_hash_tampered_file` (option A); original test retained
 - [x] [Review][Patch] `_git_is_dirty` flags untracked files as dirty, making check (c) permanently fail in any dev env with untracked files [oos_checkpoint.py:59–63] — fixed: changed to `git status --porcelain --untracked-files=no`
 - [x] [Review][Defer] `_config_to_json` only converts top-level `time` fields; nested dataclass `time` values would survive unconverted (latent — StrategyConfig has no nested dataclasses today) [oos_checkpoint.py:41–44] — deferred, pre-existing
 - [x] [Review][Defer] `_git_is_dirty` returns `False` (clean) when git exits non-zero (not-a-repo), silently passing check (c) [oos_checkpoint.py:59–63] — deferred, unrealistic scenario for a tool always run from repo root
 - [x] [Review][Defer] `protect_holdout.verify()` not mocked in tests; coupled to its date-cutoff logic (test CSV named `mnq_1min_holdout_20260301_plus.csv` satisfies cutoff accidentally) [tests/unit/test_oos_checkpoint.py] — deferred, tests pass correctly today
 - [x] [Review][Defer] Hash regex `[0-9a-f]+` accepts any-length hex; corrupted/truncated hash parses silently and fails check with "mismatch" instead of "malformed hash" [oos_checkpoint.py:33–37] — deferred, comparison still fails correctly
+
+**Round 2 (adversarial code review 2026-05-24):**
+
+- [x] [Review][Patch] `STRATEGY_CORE_PATH` and `HOLDOUT_DIR` were CWD-relative — silently wrong when script invoked from any directory other than repo root [oos_checkpoint.py:29–30] — fixed: `Path(__file__).parent / "..."` pattern
+- [x] [Review][Patch] `_git_head()` and `_git_is_dirty()` lacked `try/except (FileNotFoundError, OSError)` — raised unhandled exceptions when git binary absent (e.g. container build environments) [oos_checkpoint.py:52–72] — fixed
+- [x] [Review][Patch] `correct_source_hash()` test helper used CWD-relative `Path("src/research/strategy_core.py")` — test failed when pytest invoked from any directory other than repo root [tests/unit/test_oos_checkpoint.py:39–41] — fixed: `Path(__file__).parent.parent.parent / "src/research/strategy_core.py"`
+- [x] [Review][Patch] No test for malformed/partial prereg doc parse-abort path — `run_checks` early-exits on parse failure but this branch was uncovered [tests/unit/test_oos_checkpoint.py] — resolved: added `test_checkpoint_malformed_prereg_returns_parse_error`
+- [x] [Review][Patch] No test for `_git_head()` fallback when git absent — resolved: added `test_git_head_returns_unknown_when_git_absent`
+- [x] [Review][Patch] No test for `_git_is_dirty()` fallback when git absent — resolved: added `test_git_is_dirty_returns_false_when_git_absent`
 
 ## Dev Notes
 
@@ -329,7 +340,8 @@ claude-sonnet-4-6
 - `checkpoint()` prints all pass/fail messages to stdout and returns 0/1 (CLI use).
 - `checkpoint_or_abort()` prints only failure messages to stderr and raises `SystemExit(1)` on failure; returns `None` on success (library API for Story 3.4 per AR8).
 - Smoke test result: checks (a) config hash PASS, (b) source hash PASS, (c) clean tree FAILED (expected — working tree dirty with new uncommitted files), (d) HEAD match PASS (HEAD unchanged since no commit was made while sealing), (e) holdout PASS. All message formats correctly produced.
-- 9/9 unit tests pass; full regression 64/64 pass (no regressions).
+- Round 2 adversarial review (2026-05-24): CWD-relative path bug fixed; git error handling hardened; 3 new tests added (malformed prereg, git-absent helpers).
+- 13/13 unit tests pass; full regression suite passes (no regressions).
 
 ### File List
 

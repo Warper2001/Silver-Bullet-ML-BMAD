@@ -9,9 +9,11 @@ authoritative P&L record and handles the time-stop (cancel bracket + flat close)
 """
 
 import asyncio
+import json
 import logging
 import os
 import sys
+import time as _time_mod
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -27,42 +29,45 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
+import src.research.strategy_core as strategy_core
+from src.research.strategy_core import (
+    Direction,
+    EntryDecision,
+    ExitDecision,
+    ExitReason,
+    FVGSignal,
+    StrategyConfig,
+    SweepSignal,
+    calc_atr,
+    check_exit,
+    detect_fvg,
+    detect_liquidity_sweep,
+    make_entry_decision,
+    resample_to_h1,
+    volatility_regime_filter,
+)
 
 # Configuration (OPTIMIZED TIER 2)
 TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25"  # S25 pre-reg SHA 69972c3
-SL_MULTIPLIER = 5.0
-TP_MULTIPLIER = 6.0
-ENTRY_PCT = 0.5  # Midpoint entry
-ATR_THRESHOLD = 0.5
-MAX_GAP_DOLLARS = 60.0
-MAX_HOLD_BARS = 60     # Active trade time-stop from fill — grid search optimum (2025 full year)
-MAX_PENDING_BARS = 240  # Max bars to wait for limit entry fill — grid search optimum (2025 full year)
-CONTRACTS_PER_TRADE = 5
-MAX_DAILY_LOSS = -750.0   # halt if intraday realized P&L drops below this
 
-VOL_REGIME_LOOKBACK  = 120   # H1 bars of ATR history for percentile (~5 trading days)
-VOL_REGIME_THRESHOLD = 0.75  # block signals when ATR percentile rank > 75th pct
-MIN_GAP_ATR_RATIO    = 0.25  # FVG gap must be ≥ 25% of H1 ATR (S25: S21 DOE peak, g0.25)
+# Strategy parameters live in StrategyConfig (strategy_core.py) — the single source
+# of truth shared by live trader and backtest engine.  Do not add duplicates here.
+# Default values: SL 5.0×, TP 6.0×, entry 50%, gap≥25% ATR, vol-regime 75th pct,
+# max_hold 60 bars, max_pending 240 bars, 5 contracts, daily loss limit −$750.
 
-# MNQ Specifications
-MNQ_POINT_VALUE = 20.0          # used for dollar-bar notional computation
-MNQ_DOLLAR_VALUE = 2.0          # $2 per index point — P&L scaling and gap-size dollar filter
-MNQ_TICK_SIZE = 0.25            # minimum price increment — all order prices must be multiples of this
-
-# Transaction Costs
-COMMISSION_PER_CONTRACT = 0.40
-TRANSACTION_COST = COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2  # $0.80/roundtrip
-
-# ML Filter
+# ML Filter model path (infrastructure — not a strategy parameter)
 ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta_labeling_model.pkl"
-ML_THRESHOLD = 0.0   # Filter disabled — full-year backtest showed 9% pass rate with no PF improvement (2026-05-04)
+
+# Per-instrument specifications (point value, tick size, default contract count)
+SYMBOL_SPECS: dict[str, dict] = {
+    "MNQM26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},
+    "MESM26": {"point_value": 5.0,  "tick_size": 0.25, "contracts": 2},
+    "M2KM26": {"point_value": 5.0,  "tick_size": 0.10, "contracts": 2},
+}
 
 # TradeStation market data API
-SYMBOL = "MNQM26"
 BAR_INTERVAL = "1"
 BAR_UNIT = "Minute"
-BARS_BASE_URL = (f"https://api.tradestation.com/v3/marketdata/barcharts/{SYMBOL}"
-                 f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}")
 HISTORY_HOURS = 48  # Enough history for H1 swing detection
 POLL_INTERVAL_SECONDS = 60
 
@@ -71,6 +76,92 @@ SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
 
 ET_TZ = pytz.timezone('US/Eastern')
+_NY_TZ = pytz.timezone('America/New_York')
+
+# Rolling buffer cap — 125 H1 bars × 60 min covers vol_regime_lookback=120 H1 bars (AR16).
+_BUFFER_CAP: int = 7500
+
+
+def _dollar_bars_to_df(bars: "list[DollarBar]") -> pd.DataFrame:
+    """Convert a bounded list of DollarBars to the canonical AR9 DataFrame.
+
+    Timezone is already UTC on DollarBar.timestamp; converts to America/New_York
+    at this ingest boundary (AR19 — single conversion, never inside strategy_core).
+    """
+    rows = {
+        "timestamp": pd.to_datetime([b.timestamp for b in bars], utc=True),
+        "open": [b.open for b in bars],
+        "high": [b.high for b in bars],
+        "low": [b.low for b in bars],
+        "close": [b.close for b in bars],
+        "volume": [b.volume for b in bars],
+    }
+    df = pd.DataFrame(rows)
+    df["timestamp"] = df["timestamp"].dt.tz_convert("America/New_York")
+    df = df.set_index("timestamp")
+    df.index.name = "timestamp"
+    df[["open", "high", "low", "close"]] = df[["open", "high", "low", "close"]].astype("float64")
+    df["volume"] = df["volume"].astype("int64")
+    return df.sort_index()
+
+
+def _build_strategy_config() -> StrategyConfig:
+    """Load StrategyConfig from YAML if available; fall back to dataclass defaults.
+
+    Resolution order:
+    1. STRATEGY_CONFIG_PATH env var (explicit override)
+    2. strategy_config.yaml at repo root (default YAML)
+    3. StrategyConfig() dataclass defaults
+    """
+    from src.research.config_loader import load_strategy_config
+
+    yaml_path_env = os.environ.get("STRATEGY_CONFIG_PATH")
+    if yaml_path_env:
+        path = Path(yaml_path_env)
+        if path.exists():
+            logger.info(f"Loading strategy config from env STRATEGY_CONFIG_PATH: {path}")
+            return load_strategy_config(path)
+        logger.warning(f"STRATEGY_CONFIG_PATH={yaml_path_env!r} not found; falling through")
+
+    default_yaml = Path(__file__).parent.parent.parent / "strategy_config.yaml"
+    if default_yaml.exists():
+        logger.info(f"Loading strategy config from {default_yaml}")
+        return load_strategy_config(default_yaml)
+
+    logger.info("Using StrategyConfig() dataclass defaults")
+    return StrategyConfig()
+
+
+class StatePersistence:
+    """Atomic JSON state file writer/reader for crash-safe active-trade recovery (AR14, AR15).
+
+    Writes to a .tmp file then ``os.replace()`` atomically to avoid partial writes.
+    Only this class reads/writes the state file paths (AR15).
+    """
+
+    _LOG_DIR = Path(__file__).parent.parent.parent / "logs"
+    STATE_PATH = _LOG_DIR / "active_trade_state.json"
+    TMP_PATH = _LOG_DIR / "active_trade_state.tmp"
+
+    @classmethod
+    def save_state(cls, state: dict) -> None:
+        cls._LOG_DIR.mkdir(parents=True, exist_ok=True)
+        cls.TMP_PATH.write_text(json.dumps(state, default=str), encoding="utf-8")
+        os.replace(cls.TMP_PATH, cls.STATE_PATH)
+
+    @classmethod
+    def load_state(cls) -> "dict | None":
+        try:
+            return json.loads(cls.STATE_PATH.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
+    @classmethod
+    def clear_state(cls) -> None:
+        try:
+            cls.STATE_PATH.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _parse_blocked_months(raw: str) -> frozenset:
@@ -87,12 +178,10 @@ def _parse_blocked_months(raw: str) -> frozenset:
     return frozenset(months)
 
 
-# Direction + seasonality filters (Path 1 — 2026-05-04)
-# BEARISH_ONLY: full-year 2025 backtest shows bearish PF 1.43 vs bullish PF 1.06;
-#               bearish-only improves daily P&L and reduces max drawdown.
-BEARISH_ONLY: bool = True
-# BLOCKED_MONTHS: months where edge is statistically zero (Aug-Oct bearish: $0.50/trade avg).
-#                 Default empty — activate with TIER2_BLOCKED_MONTHS=8,9,10.
+# Seasonality filter: months where edge is statistically zero (Aug-Oct bearish: $0.50/trade avg).
+# Default empty — activate with TIER2_BLOCKED_MONTHS=8,9,10 env var.
+# Note: bearish_only is a StrategyConfig field (default True); direction logic reads
+# self._strategy_config.bearish_only — do not add a duplicate module-level constant here.
 BLOCKED_MONTHS: frozenset = _parse_blocked_months(os.environ.get("TIER2_BLOCKED_MONTHS", ""))
 
 # Setup logging
@@ -119,7 +208,7 @@ class MetaLabelingFilter:
         'h1_trend_slope', 'atr', 'session_displacement', 'session_volume_ratio',
     ]
 
-    def __init__(self, model_path: Path, threshold: float = ML_THRESHOLD):
+    def __init__(self, model_path: Path, threshold: float = 0.0):  # 0.0 = disabled; matches StrategyConfig.ml_threshold
         self.threshold = threshold
         self.model = None
         if model_path.exists():
@@ -274,7 +363,19 @@ class CompletedTrade:
 
 
 class Tier2StreamingTrader:
-    def __init__(self):
+    def __init__(self, symbol: str = "MNQM26"):
+        spec = SYMBOL_SPECS.get(symbol)
+        if spec is None:
+            raise ValueError(f"Unknown symbol: {symbol!r}. Valid symbols: {list(SYMBOL_SPECS)}")
+        self._symbol: str = symbol
+        self._point_value: float = spec["point_value"]
+        self._tick_size: float = spec["tick_size"]
+        self._contracts: int = spec["contracts"]
+        self._bars_base_url: str = (
+            f"https://api.tradestation.com/v3/marketdata/barcharts/{symbol}"
+            f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}"
+        )
+
         self.running = False
         self.auth = None
         self.client = None
@@ -285,12 +386,15 @@ class Tier2StreamingTrader:
         self._is_backfill: bool = True
         self.session_start_time: Optional[datetime] = None
 
+        # Strategy config — must be created before any logging that references its fields
+        self._strategy_config: StrategyConfig = _build_strategy_config()
+
         # ML Filter
         self.ml_filter = MetaLabelingFilter(ML_MODEL_PATH)
         self.lr_filter  = LRRegimeFilter()
 
         # Log active signal filters
-        logger.info(f"Signal filters — BEARISH_ONLY={BEARISH_ONLY}, "
+        logger.info(f"Signal filters — BEARISH_ONLY={self._strategy_config.bearish_only}, "
                     f"BLOCKED_MONTHS={sorted(BLOCKED_MONTHS) if BLOCKED_MONTHS else 'none'}")
 
         # H1 sweep state — flags persist until 6-hour expiry window lapses
@@ -326,16 +430,27 @@ class Tier2StreamingTrader:
         self._daily_halted: bool = False
         self._last_trading_date: Optional[datetime.date] = None
 
+        # strategy_core integration (Story 1.5)
+        self._cached_sweep: Optional[SweepSignal] = None        # most recent sweep from detect_liquidity_sweep
+        self._active_entry_decision: Optional[EntryDecision] = None  # EntryDecision for active trade (check_exit)
+
+        # Per-bar timing (AR17)
+        self._bar_processing_times: list[float] = []  # nanoseconds
+
+        # State persistence (AR14)
+        self._state_persistence = StatePersistence()
+
     async def initialize(self):
         logger.info("=" * 70)
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
         logger.info("=" * 70)
+        cfg = self._strategy_config
         logger.info(f"Configuration: {TIER2_CONFIG}")
-        logger.info(f"Symbol: {SYMBOL}")
-        logger.info(f"Max hold: {MAX_HOLD_BARS} bars | SL/TP mult: {SL_MULTIPLIER}x")
-        logger.info(f"Entry Level: {ENTRY_PCT*100}% (Mean Threshold)")
-        logger.info(f"M15 CHoCH: REQUIRED (S25) | MIN_GAP_ATR_RATIO={MIN_GAP_ATR_RATIO}")
-        logger.info(f"ML Filter: {'ACTIVE' if self.ml_filter.model else 'PASS-THROUGH'} | threshold={ML_THRESHOLD}")
+        logger.info(f"Symbol: {self._symbol} | point_value={self._point_value} tick={self._tick_size} contracts={self._contracts}")
+        logger.info(f"Max hold: {cfg.max_hold_bars} bars | SL/TP mult: {cfg.sl_multiplier}x")
+        logger.info(f"Entry Level: {cfg.entry_pct * 100}% (Mean Threshold)")
+        logger.info(f"M15 CHoCH: REQUIRED (S25) | MIN_GAP_ATR_RATIO={cfg.min_gap_atr_ratio}")
+        logger.info(f"ML Filter: {'ACTIVE' if self.ml_filter.model else 'PASS-THROUGH'} | threshold={cfg.ml_threshold}")
         logger.info("=" * 70)
 
         self.auth = TradeStationAuthV3.from_file('.access_token')
@@ -379,7 +494,7 @@ class Tier2StreamingTrader:
             token = await self.auth.authenticate()
             headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
             since = self._last_processed_timestamp or (datetime.now(timezone.utc) - timedelta(hours=HISTORY_HOURS))
-            url = f"{BARS_BASE_URL}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
             response = await self.client.get(url, headers=headers)
             if response.status_code != 200: return
@@ -393,6 +508,9 @@ class Tier2StreamingTrader:
                     not self._last_processed_timestamp or bar.timestamp > self._last_processed_timestamp
                 ):
                     self.dollar_bars.append(bar)
+                    # Bound the buffer to prevent unbounded memory growth (AR16)
+                    if len(self.dollar_bars) > _BUFFER_CAP:
+                        del self.dollar_bars[:-_BUFFER_CAP]
                     self._last_processed_timestamp = bar.timestamp
                     new_bars.append(bar)
 
@@ -403,21 +521,24 @@ class Tier2StreamingTrader:
                             # Day closed, record range for ADR
                             self._daily_ranges.append(self._session_high - self._session_low)
                             if len(self._daily_ranges) > 20: self._daily_ranges.pop(0)
-                        
+
                         self._current_day = bar_et.date()
                         self._session_open_price = np.nan
                         self._session_high, self._session_low = bar.high, bar.low
                     else:
                         self._session_high = max(self._session_high, bar.high)
                         self._session_low = min(self._session_low, bar.low)
-                    
+
                     if np.isnan(self._session_open_price) and bar_et.hour >= 6:
                         self._session_open_price = bar.open
 
+                    # Per-bar timing instrumentation (AR17)
+                    _t0 = _time_mod.perf_counter_ns()
                     self._update_h1_structure()
                     self._update_m15_choch()
                     await self._advance_active_trade(bar)
                     await self._detect_and_enter(bar, is_backfill=self._is_backfill)
+                    self._bar_processing_times.append(_time_mod.perf_counter_ns() - _t0)
 
             if self._is_backfill and new_bars:
                 self._is_backfill = False
@@ -431,7 +552,7 @@ class Tier2StreamingTrader:
             low_val = float(d["Low"])
             volume = int(d.get("TotalVolume", 0))
             # Calculate a realistic notional value to pass Pydantic validation
-            notional = max(((high_val + low_val) / 2) * volume * MNQ_POINT_VALUE, 0.01)
+            notional = max(((high_val + low_val) / 2) * volume * strategy_core.MNQ_NOTIONAL_MULTIPLIER, 0.01)
 
             return DollarBar(
                 timestamp=datetime.fromisoformat(d["TimeStamp"].replace('Z', '+00:00')),
@@ -444,100 +565,78 @@ class Tier2StreamingTrader:
             return None
 
     def _update_h1_structure(self):
-        """Resample 1m bars to H1 and detect liquidity sweeps in the last completed H1 bar."""
-        if not self.dollar_bars: return
+        """Resample 1m bars to H1; update H1 ATR, vol regime, and sweep state via strategy_core.
 
-        # Cap to last 3000 1m bars (~50 H1 bars) — swing detection only needs recent history.
-        # Without the cap, DataFrame construction is O(n) on all accumulated bars, making the
-        # full-year backtest O(n²) overall.
-        recent_bars = self.dollar_bars[-3000:]
-        df = pd.DataFrame([vars(b) for b in recent_bars])
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        h1 = df.set_index('timestamp').resample('1h').agg({
-            'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'
-        }).dropna().reset_index()
+        Replaces all inline swing/sweep/ATR logic with pure strategy_core calls (Story 1.5).
+        Buffer is bounded by _BUFFER_CAP (7500 M1 bars ≈ 125 H1 bars) — O(window) per bar.
+        """
+        if len(self.dollar_bars) < 60:
+            return
 
-        # Need at least 6 completed H1 bars plus the currently forming bar
-        if len(h1) < 7: return
+        # Build canonical AR9 DataFrame from the bounded buffer (tz conversion here only, AR19)
+        df = _dollar_bars_to_df(self.dollar_bars)
 
-        # Swing detection on completed bars only (exclude the forming h1.iloc[-1])
-        completed = h1.iloc[:-1].reset_index(drop=True)
+        # Resample to H1 via strategy_core; exclude the still-forming bar
+        try:
+            h1_all = resample_to_h1(df)
+        except ValueError:
+            return
+        if len(h1_all) < 2:
+            return
+        h1_completed = h1_all.iloc[:-1]
 
-        # Calculate H1 ATR and Slope
-        tr = np.maximum(completed['high'] - completed['low'], 
-                        np.maximum(np.abs(completed['high'] - completed['close'].shift(1)), 
-                                  np.abs(completed['low'] - completed['close'].shift(1))))
-        h1_atr_val = tr.rolling(20, min_periods=5).mean().iloc[-1]
-        self._h1_atr = float(h1_atr_val) if not np.isnan(h1_atr_val) else 0.0
+        # H1 ATR (used by detect_fvg's H1-ATR ratio gate and ML features)
+        self._h1_atr = calc_atr(h1_completed) if len(h1_completed) >= 2 else 0.0
 
-        if self._h1_atr > 0:
-            self._h1_atr_history.append(self._h1_atr)
-            if len(self._h1_atr_history) > VOL_REGIME_LOOKBACK:
-                self._h1_atr_history.pop(0)
-        if len(self._h1_atr_history) >= 20:
-            pct_rank = sum(1 for v in self._h1_atr_history if v < self._h1_atr) / len(self._h1_atr_history)
-            self._vol_regime_high = pct_rank > VOL_REGIME_THRESHOLD
-
-        if len(completed) >= 6 and self._h1_atr > 0:
-            closes = completed['close'].values[-6:]
-            slope = np.polyfit(range(6), closes, 1)[0]
+        # H1 slope for ML feature extraction (unchanged)
+        if len(h1_completed) >= 6 and self._h1_atr > 0:
+            closes = h1_completed["close"].values[-6:]
+            slope = float(np.polyfit(range(6), closes, 1)[0])
             self._h1_slope = slope / self._h1_atr
         else:
             self._h1_slope = 0.0
 
-        sh, sl = [], []
-        highs, lows = completed['high'].values, completed['low'].values
-        for i in range(2, len(completed) - 2):
-            if highs[i] > highs[i-1] and highs[i] > highs[i-2] and highs[i] > highs[i+1] and highs[i] > highs[i+2]:
-                sh.append((completed.loc[i, 'timestamp'], highs[i]))
-            if lows[i] < lows[i-1] and lows[i] < lows[i-2] and lows[i] < lows[i+1] and lows[i] < lows[i+2]:
-                sl.append((completed.loc[i, 'timestamp'], lows[i]))
+        # Volatility regime via strategy_core (replaces inline ATR-history + pct_rank block)
+        try:
+            self._vol_regime_high = not volatility_regime_filter(h1_completed, self._strategy_config)
+        except ValueError:
+            self._vol_regime_high = True  # safe default: block trading when vol filter errors
 
-        # Check the last COMPLETED H1 bar for sweeps (not the still-forming bar)
-        last = completed.iloc[-1]
-        # Use bar timestamp for expiry — wall-clock time breaks during backfill replay
-        now_utc = self.dollar_bars[-1].timestamp if self.dollar_bars else datetime.now(timezone.utc)
+        # Sweep detection via strategy_core pure scan (replaces stateful 6-hour expiry machine)
+        min_rows = self._strategy_config.h1_sweep_lookback + 5
+        prev_bearish_active = self.h1_bearish_sweep_active
+        if len(h1_completed) >= min_rows:
+            try:
+                self._cached_sweep = detect_liquidity_sweep(h1_completed, self._strategy_config)
+            except ValueError:
+                self._cached_sweep = None
+        else:
+            self._cached_sweep = None
 
-        new_bullish_sweep = False
-        new_bearish_sweep = False
+        new_bearish = (
+            self._cached_sweep is not None
+            and self._cached_sweep.direction == Direction.BEARISH
+        )
+        new_bullish = (
+            self._cached_sweep is not None
+            and self._cached_sweep.direction == Direction.BULLISH
+        )
 
-        last_h1_ts = last['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc)
-
-        for t, val in sh:
-            if t < last['timestamp'] - timedelta(hours=2):  # swing must be confirmed
-                if last['high'] > val and last['close'] < val:
-                    if last_h1_ts > self._last_bearish_sweep_h1_ts:
-                        new_bearish_sweep = True
-                        self._bearish_sweep_bar = len(self.dollar_bars)
-                        self._last_bearish_sweep_h1_ts = last_h1_ts
-                        logger.info(f"🎯 H1 BEARISH SWEEP detected at {val:.2f}")
-
-        for t, val in sl:
-            if t < last['timestamp'] - timedelta(hours=2):
-                if last['low'] < val and last['close'] > val:
-                    if last_h1_ts > self._last_bullish_sweep_h1_ts:
-                        new_bullish_sweep = True
-                        self._bullish_sweep_bar = len(self.dollar_bars)
-                        self._last_bullish_sweep_h1_ts = last_h1_ts
-                        logger.info(f"🎯 H1 BULLISH SWEEP detected at {val:.2f}")
-
-        # Sweep stays active for 6 H1 bars after detection; expires otherwise
-        sweep_window = timedelta(hours=6)
-        if new_bullish_sweep:
-            self.h1_bullish_sweep_active = True
-            self._bullish_sweep_expires = last_h1_ts + sweep_window
-        elif now_utc > self._bullish_sweep_expires:
-            self.h1_bullish_sweep_active = False
-
-        if new_bearish_sweep:
-            self.h1_bearish_sweep_active = True
-            self._bearish_sweep_expires = last_h1_ts + sweep_window
-            self._m15_choch_active = False   # new sweep resets CHoCH state
+        # Log sweep transitions; reset M15 CHoCH on bearish sweep change
+        if new_bearish and not prev_bearish_active:
+            logger.info(
+                f"🎯 H1 BEARISH SWEEP active (bars_ago={self._cached_sweep.bars_ago}, "
+                f"price={self._cached_sweep.sweep_price:.2f})"
+            )
+            self._m15_choch_active = False
             self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
-        elif now_utc > self._bearish_sweep_expires:
-            self.h1_bearish_sweep_active = False
-            self._m15_choch_active = False   # expired sweep resets CHoCH state
+        elif not new_bearish and prev_bearish_active:
+            logger.info("H1 bearish sweep expired (no sweep in last 6 H1 bars)")
+            self._m15_choch_active = False
             self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
+
+        self.h1_bearish_sweep_active = new_bearish
+        self.h1_bullish_sweep_active = new_bullish
 
     def _update_m15_choch(self):
         """
@@ -629,36 +728,30 @@ class Tier2StreamingTrader:
                 t.bars_held = 0  # reset so MAX_HOLD_BARS counts from fill, not signal
                 logger.info(f"✅ Limit entry FILLED at {t.entry_price:.2f}")
                 # Fall through to TP/SL check — might hit in the same bar
-            elif t.bars_held >= MAX_PENDING_BARS:
+            elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
                     if oid: await self._cancel_sim_order(oid)
                 self.active_trade = None
-                logger.info(f"⏱ Limit entry expired ({MAX_PENDING_BARS} bars, not filled)")
+                self._active_entry_decision = None
+                logger.info(f"⏱ Limit entry expired ({self._strategy_config.max_pending_bars} bars, not filled)")
                 return False
             else:
                 return False  # still waiting for fill
 
-        # ── Active trade: check TP / SL / time-stop ───────────────────────────
-        closed = False
-        if t.direction == "LONG":
-            if bar.low <= t.sl_price:
-                await self._close_active_trade(bar, t.sl_price, "sl")
-                closed = True
-            elif bar.high >= t.tp_price:
-                await self._close_active_trade(bar, t.tp_price, "tp")
-                closed = True
-        else:
-            if bar.high >= t.sl_price:
-                await self._close_active_trade(bar, t.sl_price, "sl")
-                closed = True
-            elif bar.low <= t.tp_price:
-                await self._close_active_trade(bar, t.tp_price, "tp")
-                closed = True
-        # Guard: re-check self.active_trade in case close was already called
-        if not closed and self.active_trade and t.bars_held >= MAX_HOLD_BARS:
-            await self._close_active_trade(bar, bar.close, "time")
-            closed = True
-        return closed
+        # ── Active trade: check TP / SL / time-stop via strategy_core.check_exit ──
+        if self._active_entry_decision is not None:
+            bar_series = pd.Series({"high": bar.high, "low": bar.low, "close": bar.close})
+            exit_dec = check_exit(bar_series, self._active_entry_decision, t.bars_held, self._strategy_config)
+            if exit_dec is not None:
+                _reason_map = {
+                    ExitReason.TP: "tp",
+                    ExitReason.SL: "sl",
+                    ExitReason.TIME_STOP: "time",
+                    ExitReason.MANUAL: "time",
+                }
+                await self._close_active_trade(bar, exit_dec.exit_price, _reason_map[exit_dec.reason])
+                return True
+        return False
 
     async def _close_active_trade(self, bar: DollarBar, price: float, reason: str):
         t = self.active_trade
@@ -671,13 +764,53 @@ class Tier2StreamingTrader:
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
             if other_id: await self._cancel_sim_order(other_id)
 
-        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE * CONTRACTS_PER_TRADE - TRANSACTION_COST
+        cfg = self._strategy_config
+        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * self._point_value * self._contracts - cfg.commission_per_roundtrip
         self._daily_pnl += pnl
         self.completed_trades.append(CompletedTrade(
             t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
         ))
         self.active_trade = None
+        self._active_entry_decision = None
+        StatePersistence.clear_state()  # no active trade to recover
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._daily_pnl:.2f}")
+        self._log_trade(t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl)
+
+    def _log_trade(
+        self,
+        entry_time,
+        exit_time,
+        direction: str,
+        entry_price: float,
+        exit_price: float,
+        exit_reason: str,
+        bars_held: int,
+        pnl_usd: float,
+    ) -> None:
+        """Append completed trade to logs/tier2_trade_log.csv (includes instrument column)."""
+        import csv as _csv
+        log_path = Path(__file__).parent.parent.parent / "logs/tier2_trade_log.csv"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        row = {
+            "timestamp":   str(exit_time),
+            "instrument":  self._symbol,
+            "direction":   direction,
+            "entry_price": round(entry_price, 4),
+            "exit_price":  round(exit_price, 4),
+            "exit_reason": exit_reason,
+            "bars_held":   bars_held,
+            "pnl_usd":     round(pnl_usd, 2),
+        }
+        write_header = not log_path.exists()
+        try:
+            with log_path.open("a", newline="") as _f:
+                _w = _csv.DictWriter(_f, fieldnames=list(row.keys()))
+                if write_header:
+                    _w.writeheader()
+                _w.writerow(row)
+        except Exception as _e:
+            logger.warning(f"Trade log write failed: {_e}")
+
     def _check_daily_reset_and_halt(self, bar_et: datetime) -> bool:
         """Reset daily P&L counter at the start of each new trading day.
         Returns True if trading is halted for today."""
@@ -690,9 +823,9 @@ class Tier2StreamingTrader:
             self._last_trading_date = today
         if self._daily_halted:
             return True
-        if self._daily_pnl <= MAX_DAILY_LOSS:
+        if self._daily_pnl <= self._strategy_config.max_daily_loss:
             logger.warning(
-                f"🛑 Daily loss limit hit: ${self._daily_pnl:.2f} ≤ ${MAX_DAILY_LOSS:.0f} — halting for today"
+                f"🛑 Daily loss limit hit: ${self._daily_pnl:.2f} ≤ ${self._strategy_config.max_daily_loss:.0f} — halting for today"
             )
             self._daily_halted = True
             return True
@@ -720,32 +853,46 @@ class Tier2StreamingTrader:
         if self._vol_regime_high:
             return
 
+        # FVG detection via strategy_core (replaces self._detect_fvg)
+        # Use the last 20 M1 bars — sufficient for the 3-bar FVG check + 20-bar ATR window.
+        m1_df = _dollar_bars_to_df(bars[-20:])
+        cached_sweep = self._cached_sweep
+
         # Direction gate: bearish-only by default (full-year 2025: bearish PF 1.43 vs bullish 1.06)
-        if not BEARISH_ONLY and self.h1_bullish_sweep_active:
-            fvg = self._detect_fvg(bars, bullish=True)
-            if fvg:
+        if not self._strategy_config.bearish_only and self.h1_bullish_sweep_active and cached_sweep is not None:
+            try:
+                fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
+            except ValueError:
+                fvg_signal = None
+            if fvg_signal and fvg_signal.direction == Direction.BULLISH:
+                fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
                 if not self.lr_filter.allows(bars, "bullish"):
                     return
-                features = self._extract_features(bars, bar, fvg, "bullish")
+                features = self._extract_features(bars, bar, fvg_dict, "bullish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+
         if self.h1_bearish_sweep_active and self._m15_choch_active:  # S25: M15 CHoCH required
-            fvg = self._detect_fvg(bars, bullish=False)
-            if fvg:
+            try:
+                fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
+            except ValueError:
+                fvg_signal = None
+            if fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None:
+                fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
                 if not self.lr_filter.allows(bars, "bearish"):
                     return
-                features = self._extract_features(bars, bar, fvg, "bearish")
+                features = self._extract_features(bars, bar, fvg_dict, "bearish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
@@ -831,34 +978,11 @@ class Tier2StreamingTrader:
         logger.debug(f"Full Features: {features}")
         return features
 
-    def _detect_fvg(self, bars: list, bullish: bool) -> Optional[dict]:
-        c1, c2, c3 = bars[-3], bars[-2], bars[-1]
-        if bullish:
-            # True FVG: candle 1 high strictly below candle 3 low (price void)
-            if not (c1.high < c3.low and c2.close > c2.open): return None
-            top, bot = c3.low, c1.high
-        else:
-            if not (c1.low > c3.high and c2.close < c2.open): return None
-            top, bot = c1.low, c3.high
-
-        if top <= bot: return None
-        gap_pts = top - bot
-        # ATR filter in raw points; dollar ceiling uses MNQ_DOLLAR_VALUE ($2/pt) to match backtest
-        if gap_pts < ATR_THRESHOLD * self._calculate_atr(bars): return None
-        if gap_pts * MNQ_DOLLAR_VALUE > MAX_GAP_DOLLARS: return None
-        if self._h1_atr > 0 and gap_pts < MIN_GAP_ATR_RATIO * self._h1_atr: return None
-
-        return {"direction": "bullish" if bullish else "bearish", "top": top, "bottom": bot}
-
     def _calculate_atr(self, bars: list) -> float:
-        """20-bar mean True Range in raw index points."""
-        if len(bars) < 20: return 10.0
-        sliced = bars[-20:]
-        tr = [
-            max(b.high - b.low, abs(b.high - sliced[i-1].close), abs(b.low - sliced[i-1].close))
-            for i, b in enumerate(sliced) if i > 0
-        ]
-        return sum(tr) / len(tr)
+        """Delegate to strategy_core.calc_atr after converting DollarBar list to DataFrame."""
+        if len(bars) < 20:
+            return 10.0
+        return calc_atr(_dollar_bars_to_df(bars[-20:]))
 
     async def _get_auth_headers(self):
         token = await self.auth.authenticate()
@@ -878,10 +1002,11 @@ class Tier2StreamingTrader:
             entry_action = "SELL"
             exit_action = "BUY"
 
+        qty = str(self._contracts)
         payload = {
             "AccountID": SIM_ACCOUNT_ID,
-            "Symbol": SYMBOL,
-            "Quantity": str(CONTRACTS_PER_TRADE),
+            "Symbol": self._symbol,
+            "Quantity": qty,
             "OrderType": "Limit",
             "LimitPrice": str(entry_price),
             "TradeAction": entry_action,
@@ -892,8 +1017,8 @@ class Tier2StreamingTrader:
                 "Orders": [
                     {
                         "AccountID": SIM_ACCOUNT_ID,
-                        "Symbol": SYMBOL,
-                        "Quantity": str(CONTRACTS_PER_TRADE),
+                        "Symbol": self._symbol,
+                        "Quantity": qty,
                         "OrderType": "Limit",
                         "TradeAction": exit_action,
                         "TimeInForce": {"Duration": "GTC"},
@@ -901,8 +1026,8 @@ class Tier2StreamingTrader:
                     },
                     {
                         "AccountID": SIM_ACCOUNT_ID,
-                        "Symbol": SYMBOL,
-                        "Quantity": str(CONTRACTS_PER_TRADE),
+                        "Symbol": self._symbol,
+                        "Quantity": qty,
                         "OrderType": "StopMarket",
                         "TradeAction": exit_action,
                         "TimeInForce": {"Duration": "GTC"},
@@ -949,8 +1074,8 @@ class Tier2StreamingTrader:
         close_action = "SELL" if direction == "LONG" else "BUY"
         payload = {
             "AccountID": SIM_ACCOUNT_ID,
-            "Symbol": SYMBOL,
-            "Quantity": str(CONTRACTS_PER_TRADE),
+            "Symbol": self._symbol,
+            "Quantity": str(self._contracts),
             "OrderType": "Market",
             "TradeAction": close_action,
             "TimeInForce": {"Duration": "DAY"},
@@ -968,36 +1093,90 @@ class Tier2StreamingTrader:
             logger.warning(f"⚠️ SIM close order exception: {e}")
             return None
 
-    @staticmethod
-    def _snap_tick(price: float) -> float:
-        """Round price to nearest MNQ tick (0.25). Avoids float artifacts."""
-        return round(round(price / MNQ_TICK_SIZE) * MNQ_TICK_SIZE, 10)
+    def _snap_tick(self, price: float) -> float:
+        """Round price to nearest instrument tick. Avoids float artifacts."""
+        return round(round(price / self._tick_size) * self._tick_size, 10)
 
-    async def _enter_trade(self, fvg: dict, bar: DollarBar, idx: int, is_backfill: bool):
+    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool):
+        """Resolve entry via strategy_core.make_entry_decision and arm the ActiveTrade.
+
+        ``fvg`` is now a ``FVGSignal`` from ``strategy_core.detect_fvg``.
+        Tick-snapping is applied to the prices before SIM order submission.
+        ``self._active_entry_decision`` stores the *snapped* EntryDecision for ``check_exit``.
+        """
         self._last_entry_bar = len(self.dollar_bars)
-        if is_backfill: return
+        if is_backfill:
+            return
 
-        direction = "LONG" if fvg["direction"] == "bullish" else "SHORT"
-        gap_size = fvg["top"] - fvg["bottom"]
-        if direction == "LONG":
-            ent = self._snap_tick(fvg["top"] - gap_size * ENTRY_PCT)
-            tp  = self._snap_tick(ent + gap_size * TP_MULTIPLIER)
-            sl  = self._snap_tick(ent - gap_size * SL_MULTIPLIER)
-        else:
-            ent = self._snap_tick(fvg["bottom"] + gap_size * ENTRY_PCT)
-            tp  = self._snap_tick(ent - gap_size * TP_MULTIPLIER)
-            sl  = self._snap_tick(ent + gap_size * SL_MULTIPLIER)
+        sweep = self._cached_sweep
+        if sweep is None:
+            return
 
-        e_id, tp_id, sl_id = await self._submit_bracket_order(direction, ent, tp, sl)
-        self.active_trade = ActiveTrade(idx, bar.timestamp, direction, ent, tp, sl, sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id)
-        logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
+        entry_dec = make_entry_decision(sweep, fvg, self._strategy_config)
+        if entry_dec is None:
+            return
+
+        # Snap prices to MNQ tick for SIM order submission
+        ent = self._snap_tick(entry_dec.entry_price)
+        tp = self._snap_tick(entry_dec.tp_price)
+        sl = self._snap_tick(entry_dec.sl_price)
+
+        # Rebuild EntryDecision with snapped prices — these are authoritative for check_exit
+        snapped_dec = EntryDecision(
+            direction=entry_dec.direction,
+            entry_price=ent,
+            sl_price=sl,
+            tp_price=tp,
+            contracts=entry_dec.contracts,
+        )
+        self._active_entry_decision = snapped_dec
+
+        direction_str = "LONG" if entry_dec.direction == Direction.BULLISH else "SHORT"
+        e_id, tp_id, sl_id = await self._submit_bracket_order(direction_str, ent, tp, sl)
+        self.active_trade = ActiveTrade(
+            idx, bar.timestamp, direction_str, ent, tp, sl,
+            sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,
+        )
+        # Persist active-trade state for crash recovery (AR14, AR15)
+        StatePersistence.save_state({
+            "direction": direction_str,
+            "entry_price": ent,
+            "tp_price": tp,
+            "sl_price": sl,
+            "entry_time": bar.timestamp.isoformat(),
+            "sim_entry_order_id": e_id,
+            "sim_tp_order_id": tp_id,
+            "sim_sl_order_id": sl_id,
+        })
+        logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction_str} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
 
     def _print_final_report(self):
         logger.info("Tier 2 Paper Trading Session Ended.")
+        if self.completed_trades:
+            logger.info(f"Completed trades this session: {len(self.completed_trades)}")
+        # Per-bar timing report (AR17)
+        if self._bar_processing_times:
+            n = len(self._bar_processing_times)
+            sorted_times = sorted(self._bar_processing_times)
+            p50 = sorted_times[n // 2] / 1_000
+            p95 = sorted_times[int(n * 0.95)] / 1_000
+            mx = sorted_times[-1] / 1_000
+            logger.info(
+                f"Per-bar processing latency ({n} bars): "
+                f"p50={p50:.1f}µs  p95={p95:.1f}µs  max={mx:.1f}µs"
+            )
 
 
 async def main():
-    trader = Tier2StreamingTrader()
+    import argparse as _argparse
+    parser = _argparse.ArgumentParser(description="Tier 2 FVG Paper Trader")
+    parser.add_argument(
+        "--symbol",
+        default=os.environ.get("SYMBOL", "MNQM26"),
+        help="Futures symbol to trade (default: MNQM26 or $SYMBOL env var)",
+    )
+    args = parser.parse_args()
+    trader = Tier2StreamingTrader(symbol=args.symbol)
     await trader.initialize()
     await trader.start_streaming()
 

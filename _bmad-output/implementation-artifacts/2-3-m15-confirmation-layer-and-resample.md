@@ -1,6 +1,6 @@
 # Story 2.3: M15 Confirmation Layer and Resample (15m Reframe)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -64,6 +64,14 @@ So that false entries on structurally misaligned 15m bars are filtered out and I
 
 - [x] Task 7 — Full test suite verification (AC #10)
   - [x] `.venv/bin/python -m pytest tests/unit/test_strategy_core_m15.py tests/integration/test_baseline_backtesting.py tests/integration/test_kill_zone_filter_integration.py tests/unit/test_strategy_core_killzone.py -q` — 52 passed, 0 failed
+
+### Review Findings
+
+- [x] [Review][Patch] `verify_m15_confirmed()` vacuous pass on empty trade list [`src/research/m15_conf_test.py:91`] — `for t in m15_trades` never executes when list is empty; returns `True` without verifying anything; add `if not m15_trades: return False`
+
+- [x] [Review][Defer] Look-ahead bias in M15 gate when BacktestEngine receives 1-min bars [`src/research/backtest_engine.py:830`] — `searchsorted(bar_ts)` on an M15 index includes the current incomplete M15 bar for any bar_ts that falls mid-period; the pre-computed M15 bar's `close` contains future data; only affects 1-min input, 15m input (used in this story) is correct — deferred, latent
+- [x] [Review][Defer] `m15_confirmed=True` for all trades when `m15_confirmation=False` [`src/research/backtest_engine.py:828`] — `m15_ok=True` by default; gate-disabled trades record `m15_confirmed=True`, making the field ambiguous vs. a gate-enabled confirmed trade in CSV output — deferred, pre-existing design
+- [x] [Review][Defer] No integration test exercises 1-min bar path with `m15_confirmation=True` [`tests/`] — look-ahead bias has zero test coverage; 15m bar tests mask the bug — deferred, scope gap
 
 ## Dev Notes
 

@@ -4,6 +4,7 @@ Pre-registration: _bmad-output/preregistration_s_bidir_15m.md
 SHA: 9a94d2e7e75f073a717337a198610c81641d060a
 """
 
+import math
 import os
 import tempfile
 from datetime import date
@@ -21,7 +22,7 @@ CSV_PATH = "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
 PRE_REG_SHA = "9a94d2e7e75f073a717337a198610c81641d060a"
 
 BASELINE = {"trades": 61, "pf": 1.179, "wr": 0.475, "sharpe": 1.373}
-COUNT_THRESHOLD = BASELINE["trades"] * 1.5  # 91.5 → need ≥ 92
+COUNT_THRESHOLD = math.ceil(BASELINE["trades"] * 1.5)  # 92 (pre-reg text said "≥ 91" but ceil(91.5)=92)
 
 
 def load_and_resample() -> pd.DataFrame:
@@ -93,7 +94,7 @@ def main() -> None:
     print("=== S-BIDIR-15m: Bidirectional FVG Power Recovery ===")
     print(f"Pre-registration SHA: {PRE_REG_SHA}")
     print(f"Bearish-only baseline: {BASELINE['trades']} trades | PF={BASELINE['pf']:.3f}")
-    print(f"Count threshold for H1: ≥ {COUNT_THRESHOLD:.0f} trades")
+    print(f"Count threshold for H1: ≥ {COUNT_THRESHOLD} trades")
 
     print("\nLoading and resampling 2025 1m → 15m...")
     bars_15m = load_and_resample()
@@ -128,7 +129,7 @@ def main() -> None:
     consistency = bear_pf_pass and bull_pf_pass
 
     print(f"\nConsistency criterion:")
-    print(f"  Count ≥ 1.5×: {'✓' if count_pass else '✗'} ({n} vs {COUNT_THRESHOLD:.0f})")
+    print(f"  Count ≥ 1.5×: {'✓' if count_pass else '✗'} ({n} vs {COUNT_THRESHOLD})")
     print(f"  Total PF > 1.0: {'✓' if pf_pass else '✗'} ({total_m['pf']:.3f})")
     print(f"  Bearish PF > 1.0: {'✓' if bear_pf_pass else '✗'} ({bear_m['pf']:.3f})")
     print(f"  Bullish PF > 1.0: {'✓' if bull_pf_pass else '✗'} ({bull_m['pf']:.3f})")
@@ -139,7 +140,7 @@ def main() -> None:
     else:
         fails = []
         if not count_pass:
-            fails.append(f"count {n} < {COUNT_THRESHOLD:.0f}")
+            fails.append(f"count {n} < {COUNT_THRESHOLD}")
         if not pf_pass:
             fails.append(f"PF {total_m['pf']:.3f} ≤ 1.0")
         if not consistency:
@@ -179,7 +180,7 @@ def main() -> None:
         "",
         "## Consistency Criterion",
         "",
-        f"- Count ≥ 1.5× baseline (≥ {COUNT_THRESHOLD:.0f}): {'✓' if count_pass else '✗'} ({n} trades, {count_ratio:.2f}×)",
+        f"- Count ≥ 1.5× baseline (≥ {COUNT_THRESHOLD}): {'✓' if count_pass else '✗'} ({n} trades, {count_ratio:.2f}×)",
         f"- Total PF > 1.0: {'✓' if pf_pass else '✗'} ({total_m['pf']:.3f})",
         f"- Bearish PF > 1.0: {'✓' if bear_pf_pass else '✗'} ({bear_m['pf']:.3f})",
         f"- Bullish PF > 1.0: {'✓' if bull_pf_pass else '✗'} ({bull_m['pf']:.3f})",

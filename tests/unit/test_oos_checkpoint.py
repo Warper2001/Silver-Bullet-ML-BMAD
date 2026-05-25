@@ -37,7 +37,9 @@ def correct_config_hash() -> str:
 
 
 def correct_source_hash() -> str:
-    return hashlib.sha256(Path("src/research/strategy_core.py").read_bytes()).hexdigest()
+    return hashlib.sha256(
+        (Path(__file__).parent.parent.parent / "src/research/strategy_core.py").read_bytes()
+    ).hexdigest()
 
 
 def make_prereg_doc(hash_a: str, hash_b: str, hash_c: str) -> str:
@@ -260,3 +262,131 @@ def test_parse_missing_hashes(tmp_path):
     assert result.get("hash_a") is None
     assert result.get("hash_b") is None
     assert result.get("hash_c") is None
+
+
+def test_checkpoint_malformed_prereg_returns_parse_error(tmp_path, capsys):
+    """Malformed prereg doc (missing hashes) → checkpoint() returns 1 with parse error message."""
+    doc_path = tmp_path / "prereg.md"
+    doc_path.write_text("# Pre-Registration: malformed\n\nNo integrity hashes table here.\n")
+    make_protected_csv(tmp_path)
+
+    from oos_checkpoint import checkpoint
+
+    with (
+        patch("oos_checkpoint._git_is_dirty", return_value=False),
+        patch("oos_checkpoint._git_head", return_value=SEALED_HEAD),
+    ):
+        rc = checkpoint(doc_path, Path("src/research/strategy_core.py"), tmp_path)
+
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "parse" in out.lower() or "Could not parse" in out
+
+
+def test_git_head_returns_unknown_when_git_absent():
+    """_git_head() returns 'unknown' rather than raising if git is not on PATH."""
+    from unittest.mock import patch
+    import subprocess
+
+    from oos_checkpoint import _git_head
+
+    with patch("subprocess.run", side_effect=FileNotFoundError("git not found")):
+        result = _git_head()
+
+    assert result == "unknown"
+
+
+def test_git_is_dirty_returns_true_when_git_absent():
+    """_git_is_dirty() returns True (assume dirty) when git is not on PATH — conservative safe default."""
+    from oos_checkpoint import _git_is_dirty
+
+    with patch("oos_checkpoint.subprocess") as mock_sub:
+        mock_sub.run.side_effect = FileNotFoundError("git not found")
+        result = _git_is_dirty()
+
+    assert result is True
+
+
+# ---------------------------------------------------------------------------
+# Story 8.5 — YAML hash verification tests
+# ---------------------------------------------------------------------------
+
+def make_yaml_prereg_doc(yaml_hash: str, hash_b: str, hash_c: str) -> str:
+    return f"""# Pre-Registration: test
+
+## Integrity Hashes
+
+| Hash | Value |
+|---|---|
+| (a) YAML config SHA-256 | `{yaml_hash}` |
+| (b) strategy_core.py SHA-256 | `{hash_b}` |
+| (c) Git HEAD commit | `{hash_c}` |
+"""
+
+
+class TestYamlHashVerification:
+    def test_run_checks_yaml_hash_passes_when_yaml_unchanged(self, tmp_path):
+        import re
+        from oos_checkpoint import run_checks
+
+        make_protected_csv(tmp_path)
+        yaml_path = tmp_path / "cfg.yaml"
+        yaml_path.write_text("sl_multiplier: 5.0\n")
+        yaml_hash = hashlib.sha256(yaml_path.read_bytes()).hexdigest()
+
+        prereg = tmp_path / "prereg.md"
+        prereg.write_text(make_yaml_prereg_doc(yaml_hash, correct_source_hash(), SEALED_HEAD))
+
+        with patch("oos_checkpoint._git_head", return_value=SEALED_HEAD), \
+             patch("oos_checkpoint._git_is_dirty", return_value=False):
+            results = run_checks(
+                prereg,
+                Path("src/research/strategy_core.py"),
+                tmp_path,
+                yaml_path=yaml_path,
+            )
+        config_result = next(r for r in results if r[0] == "config_hash")
+        assert config_result[1] is True, f"Expected PASS but got: {config_result[2]}"
+
+    def test_run_checks_yaml_hash_fails_when_yaml_modified(self, tmp_path):
+        from oos_checkpoint import run_checks
+
+        make_protected_csv(tmp_path)
+        yaml_path = tmp_path / "cfg.yaml"
+        yaml_path.write_text("sl_multiplier: 5.0\n")
+        original_hash = hashlib.sha256(yaml_path.read_bytes()).hexdigest()
+
+        prereg = tmp_path / "prereg.md"
+        prereg.write_text(make_yaml_prereg_doc(original_hash, correct_source_hash(), SEALED_HEAD))
+
+        # Modify YAML after sealing
+        yaml_path.write_text("sl_multiplier: 3.0\n")
+
+        with patch("oos_checkpoint._git_head", return_value=SEALED_HEAD), \
+             patch("oos_checkpoint._git_is_dirty", return_value=False):
+            results = run_checks(
+                prereg,
+                Path("src/research/strategy_core.py"),
+                tmp_path,
+                yaml_path=yaml_path,
+            )
+        config_result = next(r for r in results if r[0] == "config_hash")
+        assert config_result[1] is False, "Expected FAIL but check passed"
+
+    def test_hash_pattern_matches_yaml_config_label(self):
+        import re
+        from oos_checkpoint import HASH_PATTERNS
+
+        doc = "| (a) YAML config SHA-256 | `abcdef1234567890` |"
+        m = re.search(HASH_PATTERNS["hash_a"], doc)
+        assert m is not None, "Regex did not match YAML config label"
+        assert m.group(1) == "abcdef1234567890"
+
+    def test_hash_pattern_still_matches_legacy_label(self):
+        import re
+        from oos_checkpoint import HASH_PATTERNS
+
+        doc = "| (a) StrategyConfig SHA-256 | `abcdef1234567890` |"
+        m = re.search(HASH_PATTERNS["hash_a"], doc)
+        assert m is not None, "Regex no longer matches legacy StrategyConfig label"
+        assert m.group(1) == "abcdef1234567890"

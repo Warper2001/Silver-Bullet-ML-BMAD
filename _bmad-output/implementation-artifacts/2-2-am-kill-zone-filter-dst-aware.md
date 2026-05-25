@@ -1,6 +1,6 @@
 # Story 2.2: AM Kill Zone Filter (09:30–11:00 ET, DST-Aware) at 15m
 
-Status: review
+Status: done
 
 ## Story
 
@@ -50,6 +50,22 @@ so that I can determine whether restricting entries to 09:30–11:00 ET improves
 
 - [x] Task 7 — Full test suite verification (AC #7)
   - [x] `.venv/bin/python -m pytest tests/ -x -q` — 46 passed (no regressions)
+
+### Review Findings
+
+- [x] [Review][Patch] Double `check_exit` call on fill bar [`src/research/backtest_engine.py`] — after limit fill with no immediate exit, execution falls through to active-trade block and calls `check_exit` again on the same bar with `bars_held=1`; add `continue` after fill-but-no-exit path
+- [x] [Review][Patch] `verify_dst()` vacuous pass on empty trade list [`src/research/kz_15m_test.py`] — `for t in kz_trades` never executes when list is empty; returns `True` without verifying anything; add `if not kz_trades: return False`
+- [x] [Review][Patch] Integration test uses real CSV + vacuous assertions [`tests/integration/test_kill_zone_filter_integration.py`] — `pytest.skip` when CSV absent violates AC #6 (requires synthetic data); `head(4*390)` comment says "~4 weeks" but is 4 trading days; all 3 assertions pass vacuously on empty trade list; replace with minimal synthetic CSV fixture
+
+- [x] [Review][Defer] `min_gap_atr_ratio` default mismatch: StrategyConfig default=0.25 vs CLAUDE.md live value=0.15 [`src/research/strategy_core.py:92`] — deferred, pre-existing
+- [x] [Review][Defer] `make_entry_decision` no-kwargs bypass passes volatility filter vacuously [`src/research/backtest_engine.py`] — deferred, pre-existing
+- [x] [Review][Defer] `save_outputs()` attempts equity path write when trades=[] (unhandled) [`src/research/kz_15m_test.py`] — deferred, pre-existing
+- [x] [Review][Defer] `kill_zone_filter` raises TypeError on tz-naive timestamp [`src/research/strategy_core.py:584`] — deferred, pre-existing
+- [x] [Review][Defer] `_H1_BUFFER_BARS=7500` (125 H1 bars) only 5-bar margin above minimum 120 [`src/research/backtest_engine.py`] — deferred, pre-existing
+- [x] [Review][Defer] `_compute_vol_pct` duplicates `volatility_regime_filter` internals [`src/research/backtest_engine.py`] — deferred, pre-existing
+- [x] [Review][Defer] Empty CSV input → unhandled ValueError from `resample_to_h1` [`src/research/backtest_engine.py`] — deferred, pre-existing
+- [x] [Review][Defer] Dead code `if i < 2: continue` shadowed by `if i < 20` later in same loop [`src/research/backtest_engine.py`] — deferred, pre-existing
+- [x] [Review][Defer] Pending-order timeout falls through to same-bar entry detection [`src/research/backtest_engine.py`] — deferred, intentional per code comment
 
 ## Dev Notes
 

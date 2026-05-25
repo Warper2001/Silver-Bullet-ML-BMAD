@@ -727,7 +727,7 @@ class BacktestEngine:
                             daily_pnl += trades[-1].pnl_usd
                             active = None
                             bars_held = 0
-                        # Either way: do NOT enter a new trade this bar
+                        continue  # fill bar: advance to next bar regardless of exit outcome
                     elif pending_bars >= config.max_pending_bars:
                         active = None
                         pending = False

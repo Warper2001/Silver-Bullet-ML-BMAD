@@ -9,7 +9,7 @@ import logging
 import sys
 from datetime import datetime
 
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ def main():
     logger.info(f"Initial capital: ${args.initial_capital:,.2f}")
 
     # Initialize backtest engine
-    engine = BacktestEngine(initial_capital=args.initial_capital)
+    engine = LegacyTradeLedger(initial_capital=args.initial_capital)
 
     # Note: This is a placeholder for actual strategy backtesting
     # In a full implementation, this would:

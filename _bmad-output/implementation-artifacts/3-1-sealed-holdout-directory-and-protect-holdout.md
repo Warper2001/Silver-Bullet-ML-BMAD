@@ -1,6 +1,6 @@
 # Story 3.1: Sealed Holdout Directory and protect_holdout.py
 
-Status: review
+Status: done
 
 ## Story
 
@@ -253,6 +253,34 @@ This requires running the process as a non-root user, or testing against the rea
 - Holdout CSV: `data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv` (chmod 0444)
 - Story 3.2 will build `prereg_seal.py` which uses `data/sealed_holdout/` for date range
 - Story 3.3 (`oos_checkpoint.py`) will call `protect_holdout.py --verify` as one of its five checks
+
+### Review Findings
+
+- [x] [Review][Decision→Patch] AC#5 content fallback: implemented CSV content read fallback in `_extract_date()` — when filename has no parseable date, reads first data row `timestamp` column; 4 new tests added (`TestVerifyDateContentFallback`); 24/24 pass [`protect_holdout.py:22-41`]
+
+- [x] [Review][Patch] Relative `HOLDOUT_DIR = Path("data/sealed_holdout")` is CWD-dependent — fixed: `Path(__file__).parent / "data/sealed_holdout"` [`protect_holdout.py:17`]
+
+- [x] [Review][Patch] `verify()` message includes `(chmod 444)` suffix not in AC#2 spec — fixed: removed suffix, now prints exactly `"VERIFY PASS — all N file(s) protected"` [`protect_holdout.py:56`]
+
+- [x] [Review][Defer] `chmod 444` bypass via root user [`protect_holdout.py:57`] — deferred, pre-existing; documented and accepted per AC#3 root limitation note
+
+- [x] [Review][Defer] `init()` applies no date validation before protecting files — running `--init` on a pre-cutoff directory exits 0 then `--verify` exits 1; AC#1 does not require init to date-validate [`protect_holdout.py:62-82`] — deferred, by design per spec
+
+- [x] [Review][Defer] `_extract_date` regex matches first 8-digit run — could extract wrong date on multi-number filenames; does not affect the actual holdout filename `mnq_1min_holdout_20260301_plus.csv` [`protect_holdout.py:23`] — deferred, pre-existing
+
+- [x] [Review][Defer] `init()` returns 0 with zero CSVs in directory — prints `INIT PASS — 0 CSV(s) protected`, potentially misleading [`protect_holdout.py:79`] — deferred, edge case not in spec
+
+- [x] [Review][Defer] No error handling around `os.chmod()` or `open(access_log, "a")` in `init()` — Python raises `PermissionError` with traceback; no recovery path [`protect_holdout.py:70,78`] — deferred, pre-existing; Python exceptions are informative enough
+
+- [x] [Review][Defer] No subprocess test for process-restart durability (AC#4) — smoke tests in Task 3 cover this; chmod persistence is OS-level and not Python-level [`tests/unit/test_protect_holdout.py`] — deferred, smoke tests sufficient
+
+- [x] [Review][Defer] `ACCESS_LOG.md` is mutable and untamper-evident — intentional per AC#6 which requires it to stay writable for future log entries [`protect_holdout.py:18`] — deferred, by design
+
+- [x] [Review][Defer] `verify()` inconsistent early-exit: date loop fast-fails on first bad file; permission loop collects all offenders [`protect_holdout.py:35-52`] — deferred, style choice, not a correctness bug
+
+- [x] [Review][Defer] `verify()` gives identical error for non-existent directory vs empty directory — holdout dir always exists in practice [`protect_holdout.py:31`] — deferred, edge case
+
+- [x] [Review][Defer] `--init --verify` combined silently runs only `--init` (elif routing) [`protect_holdout.py:93-98`] — deferred, edge case; users are expected to use one flag at a time
 
 ## Dev Agent Record
 

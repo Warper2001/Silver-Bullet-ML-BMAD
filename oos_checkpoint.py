@@ -26,11 +26,12 @@ import sys
 from datetime import time
 from pathlib import Path
 
-STRATEGY_CORE_PATH = Path("src/research/strategy_core.py")
-HOLDOUT_DIR = Path("data/sealed_holdout")
+STRATEGY_CORE_PATH = Path(__file__).parent / "src/research/strategy_core.py"
+HOLDOUT_DIR = Path(__file__).parent / "data/sealed_holdout"
 
 HASH_PATTERNS = {
-    "hash_a": r"\|\s*\(a\) StrategyConfig SHA-256\s*\|\s*`([0-9a-f]+)`",
+    # Matches both "(a) StrategyConfig SHA-256" and "(a) YAML config SHA-256"
+    "hash_a": r"\|\s*\(a\)[^\|]+SHA-256\s*\|\s*`([0-9a-f]+)`",
     "hash_b": r"\|\s*\(b\) strategy_core\.py SHA-256\s*\|\s*`([0-9a-f]+)`",
     "hash_c": r"\|\s*\(c\) Git HEAD commit\s*\|\s*`([0-9a-f]+)`",
 }
@@ -51,17 +52,23 @@ def _config_to_json(config) -> str:
 
 def _git_head() -> str:
     """Return git HEAD commit SHA, or 'unknown' if not in a repo."""
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+        )
+    except (FileNotFoundError, OSError):
+        return "unknown"
     return result.stdout.strip() if result.returncode == 0 else "unknown"
 
 
 def _git_is_dirty() -> bool:
     """Return True if the working tree has uncommitted changes to tracked files."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True, check=False
+        )
+    except (FileNotFoundError, OSError):
+        return True  # assume dirty when git is unavailable
     return bool(result.stdout.strip())
 
 
@@ -85,6 +92,11 @@ def _compute_config_hash() -> str:
     return hashlib.sha256(_config_to_json(StrategyConfig()).encode()).hexdigest()
 
 
+def _compute_yaml_hash(yaml_path: Path) -> str:
+    """SHA-256 of YAML config file bytes — matches hash_a when prereg_seal used --config."""
+    return hashlib.sha256(yaml_path.read_bytes()).hexdigest()
+
+
 def _compute_source_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -97,11 +109,16 @@ def run_checks(
     prereg_path: Path,
     strategy_core_path: Path = STRATEGY_CORE_PATH,
     holdout_dir: Path = HOLDOUT_DIR,
+    yaml_path: Path | None = None,
 ) -> list:
     """Run all five integrity checks.
 
     Returns list of (check_name, passed: bool, message: str).
     Aborts early with a parse-failure entry if hashes cannot be parsed.
+
+    When yaml_path is provided, hash_a is verified against SHA-256 of YAML bytes
+    (matching prereg_seal --config workflow). Otherwise hash_a is verified against
+    StrategyConfig JSON hash (legacy workflow).
     """
     from protect_holdout import verify as verify_holdout
 
@@ -118,16 +135,26 @@ def run_checks(
 
     results = []
 
-    # (a) Config hash
-    actual_a = _compute_config_hash()
-    if actual_a == hashes["hash_a"]:
-        results.append(("config_hash", True, "PASS: Config hash matches seal"))
+    # (a) Config hash — YAML bytes or StrategyConfig JSON depending on workflow
+    if yaml_path is not None:
+        try:
+            actual_a = _compute_yaml_hash(yaml_path)
+        except (FileNotFoundError, OSError) as exc:
+            results.append(("config_hash", False, f"FAILED: Cannot read YAML config at {yaml_path} — {exc}"))
+            actual_a = None
+        mismatch_msg = f"FAILED: YAML config hash mismatch — {yaml_path} has been modified since pre-registration seal"
     else:
+        actual_a = _compute_config_hash()
+        mismatch_msg = "FAILED: Config hash mismatch — StrategyConfig has been modified since pre-registration seal"
+
+    if actual_a is not None and actual_a == hashes["hash_a"]:
+        results.append(("config_hash", True, "PASS: Config hash matches seal"))
+    elif actual_a is not None:
         results.append(
             (
                 "config_hash",
                 False,
-                "FAILED: Config hash mismatch — StrategyConfig has been modified since pre-registration seal",
+                mismatch_msg,
             )
         )
 
@@ -190,9 +217,10 @@ def checkpoint(
     prereg_path: Path,
     strategy_core_path: Path = STRATEGY_CORE_PATH,
     holdout_dir: Path = HOLDOUT_DIR,
+    yaml_path: Path | None = None,
 ) -> int:
     """CLI-style runner: prints all check results to stdout. Returns 0 (pass) or 1 (fail)."""
-    results = run_checks(prereg_path, strategy_core_path, holdout_dir)
+    results = run_checks(prereg_path, strategy_core_path, holdout_dir, yaml_path=yaml_path)
     passed = True
     for _name, ok, msg in results:
         print(msg)
@@ -208,13 +236,14 @@ def checkpoint_or_abort(
     prereg_path: Path,
     strategy_core_path: Path = STRATEGY_CORE_PATH,
     holdout_dir: Path = HOLDOUT_DIR,
+    yaml_path: Path | None = None,
 ) -> None:
     """Library API for oos_verdict.py (AR8).
 
     Raises SystemExit(1) on any failure (prints failures to stderr).
     Returns None on success (caller prints its own header).
     """
-    results = run_checks(prereg_path, strategy_core_path, holdout_dir)
+    results = run_checks(prereg_path, strategy_core_path, holdout_dir, yaml_path=yaml_path)
     failures = [(name, msg) for name, ok, msg in results if not ok]
     if failures:
         for _name, msg in failures:
@@ -227,8 +256,14 @@ def main() -> None:
         description="Verify pre-OOS integrity checks before accessing sealed holdout data."
     )
     parser.add_argument("--prereg", type=Path, required=True, help="Path to pre-registration document (.md)")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to YAML config file; verifies YAML bytes hash against hash_a (use when prereg was sealed with --config)",
+    )
     args = parser.parse_args()
-    sys.exit(checkpoint(args.prereg))
+    sys.exit(checkpoint(args.prereg, yaml_path=args.config))
 
 
 if __name__ == "__main__":

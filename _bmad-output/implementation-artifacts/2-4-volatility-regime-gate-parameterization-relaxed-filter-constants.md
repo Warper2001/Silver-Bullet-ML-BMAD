@@ -1,6 +1,6 @@
 # Story 2.4: Volatility Regime Gate Parameterization and Relaxed Filter Constants
 
-Status: review
+Status: done
 
 ## Story
 
@@ -55,6 +55,12 @@ so that I can measure whether loosening entry constraints (H1 sweep lookback, mi
 
 - [x] Task 6 — Full test suite verification (AC #7)
   - [x] `.venv/bin/python -m pytest tests/unit/test_strategy_core_tuesday.py tests/integration/test_baseline_backtesting.py tests/integration/test_tuesday_exclusion_integration.py tests/unit/test_strategy_core_killzone.py tests/unit/test_strategy_core_m15.py -q` — 56 passed, 0 failed
+
+### Review Findings
+
+- [x] [Review][Patch] Integration test uses real CSV + all three tests pass vacuously on 0 trades [`tests/integration/test_tuesday_exclusion_integration.py`] — replaced with synthetic 3-day fixture (Thu/Mon/Tue); all 3 tests are now non-vacuous; 85/85 Epic 2+3 tests pass
+
+- [x] [Review][Defer] AC #4 pending-timeout verification is a static config echo, not a behavioral assertion [`src/research/vol_regime_15m_test.py`] — script prints `RELAXED_CONFIG.max_pending_bars = 120` but does not assert that a pending order actually cancels at bar 121; deferred, pre-existing script pattern
 
 ## Dev Notes
 

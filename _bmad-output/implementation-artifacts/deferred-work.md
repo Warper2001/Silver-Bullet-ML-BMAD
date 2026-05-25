@@ -1,4 +1,87 @@
 
+## Deferred from: code review of 8-5-prereg-yaml-workflow (2026-05-25)
+
+- **No test for YAML-file-missing at `oos_checkpoint` verification time** — `run_checks()` catches `FileNotFoundError` correctly but no test exercises that path; symmetric test exists on the seal side (`test_seal_yaml_config_missing_file_returns_1`). [`oos_checkpoint.py:140-144`]
+
+## Deferred from: code review of 8-4-rolling-weekly-backtest (2026-05-25)
+
+- **`--weeks` window anchored to last data row's timestamp, not today's date** — if the data file hasn't been refreshed recently, the window silently narrows; user expects N weeks from today. [`tools/weekly_backtest.py:_load_and_filter`]
+- **`epilog` crashes with `-OO` Python flag** — `__doc__` is `None` when Python strips docstrings; `__doc__.split()` raises `AttributeError`; fix is `epilog=(__doc__ or "").split(...)`. [`tools/weekly_backtest.py:main():264`]
+
+## Deferred from: code review of 8-3-multi-instrument-support (2026-05-25)
+
+- **Crash recovery half-implemented: `StatePersistence` saves state on entry but `load_state()` never called on `initialize()`** — on crash, dangling bracket orders persist at TradeStation while the bot restarts with no active trade; Epic 4 Story 4-2 is the correct home for this fix. [`tier2_streaming_working.py:153, initialize()`]
+- **`detect_fvg` hardcoded to MNQ `POINT_VALUE_USD=2.0` for dollar-ceiling gate** — MES ($5/pt) gaps are up to 2.5× more expensive in dollar terms; the `max_gap_dollars` filter is structurally MNQ-only; fix requires a `point_value` parameter in `detect_fvg` (AR1-protected strategy_core change). [`strategy_core.py:359`]
+- **`commission_per_roundtrip=4.0` not scaled per instrument** — MES (2 contracts) incorrectly charged $4.00 instead of $1.60; acknowledged in Story 8-3 dev notes as "per-roundtrip, not per-contract"; accepted for now. [`strategy_core.py:98`]
+- **CSV header TOCTOU race in `_log_trade`** — `write_header = not log_path.exists()` evaluated before open; two instances starting simultaneously can both write headers; fix is to check `file.tell() == 0` inside the open context. [`tier2_streaming_working.py:802`]
+- **`_bar_processing_times` list grows unboundedly** — one append per bar, never trimmed; fix is `collections.deque(maxlen=10000)` in `__init__`. [`tier2_streaming_working.py:438`]
+- **Symbol expiry codes require manual update each quarterly rollover** — `MNQM26/MESM26/M2KM26` reject new expirations (e.g., `MNQU26`) with `ValueError`; operational concern, no code fix needed now.
+- **`_log_trade` drops `entry_time`** — parameter accepted but never written; only `exit_time` is recorded as `timestamp`; AC#8 doesn't specify entry vs exit; deferred pending clarification.
+
+## Deferred from: code review of 8-2-yaml-config-externalization (2026-05-24)
+
+- **Time-parser inconsistency: `config_loader.py` uses `split(":")` / `time(int,int)` while `prereg_seal._build_config()` uses `time.fromisoformat()`** — both handle the expected "HH:MM" format correctly; `config_loader.py` is actually more robust for single-digit hours (e.g. "9:30"); `prereg_seal._build_config()` fromisoformat would fail on "9:30" in the legacy `--config-json` path. Low priority since the YAML workflow always goes through `config_loader.py`. [`src/research/config_loader.py:51`, `prereg_seal.py:87`]
+- **HASH_PATTERNS `hash_a` regex too broad** — `r"\|\s*\(a\)[^\|]+SHA-256\s*\|\s*\`([0-9a-f]+)\`"` matches any `(a) *SHA-256` row; alternation `(StrategyConfig|YAML config)` would be more precise. Low practical risk given controlled doc format. [`oos_checkpoint.py:34`]
+- **Misleading FAILED message when `--config` omitted on YAML-workflow prereg** — user sees "StrategyConfig has been modified since pre-registration seal" when the real issue is that `--config strategy_config.yaml` was forgotten. Auto-detecting from the `(a) YAML config SHA-256` label in the doc is the fix. [`oos_checkpoint.py:run_checks`]
+- **`yaml.safe_load(path.read_text())` without `encoding="utf-8"` in config_loader** — low probability of failure on UTF-8 Linux but not portable. Also affects `oos_checkpoint.py`'s prereg doc read. Fix: pass `encoding="utf-8"` to `read_text()`. [`src/research/config_loader.py:42`, `oos_checkpoint.py`]
+- **`load_strategy_config` returns StrategyConfig defaults silently on empty/null YAML** — `if not raw: return StrategyConfig()` gives no warning; a truncated YAML file would silently use defaults. Behavior is technically correct (hash still round-trips). Add `logger.warning()` on next touch. [`src/research/config_loader.py:44`]
+
+## Deferred from: code review of 8-1-s25-config-deployment-g025-m15-choch (2026-05-24)
+
+- **`tuesday_exclusion` config field silently ignored in live trader** — `_detect_and_enter()` line 839 has `if bar_et.weekday() == 1: return` hardcoded; `self._strategy_config.tuesday_exclusion` is never read by `Tier2StreamingTrader`. Toggling the YAML field would have zero effect on the live system. Only `BacktestEngine` reads the config field. Fix by replacing the hardcoded check with `if cfg.tuesday_exclusion and bar_et.weekday() == 1: return`. [`tier2_streaming_working.py:839`]
+- **AC5: BacktestEngine has no S25 CHoCH state machine** — The N=61 verification backtest used the no-CHoCH 15m baseline (S13 reference). The S25 CHoCH logic (`_update_m15_choch()`) lives only in `Tier2StreamingTrader`; `BacktestEngine` has only `m15_confirmation` (bar-close direction check), which is a different filter. Confirming S25 CHoCH behavior via backtest requires porting the CHoCH state machine to `BacktestEngine`. Future story. [`src/research/backtest_engine.py`, `src/research/tier2_streaming_working.py:641`]
+- **AC7: Three test files have pre-existing collection errors** — `tests/unit/test_resource_monitor.py`, `test_tier2_ml_filter.py`, `test_performance_documentation.py` fail at pytest collection; `pytest tests/ -q` exits with collection errors before running. Must exclude these files or fix their import/syntax issues for AC7 to be satisfiable as written. Pre-existing since before Story 8-1. [`tests/unit/`]
+- **AC1: No dedicated unit test for `StrategyConfig().min_gap_atr_ratio == 0.25`** — The only test covering this value loads the repo-root YAML file (test_config_loader.py), not the bare dataclass default. A low-cost assertion would be: `assert StrategyConfig().min_gap_atr_ratio == 0.25`. [`tests/unit/`]
+
+## Deferred from: code review of 3-2-pre-registration-document-generator-prereg-seal (2026-05-24)
+
+- **`_git_is_dirty()` detects the output doc itself as "dirty"** — On re-seal runs, the previously generated `_bmad-output/preregistration_*.md` shows as a modified or untracked file, causing a WARNING on every invocation. Expected workflow behavior: user seals → commits the doc → clean tree. Not a bug. [`prereg_seal.py:58-66`]
+- **Silent overwrite of existing sealed document** — Re-running with the same `--name` silently replaces the doc. No guard or error. Risk: accidentally overwriting a committed pre-reg during OOS period. Add `if output_path.exists(): print("ERROR: seal already exists"); return 1` if reproducibility audit requires. [`prereg_seal.py:189`]
+- **`_config_to_json()` value-mutation during `d.items()` iteration** — Replaces `time` values in-place while iterating. CPython 3 allows value mutation without structural change; no crash observed. Use `for k in list(d)` if `StrategyConfig` ever gains nested sub-dict `time` fields. [`prereg_seal.py:29-31`]
+- **`_build_config()` raises `AttributeError` on unknown JSON fields** — `defaults.update(overrides)` adds unknown keys; `getattr(base, k)` then raises `AttributeError`. No user-friendly message. Add field validation before update. [`prereg_seal.py:75`]
+- **`date.today()` is local wall-clock, not UTC** — Sealed date may differ from UTC by ±1 day near midnight. Use `datetime.now(timezone.utc).date().isoformat()` for audit-grade timestamps. [`prereg_seal.py:127`]
+- **`output_path.write_text(doc)` uses system default encoding** — Should be `write_text(doc, encoding="utf-8")` for portability across locales. Harmless on UTF-8 Linux systems. [`prereg_seal.py:189`]
+- **`_extract_holdout_dates()` silently ignores files with no 8-digit date in stem** — Unnamed holdout CSVs (e.g., `holdout_data.csv`) are excluded from date range with no warning. Acceptable given current naming convention. [`prereg_seal.py:39-44`]
+
+## Deferred from: code review of 3-1-sealed-holdout-directory-and-protect-holdout (2026-05-24)
+
+- **`chmod 444` bypass via root user** — Running as root bypasses DAC; chmod 444 does not prevent root writes. Documented and accepted per AC#3. If ever deployed as non-root, no fix needed. [`protect_holdout.py:57`]
+- **`init()` applies no date validation before protecting** — `--init` chmods all CSVs regardless of date; subsequent `--verify` would then fail date check. AC#1 does not require init to date-validate; by design. [`protect_holdout.py:62-82`]
+- **`_extract_date` regex matches first 8-digit run** — Could pick wrong date on filenames with multiple long numeric sequences. Does not affect actual holdout filename `mnq_1min_holdout_20260301_plus.csv`. Fix anchor regex with `(?<!\d)...(?!\d)` if naming convention changes. [`protect_holdout.py:23`]
+- **`init()` returns 0 with zero CSVs** — `INIT PASS — 0 CSV(s) protected` is misleading when no data files exist. Edge case not covered by spec. Add exit 1 + warning if needed. [`protect_holdout.py:79`]
+- **No error handling in `init()` around `os.chmod()` / `open()`** — Python raises `PermissionError` with traceback on failure; no recovery path. Acceptable for a CLI tool. [`protect_holdout.py:70,78`]
+- **No subprocess test for process-restart durability (AC#4)** — `test_init_verify_roundtrip` runs in-process; smoke tests in Task 3 cover the cross-process case. chmod persistence is OS-level. [`tests/unit/test_protect_holdout.py`]
+- **`ACCESS_LOG.md` mutable and untamper-evident** — Intentional per AC#6; must stay writable for future append operations. Would require cryptographic signing to make tamper-evident. [`protect_holdout.py:18`]
+- **`verify()` inconsistent early-exit** — Date check fast-fails on first bad file; permission check collects all offenders. Style inconsistency, not a correctness bug. [`protect_holdout.py:35-52`]
+- **`verify()` identical error for non-existent vs empty dir** — Both print "no CSV files found". Holdout dir always exists in practice. [`protect_holdout.py:31`]
+- **`--init --verify` combined flags runs only `--init`** — `elif` routing silently skips verify. Users expected to use one flag at a time. [`protect_holdout.py:93-98`]
+
+## Deferred from: code review of 2-4-volatility-regime-gate-parameterization-relaxed-filter-constants (2026-05-24)
+
+- **AC #4 pending-timeout not behaviorally verified** — `vol_regime_15m_test.py` prints `RELAXED_CONFIG.max_pending_bars = 120` as confirmation but does not assert that a pending order placed at bar 0 is actually cancelled at bar 121. The BacktestEngine `>= config.max_pending_bars` gate is covered by the broader test suite. Add a dedicated synthetic-scenario assertion if timeout boundary verification is required for audit. [`src/research/vol_regime_15m_test.py`]
+
+## Deferred from: code review of 2-3-m15-confirmation-layer-and-resample (2026-05-24)
+
+- **Look-ahead bias in M15 gate for 1-min bar input** — `searchsorted(bar_ts)` on the pre-computed M15 index returns the next M15 bucket position when `bar_ts` falls mid-period; the current (incomplete) M15 bar is included and its `close` contains future data. Only affects 1-min input; the 15m bar path (used in research) is correct. Fix before calling `BacktestEngine` with 1-min bars and `m15_confirmation=True`. [`src/research/backtest_engine.py:830`]
+- **`m15_confirmed=True` for all trades when `m15_confirmation=False`** — `m15_ok=True` by default; when the gate is disabled, all trades record `m15_confirmed=True`, making the field ambiguous in CSV output vs. a gate-enabled confirmed trade. Consider using `None` or a separate `m15_filter_enabled` column. [`src/research/backtest_engine.py:828`]
+- **No integration test for 1-min bars with `m15_confirmation=True`** — look-ahead bias has zero test coverage; 15m bar test masks the bug. Add a BacktestEngine integration test with 1-min synthetic bars to validate the M15 slice is computed without look-ahead. [`tests/`]
+
+## Deferred from: code review of 2-2-am-kill-zone-filter-dst-aware (2026-05-24)
+
+- **`min_gap_atr_ratio` default mismatch** — `StrategyConfig` default is 0.25; CLAUDE.md documents live value as 0.15. Backtest and live system differ silently. Fix when strategy params are consolidated before live deployment. [`src/research/strategy_core.py:92`]
+- **`make_entry_decision` no-kwargs bypass** — calling `make_entry_decision(sweep, fvg, config)` without `vol_ok` always passes the volatility filter vacuously. Research scripts may inadvertently bypass the vol gate. Audit all callers before live use. [`src/research/backtest_engine.py`]
+- **`save_outputs()` empty-trades path** — writes equity curve CSV but `pnls` is empty; `list(itertools.accumulate([]))` returns `[]` which is harmless, but the equity file is created with only a header. Confusing artifact when verdict is H₀. [`src/research/kz_15m_test.py`]
+- **`kill_zone_filter` TypeError on tz-naive timestamp** — `bar_timestamp.astimezone(_NY_TZ)` raises `TypeError` for tz-naive input. All BacktestEngine callers pass UTC-aware timestamps so this is unreachable in practice; add a guard before exposing in a library context. [`src/research/strategy_core.py:584`]
+- **`_H1_BUFFER_BARS=7500` thin margin** — 7500 1-min bars = 125 H1 bars; minimum for H1 sweep detection is 120. Only 5-bar slack; a longer gap in the data could exhaust the buffer. Increase to 10,000 (≈167 H1 bars) when next touching backtest_engine. [`src/research/backtest_engine.py`]
+- **`_compute_vol_pct` duplicates `volatility_regime_filter` internals** — rolling ATR percentile computed twice with slightly different window configs; diverges from StrategyConfig params. Refactor to call `volatility_regime_filter` directly. [`src/research/backtest_engine.py`]
+- **Empty CSV → unhandled ValueError from `resample_to_h1`** — `pd.DataFrame.resample().agg()` on empty input raises ValueError; BacktestEngine has no guard. Fix before using BacktestEngine in automated pipelines. [`src/research/backtest_engine.py`]
+- **Dead code `if i < 2: continue`** — this guard is shadowed by `if i < 20: continue` later in the same loop; the `< 2` branch never executes. Remove on next cleanup pass. [`src/research/backtest_engine.py`]
+- **Pending timeout falls through to same-bar entry** — when a pending order times out, the code clears `active` and falls through to the entry-detection block on the same bar, potentially arming a new pending order immediately. Intentional per inline comment but creates a subtle sequence dependency. [`src/research/backtest_engine.py`]
+
+## Deferred from: code review of 3-4-oos-verdict-report-generator (2026-05-24)
+
+- **`_parse_prereg` called twice in `verdict()`** — `checkpoint_or_abort` internally calls `_parse_prereg`; `verdict()` calls it again to extract `hash_c`. Redundant and fragile: if the second call returns different results (unlikely race condition or malformed doc), "unknown" gets logged in ACCESS_LOG. Fix when `checkpoint_or_abort` is refactored to return its parsed hashes, or expose `_parse_prereg` result from the checkpoint call. [`oos_verdict.py:209`]
+
 ## Deferred from: code review of 3-3-oos-checkpoint-verification (2026-05-24)
 
 - **`_config_to_json` only converts top-level `time` fields** — nested dataclass `time` values survive unconverted; `json.dumps` would raise `TypeError` if StrategyConfig ever gains a nested dataclass with a `time` field. Latent — no nested dataclasses today. Fix when StrategyConfig structure changes. [`oos_checkpoint.py:41–44`]

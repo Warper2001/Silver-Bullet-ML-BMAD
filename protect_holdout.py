@@ -14,16 +14,34 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-HOLDOUT_DIR = Path("data/sealed_holdout")
+HOLDOUT_DIR = Path(__file__).parent / "data/sealed_holdout"
 ACCESS_LOG = HOLDOUT_DIR / "ACCESS_LOG.md"
 HOLDOUT_CUTOFF = "2026-03-01"
 
 
 def _extract_date(csv_path: Path) -> str | None:
-    """Extract YYYY-MM-DD from filename like mnq_1min_holdout_20260301_plus.csv."""
+    """Extract YYYY-MM-DD: filename regex first, then first data row timestamp column."""
     m = re.search(r"(\d{4})(\d{2})(\d{2})", csv_path.stem)
     if m:
         return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    # Filename has no parseable date — fall back to reading first data row
+    try:
+        with open(csv_path) as f:
+            header_line = f.readline().strip()
+            if not header_line:
+                return None
+            cols = header_line.split(",")
+            if "timestamp" not in cols:
+                return None
+            ts_idx = cols.index("timestamp")
+            data_line = f.readline().strip()
+            if not data_line:
+                return None
+            fields = data_line.split(",")
+            if len(fields) > ts_idx and len(fields[ts_idx]) >= 10:
+                return fields[ts_idx][:10]
+    except OSError:
+        return None
     return None
 
 
@@ -53,7 +71,7 @@ def verify(holdout_dir: Path) -> int:
             print(f"VERIFY FAIL — {name} is writable (mode {mode})")
         return 1
 
-    print(f"VERIFY PASS — all {len(csvs)} file(s) protected (chmod 444)")
+    print(f"VERIFY PASS — all {len(csvs)} file(s) protected")
     return 0
 
 

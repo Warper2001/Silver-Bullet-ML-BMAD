@@ -1,0 +1,26 @@
+# strategy_config.yaml — S25 pre-registered configuration
+# Sealed: 2026-05-21, ref: _bmad-output/preregistration_s25_live_deployment.md
+# DO NOT CHANGE any value without first running prereg_seal.py --config strategy_config.yaml
+# and committing the resulting pre-registration document.
+
+sl_multiplier: 5.0
+tp_multiplier: 6.0
+entry_pct: 0.5
+atr_threshold: 0.5
+max_gap_dollars: 60.0
+max_hold_bars: 60
+max_pending_bars: 240
+contracts_per_trade: 5
+max_daily_loss: -750.0
+vol_regime_lookback: 120
+vol_regime_threshold: 0.75
+min_gap_atr_ratio: 0.25
+ml_threshold: 0.0
+bearish_only: true
+h1_sweep_lookback: 6
+kill_zone_start_et: "09:30"
+kill_zone_end_et: "11:00"
+commission_per_roundtrip: 4.0
+enable_kill_zone_filter: false
+m15_confirmation: false
+tuesday_exclusion: true

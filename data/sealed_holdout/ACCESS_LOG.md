@@ -91,6 +91,9 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 *Any access to the sealed holdout file that is not recorded in this log is a protocol violation.*  
 *If you find an unlogged access, add a retroactive entry explaining what happened.*
 | 2026-05-23 00:49 UTC | `5b581f4d88e5bf66216e23c4b66eb331ffb9b43b` | holdout_15m_oos_test.py | Phase 2 definitive 15m OOS test | PF=2.5857 (PASS), N=6, WR=0.667, Sharpe=7.684 |
+| 2026-05-25 00:12 UTC | a97b21c | backtest script | `--preregistration a97b21c` | pending |
+| 2026-05-25 00:13 UTC | a97b21c | backtest script | `--preregistration a97b21c` | pending |
+| 2026-05-25 01:06 UTC | a97b21c | backtest script | `--preregistration a97b21c` | pending |
 
 ## Init — 2026-05-23T15:02:03Z
 

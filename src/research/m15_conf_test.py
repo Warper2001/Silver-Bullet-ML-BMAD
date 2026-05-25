@@ -89,6 +89,8 @@ def metrics(trades_list: list) -> dict:
 
 
 def verify_m15_confirmed(m15_trades: list) -> bool:
+    if not m15_trades:
+        return False
     for t in m15_trades:
         if not t.m15_confirmed:
             print(f"  FAIL: trade not M15-confirmed: {t.timestamp_entry}")

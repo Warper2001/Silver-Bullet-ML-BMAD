@@ -93,6 +93,8 @@ def metrics(trades_list: list) -> dict:
 
 
 def verify_dst(kz_trades: list) -> bool:
+    if not kz_trades:
+        return False
     for t in kz_trades:
         entry_ny = t.timestamp_entry.astimezone(NY_TZ).time()
         if not (dtime(9, 30) <= entry_ny < dtime(11, 0)):

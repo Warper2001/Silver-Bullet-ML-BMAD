@@ -164,6 +164,7 @@ class TestSeal:
         assert "2.0" in content
         assert "Sharpe" in content
         assert "1.5" in content
+        assert "10%" in content  # max drawdown threshold
         assert "200" in content  # min sample size
         assert "100" in content  # stopping rule trades
 
@@ -202,6 +203,7 @@ class TestSeal:
             rc = seal(StrategyConfig(), output, "test-exp",
                       Path("src/research/strategy_core.py"), tmp_path)
         assert rc == 0  # warning, not error
+        assert output.exists()  # document must still be written (AC#4)
         out = capsys.readouterr().out
         assert "WARNING" in out
         assert "dirty" in out
@@ -253,3 +255,80 @@ class TestConfigJsonOverride:
 
         with pytest.raises((json.JSONDecodeError, ValueError)):
             _build_config("{not valid json}")
+
+
+class TestSealYamlConfig:
+    def test_seal_yaml_config_hash_a_is_yaml_bytes_sha256(self, tmp_path):
+        from prereg_seal import seal
+
+        make_protected_csv(tmp_path)
+        make_access_log(tmp_path)
+        yaml_path = tmp_path / "cfg.yaml"
+        yaml_path.write_text("sl_multiplier: 5.0\n")
+        expected_hash = hashlib.sha256(yaml_path.read_bytes()).hexdigest()
+
+        output = tmp_path / "prereg.md"
+        with patch("prereg_seal._git_head", return_value="abc123"), \
+             patch("prereg_seal._git_is_dirty", return_value=False):
+            rc = seal(
+                StrategyConfig(), output, "test-yaml",
+                Path("src/research/strategy_core.py"), tmp_path,
+                yaml_path=yaml_path,
+            )
+        assert rc == 0
+        assert expected_hash in output.read_text()
+
+    def test_seal_yaml_config_label_in_document(self, tmp_path):
+        from prereg_seal import seal
+
+        make_protected_csv(tmp_path)
+        make_access_log(tmp_path)
+        yaml_path = tmp_path / "cfg.yaml"
+        yaml_path.write_text("sl_multiplier: 5.0\n")
+
+        output = tmp_path / "prereg.md"
+        with patch("prereg_seal._git_head", return_value="abc123"), \
+             patch("prereg_seal._git_is_dirty", return_value=False):
+            seal(
+                StrategyConfig(), output, "test-yaml",
+                Path("src/research/strategy_core.py"), tmp_path,
+                yaml_path=yaml_path,
+            )
+        content = output.read_text()
+        assert "(a) YAML config SHA-256" in content
+        assert "StrategyConfig SHA-256" not in content
+
+    def test_seal_yaml_config_missing_file_returns_1(self, tmp_path, capsys):
+        from prereg_seal import seal
+
+        make_protected_csv(tmp_path)
+        make_access_log(tmp_path)
+        output = tmp_path / "prereg.md"
+        with patch("prereg_seal._git_head", return_value="abc123"), \
+             patch("prereg_seal._git_is_dirty", return_value=False):
+            rc = seal(
+                StrategyConfig(), output, "test-yaml",
+                Path("src/research/strategy_core.py"), tmp_path,
+                yaml_path=tmp_path / "nonexistent.yaml",
+            )
+        assert rc == 1
+        assert not output.exists()
+        assert "ERROR" in capsys.readouterr().out
+
+    def test_seal_yaml_config_backward_compat_without_flag(self, tmp_path):
+        from prereg_seal import seal
+
+        make_protected_csv(tmp_path)
+        make_access_log(tmp_path)
+        output = tmp_path / "prereg.md"
+        with patch("prereg_seal._git_head", return_value="abc123"), \
+             patch("prereg_seal._git_is_dirty", return_value=False):
+            rc = seal(
+                StrategyConfig(), output, "test-legacy",
+                Path("src/research/strategy_core.py"), tmp_path,
+                yaml_path=None,
+            )
+        assert rc == 0
+        content = output.read_text()
+        assert "(a) StrategyConfig SHA-256" in content
+        assert "YAML config" not in content

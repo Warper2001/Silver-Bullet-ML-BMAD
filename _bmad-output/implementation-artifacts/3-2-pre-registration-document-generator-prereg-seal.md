@@ -1,6 +1,6 @@
 # Story 3.2: Pre-Registration Document Generator (prereg_seal.py)
 
-Status: review
+Status: done
 
 ## Story
 

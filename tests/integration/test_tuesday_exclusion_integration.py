@@ -1,14 +1,24 @@
 """Integration test: tuesday_exclusion flag in BacktestEngine (Story 2.4).
 
-Verifies that BacktestEngine respects config.tuesday_exclusion:
-- When True (default): no trades entered on Tuesdays
-- When False: Tuesday entries are not blocked
+Uses synthetic price data only (no CSV file dependency).
 
-Uses the same 2025 training CSV as the research scripts, limiting to
-4 weeks (small enough to run quickly, enough to span Tuesdays).
+Day 1 (2025-01-02 Thu): 28 ranging bars — establish H1 history
+Day 2 (2025-01-06 Mon): swing high at H1 11:00 ET (high=18025);
+    bearish sweep at H1 14:00 ET (high=18028, close=18015)
+Day 3 (2025-01-07 Tue): bearish FVG at 09:30 ET:
+    c1.low=18025 > c3.high=18014 → gap=11 pts
+    entry=18019.5, SL=18074.5, TP=17953.5
+    fill at 09:45 (high=18020 ≥ 18019.5)
+    TP at 10:30 (low=17950 ≤ 17953.5)
+
+tuesday_exclusion=True  → bar 09:30 Tue (and all Tue bars) skipped → 0 trades
+tuesday_exclusion=False → entry processed → 1 trade with Tuesday timestamp
 """
 
+import os
+import tempfile
 import zoneinfo
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import pytest
@@ -16,82 +26,122 @@ import pytest
 from src.research.backtest_engine import BacktestEngine
 from src.research.strategy_core import StrategyConfig
 
-CSV_PATH = "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
 NY_TZ = zoneinfo.ZoneInfo("America/New_York")
 
 
+def _et(year, month, day, hour, minute):
+    return datetime(year, month, day, hour, minute, tzinfo=NY_TZ)
+
+
+def _bar(dt_et, o, h, lo, c):
+    dt_utc = dt_et.astimezone(timezone.utc)
+    return {
+        "timestamp": dt_utc.strftime("%Y-%m-%d %H:%M:%S+00:00"),
+        "open": o,
+        "high": h,
+        "low": lo,
+        "close": c,
+        "volume": 100,
+    }
+
+
+def _ranging(dt_et, mid=18000.0):
+    return _bar(dt_et, mid + 2, mid + 4, mid - 4, mid - 2)
+
+
+def _make_tuesday_synthetic_csv():
+    rows = []
+
+    # Day 1 (Thu 2025-01-02): ranging bars to establish H1 history
+    t = _et(2025, 1, 2, 9, 0)
+    while t.hour < 16:
+        rows.append(_ranging(t, 18000.0))
+        t += timedelta(minutes=15)
+
+    # Day 2 (Mon 2025-01-06): swing high + bearish sweep
+    for mm in (0, 15, 30, 45):
+        rows.append(_bar(_et(2025, 1, 6, 9, mm), 18005, 18010, 17995, 18000))
+    for mm in (0, 15, 30, 45):
+        rows.append(_bar(_et(2025, 1, 6, 10, mm), 18010, 18015, 18000, 18005))
+    rows.append(_bar(_et(2025, 1, 6, 11, 0), 18010, 18025, 18000, 18005))  # swing high
+    rows.append(_bar(_et(2025, 1, 6, 11, 15), 18005, 18012, 17998, 18000))
+    rows.append(_bar(_et(2025, 1, 6, 11, 30), 18000, 18010, 17995, 17998))
+    rows.append(_bar(_et(2025, 1, 6, 11, 45), 17998, 18010, 17990, 17995))
+    for mm in (0, 15, 30, 45):
+        rows.append(_bar(_et(2025, 1, 6, 12, mm), 18000, 18012, 17992, 18000))
+    for mm in (0, 15, 30, 45):
+        rows.append(_bar(_et(2025, 1, 6, 13, mm), 18000, 18008, 17992, 18000))
+    rows.append(_bar(_et(2025, 1, 6, 14, 0), 18015, 18028, 18010, 18012))  # sweep
+    rows.append(_bar(_et(2025, 1, 6, 14, 15), 18012, 18020, 18008, 18010))
+    rows.append(_bar(_et(2025, 1, 6, 14, 30), 18010, 18018, 18006, 18008))
+    rows.append(_bar(_et(2025, 1, 6, 14, 45), 18008, 18015, 18005, 18015))
+    for mm in (0, 15, 30, 45):
+        rows.append(_bar(_et(2025, 1, 6, 15, mm), 18012, 18018, 18005, 18010))
+
+    # Day 3 (Tue 2025-01-07): FVG + fill + TP
+    rows.append(_bar(_et(2025, 1, 7, 9, 0), 18030, 18035, 18025, 18026))   # c1
+    rows.append(_bar(_et(2025, 1, 7, 9, 15), 18024, 18025, 18014, 18015))  # c2 bearish
+    rows.append(_bar(_et(2025, 1, 7, 9, 30), 18012, 18014, 18006, 18008))  # c3 gap=11
+    rows.append(_bar(_et(2025, 1, 7, 9, 45), 18015, 18020, 18012, 18014))  # fill
+    rows.append(_bar(_et(2025, 1, 7, 10, 0), 18013, 18014, 17985, 17986))
+    rows.append(_bar(_et(2025, 1, 7, 10, 15), 17986, 17987, 17960, 17962))
+    rows.append(_bar(_et(2025, 1, 7, 10, 30), 17962, 17963, 17950, 17952))  # TP
+    t = _et(2025, 1, 7, 10, 45)
+    while t.hour < 16:
+        rows.append(_ranging(t, 17952.0))
+        t += timedelta(minutes=15)
+
+    df = pd.DataFrame(rows)
+    tmp = tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w")
+    df.to_csv(tmp.name, index=False)
+    tmp.close()
+    return tmp.name
+
+
 @pytest.fixture(scope="module")
-def bars_15m_4weeks():
-    """First 4 weeks of 2025 1-min bars resampled to 15m, written to temp CSV."""
-    import os
-    import tempfile
+def tuesday_csv():
+    path = _make_tuesday_synthetic_csv()
+    yield path
+    os.unlink(path)
 
-    bars = pd.read_csv(CSV_PATH, parse_dates=["timestamp"])
-    if bars["timestamp"].dt.tz is None:
-        bars["timestamp"] = bars["timestamp"].dt.tz_localize("UTC")
-    else:
-        bars["timestamp"] = bars["timestamp"].dt.tz_convert("UTC")
-    bars["timestamp"] = bars["timestamp"].dt.tz_convert("America/New_York")
-    bars = bars.set_index("timestamp").sort_index()
-    bars = bars.drop(columns=["notional"], errors="ignore")
-    bars = bars.head(4 * 5 * 390)  # 4 weeks × 5 days × 390 min/day (approx)
 
-    m15 = (
-        bars.resample("15min")
-        .agg(
-            open=("open", "first"),
-            high=("high", "max"),
-            low=("low", "min"),
-            close=("close", "last"),
-            volume=("volume", "sum"),
-        )
-        .dropna(subset=["open", "high", "low", "close"])
+def _run(csv_path, config):
+    return BacktestEngine(csv_path, config=config).run()
+
+
+def test_tuesday_exclusion_blocks_tuesday_entries(tuesday_csv):
+    """tuesday_exclusion=True must block the Tuesday FVG entry; False must allow it."""
+    trades_on = _run(tuesday_csv, StrategyConfig(bearish_only=True, tuesday_exclusion=True))
+    trades_off = _run(tuesday_csv, StrategyConfig(bearish_only=True, tuesday_exclusion=False))
+    assert len(trades_off) >= 1, (
+        "Synthetic data must produce at least one trade with tuesday_exclusion=False"
     )
-
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
-            df_out = m15.reset_index()
-            df_out["timestamp"] = df_out["timestamp"].dt.tz_convert("UTC")
-            df_out.to_csv(f, index=False)
-            tmp_path = f.name
-        yield tmp_path
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
-
-
-def test_tuesday_exclusion_true_no_tuesday_entries(bars_15m_4weeks):
-    """tuesday_exclusion=True (default): no trades should have Tuesday entry timestamps."""
-    config = StrategyConfig(bearish_only=True, tuesday_exclusion=True)
-    trades = BacktestEngine(bars_15m_4weeks, config=config).run()
-    tuesday_trades = [
-        t for t in trades
-        if t.timestamp_entry is not None
-        and t.timestamp_entry.astimezone(NY_TZ).weekday() == 1
+    tuesday_entries = [
+        t for t in trades_off
+        if t.timestamp_entry.astimezone(NY_TZ).weekday() == 1
     ]
-    assert tuesday_trades == [], (
-        f"Expected no Tuesday trades with tuesday_exclusion=True, "
-        f"got {len(tuesday_trades)}: {[t.timestamp_entry for t in tuesday_trades]}"
+    assert len(tuesday_entries) >= 1, (
+        "trades with tuesday_exclusion=False must include a Tuesday entry"
+    )
+    assert len(trades_on) == 0, (
+        f"tuesday_exclusion=True must block the Tuesday entry; got {len(trades_on)} trades"
     )
 
 
-def test_tuesday_exclusion_false_allows_more_trades(bars_15m_4weeks):
+def test_tuesday_exclusion_false_allows_more_trades(tuesday_csv):
     """tuesday_exclusion=False produces >= trade count of tuesday_exclusion=True."""
-    config_on = StrategyConfig(bearish_only=True, tuesday_exclusion=True)
-    config_off = StrategyConfig(bearish_only=True, tuesday_exclusion=False)
-    trades_on = BacktestEngine(bars_15m_4weeks, config=config_on).run()
-    trades_off = BacktestEngine(bars_15m_4weeks, config=config_off).run()
+    trades_on = _run(tuesday_csv, StrategyConfig(bearish_only=True, tuesday_exclusion=True))
+    trades_off = _run(tuesday_csv, StrategyConfig(bearish_only=True, tuesday_exclusion=False))
+    assert len(trades_off) >= 1, "Baseline (filter OFF) must produce at least one trade"
     assert len(trades_off) >= len(trades_on), (
-        f"tuesday_exclusion=False should produce >= trades vs True: "
-        f"{len(trades_off)} vs {len(trades_on)}"
+        f"Expected trades_off ({len(trades_off)}) >= trades_on ({len(trades_on)})"
     )
 
 
-def test_tuesday_exclusion_default_matches_true(bars_15m_4weeks):
+def test_tuesday_exclusion_default_matches_true(tuesday_csv):
     """StrategyConfig() default (tuesday_exclusion=True) produces same result as explicit True."""
-    config_default = StrategyConfig(bearish_only=True)
-    config_explicit = StrategyConfig(bearish_only=True, tuesday_exclusion=True)
-    trades_default = BacktestEngine(bars_15m_4weeks, config=config_default).run()
-    trades_explicit = BacktestEngine(bars_15m_4weeks, config=config_explicit).run()
-    assert len(trades_default) == len(trades_explicit)
+    trades_default = _run(tuesday_csv, StrategyConfig(bearish_only=True))
+    trades_explicit = _run(tuesday_csv, StrategyConfig(bearish_only=True, tuesday_exclusion=True))
+    assert len(trades_default) == len(trades_explicit), (
+        "Default tuesday_exclusion must produce same result as explicit True"
+    )

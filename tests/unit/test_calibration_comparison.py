@@ -10,7 +10,7 @@ from datetime import datetime
 from unittest.mock import Mock, MagicMock
 from pathlib import Path
 
-from src.research.backtest_engine import BacktestEngine, CalibrationComparison
+from src.research.backtest_engine import LegacyTradeLedger, CalibrationComparison
 
 
 class TestCalibrationComparison:

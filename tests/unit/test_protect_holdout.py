@@ -78,10 +78,47 @@ class TestVerifyDateValidation:
         assert rc == 1
         assert "predates cutoff" in capsys.readouterr().out
 
-    def test_verify_no_date_in_filename_passes(self, tmp_path):
-        # File with no parseable date in name — date check skipped, permission check applies
+    def test_verify_no_date_in_filename_no_data_rows_skips_check(self, tmp_path):
+        # Header-only CSV, no date in name → no date determinable → skip date check
         p = tmp_path / "holdout_data.csv"
         p.write_text("timestamp,open,high,low,close,volume\n")
+        os.chmod(p, 0o444)
+        assert verify(tmp_path) == 0
+
+
+class TestVerifyDateContentFallback:
+    def _make_content_csv(
+        self, tmp_path: Path, name: str, timestamp: str, mode: int = 0o444
+    ) -> Path:
+        p = tmp_path / name
+        p.write_text(
+            f"timestamp,open,high,low,close,volume\n"
+            f"{timestamp},18000,18010,17990,18000,100\n"
+        )
+        os.chmod(p, mode)
+        return p
+
+    def test_content_fallback_valid_timestamp_passes(self, tmp_path):
+        """Dateless filename, post-cutoff content timestamp → PASS."""
+        self._make_content_csv(tmp_path, "holdout_data.csv", "2026-03-01 09:30:00+00:00")
+        assert verify(tmp_path) == 0
+
+    def test_content_fallback_precautoff_timestamp_fails(self, tmp_path, capsys):
+        """Dateless filename, pre-cutoff content timestamp → FAIL."""
+        self._make_content_csv(tmp_path, "holdout_data.csv", "2025-12-31 09:30:00+00:00")
+        rc = verify(tmp_path)
+        assert rc == 1
+        assert "predates cutoff" in capsys.readouterr().out
+
+    def test_content_fallback_exact_cutoff_passes(self, tmp_path):
+        """Dateless filename, content timestamp exactly at cutoff 2026-03-01 → PASS."""
+        self._make_content_csv(tmp_path, "holdout_data.csv", "2026-03-01 00:00:00+00:00")
+        assert verify(tmp_path) == 0
+
+    def test_content_fallback_no_timestamp_column_skips_check(self, tmp_path):
+        """CSV with no 'timestamp' column and no filename date → skip date check."""
+        p = tmp_path / "holdout_data.csv"
+        p.write_text("open,high,low,close,volume\n18000,18010,17990,18000,100\n")
         os.chmod(p, 0o444)
         assert verify(tmp_path) == 0
 

@@ -26,7 +26,7 @@ from src.detection.fvg_detection import (
     detect_bullish_fvg,
     detect_bearish_fvg,
 )
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 
 # Configure logging
 logging.basicConfig(
@@ -271,7 +271,7 @@ class HybridTier1Backtester:
 
     def __init__(self, use_tier1_filters: bool = True):
         self.use_tier1_filters = use_tier1_filters
-        self.engine = BacktestEngine(initial_capital=100000.0)
+        self.engine = LegacyTradeLedger(initial_capital=100000.0)
         self.trades = []
 
     def run_backtest(self, dollar_bars: list[DollarBar]) -> dict:

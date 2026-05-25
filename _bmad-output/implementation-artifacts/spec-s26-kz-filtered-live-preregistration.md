@@ -2,7 +2,7 @@
 title: 'S26 Kill-Zone Filtered Live Pre-Registration'
 type: 'feature'
 created: '2026-05-21'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '470681c5861c4fadc1f685b44350b900e12a7ff1'
 context:
   - '{project-root}/_bmad-output/preregistration_s25_live_deployment.md'
@@ -57,10 +57,10 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `s26_kz_validate.py` -- CREATE: load `data/ml_training/s23_meta_labels_2025.csv`, apply the S26 filter (`hour_et in [10, 11, 14]` AND `dow_et != 0`), compute N, PF, win rate (TP), win rate (pnl>0), annualized Sharpe, and annual P&L at 1x and 5-contract size. Print a formatted report and write to `data/reports/s26_kz_validate_<timestamp>.txt`.
-- [ ] `_bmad-output/preregistration_s26_kz_filtered_live.md` -- CREATE: full pre-registration document using s26_kz_validate.py output as the in-sample reference numbers. Model structure exactly on `preregistration_s25_live_deployment.md`. Must include: architecture table, filter definition, in-sample baseline table, hypothesis, evaluation window, and decision rule table.
-- [ ] `s26_kz_validate.py` -- RUN: execute on 2025 data, capture output, verify numbers are internally consistent before writing the pre-registration doc.
-- [ ] `_bmad-output/preregistration_s26_kz_filtered_live.md` -- COMMIT: `git add` + `git commit` with message referencing S26 pre-registration. This commit SHA is the pre-registration gate.
+- [x] `s26_kz_validate.py` -- CREATE: load `data/ml_training/s23_meta_labels_2025.csv`, apply the S26 filter (`hour_et in [10, 11, 14]` AND `dow_et != 0`), compute N, PF, win rate (TP), win rate (pnl>0), annualized Sharpe, and annual P&L at 1x and 5-contract size. Print a formatted report and write to `data/reports/s26_kz_validate_<timestamp>.txt`.
+- [x] `_bmad-output/preregistration_s26_kz_filtered_live.md` -- CREATE: full pre-registration document using s26_kz_validate.py output as the in-sample reference numbers. Model structure exactly on `preregistration_s25_live_deployment.md`. Must include: architecture table, filter definition, in-sample baseline table, hypothesis, evaluation window, and decision rule table.
+- [x] `s26_kz_validate.py` -- RUN: executed 2026-05-21; output in `data/reports/s26_kz_validate_20260521_155159.txt`. N=50, PF=1.6273, Sharpe≈1.42.
+- [x] `_bmad-output/preregistration_s26_kz_filtered_live.md` -- COMMIT: sealed at commit a97b21c (force-added from gitignored _bmad-output). Gate is tamper-evident.
 
 **Acceptance Criteria:**
 - Given the pre-registration doc is committed to git, when `s26_kz_validate.py` is re-run, then the N and PF values in the doc match the script output within ±1 trade and ±0.01 PF

@@ -49,16 +49,17 @@ TradeStation REST API (1-min bars, poll every 60s)
   → TradeStation SIM bracket orders (entry limit + TP limit + SL stop)
 ```
 
-### Active Filters (as of 2026-05-20)
+### Active Filters (as of 2026-05-24 — S25 pre-reg SHA 69972c3)
 
 | Filter | Value | Notes |
 |---|---|---|
-| Direction | Bearish only | `BEARISH_ONLY = True`; bullish path is dead code |
-| H1 sweep required | Must be active | Bearish H1 liquidity sweep within last 6 H1 bars |
-| FVG detection | 3-bar bearish FVG on 1-min bars | Gap ≥ 0.5× ATR, ≤ $60, ≥ 15% of H1 ATR |
-| Day-of-week | No Tuesdays | Hard-coded return on `weekday() == 1` |
+| Direction | Bearish only | `bearish_only=True` in StrategyConfig; bullish path is dead code |
+| H1 sweep required | Must be active | Bearish H1 liquidity sweep within last `h1_sweep_lookback` H1 bars (default: 6) |
+| M15 CHoCH | Required (S25) | Last completed M15 bar close < swing_low − 0.3×M15_ATR; gates M1 FVG scan |
+| FVG detection | 3-bar bearish FVG on 1-min bars | Gap ≥ 0.5× ATR, ≤ $60, ≥ **25%** of H1 ATR (`MIN_GAP_ATR_RATIO=0.25`) |
+| Day-of-week | No Tuesdays | `tuesday_exclusion=True` in StrategyConfig; **note:** live trader hardcodes this check (line 839) — YAML override has no effect until fixed |
 | Volatility regime | ATR gate | Blocks when H1 ATR > 75th pct of 120-bar rolling history |
-| ML filter | **Disabled** | `ML_THRESHOLD = 0.0`; always passes through |
+| ML filter | **Disabled** | `ml_threshold=0.0`; always passes through |
 | LR regime filter | Optional | Active only if `models/xgboost/lr_regime_config.json` exists |
 | Seasonal block | Off by default | Env var `TIER2_BLOCKED_MONTHS` to activate |
 | Daily circuit breaker | -$750/day | Halts for rest of day if daily P&L ≤ -$750 |
@@ -74,20 +75,26 @@ TradeStation REST API (1-min bars, poll every 60s)
 
 ### Key Configuration Constants
 
+All parameters live in `StrategyConfig` dataclass (`src/research/strategy_core.py`):
+
 ```python
-SL_MULTIPLIER = 5.0
-TP_MULTIPLIER = 6.0
-ENTRY_PCT = 0.5
-MAX_HOLD_BARS = 60      # bars from fill
-MAX_PENDING_BARS = 240  # bars waiting for limit fill
-CONTRACTS_PER_TRADE = 5
-MAX_DAILY_LOSS = -750.0
-VOL_REGIME_LOOKBACK = 120
-VOL_REGIME_THRESHOLD = 0.75
-MIN_GAP_ATR_RATIO = 0.15
-BEARISH_ONLY = True
-ML_THRESHOLD = 0.0      # disabled
+sl_multiplier = 5.0
+tp_multiplier = 6.0
+entry_pct = 0.5
+max_hold_bars = 60       # bars from fill
+max_pending_bars = 240   # bars waiting for limit fill
+contracts_per_trade = 5
+max_daily_loss = -750.0
+vol_regime_lookback = 120
+vol_regime_threshold = 0.75
+min_gap_atr_ratio = 0.25  # S25: was 0.15 before 2026-05-24
+bearish_only = True
+ml_threshold = 0.0        # disabled
+h1_sweep_lookback = 6
+tuesday_exclusion = True
 ```
+
+M15 CHoCH state machine is in `_update_m15_choch()` (tier2_streaming_working.py:641); parameters are hardcoded to S25 spec: `SWING_R=2`, `CHOCH_ATR_MULT=0.3`.
 
 ### Running the Deployed System
 
@@ -114,15 +121,35 @@ Data files:
 - `data/processed/mnq_1min_2025.csv` — 2025 full-year 1-min bars
 - `data/processed/mnq_1min_2026_ytd.csv` — 2026 year-to-date 1-min bars
 
-### Methodology Status (2026-05-20)
+### Methodology Status (2026-05-24)
 
-**All backtest results for this system are under re-validation.** The 1-year honest OOS run (May 2025–May 2026) showed PF ≈ 1.0, Sharpe ≈ 0, WR ≈ 48%. Program C (falsification-first) is in progress:
+**Program C complete through Phase 2.** Evidence chain:
 
-- Phase 0 (housekeeping): in progress
-- Phase 1 (S12 random-entry control + S13 timeframe replication): not started
-- Sealed holdout (`data/sealed_holdout/`, 2026-03-01+): not yet established
+- Phase 1 (S12 + S13): S12 AMBIGUOUS (1m 70th pct of random null) → PIVOT → P1 (15m). S13 PATTERNS SURVIVE (15m PF=1.179, TIME_STOP 65%→11%).
+- Phase 2 OOS (holdout 2026-03-01 to 2026-05-19): N=6, PF=2.586 → PASS (weak, N=6 caution).
+- Epic 2 enhancements (BIDIR, KZ, M15CONF, VOL): all H₀ — baseline wins.
+- **S25 deployed (2026-05-24):** H1·M15·M1·g0.25 + M15 CHoCH. Live trades now count toward S25 decision rule (PF > 1.1350 after N≥20 AND 60 days).
+- **S26 pre-registered (2026-05-21):** prospective KZ subgroup analysis (10:00–12:00 ET + 14:00–15:00 ET, Mon+Tue blocked).
 
-Do not run new parameter searches or claim performance improvement until Phase 1 is complete. See `_bmad-output/problem-solution-2026-05-20.md` and `_bmad-output/strategy_spec_current.md`.
+Do NOT change `min_gap_atr_ratio`, CHoCH parameters, or any S25-frozen config without a new pre-registration commit first. See `_bmad-output/preregistration_s25_live_deployment.md`.
+
+### Weekly Config Change Workflow (Epic 8)
+
+Config changes are externalized to `strategy_config.yaml` — no Python edits needed. Follow these 5 steps in order:
+
+1. **Pre-register** (BEFORE any change): commit the seal doc before touching config
+   ```bash
+   PYTHONPATH=. python prereg_seal.py \
+     --name week-N-description \
+     --config strategy_config.yaml \
+     --output _bmad-output/preregistration_weekN.md
+   git add -f _bmad-output/preregistration_weekN.md
+   git commit -m "pre-register week N config: <what changes>"
+   ```
+2. **Edit YAML**: change `strategy_config.yaml` (no Python code changes needed)
+3. **Restart trader**: live system picks up new YAML automatically on next startup
+4. **Weekly check**: `PYTHONPATH=. python tools/weekly_backtest.py --weeks 4` (requires fresh post-holdout data from TradeStation)
+5. **OOS gate** (before any holdout access): `PYTHONPATH=. python oos_checkpoint.py --prereg _bmad-output/preregistration_weekN.md --config strategy_config.yaml`
 
 ---
 

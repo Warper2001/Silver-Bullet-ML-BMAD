@@ -25,10 +25,10 @@ from src.research.strategy_core import (
     calc_sharpe,
 )
 
-HOLDOUT_DIR = Path("data/sealed_holdout")
+HOLDOUT_DIR = Path(__file__).parent / "data/sealed_holdout"
 HOLDOUT_CSV = HOLDOUT_DIR / "mnq_1min_holdout_20260301_plus.csv"
 ACCESS_LOG = HOLDOUT_DIR / "ACCESS_LOG.md"
-REPORTS_DIR = Path("data/reports")
+REPORTS_DIR = Path(__file__).parent / "data/reports"
 
 # Pre-registered thresholds (FR26, pre-registered before any holdout access)
 THRESHOLD_PF = 2.0
@@ -69,6 +69,17 @@ def _compute_metrics(trades: list) -> tuple:
     equity = list(itertools.accumulate(pnls))
     max_dd_pct = calc_max_drawdown_pct(equity)
 
+    # Supplement: calc_max_drawdown_pct skips drawdown when peak <= 0 (initial losing
+    # streak). If equity dips below zero, also measure abs(min) / max as a conservative
+    # additional check so the 10% gate is not bypassed by strategies that lose first.
+    if equity:
+        eq_min = min(equity)
+        eq_max = max(equity)
+        if eq_min < 0 and eq_max > 0:
+            max_dd_pct = max(max_dd_pct, abs(eq_min) / eq_max)
+        elif eq_max <= 0:
+            max_dd_pct = 1.0  # strategy never profitable
+
     return pf, sharpe, max_dd_pct, n
 
 
@@ -107,8 +118,8 @@ def _append_access_log(access_log: Path, prereg_sha: str, prereg_name: str, resu
         f"| {ts} | `{prereg_sha}` | oos_verdict.py | OOS verdict run — {prereg_name} "
         f"| {result_summary} |"
     )
-    with open(access_log, "a") as f:
-        f.write("\n" + row)
+    with open(access_log, "a", encoding="utf-8") as f:
+        f.write(row + "\n")
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +137,7 @@ def _write_report(
     v: str,
 ) -> None:
     """Write the tamper-evident verdict report to report_path."""
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def _threshold_row(metric: str, realized: str, threshold: str, passed: bool) -> str:
         status = "PASS" if passed else "FAIL"
@@ -183,7 +194,7 @@ def _write_report(
 {"**Rationale:** Stopping rule triggered — PF < 1.1 after 100+ trades. Halt experiment." if v == "STOPPING_RULE_TRIGGERED" else ""}
 """
 
-    with open(report_path, "w") as f:
+    with open(report_path, "w", encoding="utf-8") as f:
         f.write(content)
 
 
@@ -209,9 +220,13 @@ def verdict(
     hashes = _parse_prereg(prereg_path)
     prereg_sha = hashes.get("hash_c") or "unknown"
 
-    # Run backtest on holdout data
+    # Run backtest on holdout data; log access even on failure (AR8)
     engine = BacktestEngine(csv_path=str(holdout_csv))
-    trades = engine.run()
+    try:
+        trades = engine.run()
+    except Exception as e:
+        _append_access_log(access_log, prereg_sha, prereg_path.name, f"ERROR: {e}")
+        raise
 
     # Compute metrics
     pf, sharpe, max_dd_pct, n = _compute_metrics(trades)
@@ -224,6 +239,7 @@ def verdict(
     _append_access_log(access_log, prereg_sha, prereg_path.name, result_summary)
 
     # Write verdict report
+    reports_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(timezone.utc)
     report_path = reports_dir / f"oos_verdict_{ts.strftime('%Y%m%d_%H%M%S')}.md"
     _write_report(report_path, prereg_path, hashes, pf, sharpe, max_dd_pct, n, v)

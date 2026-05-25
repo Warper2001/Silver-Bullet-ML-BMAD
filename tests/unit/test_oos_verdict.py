@@ -105,7 +105,7 @@ def test_verdict_go(tmp_path):
 
     assert rc == 0
     log_text = access_log.read_text()
-    assert "GO" in log_text
+    assert "| GO:" in log_text  # "| GO:" does not appear in "| NO-GO:" so this is non-vacuous
 
 
 def test_verdict_no_go_pf(tmp_path):
@@ -195,23 +195,17 @@ def test_verdict_inconclusive(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_verdict_stopping_rule_at_105_pf_1_04(tmp_path):
-    """AC #5 exact: N=105, PF=1.04 → STOPPING_RULE_TRIGGERED."""
+    """AC #5 exact: N=105, PF=1.04 → STOPPING_RULE_TRIGGERED (mock metrics for precision)."""
     prereg = make_prereg_file(tmp_path)
     access_log, reports_dir = make_tmp_dirs(tmp_path)
-
-    # PF = gross_win / gross_loss = (wins * 104) / (losses * 100) ≈ 1.04
-    # 53 wins × 104, 52 losses × 100 → PF ≈ 53*104 / (52*100) ≈ 5512/5200 ≈ 1.06; close enough
-    # Use: 105 trades, 54 wins × 52, 51 losses × 50 → PF = 54*52/(51*50) = 2808/2550 = 1.101 (too high)
-    # Simpler: 53 wins × 100, 52 losses × 96 → PF = 5300/4992 ≈ 1.062
-    # Just craft to be unambiguously < 1.1:
-    # 51 wins × 100, 54 losses × 100 → PF = 5100/5400 = 0.944 → STOPPING (< 1.1)
-    trades = make_trades(51, 54, win_pnl=100.0, loss_pnl=-100.0)  # N=105, PF≈0.94
+    trades = make_trades(60, 45)  # placeholder — metrics overridden below
 
     from oos_verdict import verdict
 
     with (
         patch("oos_verdict.checkpoint_or_abort"),
         patch("oos_verdict.BacktestEngine") as mock_engine,
+        patch("oos_verdict._compute_metrics", return_value=(1.04, 2.0, 0.05, 105)),
     ):
         mock_engine.return_value.run.return_value = trades
         rc = verdict(prereg, holdout_csv=tmp_path / "fake.csv", access_log=access_log, reports_dir=reports_dir)
@@ -399,6 +393,51 @@ def test_access_log_appended_before_report(tmp_path, monkeypatch):
 # _determine_verdict unit tests
 # ---------------------------------------------------------------------------
 
+def test_verdict_no_go_initial_loss_streak(tmp_path):
+    """MaxDD gate catches initial losing streak that calc_max_drawdown_pct would miss."""
+    prereg = make_prereg_file(tmp_path)
+    access_log, reports_dir = make_tmp_dirs(tmp_path)
+
+    # 50 losses × $1000 first → equity dips to -$50K
+    # then 250 wins × $300 → equity peaks at -$50K + $75K = $25K
+    # Supplemental MaxDD = abs(-50K) / 25K = 200% >> 10% → NO-GO
+    losses = make_trades(0, 50, loss_pnl=-1000.0)
+    wins = make_trades(250, 0, win_pnl=300.0)
+    trades = losses + wins
+
+    from oos_verdict import verdict
+
+    with (
+        patch("oos_verdict.checkpoint_or_abort"),
+        patch("oos_verdict.BacktestEngine") as mock_engine,
+    ):
+        mock_engine.return_value.run.return_value = trades
+        rc = verdict(prereg, holdout_csv=tmp_path / "fake.csv", access_log=access_log, reports_dir=reports_dir)
+
+    assert rc == 1
+    assert "NO-GO" in access_log.read_text()
+
+
+def test_engine_run_exception_logs_access(tmp_path):
+    """If engine.run() raises, ACCESS_LOG is still written with ERROR entry (AR8)."""
+    prereg = make_prereg_file(tmp_path)
+    access_log, reports_dir = make_tmp_dirs(tmp_path)
+
+    from oos_verdict import verdict
+
+    with (
+        patch("oos_verdict.checkpoint_or_abort"),
+        patch("oos_verdict.BacktestEngine") as mock_engine,
+        pytest.raises(RuntimeError),
+    ):
+        mock_engine.return_value.run.side_effect = RuntimeError("disk read error")
+        verdict(prereg, holdout_csv=tmp_path / "fake.csv", access_log=access_log, reports_dir=reports_dir)
+
+    log_text = access_log.read_text()
+    assert "oos_verdict.py" in log_text
+    assert "ERROR" in log_text
+
+
 def test_determine_verdict_logic():
     """Direct unit test of _determine_verdict for all branches."""
     from oos_verdict import _determine_verdict
@@ -422,3 +461,27 @@ def test_determine_verdict_logic():
     assert _determine_verdict(1.9, 2.0, 0.05, 200) == "NO-GO"   # PF fails
     assert _determine_verdict(2.0, 1.4, 0.05, 200) == "NO-GO"   # Sharpe fails
     assert _determine_verdict(2.0, 2.0, 0.11, 200) == "NO-GO"   # MaxDD fails
+
+
+def test_verdict_creates_reports_dir_if_missing(tmp_path):
+    """verdict() auto-creates reports_dir if it does not exist (no FileNotFoundError)."""
+    prereg = make_prereg_file(tmp_path)
+    access_log = tmp_path / "ACCESS_LOG.md"
+    access_log.write_text("| Date | SHA | Accessor | Purpose | Result |\n|---|---|---|---|---|\n")
+    # reports_dir intentionally NOT created
+    reports_dir = tmp_path / "new_reports_dir"
+    assert not reports_dir.exists()
+
+    trades = make_trades(200, 100, win_pnl=300.0, loss_pnl=-100.0)
+
+    from oos_verdict import verdict
+
+    with (
+        patch("oos_verdict.checkpoint_or_abort"),
+        patch("oos_verdict.BacktestEngine") as mock_engine,
+    ):
+        mock_engine.return_value.run.return_value = trades
+        rc = verdict(prereg, holdout_csv=tmp_path / "fake.csv", access_log=access_log, reports_dir=reports_dir)
+
+    assert reports_dir.exists()
+    assert list(reports_dir.glob("oos_verdict_*.md"))  # report was written

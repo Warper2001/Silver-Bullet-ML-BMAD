@@ -854,6 +854,9 @@ class Tier2StreamingTrader:
         self._trade_logger: TradeLogger = TradeLogger()
         self._risk_manager: RiskManager = RiskManager()
 
+        # Data quality guards (Story 4-5)
+        self._data_stale: bool = False
+
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
         self._ts_client: Optional[TradeStationClient] = None
@@ -959,6 +962,33 @@ class Tier2StreamingTrader:
         if wd == 4: return h < 22
         return h != 22
 
+    @staticmethod
+    def _is_rth(now_et: datetime) -> bool:
+        """Return True if now_et is within RTH (09:30–16:00 ET)."""
+        h, m = now_et.hour, now_et.minute
+        return (h == 9 and m >= 30) or (10 <= h <= 15) or (h == 16 and m == 0)
+
+    def _check_stale(self, bar: DollarBar) -> bool:
+        """Return True if bar timestamp is >5 min old during RTH (sets/clears _data_stale)."""
+        now_utc = datetime.now(timezone.utc)
+        now_et = now_utc.astimezone(ET_TZ)
+        if not self._is_rth(now_et):
+            return False
+        bar_ts = bar.timestamp if bar.timestamp.tzinfo else bar.timestamp.replace(tzinfo=timezone.utc)
+        age = (now_utc - bar_ts).total_seconds()
+        if age > 300:
+            if not self._data_stale:
+                logger.warning(
+                    "STALE_DATA: last bar at %s, system time %s — halting entries",
+                    bar_ts.isoformat(), now_utc.isoformat(),
+                )
+            self._data_stale = True
+            return True
+        if self._data_stale:
+            logger.info("Stale data cleared — fresh bar received, resuming entries")
+        self._data_stale = False
+        return False
+
     async def stop(self):
         self.running = False
         if self.active_trade and self.dollar_bars:
@@ -977,6 +1007,9 @@ class Tier2StreamingTrader:
             if response.status_code != 200: return
 
             bars_data = response.json().get("Bars", [])
+            if not bars_data:
+                logger.warning("DATA_GAP: no bars returned at %s", datetime.now(timezone.utc).isoformat())
+                return
             new_bars = []
             now_utc = datetime.now(timezone.utc)
             for bar_data in bars_data:
@@ -989,6 +1022,7 @@ class Tier2StreamingTrader:
                     if len(self.dollar_bars) > _BUFFER_CAP:
                         del self.dollar_bars[:-_BUFFER_CAP]
                     self._last_processed_timestamp = bar.timestamp
+                    self._check_stale(bar)
                     new_bars.append(bar)
 
                     # Update session stats
@@ -1020,6 +1054,8 @@ class Tier2StreamingTrader:
             if self._is_backfill and new_bars:
                 self._is_backfill = False
                 logger.info(f"✅ Tier 2 Backfill complete ({len(self.dollar_bars)} bars)")
+        except (httpx.TimeoutException, asyncio.TimeoutError):
+            logger.warning("API_TIMEOUT: request timed out — skipping bar")
         except Exception as e:
             logger.error(f"❌ Error in poll cycle: {e}", exc_info=True)
 
@@ -1365,6 +1401,8 @@ class Tier2StreamingTrader:
             logger.warning("Filter decision log write failed: %s", e)
 
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
+        if self._data_stale:
+            return
         bar_et = bar.timestamp.astimezone(ET_TZ)
         if self.active_trade:
             self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,

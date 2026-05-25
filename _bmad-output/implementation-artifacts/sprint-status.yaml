@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-25T16:00:00Z'
+last_updated: '2026-05-25T18:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -79,12 +79,12 @@ development_status:
 
   # Epic 4: Live Paper Trading System & Real-Time Observability
   # FRs: FR9-FR16, FR22, FR29-FR40 | NFRs: NFR2, NFR6, NFR9-NFR13, NFR16, NFR17
-  epic-4: in-progress
+  epic-4: done
   4-1-bracket-order-submission-and-position-reconciliation: done
   4-2-trade-logging-and-state-persistence-crash-recovery: done
   4-3-daily-circuit-breaker-and-emergency-stop-cli: done
   4-4-real-time-pnl-and-performance-metrics-display: done
-  4-5-stale-data-detection-token-refresh-data-gap-handling: in-progress
+  4-5-stale-data-detection-token-refresh-data-gap-handling: done
   epic-4-retrospective: optional
 
   # Epic 5: TopStep Combine Compliance Suite (Phase 2 — unlocked by OOS verdict GO)

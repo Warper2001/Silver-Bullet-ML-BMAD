@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-25T02:00:00Z'
+last_updated: '2026-05-25T08:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -79,8 +79,8 @@ development_status:
 
   # Epic 4: Live Paper Trading System & Real-Time Observability
   # FRs: FR9-FR16, FR22, FR29-FR40 | NFRs: NFR2, NFR6, NFR9-NFR13, NFR16, NFR17
-  epic-4: backlog
-  4-1-bracket-order-submission-and-position-reconciliation: backlog
+  epic-4: in-progress
+  4-1-bracket-order-submission-and-position-reconciliation: done
   4-2-trade-logging-and-state-persistence-crash-recovery: backlog
   4-3-daily-circuit-breaker-and-emergency-stop-cli: backlog
   4-4-real-time-pnl-and-performance-metrics-display: backlog

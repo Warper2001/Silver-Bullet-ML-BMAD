@@ -1,4 +1,15 @@
 
+## Deferred from: code review of 4-1-bracket-order-submission-and-position-reconciliation (2026-05-25)
+
+- **`_ts_client=None` before `initialize()`** — same pre-existing pattern as `self.auth` and `self.client`; NoneType dereference if methods called before init. [`tier2_streaming_working.py` Tier2StreamingTrader.__init__]
+- **Hardcoded `sim-api.tradestation.com` URLs defeat FR14 SIM→live swap** — `_BROKERAGE_BASE`, `cancel_order`, `SIM_ORDERS_URL` all hardcoded SIM; `AccountConfig.execution_mode` is unused dead data for now. [`tier2_streaming_working.py` TradeStationClient]
+- **PENDING state only populates `entry_order_id`; TP/SL IDs always None in TradeState** — needed for Story 4-3 crash recovery and full bracket reconciliation. [`tier2_streaming_working.py` reconcile_state:368-372]
+- **PENDING detection picks first Limit order (may be TP leg, not entry)** — acceptable while in-memory `active_trade` is authoritative; relevant if full broker-driven recovery is added. [`tier2_streaming_working.py` reconcile_state]
+- **`close_position_at_market()` uses config contract count, not broker position size** — over/under-close possible on partial fill; no partial fills in TradeStation SIM currently. [`tier2_streaming_working.py` close_position_at_market]
+- **Partial HTTP failure (one leg 503, other 200) gives ambiguous reconcile state** — only the outer `except` catches full failures; individual 4xx/5xx on one leg silently treated as empty data. [`tier2_streaming_working.py` reconcile_state]
+- **AC#5 log format mismatch** — spec says `ERROR: API call failed — <error> — skipping bar`; implementation uses warning-level with emoji. Aspirational spec text; no log scraper active. [`tier2_streaming_working.py` TradeStationClient]
+- **AC#5 error handling scope** — method-level exception handling only; pre-existing `_poll_and_process` handles the cycle-level catch. [`tier2_streaming_working.py` _poll_and_process]
+
 ## Deferred from: code review of 8-5-prereg-yaml-workflow (2026-05-25)
 
 - **No test for YAML-file-missing at `oos_checkpoint` verification time** — `run_checks()` catches `FileNotFoundError` correctly but no test exercises that path; symmetric test exists on the seal side (`test_seal_yaml_config_missing_file_returns_1`). [`oos_checkpoint.py:140-144`]

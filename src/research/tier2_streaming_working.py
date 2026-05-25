@@ -17,7 +17,7 @@ import time as _time_mod
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import joblib
 import numpy as np
@@ -65,6 +65,31 @@ SYMBOL_SPECS: dict[str, dict] = {
     "M2KM26": {"point_value": 5.0,  "tick_size": 0.10, "contracts": 2},
 }
 
+# Account and trade state types (FR14: SIM ↔ live via config; FR10: per-cycle reconciliation)
+TradeStatus = Literal["FLAT", "PENDING", "ACTIVE"]
+
+
+@dataclass
+class AccountConfig:
+    """Account configuration for TradeStationClient — SIM vs. live is a config value (FR14)."""
+    account_id: str
+    execution_mode: Literal["sim", "live"]
+    symbol: str
+    point_value: float
+    tick_size: float
+    contracts: int
+
+
+@dataclass
+class TradeState:
+    """Broker-reconciled trade state returned by TradeStationClient.reconcile_state() (FR10)."""
+    status: TradeStatus
+    entry_order_id: Optional[str] = None
+    tp_order_id: Optional[str] = None
+    sl_order_id: Optional[str] = None
+    position_qty: int = 0
+
+
 # TradeStation market data API
 BAR_INTERVAL = "1"
 BAR_UNIT = "Minute"
@@ -74,6 +99,19 @@ POLL_INTERVAL_SECONDS = 60
 # TradeStation SIM order placement
 SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+
+def _default_account_config(symbol: str) -> AccountConfig:
+    """Build AccountConfig from SYMBOL_SPECS for *symbol*. Caller must validate symbol first."""
+    spec = SYMBOL_SPECS[symbol]
+    return AccountConfig(
+        account_id=SIM_ACCOUNT_ID,
+        execution_mode="sim",
+        symbol=symbol,
+        point_value=spec["point_value"],
+        tick_size=spec["tick_size"],
+        contracts=spec["contracts"],
+    )
+
 
 ET_TZ = pytz.timezone('US/Eastern')
 _NY_TZ = pytz.timezone('America/New_York')
@@ -162,6 +200,212 @@ class StatePersistence:
             cls.STATE_PATH.unlink(missing_ok=True)
         except OSError:
             pass
+
+
+class TradeStationClient:
+    """Sole network-touching component. Owns auth, bracket-order submission, order
+    cancellation, market-close, and per-cycle broker reconciliation (AR3, FR9–FR12).
+
+    SIM vs. live is an AccountConfig value — zero strategy-logic changes for FR14 swap.
+    """
+
+    _BROKERAGE_BASE = "https://sim-api.tradestation.com/v3/brokerage"
+
+    def __init__(
+        self,
+        auth: TradeStationAuthV3,
+        account_config: AccountConfig,
+        httpx_client: httpx.AsyncClient,
+    ):
+        self._auth = auth
+        self._cfg = account_config
+        self._http = httpx_client
+
+    async def _headers(self) -> dict:
+        token = await self._auth.authenticate()
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+    async def submit_bracket_order(
+        self, decision: EntryDecision, account_id: str
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Submit SIM bracket (entry limit + TP limit + SL stop). Returns (entry_id, tp_id, sl_id).
+
+        Returns (None, None, None) on any network or HTTP error — never raises.
+        """
+        direction = "LONG" if decision.direction == Direction.BULLISH else "SHORT"
+        entry_action = "BUY" if direction == "LONG" else "SELL"
+        exit_action = "SELL" if direction == "LONG" else "BUY"
+        qty = str(self._cfg.contracts)
+
+        payload = {
+            "AccountID": account_id,
+            "Symbol": self._cfg.symbol,
+            "Quantity": qty,
+            "OrderType": "Limit",
+            "LimitPrice": str(decision.entry_price),
+            "TradeAction": entry_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+            "OSOs": [{
+                "Type": "BRK",
+                "Orders": [
+                    {
+                        "AccountID": account_id,
+                        "Symbol": self._cfg.symbol,
+                        "Quantity": qty,
+                        "OrderType": "Limit",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "LimitPrice": str(decision.tp_price),
+                    },
+                    {
+                        "AccountID": account_id,
+                        "Symbol": self._cfg.symbol,
+                        "Quantity": qty,
+                        "OrderType": "StopMarket",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "StopPrice": str(decision.sl_price),
+                    },
+                ],
+            }],
+        }
+        try:
+            headers = await self._headers()
+            response = await self._http.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            if response.status_code not in (200, 201):
+                logger.warning(f"⚠️ SIM bracket order failed HTTP {response.status_code}: {response.text[:200]}")
+                return None, None, None
+            data = response.json()
+            orders = data.get("Orders", [])
+            entry_id = tp_id = sl_id = None
+            for order in orders:
+                oid = order.get("OrderID")
+                order_type = order.get("OrderType", "")
+                msg = order.get("Message", "")
+                tif = (order.get("TimeInForce") or {}).get("Duration", "")
+                # Primary: OrderType + TimeInForce distinguish entry (Limit/DAY) from TP (Limit/GTC)
+                if order_type == "StopMarket" or "Stop Market" in msg:
+                    sl_id = oid
+                elif order_type == "Limit" and tif == "GTC":
+                    tp_id = oid
+                elif order_type == "Limit":
+                    entry_id = oid  # DAY or unknown duration
+                else:
+                    # Fallback: positional — entry first, then TP
+                    if entry_id is None:
+                        entry_id = oid
+                    else:
+                        tp_id = oid
+            logger.info(f"✓ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
+            return entry_id, tp_id, sl_id
+        except Exception as e:
+            logger.warning(f"⚠️ SIM bracket order exception: {e}")
+            return None, None, None
+
+    async def cancel_order(self, order_id: str) -> bool:
+        """Cancel an open order via DELETE. Returns True on 200/204 (success) or 404 (already gone)."""
+        try:
+            headers = await self._headers()
+            url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
+            response = await self._http.delete(url, headers=headers)
+            return response.status_code in (200, 204, 404)
+        except Exception as e:
+            logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
+            return False
+
+    async def close_position_at_market(self, direction: str, account_id: str) -> Optional[str]:
+        """Submit a market order to flatten the open position. Returns order ID or None on failure."""
+        close_action = "SELL" if direction == "LONG" else "BUY"
+        payload = {
+            "AccountID": account_id,
+            "Symbol": self._cfg.symbol,
+            "Quantity": str(self._cfg.contracts),
+            "OrderType": "Market",
+            "TradeAction": close_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route": "Intelligent",
+        }
+        try:
+            headers = await self._headers()
+            response = await self._http.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            if response.status_code in (200, 201):
+                oid = response.json().get("Orders", [{}])[0].get("OrderID")
+                logger.info(f"✓ SIM flat close order #{oid} submitted")
+                return oid
+            return None
+        except Exception as e:
+            logger.warning(f"⚠️ SIM close order exception: {e}")
+            return None
+
+    async def reconcile_state(self, account_id: str) -> TradeState:
+        """Query broker open orders + positions for this symbol; return FLAT/PENDING/ACTIVE.
+
+        Conservative safe default: FLAT on any error — callers treat in-memory
+        active_trade as authoritative; reconciliation is a cross-check (FR10, FR38).
+        """
+        try:
+            headers = await self._headers()
+            orders_url = (
+                f"{self._BROKERAGE_BASE}/accounts/{account_id}/orders?status=Open"
+            )
+            pos_url = f"{self._BROKERAGE_BASE}/accounts/{account_id}/positions"
+            orders_resp = await self._http.get(orders_url, headers=headers)
+            pos_resp = await self._http.get(pos_url, headers=headers)
+
+            symbol_orders = []
+            if orders_resp.status_code == 200:
+                symbol_orders = [
+                    o for o in orders_resp.json().get("Orders", [])
+                    if o.get("Symbol") == self._cfg.symbol
+                ]
+            position_qty = 0
+            if pos_resp.status_code == 200:
+                # int(float(...)) handles both integer strings ("5") and float strings ("5.0").
+                # abs() because short positions have negative Quantity from the broker.
+                position_qty = sum(
+                    abs(int(float(p.get("Quantity", 0))))
+                    for p in pos_resp.json().get("Positions", [])
+                    if p.get("Symbol") == self._cfg.symbol
+                )
+
+            if position_qty != 0:
+                return TradeState(status="ACTIVE", position_qty=position_qty)
+            if symbol_orders:
+                entry_id = next(
+                    (o.get("OrderID") for o in symbol_orders if o.get("OrderType") == "Limit"),
+                    None,
+                )
+                return TradeState(status="PENDING", entry_order_id=entry_id)
+            return TradeState(status="FLAT")
+        except Exception as e:
+            logger.warning(f"⚠️ reconcile_state failed: {e} — assuming FLAT")
+            return TradeState(status="FLAT")
+
+    async def cancel_all_pending_orders(self, account_id: str) -> list:
+        """Query all open orders for this symbol and cancel each. Returns list of cancelled IDs."""
+        cancelled: list = []
+        try:
+            headers = await self._headers()
+            orders_url = f"{self._BROKERAGE_BASE}/accounts/{account_id}/orders?status=Open"
+            resp = await self._http.get(orders_url, headers=headers)
+            if resp.status_code != 200:
+                return cancelled
+            orders = [
+                o for o in resp.json().get("Orders", [])
+                if o.get("Symbol") == self._cfg.symbol
+            ]
+            for order in orders:
+                oid = order.get("OrderID")
+                if oid and await self.cancel_order(oid):
+                    cancelled.append(oid)
+        except Exception as e:
+            logger.warning(f"⚠️ cancel_all_pending_orders failed: {e}")
+        return cancelled
 
 
 def _parse_blocked_months(raw: str) -> frozenset:
@@ -440,6 +684,10 @@ class Tier2StreamingTrader:
         # State persistence (AR14)
         self._state_persistence = StatePersistence()
 
+        # TradeStationClient — created in initialize() once auth + httpx are ready
+        self._account_config: AccountConfig = _default_account_config(symbol)
+        self._ts_client: Optional[TradeStationClient] = None
+
     async def initialize(self):
         logger.info("=" * 70)
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
@@ -457,6 +705,7 @@ class Tier2StreamingTrader:
         await self.auth.authenticate()
         await self.auth.start_auto_refresh()
         self.client = httpx.AsyncClient(timeout=30.0)
+        self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
         self.session_start_time = datetime.now()
 
     async def start_streaming(self):
@@ -730,7 +979,7 @@ class Tier2StreamingTrader:
                 # Fall through to TP/SL check — might hit in the same bar
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
-                    if oid: await self._cancel_sim_order(oid)
+                    if oid: await self._ts_client.cancel_order(oid)
                 self.active_trade = None
                 self._active_entry_decision = None
                 logger.info(f"⏱ Limit entry expired ({self._strategy_config.max_pending_bars} bars, not filled)")
@@ -756,13 +1005,13 @@ class Tier2StreamingTrader:
     async def _close_active_trade(self, bar: DollarBar, price: float, reason: str):
         t = self.active_trade
         if reason == "time":
-            if t.sim_tp_order_id: await self._cancel_sim_order(t.sim_tp_order_id)
-            if t.sim_sl_order_id: await self._cancel_sim_order(t.sim_sl_order_id)
-            await self._submit_close_order(t.direction)
+            if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
+            if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
+            await self._ts_client.close_position_at_market(t.direction, SIM_ACCOUNT_ID)
         else:
             # Bracket leg hit (TP or SL) - cancel the other leg
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
-            if other_id: await self._cancel_sim_order(other_id)
+            if other_id: await self._ts_client.cancel_order(other_id)
 
         cfg = self._strategy_config
         pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * self._point_value * self._contracts - cfg.commission_per_roundtrip
@@ -984,115 +1233,6 @@ class Tier2StreamingTrader:
             return 10.0
         return calc_atr(_dollar_bars_to_df(bars[-20:]))
 
-    async def _get_auth_headers(self):
-        token = await self.auth.authenticate()
-        return {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-
-    async def _submit_bracket_order(
-        self, direction: str, entry_price: float, tp_price: float, sl_price: float
-    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
-        if direction == "LONG":
-            entry_action = "BUY"
-            exit_action = "SELL"
-        else:
-            entry_action = "SELL"
-            exit_action = "BUY"
-
-        qty = str(self._contracts)
-        payload = {
-            "AccountID": SIM_ACCOUNT_ID,
-            "Symbol": self._symbol,
-            "Quantity": qty,
-            "OrderType": "Limit",
-            "LimitPrice": str(entry_price),
-            "TradeAction": entry_action,
-            "TimeInForce": {"Duration": "DAY"},
-            "Route": "Intelligent",
-            "OSOs": [{
-                "Type": "BRK",
-                "Orders": [
-                    {
-                        "AccountID": SIM_ACCOUNT_ID,
-                        "Symbol": self._symbol,
-                        "Quantity": qty,
-                        "OrderType": "Limit",
-                        "TradeAction": exit_action,
-                        "TimeInForce": {"Duration": "GTC"},
-                        "LimitPrice": str(tp_price),
-                    },
-                    {
-                        "AccountID": SIM_ACCOUNT_ID,
-                        "Symbol": self._symbol,
-                        "Quantity": qty,
-                        "OrderType": "StopMarket",
-                        "TradeAction": exit_action,
-                        "TimeInForce": {"Duration": "GTC"},
-                        "StopPrice": str(sl_price),
-                    },
-                ],
-            }],
-        }
-
-        try:
-            headers = await self._get_auth_headers()
-            response = await self.client.post(SIM_ORDERS_URL, headers=headers, json=payload)
-            if response.status_code not in (200, 201):
-                logger.warning(f"⚠️ SIM bracket order failed HTTP {response.status_code}: {response.text[:200]}")
-                return None, None, None
-
-            data = response.json()
-            orders = data.get("Orders", [])
-            entry_id = tp_id = sl_id = None
-            for order in orders:
-                msg = order.get("Message", "")
-                oid = order.get("OrderID")
-                if "Stop Market" in msg: sl_id = oid
-                elif "Limit" in msg: tp_id = oid
-                else: entry_id = oid
-
-            logger.info(f"✓ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
-            return entry_id, tp_id, sl_id
-        except Exception as e:
-            logger.warning(f"⚠️ SIM bracket order exception: {e}")
-            return None, None, None
-
-    async def _cancel_sim_order(self, order_id: str) -> bool:
-        try:
-            headers = await self._get_auth_headers()
-            url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
-            response = await self.client.delete(url, headers=headers)
-            return response.status_code in (200, 204, 404)
-        except Exception as e:
-            logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
-            return False
-
-    async def _submit_close_order(self, direction: str) -> Optional[str]:
-        close_action = "SELL" if direction == "LONG" else "BUY"
-        payload = {
-            "AccountID": SIM_ACCOUNT_ID,
-            "Symbol": self._symbol,
-            "Quantity": str(self._contracts),
-            "OrderType": "Market",
-            "TradeAction": close_action,
-            "TimeInForce": {"Duration": "DAY"},
-            "Route": "Intelligent",
-        }
-        try:
-            headers = await self._get_auth_headers()
-            response = await self.client.post(SIM_ORDERS_URL, headers=headers, json=payload)
-            if response.status_code in (200, 201):
-                oid = response.json().get("Orders", [{}])[0].get("OrderID")
-                logger.info(f"✓ SIM flat close order #{oid} submitted")
-                return oid
-            return None
-        except Exception as e:
-            logger.warning(f"⚠️ SIM close order exception: {e}")
-            return None
-
     def _snap_tick(self, price: float) -> float:
         """Round price to nearest instrument tick. Avoids float artifacts."""
         return round(round(price / self._tick_size) * self._tick_size, 10)
@@ -1132,7 +1272,7 @@ class Tier2StreamingTrader:
         self._active_entry_decision = snapped_dec
 
         direction_str = "LONG" if entry_dec.direction == Direction.BULLISH else "SHORT"
-        e_id, tp_id, sl_id = await self._submit_bracket_order(direction_str, ent, tp, sl)
+        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, SIM_ACCOUNT_ID)
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,

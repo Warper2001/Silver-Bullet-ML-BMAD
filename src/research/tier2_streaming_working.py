@@ -9,6 +9,8 @@ authoritative P&L record and handles the time-stop (cancel bracket + flat close)
 """
 
 import asyncio
+import csv as _csv_mod
+import itertools
 import json
 import logging
 import os
@@ -39,6 +41,9 @@ from src.research.strategy_core import (
     StrategyConfig,
     SweepSignal,
     calc_atr,
+    calc_max_drawdown_pct,
+    calc_profit_factor,
+    calc_sharpe,
     check_exit,
     detect_fvg,
     detect_liquidity_sweep,
@@ -1283,17 +1288,92 @@ class Tier2StreamingTrader:
             vol_regime_pct=t.vol_regime_pct,
             contracts=self._contracts,
         ))
+        self._log_trade_metrics()
+        self._write_equity_curve()
 
     # _log_trade() removed in Story 4-2 — replaced by TradeLogger.append_trade() (AC#1, AC#2)
     # _check_daily_reset_and_halt() removed in Story 4-3 — replaced by RiskManager.check_and_update() (AC#1)
 
+    def _log_trade_metrics(self) -> None:
+        """Log PF/Sharpe/MaxDD/trade-count after each close (FR30–FR33, AC#1, AC#2, AC#5)."""
+        pnls = [t.pnl for t in self.completed_trades]
+        n = len(pnls)
+        if not pnls:
+            logger.info("PF: N/A | Sharpe: N/A | MaxDD: 0.0%% | Trades: 0")
+            return
+        pf = calc_profit_factor(pnls)
+        pf_str = "inf" if pf == float("inf") else f"{pf:.2f}"
+        sh = calc_sharpe(pnls)
+        cum = list(itertools.accumulate(pnls))
+        dd_pct = calc_max_drawdown_pct(cum)
+        logger.info("PF: %s | Sharpe: %.2f | MaxDD: %.1f%% | Trades: %d",
+                    pf_str, sh, dd_pct * 100, n)
+
+    def _write_equity_curve(self) -> None:
+        """Append one row to logs/equity_curve.csv after each trade close (FR34, AC#3)."""
+        try:
+            pnls = [t.pnl for t in self.completed_trades]
+            cum_pnl = sum(pnls)
+            n = len(pnls)
+            log_path = Path(__file__).parent.parent.parent / "logs" / "equity_curve.csv"
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            write_header = not log_path.exists()
+            with log_path.open("a", newline="") as f:
+                w = _csv_mod.DictWriter(f, fieldnames=["timestamp", "cumulative_pnl_usd", "trade_count"])
+                if write_header:
+                    w.writeheader()
+                w.writerow({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "cumulative_pnl_usd": round(cum_pnl, 2),
+                    "trade_count": n,
+                })
+        except Exception as e:
+            logger.warning("Equity curve write failed: %s", e)
+
+    def _log_filter_decision(
+        self,
+        bar_timestamp: datetime,
+        h1_sweep_active: bool,
+        kill_zone_active: bool,
+        vol_regime_blocked: bool,
+        m15_confirmed: bool,
+        fvg_detected: bool,
+        action: str,
+    ) -> None:
+        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
+        try:
+            log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            write_header = not log_path.exists()
+            with log_path.open("a", newline="") as f:
+                w = _csv_mod.DictWriter(f, fieldnames=[
+                    "bar_timestamp", "h1_sweep_active", "kill_zone_active",
+                    "vol_regime_blocked", "m15_confirmed", "fvg_detected", "action",
+                ])
+                if write_header:
+                    w.writeheader()
+                w.writerow({
+                    "bar_timestamp": bar_timestamp.isoformat(),
+                    "h1_sweep_active": h1_sweep_active,
+                    "kill_zone_active": kill_zone_active,
+                    "vol_regime_blocked": vol_regime_blocked,
+                    "m15_confirmed": m15_confirmed,
+                    "fvg_detected": fvg_detected,
+                    "action": action,
+                })
+        except Exception as e:
+            logger.warning("Filter decision log write failed: %s", e)
+
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
-        if self.active_trade: return
+        bar_et = bar.timestamp.astimezone(ET_TZ)
+        if self.active_trade:
+            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
+                                      self._m15_choch_active, False, "HOLD")
+            return
         bars = self.dollar_bars
         if len(bars) < 20: return  # need 20 bars for ATR and volume features
 
         # Tuesday filter: consistently PF<1.0 across all 5 months of backtest data
-        bar_et = bar.timestamp.astimezone(ET_TZ)
         if bar_et.weekday() == 1:  # 1 = Tuesday
             return
 
@@ -1307,6 +1387,8 @@ class Tier2StreamingTrader:
 
         # Volatility regime gate: skip all signals when H1 ATR in top quartile of recent history
         if self._vol_regime_high:
+            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, True,
+                                      self._m15_choch_active, False, "SKIP")
             return
 
         # FVG detection via strategy_core (replaces self._detect_fvg)
@@ -1339,19 +1421,25 @@ class Tier2StreamingTrader:
                 fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
             except ValueError:
                 fvg_signal = None
-            if fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None:
-                fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+            _fvg_hit = bool(fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None)
+            if _fvg_hit:
+                fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}  # type: ignore[union-attr]
                 if not self.lr_filter.allows(bars, "bearish"):
+                    self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
                     return
                 features = self._extract_features(bars, bar, fvg_dict, "bearish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
+                    self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+                    self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
+            else:
+                self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

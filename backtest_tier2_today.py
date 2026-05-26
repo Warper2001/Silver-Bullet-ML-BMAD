@@ -115,6 +115,7 @@ async def main() -> None:
             trader._session_open_price = bar.open
 
         trader._update_h1_structure()
+        trader._update_m15_choch()
         await trader._advance_active_trade(bar)
         await trader._detect_and_enter(
             bar,

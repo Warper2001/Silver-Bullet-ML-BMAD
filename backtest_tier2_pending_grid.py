@@ -125,6 +125,7 @@ async def run_one(bars: list[DollarBar], pending_bars: int, hold_bars: int) -> R
             trader._update_h1_structure()
             last_h1_ts = h1_ts
 
+        trader._update_m15_choch()
         await trader._advance_active_trade(bar)
         await trader._detect_and_enter(bar, is_backfill=False)
 

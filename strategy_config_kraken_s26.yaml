@@ -1,0 +1,23 @@
+# strategy_config_kraken_s26.yaml — S26 Crypto live paper trading config
+sl_multiplier: 5.0
+tp_multiplier: 6.0
+entry_pct: 0.5
+atr_threshold: 0.5
+max_gap_dollars: 60.0
+max_hold_bars: 60
+max_pending_bars: 240
+contracts_per_trade: 1
+max_daily_loss: -50.0
+vol_regime_lookback: 120
+vol_regime_threshold: 0.75
+min_gap_atr_ratio: 0.35
+ml_threshold: 0.0
+bearish_only: false
+h1_sweep_lookback: 6
+tuesday_exclusion: false
+m15_confirmation: true
+enable_kill_zone_filter: false
+kill_zone_start_et: "04:00"  # 04:00 ET = 03:00 CT (London AM)
+kill_zone_end_et: "11:00"    # 11:00 ET = 10:00 CT (NY AM end)
+commission_per_roundtrip: 0.04
+enable_ifvg_fallback: false

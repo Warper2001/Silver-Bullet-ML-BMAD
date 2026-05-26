@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import zoneinfo
 from dataclasses import dataclass
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from enum import Enum
 from math import sqrt
 
@@ -99,6 +99,7 @@ class StrategyConfig:
     enable_kill_zone_filter: bool = False  # if True, blocks entries outside kill zone
     m15_confirmation: bool = False  # if True, blocks entries where prior M15 bar misaligns with H1 sweep
     tuesday_exclusion: bool = True  # if True, skips Tuesday entry candidates (default preserves existing behavior)
+    enable_ifvg_fallback: bool = False  # if True, arms IFVG candidate when primary limit expires unfilled
 
 
 @dataclass(frozen=True)
@@ -110,6 +111,22 @@ class FVGSignal:
     entry_price: float  # gap midpoint
     high: float
     low: float
+
+
+@dataclass(frozen=True)
+class IFVGCandidate:
+    """An inverted FVG zone armed when a primary limit order expires unfilled.
+
+    When price fully violates the original gap (close beyond gap boundary),
+    the zone inverts polarity and a new limit entry is placed on the retest.
+    Produced by the trader/backtest engine; evaluated by ``check_ifvg_trigger``.
+    """
+
+    direction: Direction       # original FVG direction (BEARISH → resistance on retest)
+    gap_high: float            # top of original FVG zone
+    gap_low: float             # bottom of original FVG zone
+    gap_size: float            # original gap size in index points
+    formed_at: datetime        # bar timestamp when the original FVG was detected
 
 
 @dataclass(frozen=True)
@@ -368,6 +385,46 @@ def detect_fvg(
         high=top,
         low=bot,
     )
+
+
+def check_ifvg_trigger(
+    bar: pd.Series,
+    candidate: IFVGCandidate,
+    config: StrategyConfig,
+) -> FVGSignal | None:
+    """Return a new FVGSignal if ``bar`` triggers the inverted zone, else None.
+
+    A bearish IFVG fires when ``bar.close`` exceeds ``candidate.gap_high`` —
+    price has violated the original bearish gap, inverting it to resistance.
+    Entry is placed at ``entry_pct`` into the zone from the violated boundary,
+    mirroring the primary FVG entry convention.
+
+    A bullish IFVG fires when ``bar.close`` falls below ``candidate.gap_low``.
+
+    The resulting ``FVGSignal`` flows into the same ``make_entry_decision``
+    path as a primary FVG — no separate bracket-order logic required.
+    """
+    if candidate.direction == Direction.BEARISH:
+        if float(bar["close"]) > candidate.gap_high:
+            entry = candidate.gap_high - candidate.gap_size * config.entry_pct
+            return FVGSignal(
+                direction=Direction.BEARISH,
+                gap_size=candidate.gap_size,
+                entry_price=entry,
+                high=candidate.gap_high,
+                low=candidate.gap_low,
+            )
+    else:  # BULLISH
+        if float(bar["close"]) < candidate.gap_low:
+            entry = candidate.gap_low + candidate.gap_size * config.entry_pct
+            return FVGSignal(
+                direction=Direction.BULLISH,
+                gap_size=candidate.gap_size,
+                entry_price=entry,
+                high=candidate.gap_high,
+                low=candidate.gap_low,
+            )
+    return None
 
 
 def detect_liquidity_sweep(

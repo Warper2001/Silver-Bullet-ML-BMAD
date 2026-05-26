@@ -24,10 +24,12 @@ from src.research.strategy_core import (
     Direction,
     EntryDecision,
     ExitDecision,
+    IFVGCandidate,
     StrategyConfig,
     SweepSignal,
     calc_atr,
     check_exit,
+    check_ifvg_trigger,
     check_m15_confirmation,
     detect_fvg,
     detect_liquidity_sweep,
@@ -644,6 +646,7 @@ class BacktestEngine:
         pending: bool = False
         pending_bars: int = 0
         bars_held: int = 0
+        ifvg_candidate: IFVGCandidate | None = None  # S27 infrastructure (off by default)
 
         # ── Daily circuit-breaker state ──────────────────────────────────
         daily_pnl: float = 0.0
@@ -694,6 +697,14 @@ class BacktestEngine:
                         sweep_cached = None
                 else:
                     sweep_cached = None
+                # Clear IFVG candidate when bearish sweep expires
+                if (
+                    config.enable_ifvg_fallback
+                    and ifvg_candidate is not None
+                    and ifvg_candidate.direction == Direction.BEARISH
+                    and (sweep_cached is None or sweep_cached.direction != Direction.BEARISH)
+                ):
+                    ifvg_candidate = None
 
             # ── Step 1: Advance active trade ─────────────────────────────
             bar = bars.iloc[i]
@@ -729,6 +740,16 @@ class BacktestEngine:
                             bars_held = 0
                         continue  # fill bar: advance to next bar regardless of exit outcome
                     elif pending_bars >= config.max_pending_bars:
+                        if config.enable_ifvg_fallback and active_gap > 0:
+                            half = active_gap * config.entry_pct
+                            orig_dir = Direction.BEARISH if active.direction == Direction.BEARISH else Direction.BULLISH
+                            ifvg_candidate = IFVGCandidate(
+                                direction=orig_dir,
+                                gap_high=active.entry_price + active_gap * (1.0 - config.entry_pct),
+                                gap_low=active.entry_price - half,
+                                gap_size=active_gap,
+                                formed_at=active_ts.to_pydatetime(),
+                            )
                         active = None
                         pending = False
                         pending_bars = 0
@@ -818,7 +839,16 @@ class BacktestEngine:
             except ValueError:
                 continue
             if fvg is None:
-                continue
+                # IFVG fallback: check inverted zone when primary FVG missed
+                if config.enable_ifvg_fallback and ifvg_candidate is not None and sweep_cached is not None:
+                    ifvg_signal = check_ifvg_trigger(bar, ifvg_candidate, config)
+                    if ifvg_signal is not None:
+                        fvg = ifvg_signal
+                        ifvg_candidate = None  # consume candidate
+                    else:
+                        continue
+                else:
+                    continue
 
             kz = kill_zone_filter(bar_ts, config)
             if config.enable_kill_zone_filter and not kz:

@@ -326,6 +326,9 @@ class TestSinglePositionEnforcement:
 
         trader = Tier2StreamingTrader.__new__(Tier2StreamingTrader)
         trader.active_trade = MagicMock(spec=ActiveTrade)
+        trader._data_stale = False
+        trader.h1_bearish_sweep_active = False
+        trader._m15_choch_active = False
         trader._ts_client = MagicMock(spec=TradeStationClient)
         trader._ts_client.submit_bracket_order = AsyncMock()
 

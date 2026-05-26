@@ -94,6 +94,12 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-05-25 00:12 UTC | a97b21c | backtest script | `--preregistration a97b21c` | pending |
 | 2026-05-25 00:13 UTC | a97b21c | backtest script | `--preregistration a97b21c` | pending |
 | 2026-05-25 01:06 UTC | a97b21c | backtest script | `--preregistration a97b21c` | pending |
+| 2026-05-25 20:14 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-05-25 21:01 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-05-25 21:46 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-05-25 21:48 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-05-25 22:46 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-05-25 23:44 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
 
 ## Init — 2026-05-23T15:02:03Z
 

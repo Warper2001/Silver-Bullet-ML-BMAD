@@ -38,6 +38,7 @@ from src.research.strategy_core import (
     ExitDecision,
     ExitReason,
     FVGSignal,
+    IFVGCandidate,
     StrategyConfig,
     SweepSignal,
     calc_atr,
@@ -45,6 +46,7 @@ from src.research.strategy_core import (
     calc_profit_factor,
     calc_sharpe,
     check_exit,
+    check_ifvg_trigger,
     detect_fvg,
     detect_liquidity_sweep,
     kill_zone_filter,
@@ -856,6 +858,10 @@ class Tier2StreamingTrader:
 
         # Data quality guards (Story 4-5)
         self._data_stale: bool = False
+        self._consecutive_api_failures: int = 0
+
+        # IFVG fallback candidate (S27 infrastructure — disabled by default via config)
+        self._ifvg_candidate: Optional[IFVGCandidate] = None
 
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
@@ -1004,9 +1010,27 @@ class Tier2StreamingTrader:
             url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
             response = await self.client.get(url, headers=headers)
-            if response.status_code != 200: return
+
+            if response.status_code != 200:
+                self._consecutive_api_failures += 1
+                logger.warning(
+                    "API_ERROR: HTTP %d from %s (%d consecutive failure%s)",
+                    response.status_code, self._symbol,
+                    self._consecutive_api_failures,
+                    "s" if self._consecutive_api_failures != 1 else "",
+                )
+                if self._consecutive_api_failures >= 3:
+                    logger.error(
+                        "MARKET_CLOSED: %d consecutive API failures — "
+                        "shutting down for the day",
+                        self._consecutive_api_failures,
+                    )
+                    self.running = False
+                return
 
             bars_data = response.json().get("Bars", [])
+            # Reset failure counter on any successful data fetch
+            self._consecutive_api_failures = 0
             if not bars_data:
                 logger.warning("DATA_GAP: no bars returned at %s", datetime.now(timezone.utc).isoformat())
                 return
@@ -1161,6 +1185,9 @@ class Tier2StreamingTrader:
             logger.info("H1 bearish sweep expired (no sweep in last 6 H1 bars)")
             self._m15_choch_active = False
             self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
+            if self._ifvg_candidate is not None and self._ifvg_candidate.direction == Direction.BEARISH:
+                self._ifvg_candidate = None
+                logger.info("📋 IFVG candidate expired (H1 sweep window closed)")
 
         self.h1_bearish_sweep_active = new_bearish
         self.h1_bullish_sweep_active = new_bullish
@@ -1258,6 +1285,17 @@ class Tier2StreamingTrader:
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
                     if oid: await self._ts_client.cancel_order(oid)
+                if self._strategy_config.enable_ifvg_fallback and t.gap_size > 0:
+                    half = t.gap_size * self._strategy_config.entry_pct
+                    orig_dir = Direction.BEARISH if t.direction == "SHORT" else Direction.BULLISH
+                    self._ifvg_candidate = IFVGCandidate(
+                        direction=orig_dir,
+                        gap_high=t.entry_price + t.gap_size * (1.0 - self._strategy_config.entry_pct),
+                        gap_low=t.entry_price - half,
+                        gap_size=t.gap_size,
+                        formed_at=t.entry_time,
+                    )
+                    logger.info(f"📋 IFVG candidate armed: {orig_dir.value} gap {t.gap_size:.2f}pts")
                 self.active_trade = None
                 self._active_entry_decision = None
                 logger.info(f"⏱ Limit entry expired ({self._strategy_config.max_pending_bars} bars, not filled)")
@@ -1478,6 +1516,20 @@ class Tier2StreamingTrader:
                     self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
             else:
                 self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP")
+
+        # IFVG fallback: fire when primary FVG missed and candidate zone is violated
+        if (
+            self._ifvg_candidate is not None
+            and self._strategy_config.enable_ifvg_fallback
+            and self.h1_bearish_sweep_active
+            and not self.active_trade
+        ):
+            bar_series = pd.Series({"high": bar.high, "low": bar.low, "close": bar.close})
+            ifvg_signal = check_ifvg_trigger(bar_series, self._ifvg_candidate, self._strategy_config)
+            if ifvg_signal is not None:
+                self._ifvg_candidate = None  # consume candidate
+                logger.info(f"📋 IFVG trigger: {ifvg_signal.direction.value} entry at {ifvg_signal.entry_price:.2f}")
+                await self._enter_trade(ifvg_signal, bar, len(bars) - 1, is_backfill)
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

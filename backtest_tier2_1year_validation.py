@@ -36,6 +36,7 @@ from typing import NamedTuple
 
 import numpy as np
 import pytz
+from unittest.mock import AsyncMock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent))
 import src.research.tier2_streaming_working as tier2_mod
@@ -214,14 +215,17 @@ def sparkline(values: list[float], width: int = 60) -> str:
 async def run_backtest(bars: list[DollarBar]) -> list:
     trader = Tier2StreamingTrader()
 
-    async def _no_bracket(*a, **kw): return (None, None, None)
-    async def _no_cancel(*a, **kw): return True
-    async def _no_close(*a, **kw): return None
-
-    trader._submit_bracket_order = _no_bracket
-    trader._cancel_sim_order     = _no_cancel
-    trader._submit_close_order   = _no_close
+    # Mock out all broker I/O and state persistence for backtest replay
+    mock_client = MagicMock()
+    mock_client.submit_bracket_order = AsyncMock(return_value=(None, None, None))
+    mock_client.cancel_order = AsyncMock(return_value=True)
+    mock_client.close_position_at_market = AsyncMock(return_value=None)
+    mock_client.reconcile_state = AsyncMock(return_value=None)
+    trader._ts_client = mock_client
     trader.ml_filter._log_decision = lambda *a, **kw: None
+
+    # Suppress state persistence writes during replay
+    tier2_mod.StatePersistence.save_state = staticmethod(lambda *a, **kw: None)
 
     last_h1_ts = None
 
@@ -249,6 +253,7 @@ async def run_backtest(bars: list[DollarBar]) -> list:
             trader._update_h1_structure()
             last_h1_ts = h1_ts
 
+        trader._update_m15_choch()
         await trader._advance_active_trade(bar)
         await trader._detect_and_enter(bar, is_backfill=False)
 
@@ -305,7 +310,9 @@ def build_report(trades, start: datetime, end: datetime) -> tuple[str, list[dict
     lines.append("=" * 75)
     lines.append("TIER 2 MNQ 1-YEAR VALIDATION BACKTEST")
     lines.append(f"  Period : {start.date()} → {end.date()}")
-    lines.append(f"  Config : MAX_PENDING_BARS={tier2_mod.MAX_PENDING_BARS}  MAX_HOLD_BARS={tier2_mod.MAX_HOLD_BARS}")
+    from src.research.strategy_core import StrategyConfig as _SC
+    _sc = _SC()
+    lines.append(f"  Config : MAX_PENDING_BARS={_sc.max_pending_bars}  MAX_HOLD_BARS={_sc.max_hold_bars}")
     lines.append(f"  Data   : {CSV_2025.name} (≥ May 19 2025) + {CSV_2026.name}")
     lines.append("=" * 75)
 

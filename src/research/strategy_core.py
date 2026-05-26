@@ -756,6 +756,45 @@ def check_m15_confirmation(
     )
 
 
+def detect_m15_choch(m15_completed: pd.DataFrame) -> bool:
+    """True if the last bar closes below the most recent M15 swing low by ≥ 0.3 × ATR.
+
+    Stateless extraction of the CHoCH criterion used by Tier2StreamingTrader.
+    Caller must pass only COMPLETED M15 bars (forming bar already excluded) and
+    manage the latch (call once per new M15 bar; latch True until sweep expires).
+
+    Returns False when fewer than 7 bars are available or no swing low is found.
+    """
+    n = len(m15_completed)
+    if n < 7:
+        return False
+
+    period = min(20, n - 1)
+    trs = []
+    for i in range(n - period, n):
+        h  = float(m15_completed.iloc[i]["high"])
+        lo = float(m15_completed.iloc[i]["low"])
+        pc = float(m15_completed.iloc[i - 1]["close"])
+        trs.append(max(h - lo, abs(h - pc), abs(lo - pc)))
+    m15_atr = sum(trs) / len(trs) if trs else 0.0
+    if m15_atr <= 0:
+        return False
+
+    SWING_R = 2
+    lows = m15_completed["low"].values.astype(float)
+    swing_low: float | None = None
+    for i in range(n - 1 - SWING_R, SWING_R - 1, -1):
+        lo = lows[i]
+        if all(lows[i + k] >= lo for k in range(-SWING_R, SWING_R + 1) if k != 0):
+            swing_low = lo
+            break
+    if swing_low is None:
+        return False
+
+    last_close = float(m15_completed.iloc[-1]["close"])
+    return last_close < swing_low - 0.3 * m15_atr
+
+
 # ---------------------------------------------------------------------------
 # Metric functions (Story 1.3)
 # ---------------------------------------------------------------------------

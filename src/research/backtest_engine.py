@@ -30,9 +30,9 @@ from src.research.strategy_core import (
     calc_atr,
     check_exit,
     check_ifvg_trigger,
-    check_m15_confirmation,
     detect_fvg,
     detect_liquidity_sweep,
+    detect_m15_choch,
     kill_zone_filter,
     make_entry_decision,
     resample_to_h1,
@@ -660,6 +660,11 @@ class BacktestEngine:
         sweep_cached: SweepSignal | None = None
         last_h1_ts: pd.Timestamp | None = None
 
+        # ── M15 CHoCH state (stateful latch — matches live _update_m15_choch) ──
+        m15_choch_active: bool = False
+        m15_last_bar_ts: pd.Timestamp = pd.Timestamp.min
+        _prev_sweep_dir: str | None = None
+
         for i in range(n):
             if i > 0 and i % 1000 == 0:
                 logger.info(
@@ -705,6 +710,29 @@ class BacktestEngine:
                     and (sweep_cached is None or sweep_cached.direction != Direction.BEARISH)
                 ):
                     ifvg_candidate = None
+
+                # Reset CHoCH latch when sweep direction changes or expires
+                _new_sweep_dir = sweep_cached.direction.value if sweep_cached is not None else None
+                if _new_sweep_dir != _prev_sweep_dir:
+                    m15_choch_active = False
+                    m15_last_bar_ts = pd.Timestamp.min
+                _prev_sweep_dir = _new_sweep_dir
+
+            # ── M15 CHoCH scan (per-bar, mirrors live _update_m15_choch) ──────
+            if (
+                config.m15_confirmation
+                and sweep_cached is not None
+                and sweep_cached.direction == Direction.BEARISH
+                and not m15_choch_active
+            ):
+                _m15_idx = int(full_m15.index.searchsorted(bar_ts))
+                _m15_completed = full_m15.iloc[:max(0, _m15_idx - 1)]  # exclude forming bar
+                if len(_m15_completed) >= 1:
+                    _last_m15_ts = _m15_completed.index[-1]
+                    if _last_m15_ts > m15_last_bar_ts:
+                        m15_last_bar_ts = _last_m15_ts
+                        if detect_m15_choch(_m15_completed):
+                            m15_choch_active = True
 
             # ── Step 1: Advance active trade ─────────────────────────────
             bar = bars.iloc[i]
@@ -854,15 +882,10 @@ class BacktestEngine:
             if config.enable_kill_zone_filter and not kz:
                 continue  # outside kill zone — skip this entry candidate
 
-            # M15 confirmation gate
-            m15_ok = True
-            if config.m15_confirmation:
-                m15_idx = int(full_m15.index.searchsorted(bar_ts))
-                m15_slice = full_m15.iloc[:m15_idx]
-                if len(m15_slice) >= 1:
-                    m15_ok = check_m15_confirmation(sweep, m15_slice).confirmed
-                else:
-                    m15_ok = False
+            # M15 CHoCH gate — uses stateful latch updated per bar above
+            if config.m15_confirmation and not m15_choch_active:
+                continue
+            m15_ok = m15_choch_active if config.m15_confirmation else True
 
             # Entry decision
             entry = make_entry_decision(

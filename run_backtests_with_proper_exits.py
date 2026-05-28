@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 
 from src.data.models import DollarBar
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 from src.research.performance_analyzer import PerformanceAnalyzer
 from src.research.exit_simulator import ExitSimulator
 
@@ -90,7 +90,7 @@ def backtest_strategy_with_proper_exits(
     strategy_name: str,
     bars: list[DollarBar],
     max_hold_bars: int = 10,
-) -> BacktestEngine:
+) -> LegacyTradeLedger:
     """Backtest a strategy with proper SL/TP execution.
 
     Args:
@@ -100,13 +100,13 @@ def backtest_strategy_with_proper_exits(
         max_hold_bars: Maximum bars to hold
 
     Returns:
-        BacktestEngine with completed trades
+        LegacyTradeLedger with completed trades
     """
     logger.info("=" * 70)
     logger.info(f"BACKTESTING: {strategy_name} (with proper exits)")
     logger.info("=" * 70)
 
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
     simulator = ExitSimulator(max_hold_bars=max_hold_bars)
 
     signals_generated = 0
@@ -164,11 +164,11 @@ def backtest_strategy_with_proper_exits(
     return engine
 
 
-def calculate_metrics(engine: BacktestEngine, strategy_name: str) -> dict:
+def calculate_metrics(engine: LegacyTradeLedger, strategy_name: str) -> dict:
     """Calculate performance metrics for a strategy.
 
     Args:
-        engine: BacktestEngine with completed trades
+        engine: LegacyTradeLedger with completed trades
         strategy_name: Name of strategy
 
     Returns:

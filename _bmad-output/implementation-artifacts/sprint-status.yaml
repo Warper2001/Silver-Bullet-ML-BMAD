@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: '2026-05-21T00:00:00Z'
-last_updated: '2026-05-25T18:00:00Z'
+last_updated: '2026-05-26T00:00:00Z'
 project: Silver-Bullet-ML-BMAD
 project_key: NOKEY
 tracking_system: file-system
@@ -89,11 +89,11 @@ development_status:
 
   # Epic 5: TopStep Combine Compliance Suite (Phase 2 — unlocked by OOS verdict GO)
   # FRs: FR17-FR21 | Inherits: NFR9, NFR11, NFR12 from Epic 4
-  epic-5: backlog
-  5-1-intraday-trailing-drawdown-floor-tracker: backlog
-  5-2-consistency-rule-monitor-auto-position-size-reduction: backlog
-  5-3-dynamic-contract-limit-xfa-scaling-plan: backlog
-  5-4-qualifying-day-tracker-and-live-execution-mode-toggle: backlog
+  epic-5: in-progress
+  5-1-intraday-trailing-drawdown-floor-tracker: ready-for-dev
+  5-2-consistency-rule-monitor-auto-position-size-reduction: ready-for-dev
+  5-3-dynamic-contract-limit-xfa-scaling-plan: ready-for-dev
+  5-4-qualifying-day-tracker-and-live-execution-mode-toggle: ready-for-dev
   epic-5-retrospective: optional
 
   # Epic 6: Program C Phase 1 — Falsification (CLOSED 2026-05-23)

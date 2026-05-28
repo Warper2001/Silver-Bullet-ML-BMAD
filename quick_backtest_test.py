@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 
 from src.data.models import DollarBar
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 
 logging.basicConfig(
     level=logging.INFO,
@@ -74,7 +74,7 @@ def backtest_triple_confluence(bars: list[DollarBar]) -> dict:
     from src.detection.triple_confluence_strategy import TripleConfluenceStrategy
 
     strategy = TripleConfluenceStrategy(config={})
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals = 0
 
@@ -114,7 +114,7 @@ def backtest_wolf_pack(bars: list[DollarBar]) -> dict:
     from src.detection.wolf_pack_strategy import WolfPackStrategy
 
     strategy = WolfPackStrategy()
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals = 0
 
@@ -155,7 +155,7 @@ def backtest_adaptive_ema(bars: list[DollarBar]) -> dict:
     from src.detection.adaptive_ema_strategy import AdaptiveEMAStrategy
 
     strategy = AdaptiveEMAStrategy()
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals = 0
 

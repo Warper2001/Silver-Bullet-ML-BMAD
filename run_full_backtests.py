@@ -17,7 +17,7 @@ import h5py
 import numpy as np
 
 from src.data.models import DollarBar
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 from src.research.performance_analyzer import PerformanceAnalyzer
 from src.research.report_generator import ReportGenerator
 
@@ -94,14 +94,14 @@ def load_all_bars(data_path: str = "data/processed/dollar_bars/") -> list[Dollar
     return all_bars
 
 
-def backtest_triple_confluence(bars: list[DollarBar]) -> BacktestEngine:
+def backtest_triple_confluence(bars: list[DollarBar]) -> LegacyTradeLedger:
     """Backtest Triple Confluence Scalper strategy.
 
     Args:
         bars: Historical dollar bars
 
     Returns:
-        BacktestEngine with completed trades
+        LegacyTradeLedger with completed trades
     """
     logger.info("=" * 70)
     logger.info("BACKTESTING: Triple Confluence Scalper")
@@ -110,7 +110,7 @@ def backtest_triple_confluence(bars: list[DollarBar]) -> BacktestEngine:
     from src.detection.triple_confluence_strategy import TripleConfluenceStrategy
 
     strategy = TripleConfluenceStrategy(config={})
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals_generated = 0
     total_bars = len(bars)
@@ -153,14 +153,14 @@ def backtest_triple_confluence(bars: list[DollarBar]) -> BacktestEngine:
     return engine
 
 
-def backtest_wolf_pack(bars: list[DollarBar]) -> BacktestEngine:
+def backtest_wolf_pack(bars: list[DollarBar]) -> LegacyTradeLedger:
     """Backtest Wolf Pack 3-Edge strategy.
 
     Args:
         bars: Historical dollar bars
 
     Returns:
-        BacktestEngine with completed trades
+        LegacyTradeLedger with completed trades
     """
     logger.info("=" * 70)
     logger.info("BACKTESTING: Wolf Pack 3-Edge")
@@ -169,7 +169,7 @@ def backtest_wolf_pack(bars: list[DollarBar]) -> BacktestEngine:
     from src.detection.wolf_pack_strategy import WolfPackStrategy
 
     strategy = WolfPackStrategy()
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals_generated = 0
     total_bars = len(bars)
@@ -212,14 +212,14 @@ def backtest_wolf_pack(bars: list[DollarBar]) -> BacktestEngine:
     return engine
 
 
-def backtest_adaptive_ema(bars: list[DollarBar]) -> BacktestEngine:
+def backtest_adaptive_ema(bars: list[DollarBar]) -> LegacyTradeLedger:
     """Backtest Adaptive EMA Momentum strategy.
 
     Args:
         bars: Historical dollar bars
 
     Returns:
-        BacktestEngine with completed trades
+        LegacyTradeLedger with completed trades
     """
     logger.info("=" * 70)
     logger.info("BACKTESTING: Adaptive EMA Momentum")
@@ -228,7 +228,7 @@ def backtest_adaptive_ema(bars: list[DollarBar]) -> BacktestEngine:
     from src.detection.adaptive_ema_strategy import AdaptiveEMAStrategy
 
     strategy = AdaptiveEMAStrategy()
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals_generated = 0
     total_bars = len(bars)
@@ -271,14 +271,14 @@ def backtest_adaptive_ema(bars: list[DollarBar]) -> BacktestEngine:
     return engine
 
 
-def backtest_vwap_bounce(bars: list[DollarBar]) -> BacktestEngine:
+def backtest_vwap_bounce(bars: list[DollarBar]) -> LegacyTradeLedger:
     """Backtest VWAP Bounce strategy.
 
     Args:
         bars: Historical dollar bars
 
     Returns:
-        BacktestEngine with completed trades
+        LegacyTradeLedger with completed trades
     """
     logger.info("=" * 70)
     logger.info("BACKTESTING: VWAP Bounce")
@@ -287,7 +287,7 @@ def backtest_vwap_bounce(bars: list[DollarBar]) -> BacktestEngine:
     from src.detection.vwap_bounce_strategy import VWAPBounceStrategy
 
     strategy = VWAPBounceStrategy(config={})
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals_generated = 0
     total_bars = len(bars)
@@ -328,14 +328,14 @@ def backtest_vwap_bounce(bars: list[DollarBar]) -> BacktestEngine:
     return engine
 
 
-def backtest_opening_range(bars: list[DollarBar]) -> BacktestEngine:
+def backtest_opening_range(bars: list[DollarBar]) -> LegacyTradeLedger:
     """Backtest Opening Range Breakout strategy.
 
     Args:
         bars: Historical dollar bars
 
     Returns:
-        BacktestEngine with completed trades
+        LegacyTradeLedger with completed trades
     """
     logger.info("=" * 70)
     logger.info("BACKTESTING: Opening Range Breakout")
@@ -344,7 +344,7 @@ def backtest_opening_range(bars: list[DollarBar]) -> BacktestEngine:
     from src.detection.opening_range_strategy import OpeningRangeStrategy
 
     strategy = OpeningRangeStrategy(config={})
-    engine = BacktestEngine(initial_capital=100000)
+    engine = LegacyTradeLedger(initial_capital=100000)
 
     signals_generated = 0
     total_bars = len(bars)
@@ -385,11 +385,11 @@ def backtest_opening_range(bars: list[DollarBar]) -> BacktestEngine:
     return engine
 
 
-def calculate_metrics(engine: BacktestEngine, strategy_name: str) -> dict:
+def calculate_metrics(engine: LegacyTradeLedger, strategy_name: str) -> dict:
     """Calculate performance metrics for a strategy.
 
     Args:
-        engine: BacktestEngine with completed trades
+        engine: LegacyTradeLedger with completed trades
         strategy_name: Name of strategy
 
     Returns:

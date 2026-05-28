@@ -13,7 +13,7 @@ import h5py
 import numpy as np
 
 from src.data.models import DollarBar
-from src.research.backtest_engine import BacktestEngine
+from src.research.backtest_engine import LegacyTradeLedger
 from src.research.performance_analyzer import PerformanceAnalyzer
 from src.research.report_generator import ReportGenerator
 
@@ -107,7 +107,7 @@ def backtest_triple_confluence(bars: list[DollarBar]) -> dict:
         from src.detection.triple_confluence_strategy import TripleConfluenceStrategy
 
         strategy = TripleConfluenceStrategy(config={})
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         signals_generated = 0
 
@@ -168,7 +168,7 @@ def backtest_wolf_pack(bars: list[DollarBar]) -> dict:
         from src.detection.wolf_pack_strategy import WolfPackStrategy
 
         strategy = WolfPackStrategy()  # Uses default parameters
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         signals_generated = 0
 
@@ -226,7 +226,7 @@ def backtest_adaptive_ema(bars: list[DollarBar]) -> dict:
         from src.detection.adaptive_ema_strategy import AdaptiveEMAStrategy
 
         strategy = AdaptiveEMAStrategy()  # No parameters needed
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         signals_generated = 0
 
@@ -284,7 +284,7 @@ def backtest_vwap_bounce(bars: list[DollarBar]) -> dict:
         from src.detection.vwap_bounce_strategy import VWAPBounceStrategy
 
         strategy = VWAPBounceStrategy(config={})
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         signals_generated = 0
 
@@ -340,7 +340,7 @@ def backtest_opening_range(bars: list[DollarBar]) -> dict:
         from src.detection.opening_range_strategy import OpeningRangeStrategy
 
         strategy = OpeningRangeStrategy(config={})
-        engine = BacktestEngine(initial_capital=100000)
+        engine = LegacyTradeLedger(initial_capital=100000)
 
         signals_generated = 0
 

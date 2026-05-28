@@ -453,22 +453,24 @@ class TradeStationClient:
             entry_id = tp_id = sl_id = None
             for order in orders:
                 oid = order.get("OrderID")
-                order_type = order.get("OrderType", "")
                 msg = order.get("Message", "")
-                tif = (order.get("TimeInForce") or {}).get("Duration", "")
-                # Primary: OrderType + TimeInForce distinguish entry (Limit/DAY) from TP (Limit/GTC)
-                if order_type == "StopMarket" or "Stop Market" in msg:
+                
+                # TradeStation API often returns only Message and OrderID for OCOs
+                # Message format: "Sent order: Buy 1 MNQM26 @ 1000.00 Limit"
+                if "Stop Market" in msg:
                     sl_id = oid
-                elif order_type == "Limit" and tif == "GTC":
+                elif exit_action.capitalize() in msg and "Limit" in msg:
                     tp_id = oid
-                elif order_type == "Limit":
-                    entry_id = oid  # DAY or unknown duration
+                elif entry_action.capitalize() in msg and "Limit" in msg:
+                    entry_id = oid
                 else:
-                    # Fallback: positional — entry first, then TP
+                    # Fallback if messages don't match expected pattern
                     if entry_id is None:
                         entry_id = oid
-                    else:
+                    elif tp_id is None:
                         tp_id = oid
+                    else:
+                        sl_id = oid
             logger.info(f"✓ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
             return entry_id, tp_id, sl_id
         except Exception as e:

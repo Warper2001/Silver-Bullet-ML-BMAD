@@ -1,0 +1,83 @@
+========================================================================
+RESEARCH QUEUE FREQUENCY ANALYSIS
+  S25 baseline: N=62 trades over 365 days (0.170/day)
+  Decision gate reference: N≥20 in ≤365 days
+  S26v2 lesson: structural <9 trades/year → untestable
+========================================================================
+
+─── S27-revised: Hold-Period Exit Management ─────────────────────────
+  Total trades:          N=62
+  Time-stop exits:       N=36 (58%)
+    └─ profitable:       N=21 (mean $+449)
+    └─ losing:           N=15 (mean $-349)
+  TP exits:              N=14
+  SL exits:              N=12
+
+  FREQUENCY VERDICT: ✅ NOT A FILTER
+  All N=62 trades eligible — changes exit logic, not entry criteria.
+  No sample-scarcity risk. Full baseline N applies.
+  Pre-reg needed for: breakeven stop levels, trailing ATR multiplier, partial TP %
+
+─── S28: News Calendar Filter ────────────────────────────────────────
+  News events catalogued: 11 FOMC, 13 NFP, 13 CPI
+
+  Option A — ±30min blackout around event time:
+    Trades blocked:   N=2 (3%)
+    Trades surviving: N=60 (97%) → 0.164/day
+    Days to N=20:     ~122 days
+    Surviving PF:     1.3212 (baseline: 1.4106)
+
+  Option B — full-day blackout:
+    Trades blocked:   N=13 (21%)
+    Trades surviving: N=49 (79%) → 0.134/day
+    Days to N=20:     ~149 days
+    Surviving PF:     1.3787
+
+  Blocked trades (±30min):
+    2025-06-18 14:04 ET | tp   | $+1136 | FOMC
+    2026-05-13 08:22 ET | time | $+488 | CPI
+
+  FREQUENCY VERDICT: ✅ VIABLE
+  ±30min filter: 60 trades/year → N=20 in ~122 days
+  Note: calendar accuracy ±1 week for CPI dates — real analysis needs ForexFactory CSV
+
+─── S29: ES/MNQ Divergence Confirmation ──────────────────────────────
+  Baseline: N=62 trades/year
+
+  ES data not available — estimating from divergence rate assumptions:
+  ✅ If 10% of MNQ sweeps lack ES confirmation: N=56/yr → N=20 in ~130 days
+  ✅ If 25% of MNQ sweeps lack ES confirmation: N=46/yr → N=20 in ~159 days
+  ✅ If 40% of MNQ sweeps lack ES confirmation: N=37/yr → N=20 in ~197 days
+  ✅ If 60% of MNQ sweeps lack ES confirmation: N=25/yr → N=20 in ~292 days
+
+  FREQUENCY VERDICT: ⚠️  UNKNOWN — depends on ES divergence rate
+  Viable as long as >50% of MNQ setups have ES confirmation (conservative).
+  Requires sourcing ES 1-min CSV before frequency can be measured.
+  Recommend: acquire ES data, run divergence rate check BEFORE pre-registering.
+
+─── S30: Bullish CHoCH (Symmetric Direction) ─────────────────────────
+  Baseline (bearish): N=62 trades/year (0.170/day)
+  Bidir run (bearish_only=False): N=8 LONG trades/year
+    └─ Due to missing symmetric bullish CHoCH — not a valid signal count
+
+  If bullish CHoCH is symmetric with bearish:
+    Optimistic: ~62 new LONG trades/year → total ~124/yr (0.340/day)
+    Conservative: ~30 new LONG trades/year → total ~92/yr (0.252/day)
+    N=20 LONG-only in ~243 days (conservative) → ✅ VIABLE
+
+  FREQUENCY VERDICT: ✅ ADDITIVE — increases total N, no scarcity risk
+  Key dependency: architecture work required (implement bullish CHoCH + H1 sweep)
+  Must pre-register BEFORE backtest. First backtest reveals true bullish rate.
+
+========================================================================
+SUMMARY
+  S25 baseline: 62 trades/year, 0.170/day, N=20 in ~118 days
+
+  S27-revised  ✅ No filter — all 62 trades eligible, no scarcity risk
+  S28          ✅ Viable — ±30min news blackout blocks ~2 trades, N=20 in ~122 days
+  S29          ⚠️  Unknown — need ES data; viable if <50% divergence rate
+  S30          ✅ Additive — bullish signals add to N, no scarcity risk
+
+  None of these repeat the S26v2 failure pattern.
+  S29 is the only one that could hit a wall — acquire ES data first.
+========================================================================

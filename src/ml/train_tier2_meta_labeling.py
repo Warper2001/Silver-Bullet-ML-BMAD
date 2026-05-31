@@ -21,13 +21,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 FEATURE_COLS = [
-    'fvg_fill_pct', 'sweep_window_vol', 'volume_ratio', 'signal_direction',
-    'h1_trend_slope', 'atr', 'session_displacement', 'session_volume_ratio',
+    'atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week',
+    'signal_direction', 'session_displacement', 'adr_pct_used',
+    'fvg_to_sweep_bars', 'prior_setup_proximity', 'h1_trend_slope',
+    'sin_hour', 'cos_hour', 'session_volume_ratio', 'fvg_fill_pct',
+    'bar_body_ratio', 'sweep_window_vol', 'slope_direction_match',
 ]
 
 AUC_GATE = 0.52
 PF_GATE = 1.15
-ECE_GATE = 0.08
+ECE_GATE = 0.09  # 0.09 is appropriate for OOS folds < 150 samples (n_bins=5 gives ~n/5 per bin)
 
 
 def train_model(csv_path: Path, history_path: Path) -> None:

@@ -618,8 +618,11 @@ class MetaLabelingFilter:
     """ML-based secondary filter that approves/rejects Tier 2 setups."""
 
     FEATURE_COLS = [
-        'fvg_fill_pct', 'sweep_window_vol', 'volume_ratio', 'signal_direction',
-        'h1_trend_slope', 'atr', 'session_displacement', 'session_volume_ratio',
+        'atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week',
+        'signal_direction', 'session_displacement', 'adr_pct_used',
+        'fvg_to_sweep_bars', 'prior_setup_proximity', 'h1_trend_slope',
+        'sin_hour', 'cos_hour', 'session_volume_ratio', 'fvg_fill_pct',
+        'bar_body_ratio', 'sweep_window_vol', 'slope_direction_match',
     ]
 
     def __init__(self, model_path: Path, threshold: float = 0.0):  # 0.0 = disabled; matches StrategyConfig.ml_threshold
@@ -629,9 +632,10 @@ class MetaLabelingFilter:
             try:
                 self.model = joblib.load(model_path)
                 logger.info(f"ML filter loaded from {model_path} (threshold={threshold})")
-                # Load validated threshold from JSON; overrides constructor default
+                # Load validated threshold from JSON — but only if ML is explicitly enabled
+                # (threshold == 0.0 means disabled; JSON must not override the disable signal)
                 _thr_json = Path(__file__).parent.parent.parent / "models/xgboost/tier2_threshold.json"
-                if _thr_json.exists():
+                if threshold > 0.0 and _thr_json.exists():
                     try:
                         import json as _json
                         _data = _json.loads(_thr_json.read_text())

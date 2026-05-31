@@ -1,0 +1,40 @@
+# strategy_config_btc_kz_utc.yaml — BTC Intraday Kill Zone hypothesis (Hypothesis A)
+# Pre-registration: _bmad-output/preregistration_btc_kz_utc.md
+# Sealed: 2026-05-31
+# DO NOT change any value without a new pre-registration commit first.
+#
+# Hypothesis: The S25 H1 sweep + M15 CHoCH + M1 FVG signal stack, applied
+# exclusively in the 21:00-23:00 UTC window (17:00-19:00 EDT / post-US close /
+# pre-Asia handoff), produces PF > 1.10 on PF_XBTUSD over N>=30 live paper trades.
+#
+# BTC calibration notes vs MNQ S25:
+#   atr_threshold: 0.25 (vs 0.5) — BTC 1-min ATR ~100-150pts; FVGs ~30-50pts
+#   min_gap_atr_ratio: 0.04 (vs 0.25) — BTC H1 ATR ~700pts; min gap = 0.04*700 = 28pts
+#   max_gap_dollars: 150.0 — gap_pts * POINT_VALUE_USD(2.0) cap = 300pt max gap
+#   max_daily_loss: -500.0 (vs -750 MNQ) — 1 contract BTC
+#   bearish_only: true — no Golden Flip, pure SHORT on bearish FVG
+#   kill_zone: 17:00-19:00 ET = 21:00-23:00 UTC (EDT); in EST maps to 22:00-00:00 UTC
+#   tuesday_exclusion: false — crypto trades 24/7
+
+sl_multiplier: 5.0
+tp_multiplier: 6.0
+entry_pct: 0.5
+atr_threshold: 0.25
+max_gap_dollars: 150.0
+max_hold_bars: 60
+max_pending_bars: 240
+contracts_per_trade: 1
+max_daily_loss: -500.0
+vol_regime_lookback: 120
+vol_regime_threshold: 0.75
+min_gap_atr_ratio: 0.04
+ml_threshold: 0.0
+bearish_only: true
+h1_sweep_lookback: 6
+tuesday_exclusion: false
+m15_confirmation: true
+enable_kill_zone_filter: true
+kill_zone_start_et: "17:00"
+kill_zone_end_et: "19:00"
+commission_per_roundtrip: 0.04
+enable_ifvg_fallback: false

@@ -1333,6 +1333,13 @@ class Tier2StreamingTrader:
                                       "SKIP:SEASONAL")
             return
 
+        # Kill zone gate: only enter during specified window when filter is enabled
+        if self._strategy_config.enable_kill_zone_filter and not kill_zone_filter(bar.timestamp, self._strategy_config):
+            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False,
+                                      self._vol_regime_high, self._m15_choch_active, False,
+                                      "SKIP:OUTSIDE_KZ")
+            return
+
         # Volatility regime gate: skip all signals when H1 ATR in top quartile of recent history
         if self._vol_regime_high:
             self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, True,
@@ -1395,30 +1402,47 @@ class Tier2StreamingTrader:
                 fvg_signal = None
             _fvg_hit = bool(fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None)
             if _fvg_hit:
-                # GOLDEN FLIP: Logic says Bearish, we enter BULLISH
-                fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
-                if not self.lr_filter.allows(bars, "bullish"):
-                    self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
-                    return
-                features = self._extract_features(bars, bar, fvg_dict, "bullish")
-                proba = self.ml_filter.predict_proba(features)
-                if proba >= self.ml_filter.threshold:
-                    logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry | P(Success)={proba:.3f}")
-                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
-                    # Golden Flip: Create a NEW signal object with inverted direction
-                    fvg_signal = FVGSignal(
-                        direction=Direction.BULLISH,
-                        gap_size=fvg_signal.gap_size,
-                        entry_price=fvg_signal.entry_price,
-                        high=fvg_signal.high,
-                        low=fvg_signal.low
-                    )
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
+                if self._strategy_config.bearish_only:
+                    # Standard S25-style SHORT entry on bearish FVG (no Golden Flip)
+                    fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                    if not self.lr_filter.allows(bars, "bearish"):
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
+                        return
+                    features = self._extract_features(bars, bar, fvg_dict, "bearish")
+                    proba = self.ml_filter.predict_proba(features)
+                    if proba >= self.ml_filter.threshold:
+                        logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                        self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                        await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
+                    else:
+                        logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                        self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
                 else:
-                    logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry FILTERED | P(Success)={proba:.3f}")
-                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
-                    self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
+                    # GOLDEN FLIP: Logic says Bearish, we enter BULLISH
+                    fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                    if not self.lr_filter.allows(bars, "bullish"):
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
+                        return
+                    features = self._extract_features(bars, bar, fvg_dict, "bullish")
+                    proba = self.ml_filter.predict_proba(features)
+                    if proba >= self.ml_filter.threshold:
+                        logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry | P(Success)={proba:.3f}")
+                        self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                        fvg_signal = FVGSignal(
+                            direction=Direction.BULLISH,
+                            gap_size=fvg_signal.gap_size,
+                            entry_price=fvg_signal.entry_price,
+                            high=fvg_signal.high,
+                            low=fvg_signal.low
+                        )
+                        await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
+                    else:
+                        logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry FILTERED | P(Success)={proba:.3f}")
+                        self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
             else:
                 self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP:NO_FVG")
 

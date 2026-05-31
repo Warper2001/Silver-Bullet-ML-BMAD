@@ -29,8 +29,10 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
+from src.execution.kraken.market_data.history import KrakenHistoryClient, CHARTS_BASE
+from src.execution.kraken.models import KrakenBar
+import httpx
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
     Direction,
@@ -38,7 +40,6 @@ from src.research.strategy_core import (
     ExitDecision,
     ExitReason,
     FVGSignal,
-    IFVGCandidate,
     StrategyConfig,
     SweepSignal,
     calc_atr,
@@ -46,7 +47,6 @@ from src.research.strategy_core import (
     calc_profit_factor,
     calc_sharpe,
     check_exit,
-    check_ifvg_trigger,
     detect_fvg,
     detect_liquidity_sweep,
     kill_zone_filter,
@@ -56,7 +56,7 @@ from src.research.strategy_core import (
 )
 
 # Configuration (OPTIMIZED TIER 2)
-TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25"  # S25 pre-reg SHA 69972c3
+TIER2_CONFIG = "S26_CRYPTO_KRAKEN"  # S25 pre-reg SHA 69972c3
 
 # Strategy parameters live in StrategyConfig (strategy_core.py) — the single source
 # of truth shared by live trader and backtest engine.  Do not add duplicates here.
@@ -68,9 +68,7 @@ ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta
 
 # Per-instrument specifications (point value, tick size, default contract count)
 SYMBOL_SPECS: dict[str, dict] = {
-    "MNQM26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},
-    "MESM26": {"point_value": 5.0,  "tick_size": 0.25, "contracts": 2},
-    "M2KM26": {"point_value": 5.0,  "tick_size": 0.10, "contracts": 2},
+    "PF_XBTUSD": {"point_value": 1.0,  "tick_size": 0.5, "contracts": 1},
 }
 
 # Account and trade state types (FR14: SIM ↔ live via config; FR10: per-cycle reconciliation)
@@ -128,7 +126,7 @@ HISTORY_HOURS = 48  # Enough history for H1 swing detection
 POLL_INTERVAL_SECONDS = 60
 
 # TradeStation SIM order placement
-SIM_ACCOUNT_ID = "SIM2797251F"
+SIM_ACCOUNT_ID = "KRAKEN_PAPER"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
 
 def _default_account_config(symbol: str) -> AccountConfig:
@@ -144,7 +142,7 @@ def _default_account_config(symbol: str) -> AccountConfig:
     )
 
 
-ET_TZ = pytz.timezone('US/Eastern')
+ET_TZ = pytz.timezone("America/New_York")
 _NY_TZ = pytz.timezone('America/New_York')
 
 # Rolling buffer cap — 125 H1 bars × 60 min covers vol_regime_lookback=120 H1 bars (AR16).
@@ -157,6 +155,15 @@ def _dollar_bars_to_df(bars: "list[DollarBar]") -> pd.DataFrame:
     Timezone is already UTC on DollarBar.timestamp; converts to America/New_York
     at this ingest boundary (AR19 — single conversion, never inside strategy_core).
     """
+    if len(bars) <= 120:
+        return pd.DataFrame({
+            "open": [b.open for b in bars],
+            "high": [b.high for b in bars],
+            "low": [b.low for b in bars],
+            "close": [b.close for b in bars],
+            "volume": [b.volume for b in bars],
+        }, index=pd.Index([b.timestamp for b in bars], name="timestamp"))
+
     rows = {
         "timestamp": pd.to_datetime([b.timestamp for b in bars], utc=True),
         "open": [b.open for b in bars],
@@ -179,7 +186,7 @@ def _build_strategy_config() -> StrategyConfig:
 
     Resolution order:
     1. STRATEGY_CONFIG_PATH env var (explicit override)
-    2. strategy_config.yaml at repo root (default YAML)
+    2. strategy_config_kraken_s26.yaml at repo root (default YAML)
     3. StrategyConfig() dataclass defaults
     """
     from src.research.config_loader import load_strategy_config
@@ -192,7 +199,7 @@ def _build_strategy_config() -> StrategyConfig:
             return load_strategy_config(path)
         logger.warning(f"STRATEGY_CONFIG_PATH={yaml_path_env!r} not found; falling through")
 
-    default_yaml = Path(__file__).parent.parent.parent / "strategy_config.yaml"
+    default_yaml = Path(__file__).parent.parent.parent / "strategy_config_kraken_s26.yaml"
     if default_yaml.exists():
         logger.info(f"Loading strategy config from {default_yaml}")
         return load_strategy_config(default_yaml)
@@ -209,11 +216,19 @@ class StatePersistence:
     """
 
     _LOG_DIR = Path(__file__).parent.parent.parent / "logs"
-    STATE_PATH = _LOG_DIR / "active_trade_state.json"
-    TMP_PATH = _LOG_DIR / "active_trade_state.tmp"
+    _IS_BACKTEST = os.environ.get("IS_BACKTEST") == "1"
+    
+    if _IS_BACKTEST:
+        STATE_PATH = _LOG_DIR / "backtest_active_trade_state_crypto.json"
+        TMP_PATH = _LOG_DIR / "backtest_active_trade_state_crypto.tmp"
+    else:
+        STATE_PATH = _LOG_DIR / "active_trade_state_crypto.json"
+        TMP_PATH = _LOG_DIR / "active_trade_state_crypto.tmp"
 
     @classmethod
     def save_state(cls, state: dict) -> None:
+        if cls._IS_BACKTEST:
+            return  # skip writing state entirely during backtests to prevent collision
         cls._LOG_DIR.mkdir(parents=True, exist_ok=True)
         cls.TMP_PATH.write_text(json.dumps(state, default=str), encoding="utf-8")
         os.replace(cls.TMP_PATH, cls.STATE_PATH)
@@ -236,11 +251,11 @@ class StatePersistence:
 class TradeLogger:
     """Sole appender of the trade log CSV in PRD-mandated column order (AR15, FR29).
 
-    Single-writer pattern: only this class appends to tier2_trade_log.csv.
+    Single-writer pattern: only this class appends to s26_crypto_trade_log.csv.
     Header written only when file is empty (f.tell() == 0) — avoids TOCTOU race (AC#2).
     """
 
-    _LOG_PATH = Path(__file__).parent.parent.parent / "logs" / "tier2_trade_log.csv"
+    _LOG_PATH = Path(__file__).parent.parent.parent / "logs" / "s26_crypto_trade_log.csv"
     _COLUMNS = [
         "timestamp_entry", "timestamp_exit", "direction", "entry_price",
         "exit_price", "tp_price", "sl_price", "gap_size", "pnl_usd",
@@ -370,123 +385,6 @@ class RiskManager:
             logger.warning("RiskManager: failed to persist halt state: %s", e)
 
 
-class TradeStationClient:
-    """Sole network-touching component. Owns auth, bracket-order submission, order
-    cancellation, market-close, and per-cycle broker reconciliation (AR3, FR9–FR12).
-
-    SIM vs. live is an AccountConfig value — zero strategy-logic changes for FR14 swap.
-    """
-
-    _BROKERAGE_BASE = "https://sim-api.tradestation.com/v3/brokerage"
-
-    def __init__(
-        self,
-        auth: TradeStationAuthV3,
-        account_config: AccountConfig,
-        httpx_client: httpx.AsyncClient,
-    ):
-        self._auth = auth
-        self._cfg = account_config
-        self._http = httpx_client
-
-    async def _headers(self) -> dict:
-        token = await self._auth.authenticate()
-        return {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-
-    async def submit_bracket_order(
-        self, decision: EntryDecision, account_id: str
-    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
-        """Submit SIM bracket (entry limit + TP limit + SL stop). Returns (entry_id, tp_id, sl_id).
-
-        Returns (None, None, None) on any network or HTTP error — never raises.
-        """
-        direction = "LONG" if decision.direction == Direction.BULLISH else "SHORT"
-        entry_action = "BUY" if direction == "LONG" else "SELL"
-        exit_action = "SELL" if direction == "LONG" else "BUY"
-        qty = str(self._cfg.contracts)
-
-        payload = {
-            "AccountID": account_id,
-            "Symbol": self._cfg.symbol,
-            "Quantity": qty,
-            "OrderType": "Limit",
-            "LimitPrice": str(decision.entry_price),
-            "TradeAction": entry_action,
-            "TimeInForce": {"Duration": "DAY"},
-            "Route": "Intelligent",
-            "OSOs": [{
-                "Type": "BRK",
-                "Orders": [
-                    {
-                        "AccountID": account_id,
-                        "Symbol": self._cfg.symbol,
-                        "Quantity": qty,
-                        "OrderType": "Limit",
-                        "TradeAction": exit_action,
-                        "TimeInForce": {"Duration": "GTC"},
-                        "LimitPrice": str(decision.tp_price),
-                    },
-                    {
-                        "AccountID": account_id,
-                        "Symbol": self._cfg.symbol,
-                        "Quantity": qty,
-                        "OrderType": "StopMarket",
-                        "TradeAction": exit_action,
-                        "TimeInForce": {"Duration": "GTC"},
-                        "StopPrice": str(decision.sl_price),
-                    },
-                ],
-            }],
-        }
-        try:
-            headers = await self._headers()
-            response = await self._http.post(SIM_ORDERS_URL, headers=headers, json=payload)
-            if response.status_code not in (200, 201):
-                logger.warning(f"⚠️ SIM bracket order failed HTTP {response.status_code}: {response.text[:200]}")
-                return None, None, None
-            data = response.json()
-            orders = data.get("Orders", [])
-            entry_id = tp_id = sl_id = None
-            for order in orders:
-                oid = order.get("OrderID")
-                msg = order.get("Message", "")
-                
-                # TradeStation API often returns only Message and OrderID for OCOs
-                # Message format: "Sent order: Buy 1 MNQM26 @ 1000.00 Limit"
-                if "Stop Market" in msg:
-                    sl_id = oid
-                elif exit_action.capitalize() in msg and "Limit" in msg:
-                    tp_id = oid
-                elif entry_action.capitalize() in msg and "Limit" in msg:
-                    entry_id = oid
-                else:
-                    # Fallback if messages don't match expected pattern
-                    if entry_id is None:
-                        entry_id = oid
-                    elif tp_id is None:
-                        tp_id = oid
-                    else:
-                        sl_id = oid
-            logger.info(f"✓ SIM bracket submitted | entry #{entry_id} | TP #{tp_id} | SL #{sl_id}")
-            return entry_id, tp_id, sl_id
-        except Exception as e:
-            logger.warning(f"⚠️ SIM bracket order exception: {e}")
-            return None, None, None
-
-    async def cancel_order(self, order_id: str) -> bool:
-        """Cancel an open order via DELETE. Returns True on 200/204 (success) or 404 (already gone)."""
-        try:
-            headers = await self._headers()
-            url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
-            response = await self._http.delete(url, headers=headers)
-            return response.status_code in (200, 204, 404)
-        except Exception as e:
-            logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
-            return False
 
     async def close_position_at_market(self, direction: str, account_id: str) -> Optional[str]:
         """Submit a market order to flatten the open position. Returns order ID or None on failure."""
@@ -602,7 +500,10 @@ BLOCKED_MONTHS: frozenset = _parse_blocked_months(os.environ.get("TIER2_BLOCKED_
 log_dir = Path(__file__).parent.parent.parent / "logs"
 log_dir.mkdir(exist_ok=True)
 
-_handlers: list = [logging.FileHandler(log_dir / 'tier2_streaming_working.log')]
+_is_backtest_env = os.environ.get("IS_BACKTEST") == "1"
+_log_filename = 'backtest_s26_crypto_streaming.log' if _is_backtest_env else 's26_crypto_streaming_working.log'
+
+_handlers: list = [logging.FileHandler(log_dir / _log_filename)]
 if sys.stdout.isatty():
     _handlers.append(logging.StreamHandler())
 _log_level = logging.DEBUG if os.environ.get("TIER2_DEBUG") else logging.INFO
@@ -648,9 +549,9 @@ class MetaLabelingFilter:
             logger.warning(f"ML model not found at {model_path} — falling back to pass-through")
 
     def _log_decision(self, timestamp, proba: float, decision: str) -> None:
-        """Append filter decision to logs/tier2_filter_log.csv."""
+        """Append filter decision to logs/s26_crypto_filter_log.csv."""
         import csv as _csv
-        log_path = Path(__file__).parent.parent.parent / "logs/tier2_filter_log.csv"
+        log_path = Path(__file__).parent.parent.parent / "logs/s26_crypto_filter_log.csv"
         row = {
             "timestamp":       str(timestamp),
             "filter_decision": decision,
@@ -783,7 +684,7 @@ class CompletedTrade:
 
 
 class Tier2StreamingTrader:
-    def __init__(self, symbol: str = "MNQM26"):
+    def __init__(self, symbol: str = "PF_XBTUSD"):
         spec = SYMBOL_SPECS.get(symbol)
         if spec is None:
             raise ValueError(f"Unknown symbol: {symbol!r}. Valid symbols: {list(SYMBOL_SPECS)}")
@@ -797,8 +698,7 @@ class Tier2StreamingTrader:
         )
 
         self.running = False
-        self.auth = None
-        self.client = None
+        
         self.dollar_bars: list[DollarBar] = []
         self._last_processed_timestamp: Optional[datetime] = None
         self.active_trade: Optional[ActiveTrade] = None
@@ -860,14 +760,10 @@ class Tier2StreamingTrader:
 
         # Data quality guards (Story 4-5)
         self._data_stale: bool = False
-        self._consecutive_api_failures: int = 0
-
-        # IFVG fallback candidate (S27 infrastructure — disabled by default via config)
-        self._ifvg_candidate: Optional[IFVGCandidate] = None
 
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
-        self._ts_client: Optional[TradeStationClient] = None
+        self._history_client = KrakenHistoryClient(httpx.AsyncClient(timeout=15.0))
 
     async def initialize(self):
         logger.info("=" * 70)
@@ -882,11 +778,7 @@ class Tier2StreamingTrader:
         logger.info(f"ML Filter: {'ACTIVE' if self.ml_filter.model else 'PASS-THROUGH'} | threshold={cfg.ml_threshold}")
         logger.info("=" * 70)
 
-        self.auth = TradeStationAuthV3.from_file('.access_token')
-        await self.auth.authenticate()
-        await self.auth.start_auto_refresh()
-        self.client = httpx.AsyncClient(timeout=30.0)
-        self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+        pass
         self.session_start_time = datetime.now()
 
         # Crash recovery: load persisted state and reconcile with broker (FR38, NFR11, NFR12)
@@ -1006,45 +898,33 @@ class Tier2StreamingTrader:
 
     async def _poll_and_process(self):
         try:
-            token = await self.auth.authenticate()
-            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-            since = self._last_processed_timestamp or (datetime.now(timezone.utc) - timedelta(hours=HISTORY_HOURS))
-            url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-
-            response = await self.client.get(url, headers=headers)
-
-            if response.status_code != 200:
-                self._consecutive_api_failures += 1
-                logger.warning(
-                    "API_ERROR: HTTP %d from %s (%d consecutive failure%s)",
-                    response.status_code, self._symbol,
-                    self._consecutive_api_failures,
-                    "s" if self._consecutive_api_failures != 1 else "",
-                )
-                if self._consecutive_api_failures >= 3:
-                    logger.error(
-                        "MARKET_CLOSED: %d consecutive API failures — "
-                        "shutting down for the day",
-                        self._consecutive_api_failures,
-                    )
-                    self.running = False
-                return
-
-            bars_data = response.json().get("Bars", [])
-            # Reset failure counter on any successful data fetch
+            count = 1440 if not self._last_processed_timestamp else 2
+            kraken_bars = await self._history_client.fetch_bars(self._symbol, interval="1m", count=count)
             self._consecutive_api_failures = 0
-            if not bars_data:
+            
+            if not kraken_bars:
                 logger.warning("DATA_GAP: no bars returned at %s", datetime.now(timezone.utc).isoformat())
                 return
+                
             new_bars = []
             now_utc = datetime.now(timezone.utc)
-            for bar_data in bars_data:
-                bar = self._parse_bar(bar_data)
+            for kb in kraken_bars:
+                # Convert KrakenBar to DollarBar
+                notional = float(kb.volume) * float(kb.close)
+                if notional <= 0: notional = 1.0
+                bar = DollarBar(
+                    timestamp=kb.time,
+                    open=float(kb.open),
+                    high=float(kb.high),
+                    low=float(kb.low),
+                    close=float(kb.close),
+                    volume=int(kb.volume),
+                    notional_value=notional
+                )
                 if bar and bar.timestamp <= now_utc and (
                     not self._last_processed_timestamp or bar.timestamp > self._last_processed_timestamp
                 ):
                     self.dollar_bars.append(bar)
-                    # Bound the buffer to prevent unbounded memory growth (AR16)
                     if len(self.dollar_bars) > _BUFFER_CAP:
                         del self.dollar_bars[:-_BUFFER_CAP]
                     self._last_processed_timestamp = bar.timestamp
@@ -1055,7 +935,6 @@ class Tier2StreamingTrader:
                     bar_et = bar.timestamp.astimezone(ET_TZ)
                     if self._current_day != bar_et.date():
                         if self._current_day is not None:
-                            # Day closed, record range for ADR
                             self._daily_ranges.append(self._session_high - self._session_low)
                             if len(self._daily_ranges) > 20: self._daily_ranges.pop(0)
 
@@ -1069,14 +948,13 @@ class Tier2StreamingTrader:
                     if np.isnan(self._session_open_price) and bar_et.hour >= 6:
                         self._session_open_price = bar.open
 
-                    # Per-bar timing instrumentation (AR17)
                     _t0 = _time_mod.perf_counter_ns()
                     self._update_h1_structure()
                     self._update_m15_choch()
                     await self._advance_active_trade(bar)
                     await self._detect_and_enter(bar, is_backfill=self._is_backfill)
                     self._bar_processing_times.append(_time_mod.perf_counter_ns() - _t0)
-
+                    
             if self._is_backfill and new_bars:
                 self._is_backfill = False
                 logger.info(f"✅ Tier 2 Backfill complete ({len(self.dollar_bars)} bars)")
@@ -1187,9 +1065,6 @@ class Tier2StreamingTrader:
             logger.info("H1 bearish sweep expired (no sweep in last 6 H1 bars)")
             self._m15_choch_active = False
             self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
-            if self._ifvg_candidate is not None and self._ifvg_candidate.direction == Direction.BEARISH:
-                self._ifvg_candidate = None
-                logger.info("📋 IFVG candidate expired (H1 sweep window closed)")
 
         self.h1_bearish_sweep_active = new_bearish
         self.h1_bullish_sweep_active = new_bullish
@@ -1287,17 +1162,6 @@ class Tier2StreamingTrader:
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
                     if oid: await self._ts_client.cancel_order(oid)
-                if self._strategy_config.enable_ifvg_fallback and t.gap_size > 0:
-                    half = t.gap_size * self._strategy_config.entry_pct
-                    orig_dir = Direction.BEARISH if t.direction == "SHORT" else Direction.BULLISH
-                    self._ifvg_candidate = IFVGCandidate(
-                        direction=orig_dir,
-                        gap_high=t.entry_price + t.gap_size * (1.0 - self._strategy_config.entry_pct),
-                        gap_low=t.entry_price - half,
-                        gap_size=t.gap_size,
-                        formed_at=t.entry_time,
-                    )
-                    logger.info(f"📋 IFVG candidate armed: {orig_dir.value} gap {t.gap_size:.2f}pts")
                 self.active_trade = None
                 self._active_entry_decision = None
                 logger.info(f"⏱ Limit entry expired ({self._strategy_config.max_pending_bars} bars, not filled)")
@@ -1322,14 +1186,7 @@ class Tier2StreamingTrader:
 
     async def _close_active_trade(self, bar: DollarBar, price: float, reason: str):
         t = self.active_trade
-        if reason == "time":
-            if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
-            if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
-            await self._ts_client.close_position_at_market(t.direction, SIM_ACCOUNT_ID)
-        else:
-            # Bracket leg hit (TP or SL) - cancel the other leg
-            other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
-            if other_id: await self._ts_client.cancel_order(other_id)
+        pass # Pure paper trading, no broker sync needed.
 
         cfg = self._strategy_config
         pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * self._point_value * self._contracts - cfg.commission_per_roundtrip
@@ -1386,12 +1243,15 @@ class Tier2StreamingTrader:
                     pf_str, sh, dd_pct * 100, n)
 
     def _write_equity_curve(self) -> None:
-        """Append one row to logs/equity_curve.csv after each trade close (FR34, AC#3)."""
+        """Append one row to logs/equity_curve_crypto.csv after each trade close (FR34, AC#3)."""
         try:
             pnls = [t.pnl for t in self.completed_trades]
             cum_pnl = sum(pnls)
             n = len(pnls)
-            log_path = Path(__file__).parent.parent.parent / "logs" / "equity_curve.csv"
+            
+            is_backtest_env = os.environ.get("IS_BACKTEST") == "1"
+            filename = "backtest_equity_curve_crypto.csv" if is_backtest_env else "equity_curve_crypto.csv"
+            log_path = Path(__file__).parent.parent.parent / "logs" / filename
             log_path.parent.mkdir(parents=True, exist_ok=True)
             write_header = not log_path.exists()
             with log_path.open("a", newline="") as f:
@@ -1416,9 +1276,9 @@ class Tier2StreamingTrader:
         fvg_detected: bool,
         action: str,
     ) -> None:
-        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
+        """Append one per-bar filter decision row to logs/s26_crypto_bar_decisions.csv (FR35, AC#4)."""
         try:
-            log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
+            log_path = Path(__file__).parent.parent.parent / "logs" / "s26_crypto_bar_decisions.csv"
             log_path.parent.mkdir(parents=True, exist_ok=True)
             write_header = not log_path.exists()
             with log_path.open("a", newline="") as f:
@@ -1443,6 +1303,7 @@ class Tier2StreamingTrader:
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self._data_stale:
             return
+        self.ml_filter.threshold = self._strategy_config.ml_threshold
         bar_et = bar.timestamp.astimezone(ET_TZ)
         if self.active_trade:
             self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
@@ -1478,6 +1339,20 @@ class Tier2StreamingTrader:
                                       self._m15_choch_active, False, "SKIP:VOL_REGIME")
             return
 
+        # Optimization: skip converting to DataFrame if we don't have active gates for entry
+        has_bullish_gate = not self._strategy_config.bearish_only and self.h1_bullish_sweep_active and self._cached_sweep is not None
+        has_bearish_gate = self.h1_bearish_sweep_active and self._m15_choch_active
+        if not has_bullish_gate and not has_bearish_gate:
+            if not self.h1_bearish_sweep_active and not self.h1_bullish_sweep_active:
+                reason = "SKIP:NO_SWEEP"
+            elif self.h1_bearish_sweep_active and not self._m15_choch_active:
+                reason = "SKIP:NO_CHOCH"
+            else:
+                reason = "SKIP:NO_SWEEP"
+            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
+                                      self._m15_choch_active, False, reason)
+            return
+
         # FVG detection via strategy_core (replaces self._detect_fvg)
         # Use the last 20 M1 bars — sufficient for the 3-bar FVG check + 20-bar ATR window.
         m1_df = _dollar_bars_to_df(bars[-20:])
@@ -1490,17 +1365,27 @@ class Tier2StreamingTrader:
             except ValueError:
                 fvg_signal = None
             if fvg_signal and fvg_signal.direction == Direction.BULLISH:
-                fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
-                if not self.lr_filter.allows(bars, "bullish"):
+                # GOLDEN FLIP: Logic says Bullish, we enter BEARISH
+                fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                if not self.lr_filter.allows(bars, "bearish"):
+                    self._log_filter_decision(bar_et, False, False, False, False, True, "SKIP:LR_REGIME")
                     return
-                features = self._extract_features(bars, bar, fvg_dict, "bullish")
+                features = self._extract_features(bars, bar, fvg_dict, "bearish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
-                    logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                    logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                    # Golden Flip: Create a NEW signal object with inverted direction
+                    fvg_signal = FVGSignal(
+                        direction=Direction.BEARISH,
+                        gap_size=fvg_signal.gap_size,
+                        entry_price=fvg_signal.entry_price,
+                        high=fvg_signal.high,
+                        low=fvg_signal.low
+                    )
                     await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
                 else:
-                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry FILTERED | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
 
         if self.h1_bearish_sweep_active and self._m15_choch_active:  # S25: M15 CHoCH required
@@ -1510,43 +1395,32 @@ class Tier2StreamingTrader:
                 fvg_signal = None
             _fvg_hit = bool(fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None)
             if _fvg_hit:
-                fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}  # type: ignore[union-attr]
-                if not self.lr_filter.allows(bars, "bearish"):
+                # GOLDEN FLIP: Logic says Bearish, we enter BULLISH
+                fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                if not self.lr_filter.allows(bars, "bullish"):
                     self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
                     return
-                features = self._extract_features(bars, bar, fvg_dict, "bearish")
+                features = self._extract_features(bars, bar, fvg_dict, "bullish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
-                    logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
+                    logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                    # Golden Flip: Create a NEW signal object with inverted direction
+                    fvg_signal = FVGSignal(
+                        direction=Direction.BULLISH,
+                        gap_size=fvg_signal.gap_size,
+                        entry_price=fvg_signal.entry_price,
+                        high=fvg_signal.high,
+                        low=fvg_signal.low
+                    )
                     await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
                 else:
-                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry FILTERED | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
                     self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
             else:
                 self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP:NO_FVG")
-        else:
-            if not self.h1_bearish_sweep_active:
-                self._log_filter_decision(bar_et, False, False, False, self._m15_choch_active,
-                                          False, "SKIP:NO_SWEEP")
-            else:
-                self._log_filter_decision(bar_et, True, False, False, False, False, "SKIP:NO_CHOCH")
-
-        # IFVG fallback: fire when primary FVG missed and candidate zone is violated
-        if (
-            self._ifvg_candidate is not None
-            and self._strategy_config.enable_ifvg_fallback
-            and self.h1_bearish_sweep_active
-            and not self.active_trade
-        ):
-            bar_series = pd.Series({"high": bar.high, "low": bar.low, "close": bar.close})
-            ifvg_signal = check_ifvg_trigger(bar_series, self._ifvg_candidate, self._strategy_config)
-            if ifvg_signal is not None:
-                self._ifvg_candidate = None  # consume candidate
-                logger.info(f"📋 IFVG trigger: {ifvg_signal.direction.value} entry at {ifvg_signal.entry_price:.2f}")
-                await self._enter_trade(ifvg_signal, bar, len(bars) - 1, is_backfill)
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""
@@ -1681,7 +1555,7 @@ class Tier2StreamingTrader:
         _kill_zone_active = kill_zone_filter(bar.timestamp, self._strategy_config)
         _vol_regime_pct = self._last_vol_regime_pct
 
-        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, SIM_ACCOUNT_ID)
+        e_id, tp_id, sl_id = "paper_entry", "paper_tp", "paper_sl" 
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,
@@ -1732,8 +1606,8 @@ async def main():
     parser = _argparse.ArgumentParser(description="Tier 2 FVG Paper Trader")
     parser.add_argument(
         "--symbol",
-        default=os.environ.get("SYMBOL", "MNQM26"),
-        help="Futures symbol to trade (default: MNQM26 or $SYMBOL env var)",
+        default=os.environ.get("SYMBOL", "PF_XBTUSD"),
+        help="Futures symbol to trade (default: PF_XBTUSD or $SYMBOL env var)",
     )
     args = parser.parse_args()
     trader = Tier2StreamingTrader(symbol=args.symbol)

@@ -100,6 +100,10 @@ class StrategyConfig:
     m15_confirmation: bool = False  # if True, blocks entries where prior M15 bar misaligns with H1 sweep
     tuesday_exclusion: bool = True  # if True, skips Tuesday entry candidates (default preserves existing behavior)
     enable_ifvg_fallback: bool = False  # if True, arms IFVG candidate when primary limit expires unfilled
+    # Funding Rate Regime Filter (FRRF) — perpetuals-specific; False by default so MNQ is unaffected
+    funding_rate_filter_enabled: bool = False
+    funding_rate_short_threshold: float = 0.03   # >+0.03%/8h → crowded longs → SHORT bias
+    funding_rate_long_threshold: float = -0.02   # <-0.02%/8h → crowded shorts → LONG bias
 
 
 @dataclass(frozen=True)

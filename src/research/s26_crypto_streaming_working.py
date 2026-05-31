@@ -648,6 +648,89 @@ class LRRegimeFilter:
         return passes
 
 
+class FundingRateFilter:
+    """Funding rate regime classifier for PF_XBTUSD perpetuals.
+
+    Computes the 8h mark/spot basis as a funding rate proxy, or uses actual
+    8h funding rates when available.
+
+    Backtest: call load_historical(csv_path) before the bar loop; get_bias()
+    uses pd.Series.asof() for step-function lookup (most recent rate at or
+    before the bar timestamp).
+
+    Live: call refresh_live() from _poll_and_process; get_bias() uses the
+    cached live rate from the Kraken /tickers endpoint (fundingRate field is
+    the annualized decimal, converted internally to per-8h).
+
+    Returns NEUTRAL when no rate data is available (fail-safe: no entries).
+    """
+
+    LIVE_REFRESH_INTERVAL_S: int = 300
+    TICKERS_URL: str = "https://futures.kraken.com/derivatives/api/v3/tickers"
+
+    def __init__(self) -> None:
+        self._historical: Optional[pd.Series] = None
+        self._live_rate: Optional[float] = None
+        self._live_last_fetched: float = 0.0
+
+    def load_historical(self, csv_path: Path) -> None:
+        """Load funding rate CSV (timestamp, funding_rate) for backtest use."""
+        if not csv_path.exists():
+            logger.warning("FundingRateFilter: %s not found — filter returns NEUTRAL for all bars", csv_path)
+            return
+        df = pd.read_csv(csv_path, parse_dates=["timestamp"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        df = df.sort_values("timestamp").drop_duplicates("timestamp")
+        self._historical = df.set_index("timestamp")["funding_rate"]
+        logger.info("FundingRateFilter: loaded %d funding rate rows (%s → %s)",
+                    len(self._historical),
+                    self._historical.index[0].date(),
+                    self._historical.index[-1].date())
+
+    async def refresh_live(self, http_client: httpx.AsyncClient) -> None:
+        """TTL-cached fetch of current fundingRate from Kraken /tickers (every 5 min)."""
+        if _time_mod.time() - self._live_last_fetched < self.LIVE_REFRESH_INTERVAL_S:
+            return
+        try:
+            resp = await http_client.get(self.TICKERS_URL, timeout=10.0)
+            resp.raise_for_status()
+            for t in resp.json().get("tickers", []):
+                if t.get("symbol") == "PF_XBTUSD":
+                    # Kraken fundingRate is annualized decimal; convert to per-8h
+                    annualized = float(t.get("fundingRate", 0.0))
+                    self._live_rate = annualized / (3 * 365)  # → per-8h decimal
+                    self._live_last_fetched = _time_mod.time()
+                    logger.debug("FundingRateFilter: live rate=%.6f/8h (%.2f%% ann.)",
+                                 self._live_rate, annualized * 100)
+                    return
+            logger.warning("FundingRateFilter: PF_XBTUSD not in tickers response")
+        except Exception as _e:
+            logger.warning("FundingRateFilter: live refresh failed: %s", _e)
+
+    def get_bias(self, bar_timestamp: datetime,
+                 short_threshold: float, long_threshold: float) -> str:
+        """Return "SHORT", "LONG", or "NEUTRAL" based on current funding regime.
+
+        short_threshold: rate above which we have SHORT bias (crowded longs)
+        long_threshold:  rate below which we have LONG bias (crowded shorts)
+        Both thresholds in per-8h decimal units (e.g. 0.0003 = +0.03%/8h).
+        """
+        if self._historical is not None:
+            rate = self._historical.asof(bar_timestamp)
+            if pd.isna(rate):
+                return "NEUTRAL"
+        elif self._live_rate is not None:
+            rate = self._live_rate
+        else:
+            return "NEUTRAL"
+
+        if rate > short_threshold:
+            return "SHORT"
+        if rate < long_threshold:
+            return "LONG"
+        return "NEUTRAL"
+
+
 @dataclass
 class ActiveTrade:
     bar_index: int
@@ -710,8 +793,9 @@ class Tier2StreamingTrader:
         self._strategy_config: StrategyConfig = _build_strategy_config()
 
         # ML Filter
-        self.ml_filter = MetaLabelingFilter(ML_MODEL_PATH)
-        self.lr_filter  = LRRegimeFilter()
+        self.ml_filter      = MetaLabelingFilter(ML_MODEL_PATH)
+        self.lr_filter      = LRRegimeFilter()
+        self.funding_filter = FundingRateFilter()
 
         # Log active signal filters
         logger.info(f"Signal filters — BEARISH_ONLY={self._strategy_config.bearish_only}, "
@@ -1346,9 +1430,29 @@ class Tier2StreamingTrader:
                                       self._m15_choch_active, False, "SKIP:VOL_REGIME")
             return
 
+        # ── Funding Rate Regime Filter (FRRF) ─────────────────────────────────
+        _frrf_enabled = self._strategy_config.funding_rate_filter_enabled
+        _funding_bias = "NEUTRAL"
+        if _frrf_enabled:
+            _funding_bias = self.funding_filter.get_bias(
+                bar.timestamp,
+                self._strategy_config.funding_rate_short_threshold,
+                self._strategy_config.funding_rate_long_threshold,
+            )
+            if _funding_bias == "NEUTRAL":
+                self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False,
+                                          self._vol_regime_high, self._m15_choch_active, False,
+                                          "SKIP:FUNDING_NEUTRAL")
+                return
+
         # Optimization: skip converting to DataFrame if we don't have active gates for entry
-        has_bullish_gate = not self._strategy_config.bearish_only and self.h1_bullish_sweep_active and self._cached_sweep is not None
-        has_bearish_gate = self.h1_bearish_sweep_active and self._m15_choch_active
+        if _frrf_enabled:
+            # FRRF direction gates: funding bias hard-restricts which sweep path fires
+            has_bearish_gate = (_funding_bias == "SHORT") and self.h1_bearish_sweep_active and self._m15_choch_active
+            has_bullish_gate = (_funding_bias == "LONG") and self.h1_bullish_sweep_active and self._cached_sweep is not None
+        else:
+            has_bullish_gate = not self._strategy_config.bearish_only and self.h1_bullish_sweep_active and self._cached_sweep is not None
+            has_bearish_gate = self.h1_bearish_sweep_active and self._m15_choch_active
         if not has_bullish_gate and not has_bearish_gate:
             if not self.h1_bearish_sweep_active and not self.h1_bullish_sweep_active:
                 reason = "SKIP:NO_SWEEP"
@@ -1366,7 +1470,8 @@ class Tier2StreamingTrader:
         cached_sweep = self._cached_sweep
 
         # Direction gate: bearish-only by default (full-year 2025: bearish PF 1.43 vs bullish 1.06)
-        if not self._strategy_config.bearish_only and self.h1_bullish_sweep_active and cached_sweep is not None:
+        # Guarded from FRRF mode — FRRF uses a separate TRUE LONG path below, not Golden Flip.
+        if self.h1_bullish_sweep_active and cached_sweep is not None and not _frrf_enabled:
             try:
                 fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
             except ValueError:
@@ -1374,26 +1479,24 @@ class Tier2StreamingTrader:
             if fvg_signal and fvg_signal.direction == Direction.BULLISH:
                 # GOLDEN FLIP: Logic says Bullish, we enter BEARISH
                 fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
-                if not self.lr_filter.allows(bars, "bearish"):
-                    self._log_filter_decision(bar_et, False, False, False, False, True, "SKIP:LR_REGIME")
-                    return
-                features = self._extract_features(bars, bar, fvg_dict, "bearish")
-                proba = self.ml_filter.predict_proba(features)
-                if proba >= self.ml_filter.threshold:
-                    logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry | P(Success)={proba:.3f}")
-                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    # Golden Flip: Create a NEW signal object with inverted direction
-                    fvg_signal = FVGSignal(
-                        direction=Direction.BEARISH,
-                        gap_size=fvg_signal.gap_size,
-                        entry_price=fvg_signal.entry_price,
-                        high=fvg_signal.high,
-                        low=fvg_signal.low
-                    )
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
-                else:
-                    logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry FILTERED | P(Success)={proba:.3f}")
-                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+                if self.lr_filter.allows(bars, "bearish"):
+                    features = self._extract_features(bars, bar, fvg_dict, "bearish")
+                    proba = self.ml_filter.predict_proba(features)
+                    if proba >= self.ml_filter.threshold:
+                        logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry | P(Success)={proba:.3f}")
+                        self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                        # Golden Flip: Create a NEW signal object with inverted direction
+                        fvg_signal = FVGSignal(
+                            direction=Direction.BEARISH,
+                            gap_size=fvg_signal.gap_size,
+                            entry_price=fvg_signal.entry_price,
+                            high=fvg_signal.high,
+                            low=fvg_signal.low
+                        )
+                        await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
+                    else:
+                        logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry FILTERED | P(Success)={proba:.3f}")
+                        self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
 
         if self.h1_bearish_sweep_active and self._m15_choch_active:  # S25: M15 CHoCH required
             try:
@@ -1402,35 +1505,16 @@ class Tier2StreamingTrader:
                 fvg_signal = None
             _fvg_hit = bool(fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None)
             if _fvg_hit:
-                if self._strategy_config.bearish_only:
-                    # Standard S25-style SHORT entry on bearish FVG (no Golden Flip)
-                    fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
-                    if not self.lr_filter.allows(bars, "bearish"):
-                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
-                        return
-                    features = self._extract_features(bars, bar, fvg_dict, "bearish")
-                    proba = self.ml_filter.predict_proba(features)
-                    if proba >= self.ml_filter.threshold:
-                        logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
-                        self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                        self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
-                        await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
-                    else:
-                        logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
-                        self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
-                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
-                else:
-                    # GOLDEN FLIP: Logic says Bearish, we enter BULLISH
-                    fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
-                    if not self.lr_filter.allows(bars, "bullish"):
-                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
-                        return
+                # GOLDEN FLIP: Logic says Bearish, we enter BULLISH
+                fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                if self.lr_filter.allows(bars, "bullish"):
                     features = self._extract_features(bars, bar, fvg_dict, "bullish")
                     proba = self.ml_filter.predict_proba(features)
                     if proba >= self.ml_filter.threshold:
                         logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry | P(Success)={proba:.3f}")
                         self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                         self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                        # Golden Flip: Create a NEW signal object with inverted direction
                         fvg_signal = FVGSignal(
                             direction=Direction.BULLISH,
                             gap_size=fvg_signal.gap_size,
@@ -1442,9 +1526,34 @@ class Tier2StreamingTrader:
                     else:
                         logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry FILTERED | P(Success)={proba:.3f}")
                         self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
-                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
             else:
                 self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP:NO_FVG")
+
+        # ── FRRF TRUE LONG path: H1 bullish sweep + M1 bullish FVG (no Golden Flip) ──
+        if has_bullish_gate and _frrf_enabled:
+            try:
+                fvg_long = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
+            except ValueError:
+                fvg_long = None
+            if fvg_long and fvg_long.direction == Direction.BULLISH and cached_sweep is not None:
+                fvg_dict = {"direction": "bullish", "top": fvg_long.high, "bottom": fvg_long.low}
+                if not self.lr_filter.allows(bars, "bullish"):
+                    self._log_filter_decision(bar_et, False, True, False, False, True, "SKIP:LR_REGIME")
+                    return
+                features = self._extract_features(bars, bar, fvg_dict, "bullish")
+                proba = self.ml_filter.predict_proba(features)
+                if proba >= self.ml_filter.threshold:
+                    logger.info(f"FRRF LONG: bullish sweep + bullish FVG | funding_bias=LONG | P(Success)={proba:.3f}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                    self._log_filter_decision(bar_et, False, True, False, False, True, "ENTER")
+                    await self._enter_trade(fvg_long, bar, len(bars) - 1, is_backfill)
+                else:
+                    logger.info(f"FRRF LONG filtered by ML | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
+                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+                    self._log_filter_decision(bar_et, False, True, False, False, True, "SKIP:ML_FILTER")
+            else:
+                self._log_filter_decision(bar_et, False, True, False, False, False, "SKIP:NO_FVG")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

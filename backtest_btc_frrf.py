@@ -27,7 +27,7 @@ from src.data.models import DollarBar
 ET_TZ        = pytz.timezone("America/New_York")
 PRICE_CSV    = Path("data/kraken/PF_XBTUSD_1min.csv")
 FUNDING_CSV  = Path("data/kraken/PF_XBTUSD_funding_rate.csv")
-CONFIG       = Path("strategy_config_btc_frrf.yaml")
+CONFIG       = Path("strategy_config_btc_frrf_s27v2.yaml")
 
 
 def load_price_data(start_year: int = 2025) -> list[dict]:

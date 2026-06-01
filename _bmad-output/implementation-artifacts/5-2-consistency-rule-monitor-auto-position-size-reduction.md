@@ -1,6 +1,6 @@
 # Story 5.2: Consistency Rule Monitor and Auto Position Size Reduction
 
-Status: review
+Status: done
 
 ## Story
 
@@ -166,6 +166,12 @@ claude-sonnet-4-6
 - Task 7: 12 new tests (5 pure function + 7 RiskManager). All pass.
 
 ### Review Findings
+
+- [x] [Review][Patch] check_consistency() never called in live loop — added call in _detect_and_enter after circuit breaker check [tier2_streaming_working.py:1682]
+- [x] [Review][Patch] submit_bracket_order used self._cfg.contracts instead of decision.contracts — capping was silently ignored [tier2_streaming_working.py:585]
+- [x] [Review][Patch] close_position_at_market used wrong contract count on time-stop — now passes t.contracts [tier2_streaming_working.py:666]
+- [x] [Review][Patch] PnL in _close_active_trade used self._contracts not t.contracts — overstated when capped [tier2_streaming_working.py:1530]
+- [x] [Review][Defer] consistency_hard_limit_pct (50%) configured and displayed but not enforced — display-only by design per spec, not a blocking violation
 
 ### File List
 

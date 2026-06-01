@@ -1,6 +1,6 @@
 # Story 5.4: Qualifying Day Tracker and Live Execution Mode Toggle
 
-Status: review
+Status: done
 
 ## Story
 
@@ -201,6 +201,10 @@ claude-sonnet-4-6
 - Task 6: 9 tests: 5 qualifying day unit + 4 execution mode URL tests. All pass.
 
 ### Review Findings
+
+- [x] [Review][Patch] Qualifying day count not immediately persisted on rollover — _persist() now called when maybe_record_qualifying_day returns True [tier2_streaming_working.py:370]
+- [x] [Review][Patch] ActiveTrade.contracts field missing — added; _close_active_trade and close_position_at_market now use t.contracts for correct PnL and order size [tier2_streaming_working.py:943]
+- [x] [Review][Defer] _default_account_config hardcodes SIM account ID regardless of execution_mode — by design; live users supply a custom AccountConfig; default convenience function is SIM-only
 
 ### File List
 

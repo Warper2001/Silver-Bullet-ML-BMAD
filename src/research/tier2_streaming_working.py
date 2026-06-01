@@ -312,6 +312,7 @@ class RiskManager:
         # Trailing DD state (None = not yet initialized for the current day)
         self._trailing_floor: Optional[float] = None
         self._equity_high_water: Optional[float] = None
+        self._trailing_last_date: Optional[datetime.date] = None  # separate from _last_trading_date
         # Consistency rule state (Story 5-2 — FR18, FR19)
         self._session_pnls: list[float] = []          # one entry per completed day
         self._consistency_size_reduced: bool = False  # 1-contract override active today
@@ -367,7 +368,8 @@ class RiskManager:
             )
             # Record qualifying day before reset (FR21, Story 5-4)
             if account_config is not None:
-                self.maybe_record_qualifying_day(prev_pnl, account_config.qualifying_day_min_profit)
+                if self.maybe_record_qualifying_day(prev_pnl, account_config.qualifying_day_min_profit):
+                    self._persist()  # persist count immediately — crash window otherwise
             self._session_pnls.append(prev_pnl)  # archive for consistency rule
             self._daily_pnl = 0.0
             self._daily_halted = False
@@ -408,11 +410,12 @@ class RiskManager:
         dd_amount = account_config.topstep_trailing_dd_amount
         today = bar_et.date()
 
-        # Reset trailing state on new calendar day
-        if self._last_trading_date is not None and self._last_trading_date != today:
+        # Reset trailing state on new calendar day (uses dedicated field — does NOT touch
+        # _last_trading_date so check_and_update day-rollover logic remains unaffected)
+        if self._trailing_last_date is not None and self._trailing_last_date != today:
             self._trailing_floor = None
             self._equity_high_water = None
-        self._last_trading_date = today  # kept in sync for state-dict persistence
+        self._trailing_last_date = today
 
         # Initialize floor on first call of the day
         if self._trailing_floor is None:
@@ -479,7 +482,7 @@ class RiskManager:
 
     def restore_from_state(self, state: dict, today: datetime.date) -> None:
         """Restore daily risk state from persisted dict on startup (crash recovery, NFR12)."""
-        # Lifetime fields (restored regardless of day match)
+        # Lifetime fields — restored regardless of date match
         if "accumulated_profit" in state and state["accumulated_profit"] is not None:
             self._accumulated_profit = float(state["accumulated_profit"])
         if "qualifying_day_count" in state and state["qualifying_day_count"] is not None:
@@ -487,6 +490,21 @@ class RiskManager:
         if "session_pnls" in state and isinstance(state["session_pnls"], list):
             self._session_pnls = [float(p) for p in state["session_pnls"]]
 
+        # Trailing floor — keyed by trailing_last_date (independent of daily date)
+        trailing_date_str = state.get("trailing_last_date")
+        if trailing_date_str:
+            try:
+                trailing_date = datetime.fromisoformat(trailing_date_str).date() if isinstance(trailing_date_str, str) else trailing_date_str
+                if trailing_date == today:
+                    if "trailing_floor" in state and state["trailing_floor"] is not None:
+                        self._trailing_floor = float(state["trailing_floor"])
+                        self._trailing_last_date = today
+                    if "equity_high_water" in state and state["equity_high_water"] is not None:
+                        self._equity_high_water = float(state["equity_high_water"])
+            except (ValueError, TypeError):
+                pass
+
+        # Daily fields — only restored if saved on the same calendar day
         saved_date_str = state.get("last_trading_date")
         if not saved_date_str:
             return
@@ -500,10 +518,6 @@ class RiskManager:
                 self._daily_pnl = float(state.get("daily_pnl", 0.0))
                 self._daily_halted = bool(state.get("daily_halted", False))
                 self._last_trading_date = today
-                if "trailing_floor" in state and state["trailing_floor"] is not None:
-                    self._trailing_floor = float(state["trailing_floor"])
-                if "equity_high_water" in state and state["equity_high_water"] is not None:
-                    self._equity_high_water = float(state["equity_high_water"])
                 self._consistency_size_reduced = bool(state.get("consistency_size_reduced", False))
                 logger.info(
                     "Restored daily risk state: pnl=%.2f halted=%s floor=%s",
@@ -520,6 +534,7 @@ class RiskManager:
             "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
             "trailing_floor": self._trailing_floor,
             "equity_high_water": self._equity_high_water,
+            "trailing_last_date": self._trailing_last_date.isoformat() if self._trailing_last_date else None,
             "session_pnls": list(self._session_pnls),
             "consistency_size_reduced": self._consistency_size_reduced,
             "accumulated_profit": self._accumulated_profit,
@@ -527,9 +542,11 @@ class RiskManager:
         }
 
     def _persist(self) -> None:
-        """Persist current risk state immediately (called when circuit breaker trips or halt_manually)."""
+        """Persist risk state by merging into existing state dict (preserves active-trade fields)."""
         try:
-            StatePersistence.save_state(self.to_state_dict())
+            current = StatePersistence.load_state() or {}
+            current.update(self.to_state_dict())
+            StatePersistence.save_state(current)
         except Exception as e:
             logger.warning("RiskManager: failed to persist halt state: %s", e)
 
@@ -582,7 +599,7 @@ class TradeStationClient:
         direction = "LONG" if decision.direction == Direction.BULLISH else "SHORT"
         entry_action = "BUY" if direction == "LONG" else "SELL"
         exit_action = "SELL" if direction == "LONG" else "BUY"
-        qty = str(self._cfg.contracts)
+        qty = str(decision.contracts)
 
         payload = {
             "AccountID": account_id,
@@ -663,13 +680,14 @@ class TradeStationClient:
             logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
             return False
 
-    async def close_position_at_market(self, direction: str, account_id: str) -> Optional[str]:
+    async def close_position_at_market(self, direction: str, account_id: str, contracts: Optional[int] = None) -> Optional[str]:
         """Submit a market order to flatten the open position. Returns order ID or None on failure."""
         close_action = "SELL" if direction == "LONG" else "BUY"
+        qty = contracts if contracts is not None else self._cfg.contracts
         payload = {
             "AccountID": account_id,
             "Symbol": self._cfg.symbol,
-            "Quantity": str(self._cfg.contracts),
+            "Quantity": str(qty),
             "OrderType": "Market",
             "TradeAction": close_action,
             "TimeInForce": {"Duration": "DAY"},
@@ -940,6 +958,7 @@ class ActiveTrade:
     sim_sl_order_id: Optional[str] = None
     sim_entry_fill: Optional[float] = None
     pending_entry: bool = True  # True until limit order fills
+    contracts: int = 5  # actual capped contracts entered (may differ from config default)
     # Trade-log metadata captured at entry (Story 4-2 — AC#1, AC#7)
     gap_size: float = 0.0
     h1_sweep_bars_ago: int = 0
@@ -1254,13 +1273,13 @@ class Tier2StreamingTrader:
                     self._update_m15_choch()
                     # Trailing drawdown check (FR17): compute equity including unrealized PnL
                     _unrealized = 0.0
-                    if self.active_trade is not None and self.active_trade.status == "ACTIVE":
+                    if self.active_trade is not None and not self.active_trade.pending_entry:
                         _dir_sign = -1 if self.active_trade.direction == "SHORT" else 1
                         _unrealized = (
                             _dir_sign
                             * (bar.close - self.active_trade.entry_price)
                             * self._point_value
-                            * self._contracts
+                            * self.active_trade.contracts
                         )
                     _current_equity = (
                         self._account_config.starting_equity
@@ -1520,14 +1539,14 @@ class Tier2StreamingTrader:
         if reason == "time":
             if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
             if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
-            await self._ts_client.close_position_at_market(t.direction, self._account_config.account_id)
+            await self._ts_client.close_position_at_market(t.direction, self._account_config.account_id, t.contracts)
         else:
             # Bracket leg hit (TP or SL) - cancel the other leg
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
             if other_id: await self._ts_client.cancel_order(other_id)
 
         cfg = self._strategy_config
-        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * self._point_value * self._contracts - cfg.commission_per_roundtrip
+        pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * self._point_value * t.contracts - cfg.commission_per_roundtrip
         self._risk_manager.register_close(pnl)
         self.completed_trades.append(CompletedTrade(
             t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
@@ -1557,7 +1576,7 @@ class Tier2StreamingTrader:
             m15_confirmed=t.m15_confirmed,
             kill_zone_active=t.kill_zone_active,
             vol_regime_pct=t.vol_regime_pct,
-            contracts=self._contracts,
+            contracts=t.contracts,
         ))
         self._log_trade_metrics()
         self._write_equity_curve()
@@ -1680,6 +1699,9 @@ class Tier2StreamingTrader:
                                       self._vol_regime_high, self._m15_choch_active, False,
                                       "SKIP:CIRCUIT_BREAKER")
             return
+
+        # Consistency rule: update ratio and set size-reduction flag if threshold crossed (FR18/FR19)
+        self._risk_manager.check_consistency(self._account_config)
 
         # Seasonality gate: skip months with statistically zero edge (default: none blocked)
         if bar_et.month in BLOCKED_MONTHS:
@@ -1919,6 +1941,7 @@ class Tier2StreamingTrader:
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,
+            contracts=effective_contracts,
             gap_size=_gap_size,
             h1_sweep_bars_ago=_h1_sweep_bars_ago,
             m15_confirmed=_m15_confirmed,

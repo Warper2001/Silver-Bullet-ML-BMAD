@@ -1,6 +1,6 @@
 # Story 5.1: Intraday Trailing Drawdown Floor Tracker
 
-Status: review
+Status: done
 
 ## Story
 
@@ -142,6 +142,11 @@ claude-sonnet-4-6
 - Task 5: 13 tests written covering all ACs. All pass.
 
 ### Review Findings
+
+- [x] [Review][Patch] AttributeError: active_trade.status does not exist — changed to `not pending_entry`; unrealized PnL now uses `active_trade.contracts` [tier2_streaming_working.py:1257]
+- [x] [Review][Patch] check_trailing_dd set _last_trading_date preventing check_and_update day-rollover — introduced `_trailing_last_date` separate field [tier2_streaming_working.py:393]
+- [x] [Review][Patch] _persist() overwrote active-trade state on breach — now merges into existing state dict [tier2_streaming_working.py:541]
+- [x] [Review][Patch] trailing_floor restore failed when only check_trailing_dd had been called (last_trading_date was None) — restructured restore_from_state to restore floor before daily-date early-return [tier2_streaming_working.py:483]
 
 ### File List
 

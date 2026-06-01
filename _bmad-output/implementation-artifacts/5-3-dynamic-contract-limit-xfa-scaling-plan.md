@@ -1,6 +1,6 @@
 # Story 5.3: Dynamic Contract Limit and XFA Scaling Plan
 
-Status: review
+Status: done
 
 ## Story
 
@@ -164,6 +164,9 @@ None — clean implementation.
 - Task 5: 6 pure function tests in `test_strategy_core_scaling.py` + 3 RiskManager tests in `test_risk_manager.py`. All pass.
 
 ### Review Findings
+
+- [x] [Review][Patch] submit_bracket_order ignored decision.contracts — fixed in Story 5-2 review; also covers Story 5-3 scaling-plan contract cap [tier2_streaming_working.py:585]
+- [x] [Review][Defer] Optional annotation in calc_contract_limit without explicit import — works at runtime under `from __future__ import annotations`; no code change needed
 
 ### File List
 

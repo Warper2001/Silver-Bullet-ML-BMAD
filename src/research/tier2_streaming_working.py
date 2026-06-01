@@ -16,7 +16,7 @@ import logging
 import os
 import sys
 import time as _time_mod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal, Optional
@@ -43,6 +43,7 @@ from src.research.strategy_core import (
     SweepSignal,
     calc_atr,
     calc_consistency_ratio,
+    calc_contract_limit,
     calc_max_drawdown_pct,
     calc_profit_factor,
     calc_sharpe,
@@ -96,6 +97,8 @@ class AccountConfig:
     consistency_alert_pct: float = 0.40
     consistency_reduce_pct: float = 0.45
     consistency_hard_limit_pct: float = 0.50
+    # XFA scaling plan (Story 5-3 — FR20) — empty list = no cap (opt-in)
+    scaling_plan: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -309,6 +312,8 @@ class RiskManager:
         # Consistency rule state (Story 5-2 — FR18, FR19)
         self._session_pnls: list[float] = []          # one entry per completed day
         self._consistency_size_reduced: bool = False  # 1-contract override active today
+        # Lifetime accumulated profit for XFA scaling plan (Story 5-3 — FR20)
+        self._accumulated_profit: float = 0.0
 
     @property
     def is_halted(self) -> bool:
@@ -318,9 +323,14 @@ class RiskManager:
     def daily_pnl(self) -> float:
         return self._daily_pnl
 
+    @property
+    def accumulated_profit(self) -> float:
+        return self._accumulated_profit
+
     def register_close(self, pnl: float) -> None:
-        """Update daily P&L after a trade closes. Caller saves full state."""
+        """Update daily P&L and lifetime accumulated profit after a trade closes."""
         self._daily_pnl += pnl
+        self._accumulated_profit += pnl
 
     def check_and_update(self, bar_et: datetime, max_daily_loss: float) -> bool:
         """Reset on new calendar day, then check circuit breaker. Returns True if halted."""
@@ -440,6 +450,12 @@ class RiskManager:
 
     def restore_from_state(self, state: dict, today: datetime.date) -> None:
         """Restore daily risk state from persisted dict on startup (crash recovery, NFR12)."""
+        # Lifetime fields (restored regardless of day match)
+        if "accumulated_profit" in state and state["accumulated_profit"] is not None:
+            self._accumulated_profit = float(state["accumulated_profit"])
+        if "session_pnls" in state and isinstance(state["session_pnls"], list):
+            self._session_pnls = [float(p) for p in state["session_pnls"]]
+
         saved_date_str = state.get("last_trading_date")
         if not saved_date_str:
             return
@@ -457,8 +473,6 @@ class RiskManager:
                     self._trailing_floor = float(state["trailing_floor"])
                 if "equity_high_water" in state and state["equity_high_water"] is not None:
                     self._equity_high_water = float(state["equity_high_water"])
-                if "session_pnls" in state and isinstance(state["session_pnls"], list):
-                    self._session_pnls = [float(p) for p in state["session_pnls"]]
                 self._consistency_size_reduced = bool(state.get("consistency_size_reduced", False))
                 logger.info(
                     "Restored daily risk state: pnl=%.2f halted=%s floor=%s",
@@ -477,6 +491,7 @@ class RiskManager:
             "equity_high_water": self._equity_high_water,
             "session_pnls": list(self._session_pnls),
             "consistency_size_reduced": self._consistency_size_reduced,
+            "accumulated_profit": self._accumulated_profit,
         }
 
     def _persist(self) -> None:
@@ -1809,13 +1824,23 @@ class Tier2StreamingTrader:
         if entry_dec is None:
             return
 
-        # Consistency rule: cap contracts to 1 when size reduction is active (FR19)
+        # Cap 1: Consistency rule — cap to 1 when reduction is active (FR19, Story 5-2)
         effective_contracts = entry_dec.contracts
         if self._risk_manager.consistency_size_reduced:
-            effective_contracts = 1
+            effective_contracts = min(effective_contracts, 1)
+            logger.info("CONSISTENCY_REDUCE: capping contracts to 1 (ratio check active for today)")
+
+        # Cap 2: XFA scaling plan — dynamic contract limit from accumulated profit (FR20, Story 5-3)
+        _scaling_limit = calc_contract_limit(
+            self._risk_manager.accumulated_profit,
+            self._account_config.scaling_plan,
+        )
+        if _scaling_limit is not None and _scaling_limit < effective_contracts:
             logger.info(
-                "CONSISTENCY_REDUCE: capping contracts to 1 (ratio check active for today)",
+                "SCALING_LIMIT: capping contracts to %d (accumulated=$%.2f)",
+                _scaling_limit, self._risk_manager.accumulated_profit,
             )
+            effective_contracts = _scaling_limit
 
         # Snap prices to MNQ tick for SIM order submission
         ent = self._snap_tick(entry_dec.entry_price)

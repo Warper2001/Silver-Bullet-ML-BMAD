@@ -307,6 +307,15 @@ class TestConsistencyEvaluator:
             rm.check_and_update(bar_day2, max_daily_loss=-750.0)
         assert 400.0 in rm._session_pnls
 
+    def test_check_consistency_with_no_history_returns_zero(self):
+        """No prior days and no daily_pnl → ratio 0.0."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_cfg_consistency()
+        with patch.object(StatePersistence, "save_state"):
+            ratio, _ = rm.check_consistency(cfg)
+        assert ratio == pytest.approx(0.0)
+
     def test_consistency_state_persists_round_trip(self):
         """AC#4/5: session_pnls and consistency_size_reduced survive state-dict round-trip."""
         from src.research.tier2_streaming_working import RiskManager, StatePersistence
@@ -323,3 +332,49 @@ class TestConsistencyEvaluator:
         rm2.restore_from_state(state, _et(day=6).date())
         assert rm2._session_pnls == [520.0, 850.0]
         assert rm2.consistency_size_reduced is True
+
+
+# ---------------------------------------------------------------------------
+# Story 5-3: Dynamic Contract Limit / XFA Scaling Plan
+# ---------------------------------------------------------------------------
+
+_XFA_PLAN = [
+    {"milestone_usd": 0, "max_contracts": 2},
+    {"milestone_usd": 1500, "max_contracts": 3},
+    {"milestone_usd": 2000, "max_contracts": 5},
+]
+
+
+class TestAccumulatedProfit:
+    def test_accumulated_profit_updates_on_register_close(self):
+        """AC#3: accumulated_profit increases with each close."""
+        from src.research.tier2_streaming_working import RiskManager
+        rm = RiskManager()
+        rm.register_close(400.0)
+        rm.register_close(200.0)
+        assert rm.accumulated_profit == pytest.approx(600.0)
+
+    def test_accumulated_profit_persists_across_days(self):
+        """AC#7: accumulated_profit survives state-dict round-trip."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm1 = RiskManager()
+        rm1._accumulated_profit = 1600.0
+        rm1._last_trading_date = _et(day=6).date()
+        state = rm1.to_state_dict()
+        assert "accumulated_profit" in state
+
+        rm2 = RiskManager()
+        # accumulated_profit should restore regardless of day match
+        rm2.restore_from_state(state, _et(day=7).date())
+        assert rm2.accumulated_profit == pytest.approx(1600.0)
+
+    def test_accumulated_profit_not_reset_on_new_day(self):
+        """accumulated_profit is lifetime — not reset on day rollover."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        rm._accumulated_profit = 1000.0
+        rm._last_trading_date = _et(day=6).date()
+        rm._daily_pnl = 300.0
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_and_update(_et(day=7), max_daily_loss=-750.0)
+        assert rm.accumulated_profit == pytest.approx(1000.0)

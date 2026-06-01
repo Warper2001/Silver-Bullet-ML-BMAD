@@ -92,7 +92,7 @@ development_status:
   epic-5: in-progress
   5-1-intraday-trailing-drawdown-floor-tracker: review
   5-2-consistency-rule-monitor-auto-position-size-reduction: review
-  5-3-dynamic-contract-limit-xfa-scaling-plan: ready-for-dev
+  5-3-dynamic-contract-limit-xfa-scaling-plan: review
   5-4-qualifying-day-tracker-and-live-execution-mode-toggle: ready-for-dev
   epic-5-retrospective: optional
 

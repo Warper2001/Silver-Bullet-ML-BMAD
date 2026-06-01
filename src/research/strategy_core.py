@@ -902,3 +902,21 @@ def calc_consistency_ratio(session_pnls: list[float]) -> float:
     if not profitable:
         return 0.0
     return max(profitable) / sum(profitable) * 100.0
+
+
+def calc_contract_limit(
+    accumulated_profit: float,
+    scaling_plan: list[dict],
+) -> Optional[int]:
+    """Return max contracts allowed by XFA scaling plan, or None if no plan configured.
+
+    Plan format: [{"milestone_usd": 0, "max_contracts": 2}, {"milestone_usd": 1500, ...}]
+    Sorted descending — first tier whose milestone_usd ≤ accumulated_profit wins.
+    Returns None when scaling_plan is empty (no cap applied).
+    """
+    if not scaling_plan:
+        return None
+    for tier in sorted(scaling_plan, key=lambda t: t["milestone_usd"], reverse=True):
+        if accumulated_profit >= tier["milestone_usd"]:
+            return int(tier["max_contracts"])
+    return None

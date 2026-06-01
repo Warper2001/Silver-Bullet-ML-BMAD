@@ -99,6 +99,9 @@ class AccountConfig:
     consistency_hard_limit_pct: float = 0.50
     # XFA scaling plan (Story 5-3 — FR20) — empty list = no cap (opt-in)
     scaling_plan: list[dict] = field(default_factory=list)
+    # Qualifying day tracking (Story 5-4 — FR21)
+    qualifying_day_min_profit: float = 150.0
+    qualifying_days_required: int = 5
 
 
 @dataclass
@@ -314,6 +317,8 @@ class RiskManager:
         self._consistency_size_reduced: bool = False  # 1-contract override active today
         # Lifetime accumulated profit for XFA scaling plan (Story 5-3 — FR20)
         self._accumulated_profit: float = 0.0
+        # Qualifying day count for XFA withdrawal requirement (Story 5-4 — FR21)
+        self._qualifying_day_count: int = 0
 
     @property
     def is_halted(self) -> bool:
@@ -327,19 +332,43 @@ class RiskManager:
     def accumulated_profit(self) -> float:
         return self._accumulated_profit
 
+    @property
+    def qualifying_day_count(self) -> int:
+        return self._qualifying_day_count
+
+    def maybe_record_qualifying_day(self, session_pnl: float, min_profit: float) -> bool:
+        """Increment qualifying_day_count if session_pnl ≥ min_profit (FR21)."""
+        if session_pnl >= min_profit:
+            self._qualifying_day_count += 1
+            logger.info(
+                "QUALIFYING_DAY: session P&L $%.2f ≥ $%.2f — count now %d",
+                session_pnl, min_profit, self._qualifying_day_count,
+            )
+            return True
+        return False
+
     def register_close(self, pnl: float) -> None:
         """Update daily P&L and lifetime accumulated profit after a trade closes."""
         self._daily_pnl += pnl
         self._accumulated_profit += pnl
 
-    def check_and_update(self, bar_et: datetime, max_daily_loss: float) -> bool:
+    def check_and_update(
+        self,
+        bar_et: datetime,
+        max_daily_loss: float,
+        account_config: Optional["AccountConfig"] = None,
+    ) -> bool:
         """Reset on new calendar day, then check circuit breaker. Returns True if halted."""
         today = bar_et.date()
         if self._last_trading_date is not None and self._last_trading_date != today:
+            prev_pnl = self._daily_pnl
             logger.info(
-                "New trading day %s — resetting daily P&L (was $%.2f)", today, self._daily_pnl
+                "New trading day %s — resetting daily P&L (was $%.2f)", today, prev_pnl
             )
-            self._session_pnls.append(self._daily_pnl)  # archive previous day for consistency
+            # Record qualifying day before reset (FR21, Story 5-4)
+            if account_config is not None:
+                self.maybe_record_qualifying_day(prev_pnl, account_config.qualifying_day_min_profit)
+            self._session_pnls.append(prev_pnl)  # archive for consistency rule
             self._daily_pnl = 0.0
             self._daily_halted = False
             self._consistency_size_reduced = False
@@ -453,6 +482,8 @@ class RiskManager:
         # Lifetime fields (restored regardless of day match)
         if "accumulated_profit" in state and state["accumulated_profit"] is not None:
             self._accumulated_profit = float(state["accumulated_profit"])
+        if "qualifying_day_count" in state and state["qualifying_day_count"] is not None:
+            self._qualifying_day_count = int(state["qualifying_day_count"])
         if "session_pnls" in state and isinstance(state["session_pnls"], list):
             self._session_pnls = [float(p) for p in state["session_pnls"]]
 
@@ -492,6 +523,7 @@ class RiskManager:
             "session_pnls": list(self._session_pnls),
             "consistency_size_reduced": self._consistency_size_reduced,
             "accumulated_profit": self._accumulated_profit,
+            "qualifying_day_count": self._qualifying_day_count,
         }
 
     def _persist(self) -> None:
@@ -506,10 +538,13 @@ class TradeStationClient:
     """Sole network-touching component. Owns auth, bracket-order submission, order
     cancellation, market-close, and per-cycle broker reconciliation (AR3, FR9–FR12).
 
-    SIM vs. live is an AccountConfig value — zero strategy-logic changes for FR14 swap.
+    SIM vs. live is an AccountConfig value — zero strategy-logic changes for FR14 swap (FR14).
     """
 
-    _BROKERAGE_BASE = "https://sim-api.tradestation.com/v3/brokerage"
+    _SIM_BROKERAGE_BASE = "https://sim-api.tradestation.com/v3/brokerage"
+    _LIVE_BROKERAGE_BASE = "https://api.tradestation.com/v3/brokerage"
+    _SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+    _LIVE_ORDERS_URL = "https://api.tradestation.com/v3/orderexecution/orders"
 
     def __init__(
         self,
@@ -520,6 +555,14 @@ class TradeStationClient:
         self._auth = auth
         self._cfg = account_config
         self._http = httpx_client
+
+    @property
+    def _brokerage_base(self) -> str:
+        return self._LIVE_BROKERAGE_BASE if self._cfg.execution_mode == "live" else self._SIM_BROKERAGE_BASE
+
+    @property
+    def _orders_url(self) -> str:
+        return self._LIVE_ORDERS_URL if self._cfg.execution_mode == "live" else self._SIM_ORDERS_URL
 
     async def _headers(self) -> dict:
         token = await self._auth.authenticate()
@@ -576,9 +619,9 @@ class TradeStationClient:
         }
         try:
             headers = await self._headers()
-            response = await self._http.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            response = await self._http.post(self._orders_url, headers=headers, json=payload)
             if response.status_code not in (200, 201):
-                logger.warning(f"⚠️ SIM bracket order failed HTTP {response.status_code}: {response.text[:200]}")
+                logger.warning(f"⚠️ bracket order failed HTTP {response.status_code}: {response.text[:200]}")
                 return None, None, None
             data = response.json()
             orders = data.get("Orders", [])
@@ -613,7 +656,7 @@ class TradeStationClient:
         """Cancel an open order via DELETE. Returns True on 200/204 (success) or 404 (already gone)."""
         try:
             headers = await self._headers()
-            url = f"https://sim-api.tradestation.com/v3/orderexecution/orders/{order_id}"
+            url = f"{self._orders_url}/{order_id}"
             response = await self._http.delete(url, headers=headers)
             return response.status_code in (200, 204, 404)
         except Exception as e:
@@ -634,10 +677,10 @@ class TradeStationClient:
         }
         try:
             headers = await self._headers()
-            response = await self._http.post(SIM_ORDERS_URL, headers=headers, json=payload)
+            response = await self._http.post(self._orders_url, headers=headers, json=payload)
             if response.status_code in (200, 201):
                 oid = response.json().get("Orders", [{}])[0].get("OrderID")
-                logger.info(f"✓ SIM flat close order #{oid} submitted")
+                logger.info(f"✓ flat close order #{oid} submitted")
                 return oid
             return None
         except Exception as e:
@@ -653,9 +696,9 @@ class TradeStationClient:
         try:
             headers = await self._headers()
             orders_url = (
-                f"{self._BROKERAGE_BASE}/accounts/{account_id}/orders?status=Open"
+                f"{self._brokerage_base}/accounts/{account_id}/orders?status=Open"
             )
-            pos_url = f"{self._BROKERAGE_BASE}/accounts/{account_id}/positions"
+            pos_url = f"{self._brokerage_base}/accounts/{account_id}/positions"
             orders_resp = await self._http.get(orders_url, headers=headers)
             pos_resp = await self._http.get(pos_url, headers=headers)
 
@@ -693,7 +736,7 @@ class TradeStationClient:
         cancelled: list = []
         try:
             headers = await self._headers()
-            orders_url = f"{self._BROKERAGE_BASE}/accounts/{account_id}/orders?status=Open"
+            orders_url = f"{self._brokerage_base}/accounts/{account_id}/orders?status=Open"
             resp = await self._http.get(orders_url, headers=headers)
             if resp.status_code != 200:
                 return cancelled
@@ -1045,7 +1088,7 @@ class Tier2StreamingTrader:
             and state.get("entry_price") is not None
             and state.get("entry_time")
         ):
-            broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
+            broker_state = await self._ts_client.reconcile_state(self._account_config.account_id)
             if broker_state.status == "ACTIVE":
                 self.active_trade = ActiveTrade(
                     bar_index=0,
@@ -1477,7 +1520,7 @@ class Tier2StreamingTrader:
         if reason == "time":
             if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
             if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
-            await self._ts_client.close_position_at_market(t.direction, SIM_ACCOUNT_ID)
+            await self._ts_client.close_position_at_market(t.direction, self._account_config.account_id)
         else:
             # Bracket leg hit (TP or SL) - cancel the other leg
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
@@ -1549,6 +1592,13 @@ class Tier2StreamingTrader:
             cfg.consistency_reduce_pct * 100,
             cfg.consistency_hard_limit_pct * 100,
             reduced_tag,
+        )
+        # Qualifying day display (Story 5-4 — AC#3)
+        logger.info(
+            "Qualifying Days: %d / %d (days with ≥ $%.2f net profit)",
+            self._risk_manager.qualifying_day_count,
+            cfg.qualifying_days_required,
+            cfg.qualifying_day_min_profit,
         )
 
     def _write_equity_curve(self) -> None:
@@ -1625,7 +1675,7 @@ class Tier2StreamingTrader:
             return
 
         # Daily circuit breaker: halt if daily loss limit reached
-        if self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss):
+        if self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss, self._account_config):
             self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False,
                                       self._vol_regime_high, self._m15_choch_active, False,
                                       "SKIP:CIRCUIT_BREAKER")
@@ -1865,7 +1915,7 @@ class Tier2StreamingTrader:
         _kill_zone_active = kill_zone_filter(bar.timestamp, self._strategy_config)
         _vol_regime_pct = self._last_vol_regime_pct
 
-        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, SIM_ACCOUNT_ID)
+        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, self._account_config.account_id)
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,

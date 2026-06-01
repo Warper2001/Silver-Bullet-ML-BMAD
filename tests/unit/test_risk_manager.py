@@ -378,3 +378,105 @@ class TestAccumulatedProfit:
         with patch.object(StatePersistence, "save_state"):
             rm.check_and_update(_et(day=7), max_daily_loss=-750.0)
         assert rm.accumulated_profit == pytest.approx(1000.0)
+
+
+# ---------------------------------------------------------------------------
+# Story 5-4: Qualifying Day Tracker
+# ---------------------------------------------------------------------------
+
+def _make_cfg_qualifying(**overrides):
+    from src.research.tier2_streaming_working import AccountConfig
+    defaults = dict(
+        account_id="SIM001",
+        execution_mode="sim",
+        symbol="MNQM26",
+        point_value=2.0,
+        tick_size=0.25,
+        contracts=5,
+        qualifying_day_min_profit=150.0,
+        qualifying_days_required=5,
+    )
+    defaults.update(overrides)
+    return AccountConfig(**defaults)
+
+
+class TestQualifyingDayTracker:
+    def test_qualifying_day_count_increments_on_profitable_session(self):
+        """AC#1: session pnl ≥ min_profit → qualifying_day_count += 1."""
+        from src.research.tier2_streaming_working import RiskManager
+        rm = RiskManager()
+        qualified = rm.maybe_record_qualifying_day(200.0, 150.0)
+        assert qualified is True
+        assert rm.qualifying_day_count == 1
+
+    def test_qualifying_day_count_unchanged_below_threshold(self):
+        """AC#2: session pnl < min_profit → count unchanged."""
+        from src.research.tier2_streaming_working import RiskManager
+        rm = RiskManager()
+        qualified = rm.maybe_record_qualifying_day(100.0, 150.0)
+        assert qualified is False
+        assert rm.qualifying_day_count == 0
+
+    def test_qualifying_day_count_exactly_at_threshold(self):
+        """Exactly at threshold counts."""
+        from src.research.tier2_streaming_working import RiskManager
+        rm = RiskManager()
+        assert rm.maybe_record_qualifying_day(150.0, 150.0) is True
+
+    def test_qualifying_day_count_persists_round_trip(self):
+        """AC#1: to_state_dict / restore_from_state preserves count."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm1 = RiskManager()
+        rm1._qualifying_day_count = 3
+        rm1._last_trading_date = _et(day=6).date()
+        state = rm1.to_state_dict()
+        assert "qualifying_day_count" in state
+
+        rm2 = RiskManager()
+        rm2.restore_from_state(state, _et(day=7).date())
+        assert rm2.qualifying_day_count == 3
+
+    def test_qualifying_day_recorded_on_day_rollover(self):
+        """Day rollover inside check_and_update records qualifying day from prior session."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence, AccountConfig
+        rm = RiskManager()
+        cfg = _make_cfg_qualifying()
+        rm._daily_pnl = 200.0  # prior session was profitable
+        rm._last_trading_date = _et(day=6).date()
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_and_update(_et(day=7), max_daily_loss=-750.0, account_config=cfg)
+        assert rm.qualifying_day_count == 1
+
+
+class TestExecutionModeURLSelection:
+    def _make_client(self, execution_mode="sim"):
+        from src.research.tier2_streaming_working import TradeStationClient, AccountConfig
+        from unittest.mock import MagicMock
+        cfg = AccountConfig(
+            account_id="SIM001",
+            execution_mode=execution_mode,
+            symbol="MNQM26",
+            point_value=2.0,
+            tick_size=0.25,
+            contracts=5,
+        )
+        return TradeStationClient(auth=MagicMock(), account_config=cfg, httpx_client=MagicMock())
+
+    def test_sim_mode_uses_sim_orders_url(self):
+        """AC#4: execution_mode='sim' → SIM orders URL."""
+        client = self._make_client("sim")
+        assert "sim-api.tradestation.com" in client._orders_url
+
+    def test_live_mode_uses_live_orders_url(self):
+        """AC#5: execution_mode='live' → live orders URL."""
+        client = self._make_client("live")
+        assert "sim-api.tradestation.com" not in client._orders_url
+        assert "api.tradestation.com" in client._orders_url
+
+    def test_sim_mode_uses_sim_brokerage_base(self):
+        client = self._make_client("sim")
+        assert "sim-api.tradestation.com" in client._brokerage_base
+
+    def test_live_mode_uses_live_brokerage_base(self):
+        client = self._make_client("live")
+        assert "sim-api.tradestation.com" not in client._brokerage_base

@@ -42,6 +42,7 @@ from src.research.strategy_core import (
     StrategyConfig,
     SweepSignal,
     calc_atr,
+    calc_consistency_ratio,
     calc_max_drawdown_pct,
     calc_profit_factor,
     calc_sharpe,
@@ -91,6 +92,10 @@ class AccountConfig:
     topstep_trailing_dd_amount: float = 2000.0
     trailing_dd_alert_pct: float = 0.10
     starting_equity: float = 50000.0
+    # Consistency rule (Story 5-2 — FR18, FR19)
+    consistency_alert_pct: float = 0.40
+    consistency_reduce_pct: float = 0.45
+    consistency_hard_limit_pct: float = 0.50
 
 
 @dataclass
@@ -301,6 +306,9 @@ class RiskManager:
         # Trailing DD state (None = not yet initialized for the current day)
         self._trailing_floor: Optional[float] = None
         self._equity_high_water: Optional[float] = None
+        # Consistency rule state (Story 5-2 — FR18, FR19)
+        self._session_pnls: list[float] = []          # one entry per completed day
+        self._consistency_size_reduced: bool = False  # 1-contract override active today
 
     @property
     def is_halted(self) -> bool:
@@ -321,8 +329,10 @@ class RiskManager:
             logger.info(
                 "New trading day %s — resetting daily P&L (was $%.2f)", today, self._daily_pnl
             )
+            self._session_pnls.append(self._daily_pnl)  # archive previous day for consistency
             self._daily_pnl = 0.0
             self._daily_halted = False
+            self._consistency_size_reduced = False
         self._last_trading_date = today
         if self._daily_halted:
             return True
@@ -398,6 +408,36 @@ class RiskManager:
 
         return False
 
+    @property
+    def consistency_size_reduced(self) -> bool:
+        return self._consistency_size_reduced
+
+    def check_consistency(
+        self, account_config: "AccountConfig"
+    ) -> tuple[float, bool]:
+        """Compute consistency ratio including today's running PnL and alert/reduce if needed.
+
+        Returns (ratio_pct, should_reduce).
+        """
+        all_pnls = self._session_pnls + [self._daily_pnl]
+        ratio = calc_consistency_ratio(all_pnls)
+
+        if ratio >= account_config.consistency_alert_pct * 100:
+            logger.warning(
+                "CONSISTENCY_ALERT: ratio at %.1f%% — approaching 50%% threshold",
+                ratio,
+            )
+
+        should_reduce = ratio >= account_config.consistency_reduce_pct * 100
+        if should_reduce and not self._consistency_size_reduced:
+            logger.warning(
+                "CONSISTENCY_REDUCE: ratio %.1f%% ≥ %.0f%% — capping contracts to 1 for today",
+                ratio, account_config.consistency_reduce_pct * 100,
+            )
+            self._consistency_size_reduced = True
+
+        return ratio, self._consistency_size_reduced
+
     def restore_from_state(self, state: dict, today: datetime.date) -> None:
         """Restore daily risk state from persisted dict on startup (crash recovery, NFR12)."""
         saved_date_str = state.get("last_trading_date")
@@ -417,6 +457,9 @@ class RiskManager:
                     self._trailing_floor = float(state["trailing_floor"])
                 if "equity_high_water" in state and state["equity_high_water"] is not None:
                     self._equity_high_water = float(state["equity_high_water"])
+                if "session_pnls" in state and isinstance(state["session_pnls"], list):
+                    self._session_pnls = [float(p) for p in state["session_pnls"]]
+                self._consistency_size_reduced = bool(state.get("consistency_size_reduced", False))
                 logger.info(
                     "Restored daily risk state: pnl=%.2f halted=%s floor=%s",
                     self._daily_pnl, self._daily_halted, self._trailing_floor,
@@ -432,6 +475,8 @@ class RiskManager:
             "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
             "trailing_floor": self._trailing_floor,
             "equity_high_water": self._equity_high_water,
+            "session_pnls": list(self._session_pnls),
+            "consistency_size_reduced": self._consistency_size_reduced,
         }
 
     def _persist(self) -> None:
@@ -1476,6 +1521,20 @@ class Tier2StreamingTrader:
         dd_pct = calc_max_drawdown_pct(cum)
         logger.info("PF: %s | Sharpe: %.2f | MaxDD: %.1f%% | Trades: %d",
                     pf_str, sh, dd_pct * 100, n)
+        # Consistency display (Story 5-2 — AC#5)
+        cons_ratio = calc_consistency_ratio(
+            self._risk_manager._session_pnls + [self._risk_manager.daily_pnl]
+        )
+        reduced_tag = " [SIZE REDUCED]" if self._risk_manager.consistency_size_reduced else ""
+        cfg = self._account_config
+        logger.info(
+            "Consistency: %.1f%% (alert at %.0f%%, reduce at %.0f%%, limit at %.0f%%)%s",
+            cons_ratio,
+            cfg.consistency_alert_pct * 100,
+            cfg.consistency_reduce_pct * 100,
+            cfg.consistency_hard_limit_pct * 100,
+            reduced_tag,
+        )
 
     def _write_equity_curve(self) -> None:
         """Append one row to logs/equity_curve.csv after each trade close (FR34, AC#3)."""
@@ -1750,6 +1809,14 @@ class Tier2StreamingTrader:
         if entry_dec is None:
             return
 
+        # Consistency rule: cap contracts to 1 when size reduction is active (FR19)
+        effective_contracts = entry_dec.contracts
+        if self._risk_manager.consistency_size_reduced:
+            effective_contracts = 1
+            logger.info(
+                "CONSISTENCY_REDUCE: capping contracts to 1 (ratio check active for today)",
+            )
+
         # Snap prices to MNQ tick for SIM order submission
         ent = self._snap_tick(entry_dec.entry_price)
         tp = self._snap_tick(entry_dec.tp_price)
@@ -1761,7 +1828,7 @@ class Tier2StreamingTrader:
             entry_price=ent,
             sl_price=sl,
             tp_price=tp,
-            contracts=entry_dec.contracts,
+            contracts=effective_contracts,
         )
         self._active_entry_decision = snapped_dec
 

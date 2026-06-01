@@ -1,7 +1,8 @@
-"""Unit tests for Story 5-1: Intraday Trailing Drawdown Floor Tracker.
+"""Unit tests for Stories 5-1 and 5-2.
 
-Tests RiskManager.check_trailing_dd(), AccountConfig trailing-DD fields,
-state-dict round-trip, and EOD mode.
+5-1: RiskManager.check_trailing_dd(), AccountConfig trailing-DD fields,
+     state-dict round-trip, and EOD mode.
+5-2: Consistency rule monitor and auto position-size reduction.
 """
 import pytest
 from datetime import datetime, date
@@ -199,3 +200,126 @@ class TestTrailingDDPersistence:
         state = rm.to_state_dict()
         assert "equity_high_water" in state
         assert state["equity_high_water"] == pytest.approx(51000.0)
+
+
+# ---------------------------------------------------------------------------
+# Story 5-2: Consistency Rule Monitor
+# ---------------------------------------------------------------------------
+
+def _make_cfg_consistency(**overrides):
+    from src.research.tier2_streaming_working import AccountConfig
+    defaults = dict(
+        account_id="SIM001",
+        execution_mode="sim",
+        symbol="MNQM26",
+        point_value=2.0,
+        tick_size=0.25,
+        contracts=5,
+        consistency_alert_pct=0.40,
+        consistency_reduce_pct=0.45,
+        consistency_hard_limit_pct=0.50,
+    )
+    defaults.update(overrides)
+    return AccountConfig(**defaults)
+
+
+class TestConsistencyAccountConfigFields:
+    def test_default_fields_exist(self):
+        cfg = _make_cfg_consistency()
+        assert cfg.consistency_alert_pct == pytest.approx(0.40)
+        assert cfg.consistency_reduce_pct == pytest.approx(0.45)
+        assert cfg.consistency_hard_limit_pct == pytest.approx(0.50)
+
+
+class TestConsistencyEvaluator:
+    def test_alert_logged_at_threshold(self, caplog):
+        """AC#2: ratio ≥ alert_pct → CONSISTENCY_ALERT logged."""
+        import logging
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_cfg_consistency(consistency_alert_pct=0.40)
+        # Simulate two previous days: [520, 850] total=1370; today so far = 600
+        # all_pnls = [520, 850, 600] → best=850, total=1970 → 43.1% ≥ 40% → alert
+        rm._session_pnls = [520.0, 850.0]
+        rm._daily_pnl = 600.0
+        with patch.object(StatePersistence, "save_state"):
+            with caplog.at_level(logging.WARNING):
+                ratio, _ = rm.check_consistency(cfg)
+        assert "CONSISTENCY_ALERT" in caplog.text
+        assert ratio > 40.0
+
+    def test_size_reduction_triggered_at_reduce_pct(self):
+        """AC#3: ratio ≥ reduce_pct → consistency_size_reduced = True."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_cfg_consistency(consistency_reduce_pct=0.45)
+        # [520, 850, 800] → best=850, total=2170 → 39.2%: NOT enough
+        # [520, 850, 950] → best=950, total=2320 → 40.9%: still not enough
+        # [520, 850, 1100] → best=1100, total=2470 → 44.5%: not enough
+        # [520, 850, 1300] → best=1300, total=2670 → 48.7% ≥ 45% → reduce
+        rm._session_pnls = [520.0, 850.0]
+        rm._daily_pnl = 1300.0
+        with patch.object(StatePersistence, "save_state"):
+            ratio, should_reduce = rm.check_consistency(cfg)
+        assert should_reduce is True
+        assert rm.consistency_size_reduced is True
+
+    def test_size_reduction_does_not_reverse_intraday(self):
+        """AC#3: once reduced, stays reduced even if ratio dips below threshold."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_cfg_consistency(consistency_reduce_pct=0.45)
+        rm._session_pnls = [520.0, 850.0]
+        rm._daily_pnl = 1300.0  # triggers reduction
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_consistency(cfg)
+        assert rm.consistency_size_reduced is True
+        rm._daily_pnl = 500.0  # hypothetically lower
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_consistency(cfg)
+        assert rm.consistency_size_reduced is True  # still reduced
+
+    def test_size_reduction_resets_on_new_day(self):
+        """AC#4: new calendar day → _consistency_size_reduced cleared."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_cfg_consistency()
+        bar_day1 = _et(day=6)
+        bar_day2 = _et(day=7)
+        rm._session_pnls = [1000.0]
+        rm._daily_pnl = 1100.0
+        rm._consistency_size_reduced = True
+        rm._last_trading_date = bar_day1.date()
+        # Simulate day transition inside check_and_update
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_and_update(bar_day2, max_daily_loss=-750.0)
+        assert rm.consistency_size_reduced is False
+
+    def test_session_pnls_accumulate_across_days(self):
+        """AC#4: previous day PnL is appended to session_pnls on day rollover."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        bar_day1 = _et(day=6)
+        bar_day2 = _et(day=7)
+        rm._daily_pnl = 400.0
+        rm._last_trading_date = bar_day1.date()
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_and_update(bar_day2, max_daily_loss=-750.0)
+        assert 400.0 in rm._session_pnls
+
+    def test_consistency_state_persists_round_trip(self):
+        """AC#4/5: session_pnls and consistency_size_reduced survive state-dict round-trip."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm1 = RiskManager()
+        rm1._session_pnls = [520.0, 850.0]
+        rm1._consistency_size_reduced = True
+        rm1._last_trading_date = _et(day=6).date()
+        rm1._daily_pnl = 300.0
+        state = rm1.to_state_dict()
+        assert "session_pnls" in state
+        assert "consistency_size_reduced" in state
+
+        rm2 = RiskManager()
+        rm2.restore_from_state(state, _et(day=6).date())
+        assert rm2._session_pnls == [520.0, 850.0]
+        assert rm2.consistency_size_reduced is True

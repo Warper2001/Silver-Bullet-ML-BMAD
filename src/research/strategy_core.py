@@ -889,3 +889,16 @@ def calc_max_drawdown_pct(equity: list[float]) -> float:
             if dd_pct > max_dd_pct:
                 max_dd_pct = dd_pct
     return max_dd_pct
+
+
+def calc_consistency_ratio(session_pnls: list[float]) -> float:
+    """Return best profitable day / total profitable days * 100 (FR18, Story 5-2).
+
+    TopStep consistency rule: no single day's profit may exceed 50% of cumulative profit.
+    Only positive days count toward the numerator and denominator.
+    Returns 0.0 if there are no profitable sessions yet.
+    """
+    profitable = [p for p in session_pnls if p > 0]
+    if not profitable:
+        return 0.0
+    return max(profitable) / sum(profitable) * 100.0

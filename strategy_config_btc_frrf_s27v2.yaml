@@ -1,0 +1,43 @@
+# strategy_config_btc_frrf_s27v2.yaml — BTC FRRF SHORT-only (S27v2)
+# Pre-registration: _bmad-output/preregistration_btc_frrf_s27v2.md
+# Sealed: 2026-06-01
+# DO NOT change any value without a new pre-registration commit first.
+#
+# S27v2 closes S27 (inconclusive: PF=1.159, gate=1.20) and pre-registers
+# the SHORT-only variant motivated by:
+#   1. S27 LONG arm was vestigial: N=27, PF=1.042, P&L=$100 — statistical noise
+#   2. S27 SHORT arm showed improving trend: 2025 rolling PF avg 1.183 → 2026 avg 2.057
+#   3. Last 91-day window (ending 2026-01-12): PF=2.257
+#
+# Hypothesis: When 8h mark/spot basis (funding rate proxy) > +0.03%/8h,
+# the market is crowded long → enter SHORT on H1 bearish sweep + M15 CHoCH + M1 bearish FVG.
+# LONG path is structurally disabled (funding_rate_long_threshold: -99.0 — never triggers).
+#
+# Funding rate data: data/kraken/PF_XBTUSD_funding_rate.csv
+# Derived from Kraken mark/spot 1h charts (mark-spot)/spot averaged per 8h window.
+
+sl_multiplier: 5.0
+tp_multiplier: 6.0
+entry_pct: 0.5
+atr_threshold: 0.25
+max_gap_dollars: 150.0
+max_hold_bars: 60
+max_pending_bars: 240
+contracts_per_trade: 1
+max_daily_loss: -500.0
+vol_regime_lookback: 120
+vol_regime_threshold: 0.75
+min_gap_atr_ratio: 0.04
+ml_threshold: 0.0
+bearish_only: false
+h1_sweep_lookback: 6
+tuesday_exclusion: false
+m15_confirmation: true
+enable_kill_zone_filter: false
+kill_zone_start_et: "17:00"
+kill_zone_end_et: "19:00"
+commission_per_roundtrip: 0.04
+enable_ifvg_fallback: false
+funding_rate_filter_enabled: true
+funding_rate_short_threshold: 0.0003
+funding_rate_long_threshold: -99.0

@@ -253,5 +253,5 @@ class TestLogFilterDecision:
             asyncio.run(_run())
 
         assert len(calls) == 1
-        assert calls[0][-1] == "SKIP"
+        assert calls[0][-1] == "SKIP:VOL_REGIME"
         assert calls[0][3] is True  # vol_regime_blocked=True (4th positional arg)

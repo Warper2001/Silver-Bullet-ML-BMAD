@@ -86,6 +86,11 @@ class AccountConfig:
     point_value: float
     tick_size: float
     contracts: int
+    # Trailing drawdown tracking (Story 5-1 — FR17)
+    dd_type: Literal["intraday", "eod"] = "intraday"
+    topstep_trailing_dd_amount: float = 2000.0
+    trailing_dd_alert_pct: float = 0.10
+    starting_equity: float = 50000.0
 
 
 @dataclass
@@ -278,20 +283,24 @@ class TradeLogger:
 
 
 class RiskManager:
-    """Phase 1 daily circuit breaker (FR16, NFR12, architecture Risk Layer decision).
+    """Phase 1 daily circuit breaker + Phase 2 trailing drawdown tracker (FR16, FR17, NFR12).
 
-    Tracks daily P&L and halts new entries when the configured loss threshold is reached.
-    Persists halt state immediately so a crash between trip and next trade close does not
-    reset the circuit breaker on restart.
+    Phase 1: Tracks daily P&L and halts new entries when the configured loss threshold is
+    reached. Persists halt state immediately so a crash between trip and next trade close
+    does not reset the circuit breaker on restart.
 
-    Phase 2 extension (trailing DD, consistency rule, dynamic contracts) adds evaluators
-    inside check_and_update() without changing the public surface.
+    Phase 2: Intraday trailing drawdown — floor rises with every unrealized equity peak
+    (TopStep Combine behaviour). EOD mode available for XFA funded accounts where the floor
+    only updates at session end.
     """
 
     def __init__(self) -> None:
         self._daily_pnl: float = 0.0
         self._daily_halted: bool = False
         self._last_trading_date: Optional[datetime.date] = None
+        # Trailing DD state (None = not yet initialized for the current day)
+        self._trailing_floor: Optional[float] = None
+        self._equity_high_water: Optional[float] = None
 
     @property
     def is_halted(self) -> bool:
@@ -332,6 +341,63 @@ class RiskManager:
         self._daily_halted = True
         self._persist()
 
+    @property
+    def trailing_floor(self) -> Optional[float]:
+        return self._trailing_floor
+
+    def check_trailing_dd(
+        self,
+        current_equity: float,
+        bar_et: datetime,
+        account_config: "AccountConfig",
+    ) -> bool:
+        """Update intraday trailing floor and check for breach (FR17).
+
+        Returns True (and halts) if current_equity is at or below the trailing floor.
+        In EOD mode the floor is initialized on the first call but never updated intrabar.
+        """
+        dd_amount = account_config.topstep_trailing_dd_amount
+        today = bar_et.date()
+
+        # Reset trailing state on new calendar day
+        if self._last_trading_date is not None and self._last_trading_date != today:
+            self._trailing_floor = None
+            self._equity_high_water = None
+        self._last_trading_date = today  # kept in sync for state-dict persistence
+
+        # Initialize floor on first call of the day
+        if self._trailing_floor is None:
+            self._trailing_floor = account_config.starting_equity - dd_amount
+            self._equity_high_water = account_config.starting_equity
+
+        # Update high-water mark and floor (intraday mode only)
+        if account_config.dd_type == "intraday":
+            if current_equity > self._equity_high_water:  # type: ignore[operator]
+                self._equity_high_water = current_equity
+            new_floor = self._equity_high_water - dd_amount  # type: ignore[operator]
+            if new_floor > self._trailing_floor:
+                self._trailing_floor = new_floor
+
+        # Alert when cushion is thin
+        cushion = current_equity - self._trailing_floor  # type: ignore[operator]
+        if 0 < cushion < dd_amount * account_config.trailing_dd_alert_pct:
+            logger.warning(
+                "TRAILING_DD_ALERT: equity $%.2f — only $%.2f above floor $%.2f",
+                current_equity, cushion, self._trailing_floor,
+            )
+
+        # Breach check
+        if current_equity <= self._trailing_floor:  # type: ignore[operator]
+            logger.warning(
+                "TRAILING_DD_BREACH: current equity $%.2f is at or below floor $%.2f — halting",
+                current_equity, self._trailing_floor,
+            )
+            self._daily_halted = True
+            self._persist()
+            return True
+
+        return False
+
     def restore_from_state(self, state: dict, today: datetime.date) -> None:
         """Restore daily risk state from persisted dict on startup (crash recovery, NFR12)."""
         saved_date_str = state.get("last_trading_date")
@@ -347,9 +413,13 @@ class RiskManager:
                 self._daily_pnl = float(state.get("daily_pnl", 0.0))
                 self._daily_halted = bool(state.get("daily_halted", False))
                 self._last_trading_date = today
+                if "trailing_floor" in state and state["trailing_floor"] is not None:
+                    self._trailing_floor = float(state["trailing_floor"])
+                if "equity_high_water" in state and state["equity_high_water"] is not None:
+                    self._equity_high_water = float(state["equity_high_water"])
                 logger.info(
-                    "Restored daily risk state: pnl=%.2f halted=%s",
-                    self._daily_pnl, self._daily_halted,
+                    "Restored daily risk state: pnl=%.2f halted=%s floor=%s",
+                    self._daily_pnl, self._daily_halted, self._trailing_floor,
                 )
         except (ValueError, TypeError) as e:
             logger.warning("Could not parse last_trading_date from state: %s", e)
@@ -360,6 +430,8 @@ class RiskManager:
             "daily_pnl": self._daily_pnl,
             "daily_halted": self._daily_halted,
             "last_trading_date": self._last_trading_date.isoformat() if self._last_trading_date else None,
+            "trailing_floor": self._trailing_floor,
+            "equity_high_water": self._equity_high_water,
         }
 
     def _persist(self) -> None:
@@ -1077,6 +1149,22 @@ class Tier2StreamingTrader:
                     _t0 = _time_mod.perf_counter_ns()
                     self._update_h1_structure()
                     self._update_m15_choch()
+                    # Trailing drawdown check (FR17): compute equity including unrealized PnL
+                    _unrealized = 0.0
+                    if self.active_trade is not None and self.active_trade.status == "ACTIVE":
+                        _dir_sign = -1 if self.active_trade.direction == "SHORT" else 1
+                        _unrealized = (
+                            _dir_sign
+                            * (bar.close - self.active_trade.entry_price)
+                            * self._point_value
+                            * self._contracts
+                        )
+                    _current_equity = (
+                        self._account_config.starting_equity
+                        + self._risk_manager.daily_pnl
+                        + _unrealized
+                    )
+                    self._risk_manager.check_trailing_dd(_current_equity, bar_et, self._account_config)
                     await self._advance_active_trade(bar)
                     await self._detect_and_enter(bar, is_backfill=self._is_backfill)
                     self._bar_processing_times.append(_time_mod.perf_counter_ns() - _t0)

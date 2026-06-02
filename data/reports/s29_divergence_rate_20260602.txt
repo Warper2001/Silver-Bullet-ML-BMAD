@@ -1,0 +1,108 @@
+Loading data...
+MNQ 1min: 393,468 bars  (2025-01-01 18:01:00-05:00 → 2026-05-19 17:00:00-04:00)
+ES 1min: 367,913 bars  (2025-04-30 20:01:00-04:00 → 2026-05-19 20:00:00-04:00)
+
+Analyzing 62 S25 trades for ES H1 sweep confirmation...
+
+  2025-05-22 08:00 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-486
+  2025-05-28 14:53 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+791
+  2025-05-28 16:02 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-954
+  2025-06-16 18:49 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+366
+  2025-06-18 14:04 ET | MNQ✗ | ES=✓ | ✅ BOTH | $+1136
+  2025-06-20 11:02 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-1029
+  2025-06-25 13:42 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-6
+  2025-06-27 13:46 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-634
+  2025-06-30 09:34 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+221
+  2025-06-30 16:01 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-74
+  2025-07-07 09:35 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+86
+  2025-07-10 10:22 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-514
+  2025-07-10 20:24 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+146
+  2025-07-16 11:21 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-164
+  2025-07-24 10:11 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-302
+  2025-07-30 15:01 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-1054
+  2025-08-07 09:44 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+716
+  2025-08-25 20:44 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-339
+  2025-10-02 10:48 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+221
+  2025-10-03 09:43 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+294
+  2025-10-16 12:32 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-4
+  2025-10-16 14:14 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+118
+  2025-11-06 09:42 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+1241
+  2025-11-06 10:14 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+1241
+  2025-11-12 10:14 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+531
+  2025-11-12 18:06 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-212
+  2025-11-17 10:05 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+1426
+  2025-12-17 10:27 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+1181
+  2026-01-02 09:41 ET | MNQ✗ | ES=✓ | ✅ BOTH | $+1661
+  2026-01-09 10:08 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-939
+  2026-01-14 05:23 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+1121
+  2026-01-14 09:53 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+821
+  2026-01-14 10:01 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-854
+  2026-01-15 14:32 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+801
+  2026-01-16 10:01 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+596
+  2026-01-16 10:31 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-272
+  2026-01-21 06:57 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+44
+  2026-01-22 09:57 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-759
+  2026-01-23 03:21 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-1329
+  2026-01-28 11:54 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-456
+  2026-01-28 14:58 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+1136
+  2026-02-11 10:51 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-894
+  2026-02-16 09:12 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+308
+  2026-02-18 07:31 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+1451
+  2026-02-18 13:53 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+1016
+  2026-02-19 04:48 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+184
+  2026-02-19 09:37 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-1329
+  2026-02-20 11:17 ET | MNQ✗ | ES=✓ | ✅ BOTH | $+1736
+  2026-02-20 12:37 ET | MNQ✗ | ES=✓ | ✅ BOTH | $-944
+  2026-03-06 10:10 ET | MNQ✗ | ES=✓ | ✅ BOTH | $-1454
+  2026-03-11 05:02 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-69
+  2026-03-11 08:43 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $-1154
+  2026-03-18 08:32 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+866
+  2026-03-18 10:15 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+1001
+  2026-04-01 21:32 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+796
+  2026-04-06 10:40 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+411
+  2026-04-06 18:25 ET | MNQ✗ | ES=✓ | ✅ BOTH | $+756
+  2026-04-09 13:32 ET | MNQ✓ | ES=✓ | ✅ BOTH | $+536
+  2026-04-22 09:50 ET | MNQ✓ | ES=✓ | ✅ BOTH | $-1179
+  2026-04-27 09:52 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $-769
+  2026-05-04 06:04 ET | MNQ✓ | ES=✗ | ⚠️  MNQ-only | $+191
+  2026-05-13 08:22 ET | MNQ✗ | ES=✗ | ⚠️  MNQ-only | $+488
+
+====================================================================
+S29 DIVERGENCE RATE ANALYSIS
+====================================================================
+
+Baseline (S25):     N=62,  PF=1.4106
+MNQ sweep verified: N=40 / 62  (⚠️  some missed)
+  [Note: 22 trades missing MNQ H1 sweep — may be near history boundary]
+
+────────────────────────────────────────
+  ES confirms (converging): N=30 (48%)
+  ES diverges (MNQ only):   N=32  (52%)
+────────────────────────────────────────
+
+Converging trades (S29 ALLOWS):
+  N=30, PF=1.4974
+  TP: 7, SL: 5, Time: 18
+  Mean PnL: $+143, Win rate: 60%
+  Rate: 0.082/day → N=20 in ~243 days
+
+Diverging trades (S29 BLOCKS):
+  N=32, PF=1.3327
+  Mean PnL: $+100
+  TP: 7, SL: 7, Time: 18
+
+────────────────────────────────────────
+FREQUENCY VERDICT: ⚠️  BORDERLINE
+  blocks 52% of trades, N=20 in ~243 days — check quality gain
+
+Quality comparison (key S29 hypothesis test):
+  Converging PF (ES confirms): 1.4974  N=30
+  Diverging  PF (MNQ-only):    1.3327  N=32
+  ✅ Converging trades ARE higher quality (+0.1647 PF) — consistent with S29 hypothesis
+
+Caveats:
+  - MNQ sweep verification: 40/62 confirmed (22 missed by point-in-time lookback — all 62 had sweeps in live backtest)
+  - ES divergence rate (52%) is higher than the ≤50% 'comfortable' threshold
+  - Sample sizes (N=30, N=32) are too small for confident PF comparison
+  - Pre-registration required before any further analysis
+====================================================================

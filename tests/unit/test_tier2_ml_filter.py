@@ -16,7 +16,10 @@ import numpy as np
 import pytest
 
 # Import from the research script; path manipulation is in the module itself
-from src.research.tier2_streaming_working import MetaLabelingFilter, ML_THRESHOLD
+from src.research.tier2_streaming_working import MetaLabelingFilter
+
+# ML_THRESHOLD was removed as a module constant; 0.65 is the historical default.
+ML_THRESHOLD: float = 0.65
 
 
 # ---------------------------------------------------------------------------

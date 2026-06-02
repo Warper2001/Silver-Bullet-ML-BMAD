@@ -1,7 +1,7 @@
 """Kraken Futures order placement and cancellation."""
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import httpx
 
@@ -10,50 +10,65 @@ from src.execution.kraken.exceptions import KrakenAPIError, KrakenAuthError, Kra
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://demo-futures.kraken.com/derivatives/api/v3"
-SENDORDER_ENDPOINT = "/derivatives/api/v3/sendorder"
+_DEMO_BASE           = "https://demo-futures.kraken.com/derivatives/api/v3"
+_LIVE_BASE           = "https://futures.kraken.com/derivatives/api/v3"
+BASE_URL             = _DEMO_BASE   # kept for backwards compatibility
+SENDORDER_ENDPOINT   = "/derivatives/api/v3/sendorder"
 CANCELORDER_ENDPOINT = "/derivatives/api/v3/cancelorder"
 
 
 class KrakenOrdersClient:
-    """Submits and cancels orders on Kraken Futures (demo environment for paper trading)."""
+    """Submits and cancels orders on Kraken Futures.
 
-    def __init__(self, auth: KrakenFuturesAuth, http_client: httpx.AsyncClient) -> None:
-        self._auth = auth
+    Args:
+        live: If True, routes to the live Futures endpoint; otherwise uses the
+              demo (paper-trading) environment. Default is False (paper).
+    """
+
+    def __init__(
+        self,
+        auth: KrakenFuturesAuth,
+        http_client: httpx.AsyncClient,
+        live: bool = False,
+    ) -> None:
+        self._auth   = auth
         self._client = http_client
+        self._base   = _LIVE_BASE if live else _DEMO_BASE
 
     async def place_order(
         self,
         symbol: str,
         side: str,
         order_type: str,
-        size: int,
+        size: Union[int, float],
         limit_price: Optional[float] = None,
         stop_price: Optional[float] = None,
     ) -> str:
-        """Submit an order to Kraken Futures demo.
+        """Submit an order to Kraken Futures.
 
         Args:
-            symbol: e.g. "PF_XBTUSD"
-            side: "buy" or "sell"
-            order_type: "lmt", "stp", or "mkt"
-            size: Number of contracts (integer)
+            symbol:      e.g. "PF_XBTUSD"
+            side:        "buy" or "sell"
+            order_type:  "lmt", "stp", or "mkt"
+            size:        Contract quantity. PF_XBTUSD is coin-denominated (1 contract = 1 BTC),
+                         so fractional sizes like 0.1423 are valid. Pass float for PF_XBTUSD;
+                         pass int for USD-margined contracts.
             limit_price: Required for "lmt" orders
-            stop_price: Required for "stp" orders
+            stop_price:  Required for "stp" orders
 
         Returns:
             order_id string from Kraken
 
         Raises:
-            KrakenAuthError: On 401 response
+            KrakenAuthError:  On 401 response
             KrakenOrderError: On rejected order
-            KrakenAPIError: On other HTTP errors
+            KrakenAPIError:   On other HTTP errors
         """
         post_data: dict = {
             "orderType": order_type,
-            "symbol": symbol,
-            "side": side,
-            "size": size,
+            "symbol":    symbol,
+            "side":      side,
+            "size":      size,
         }
         if limit_price is not None:
             post_data["limitPrice"] = limit_price
@@ -65,7 +80,7 @@ class KrakenOrdersClient:
 
         try:
             response = await self._client.post(
-                f"{BASE_URL}/sendorder", data=post_data, headers=headers, timeout=15.0
+                f"{self._base}/sendorder", data=post_data, headers=headers, timeout=15.0
             )
         except httpx.RequestError as exc:
             raise KrakenAPIError(0, str(exc)) from exc
@@ -86,7 +101,10 @@ class KrakenOrdersClient:
         if not order_id:
             raise KrakenOrderError("No order_id in sendStatus", raw=body)
 
-        logger.info(f"Order placed: {side} {size}x {symbol} @ {limit_price or stop_price} → id={order_id}")
+        logger.info(
+            f"Order placed: {side} {size}x {symbol} "
+            f"@ {limit_price or stop_price} → id={order_id}"
+        )
         return order_id
 
     async def cancel_order(self, order_id: str) -> bool:
@@ -104,7 +122,7 @@ class KrakenOrdersClient:
 
         try:
             response = await self._client.post(
-                f"{BASE_URL}/cancelorder", data=post_data, headers=headers, timeout=10.0
+                f"{self._base}/cancelorder", data=post_data, headers=headers, timeout=10.0
             )
         except httpx.RequestError as exc:
             logger.warning(f"Cancel request error for {order_id}: {exc}")

@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """
-BTC Funding-Rate Cash-and-Carry Executor (paper trading)
+BTC Funding-Rate Cash-and-Carry Executor
 
-Delta-neutral strategy: notional long BTC spot + short BTC perpetual.
+Delta-neutral strategy: long BTC spot + short BTC perpetual.
 Collect 8h funding payments when annualized rate exceeds the hurdle.
 
 Pre-registered parameters sealed in:
   _bmad-output/preregistration_btc_carry_backtest.md (commit 35d9e4d)
 Backtest result: PASS — 23.6% ann. yield, Sharpe 12.64, MaxDD 1.93%
 
-Paper mode: monitors real Kraken funding rates, simulates P&L,
-            logs "WOULD ENTER / WOULD EXIT" events. No real orders placed.
+Modes:
+  Paper (default) — monitors real Kraken funding rates, simulates P&L.
+                    No real orders placed. No credentials required.
+  Live (--live)   — places real market orders on both legs via Kraken APIs.
+                    Requires KRAKEN_SPOT_API_KEY/SECRET and
+                    KRAKEN_FUTURES_API_KEY/SECRET in environment.
 
 Usage:
-    .venv/bin/python btc_carry_executor.py              # run executor
-    .venv/bin/python btc_carry_executor.py --status     # print current state and exit
-    .venv/bin/python btc_carry_executor.py --notional 50000  # override position size
+    .venv/bin/python btc_carry_executor.py                    # paper mode
+    .venv/bin/python btc_carry_executor.py --live             # live mode
+    .venv/bin/python btc_carry_executor.py --status           # status and exit
+    .venv/bin/python btc_carry_executor.py --live --status    # status with balance check
+    .venv/bin/python btc_carry_executor.py --notional 50000   # override position size
 """
 
 import argparse
@@ -47,6 +53,7 @@ DEFAULT_NOTIONAL   = 10_000.0   # USD notional per leg
 POLL_INTERVAL_S    = 60         # poll loop interval
 FUNDING_TTL_S      = 300        # re-fetch funding rate at most every 5 min
 TICKERS_URL        = "https://futures.kraken.com/derivatives/api/v3/tickers"
+MIN_BTC_ORDER      = 0.0001     # Kraken minimum spot/perp order size in BTC
 
 STATE_FILE         = Path("data/carry_executor_state.json")
 POSITIONS_LOG      = Path("logs/carry_positions.csv")
@@ -95,6 +102,11 @@ class CarryState:
     n_trades:           int            = 0      # completed carry legs
     total_pnl:          float          = 0.0    # all-time cumulative P&L (fraction of notional)
     total_cost:         float          = 0.0    # all-time transaction costs (fraction of notional)
+    # Live-mode order tracking (Optional — None in paper mode)
+    spot_order_id:      Optional[str]  = None   # Kraken Spot txid at last entry
+    perp_order_id:      Optional[str]  = None   # Kraken Futures order_id at last entry
+    entry_spot_price:   Optional[float] = None  # actual spot fill price at entry
+    entry_perp_price:   Optional[float] = None  # actual perp fill price at entry
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -128,20 +140,24 @@ def save_state(state: CarryState) -> None:
 # ---------------------------------------------------------------------------
 
 _POSITION_FIELDS = [
-    "event_time", "event_type", "funding_ann_pct",
+    "event_time", "event_type", "mode", "funding_ann_pct",
     "notional_usd", "pnl_frac", "pnl_usd",
     "n_payments", "neg_count", "status_after",
+    "spot_order_id", "perp_order_id",
 ]
 
 
 def _log_position_event(
     event_type: str,
+    mode: str,
     funding_ann: float,
     notional: float,
     pnl_frac: float,
     n_payments: int,
     neg_count: int,
     status_after: str,
+    spot_order_id: str = "",
+    perp_order_id: str = "",
 ) -> None:
     POSITIONS_LOG.parent.mkdir(exist_ok=True)
     write_header = not POSITIONS_LOG.exists()
@@ -152,6 +168,7 @@ def _log_position_event(
         w.writerow({
             "event_time":       datetime.now(timezone.utc).isoformat(),
             "event_type":       event_type,
+            "mode":             mode,
             "funding_ann_pct":  f"{funding_ann * 100:.4f}",
             "notional_usd":     f"{notional:.2f}",
             "pnl_frac":         f"{pnl_frac:.8f}",
@@ -159,6 +176,8 @@ def _log_position_event(
             "n_payments":       n_payments,
             "neg_count":        neg_count,
             "status_after":     status_after,
+            "spot_order_id":    spot_order_id,
+            "perp_order_id":    perp_order_id,
         })
 
 
@@ -184,7 +203,7 @@ class FundingRateFetcher:
             resp.raise_for_status()
             for t in resp.json().get("tickers", []):
                 if t.get("symbol") == SYMBOL:
-                    ann = float(t.get("fundingRate", 0.0))   # Kraken: annualised decimal
+                    ann = float(t.get("fundingRate", 0.0))
                     self._rate_ann = ann
                     self._rate_8h  = ann / (3 * 365)
                     self._last_price = (
@@ -244,36 +263,126 @@ def _payment_due(state: CarryState) -> bool:
     return datetime.now(timezone.utc) >= ref + timedelta(hours=8)
 
 
+def _calc_volume_btc(notional_usd: float, btc_price: float) -> float:
+    """BTC quantity for both legs. Enforces Kraken minimum lot size."""
+    vol = round(notional_usd / btc_price, 8)
+    return max(vol, MIN_BTC_ORDER)
+
+
 # ---------------------------------------------------------------------------
 # Carry executor
 # ---------------------------------------------------------------------------
 
 class BTCCarryExecutor:
-    def __init__(self, notional: float = DEFAULT_NOTIONAL) -> None:
+    def __init__(self, notional: float = DEFAULT_NOTIONAL, live: bool = False) -> None:
         self.notional = notional
+        self.live     = live
         self.state    = load_state()
         self.state.notional_usd = notional
         self._http    = httpx.AsyncClient(timeout=15.0)
         self.fetcher  = FundingRateFetcher(self._http)
         self._running = False
+        # Live-mode clients — created in run() so --status path skips credential checks
+        self._spot_client    = None
+        self._futures_client = None
+
+    def _mode_tag(self) -> str:
+        return "LIVE" if self.live else "PAPER"
+
+    async def _preflight_balance_check(self) -> None:
+        """Verify sufficient USD balance before entering live mode. Logs BTC and USD."""
+        usd = await self._spot_client.get_usd_balance()
+        btc = await self._spot_client.get_btc_balance()
+        logger.info(f"Preflight balance — USD: ${usd:,.2f}  BTC: {btc:.8f}")
+        required = self.notional * 1.01
+        if usd < required:
+            raise RuntimeError(
+                f"Insufficient USD balance for live carry: "
+                f"have ${usd:,.2f}, need ${required:,.2f} (notional + 1% buffer)"
+            )
+        logger.info(f"Balance check passed — USD ${usd:,.2f} >= required ${required:,.2f}")
 
     async def _enter(self, rate_ann: float) -> None:
         now  = datetime.now(timezone.utc)
         cost = _cost_frac()
+
+        spot_order_id = ""
+        perp_order_id = ""
+
+        if self.live:
+            btc_price  = self.fetcher.price
+            if btc_price is None:
+                logger.error("Cannot enter: BTC price unavailable")
+                return
+            volume_btc = _calc_volume_btc(self.notional, btc_price)
+            if volume_btc < MIN_BTC_ORDER:
+                logger.warning(
+                    f"Computed volume {volume_btc} BTC below minimum {MIN_BTC_ORDER} — clamped"
+                )
+
+            # Perp short FIRST — if spot subsequently fails, perp can be cleanly unwound.
+            # The reverse (spot bought, perp fails) leaves naked long BTC.
+            try:
+                perp_order_id = await self._futures_client.orders.place_order(
+                    SYMBOL, "sell", "mkt", volume_btc
+                )
+                logger.info(f"Perp short placed: {volume_btc} BTC | order_id={perp_order_id}")
+            except Exception as exc:
+                logger.error(f"Perp short FAILED — aborting entry: {exc}")
+                return
+
+            # Spot buy SECOND
+            try:
+                spot_result = await self._spot_client.place_market_order("buy", volume_btc)
+                spot_order_id = spot_result.txid
+                self.state.entry_spot_price = spot_result.fill_price
+                self.state.entry_perp_price = btc_price   # perp fill price not in sendorder response
+                logger.info(
+                    f"Spot buy confirmed: {spot_result.vol_exec} BTC "
+                    f"@ ${spot_result.fill_price:,.2f} | txid={spot_order_id}"
+                )
+            except Exception as exc:
+                logger.critical(
+                    f"Spot buy FAILED after perp short — attempting emergency perp unwind: {exc}"
+                )
+                # Retry spot once after 5s
+                await asyncio.sleep(5.0)
+                try:
+                    spot_result = await self._spot_client.place_market_order("buy", volume_btc)
+                    spot_order_id = spot_result.txid
+                    self.state.entry_spot_price = spot_result.fill_price
+                    logger.info(f"Spot buy retry succeeded: txid={spot_order_id}")
+                except Exception as retry_exc:
+                    logger.critical(
+                        f"Spot buy retry also failed — placing emergency perp close: {retry_exc}"
+                    )
+                    try:
+                        await self._futures_client.orders.place_order(
+                            SYMBOL, "buy", "mkt", volume_btc
+                        )
+                    except Exception as unwind_exc:
+                        logger.critical(f"EMERGENCY PERP UNWIND FAILED — manual action required: {unwind_exc}")
+                    return   # remain FLAT; do not update state to ACTIVE
+
         self.state.status             = "ACTIVE"
         self.state.entry_time         = now.isoformat()
         self.state.entry_funding_ann  = rate_ann
         self.state.neg_count          = 0
-        self.state.accrued_pnl        = -cost   # entry cost deducted upfront
+        self.state.accrued_pnl        = -cost
         self.state.n_funding_payments = 0
         self.state.last_payment_time  = None
         self.state.total_cost        += cost
+        self.state.spot_order_id      = spot_order_id or None
+        self.state.perp_order_id      = perp_order_id or None
         save_state(self.state)
-        _log_position_event("ENTER", rate_ann, self.notional, -cost, 0, 0, "ACTIVE")
+        _log_position_event(
+            "ENTER", self._mode_tag(), rate_ann, self.notional, -cost,
+            0, 0, "ACTIVE", spot_order_id, perp_order_id,
+        )
         logger.info(
-            f"ENTER CARRY | rate_ann={rate_ann*100:.4f}% > hurdle={_hurdle_str()} | "
-            f"notional=${self.notional:,.0f} | entry_cost=${cost*self.notional:.2f} | "
-            f"[PAPER — no real orders placed]"
+            f"ENTER CARRY [{self._mode_tag()}] | "
+            f"rate_ann={rate_ann*100:.4f}% > hurdle={_hurdle_str()} | "
+            f"notional=${self.notional:,.0f} | entry_cost=${cost*self.notional:.2f}"
         )
 
     async def _apply_payment(self, rate_8h: float, rate_ann: float) -> None:
@@ -290,8 +399,8 @@ class BTCCarryExecutor:
 
         save_state(self.state)
         _log_position_event(
-            "PAYMENT", rate_ann, self.notional, pnl_frac,
-            self.state.n_funding_payments, self.state.neg_count, "ACTIVE"
+            "PAYMENT", self._mode_tag(), rate_ann, self.notional, pnl_frac,
+            self.state.n_funding_payments, self.state.neg_count, "ACTIVE",
         )
         logger.info(
             f"PAYMENT #{self.state.n_funding_payments} | "
@@ -306,6 +415,35 @@ class BTCCarryExecutor:
         net_pnl    = self.state.accrued_pnl - cost
         n_payments = self.state.n_funding_payments
         accrued    = self.state.accrued_pnl
+
+        if self.live:
+            btc_price  = self.fetcher.price
+            volume_btc = _calc_volume_btc(self.notional, btc_price) if btc_price else MIN_BTC_ORDER
+
+            # Spot sell FIRST, then close perp
+            try:
+                spot_result = await self._spot_client.place_market_order("sell", volume_btc)
+                logger.info(
+                    f"Spot sell confirmed: {spot_result.vol_exec} BTC "
+                    f"@ ${spot_result.fill_price:,.2f} | txid={spot_result.txid}"
+                )
+            except Exception as exc:
+                logger.error(f"Spot sell failed — retrying once: {exc}")
+                await asyncio.sleep(5.0)
+                try:
+                    spot_result = await self._spot_client.place_market_order("sell", volume_btc)
+                    logger.info(f"Spot sell retry succeeded: txid={spot_result.txid}")
+                except Exception as retry_exc:
+                    logger.critical(f"Spot sell retry also failed — perp still being closed: {retry_exc}")
+
+            try:
+                perp_close_id = await self._futures_client.orders.place_order(
+                    SYMBOL, "buy", "mkt", volume_btc
+                )
+                logger.info(f"Perp close confirmed: order_id={perp_close_id}")
+            except Exception as exc:
+                logger.critical(f"Perp close FAILED — manual action required: {exc}")
+
         self.state.total_pnl  += net_pnl
         self.state.total_cost += cost
         self.state.n_trades   += 1
@@ -316,17 +454,23 @@ class BTCCarryExecutor:
         self.state.accrued_pnl        = 0.0
         self.state.n_funding_payments = 0
         self.state.last_payment_time  = None
+        self.state.spot_order_id      = None
+        self.state.perp_order_id      = None
+        self.state.entry_spot_price   = None
+        self.state.entry_perp_price   = None
         save_state(self.state)
-        _log_position_event("EXIT", rate_ann, self.notional, net_pnl, n_payments, 0, "FLAT")
+        _log_position_event(
+            "EXIT", self._mode_tag(), rate_ann, self.notional, net_pnl,
+            n_payments, 0, "FLAT",
+        )
         logger.info(
-            f"EXIT CARRY ({reason}) | "
+            f"EXIT CARRY [{self._mode_tag()}] ({reason}) | "
             f"payments={n_payments} | "
             f"gross=${accrued*self.notional:.4f} | "
             f"exit_cost=${cost*self.notional:.2f} | "
             f"net_pnl=${net_pnl*self.notional:.4f} | "
             f"all_time_pnl=${self.state.total_pnl*self.notional:.4f} | "
-            f"n_trades={self.state.n_trades} | "
-            f"[PAPER]"
+            f"n_trades={self.state.n_trades}"
         )
 
     async def _step(self) -> None:
@@ -338,20 +482,18 @@ class BTCCarryExecutor:
             logger.warning("Funding rate unavailable — skipping step")
             return
 
-        # Apply 8h payment if due
         if _payment_due(self.state):
             await self._apply_payment(rate_8h, rate_ann)
             if self.state.neg_count >= NEG_STOP_PERIODS:
                 await self._exit(f"neg_funding_x{NEG_STOP_PERIODS}", rate_ann)
                 return
 
-        # Entry check (only when FLAT)
         if self.state.status == "FLAT" and _should_enter(rate_ann):
             await self._enter(rate_ann)
 
         price_str = f"${self.fetcher.price:,.0f}" if self.fetcher.price else "?"
         logger.info(
-            f"poll | status={self.state.status} | "
+            f"poll [{self._mode_tag()}] | status={self.state.status} | "
             f"funding={rate_ann*100:.4f}%ann | btc={price_str} | "
             f"hurdle_met={_should_enter(rate_ann)} | "
             f"neg={self.state.neg_count}/{NEG_STOP_PERIODS} | "
@@ -360,7 +502,7 @@ class BTCCarryExecutor:
 
     async def run(self) -> None:
         logger.info("=" * 60)
-        logger.info("BTC CASH-AND-CARRY EXECUTOR  [paper mode]")
+        logger.info(f"BTC CASH-AND-CARRY EXECUTOR  [{self._mode_tag()}]")
         logger.info(f"  Notional : ${self.notional:,.0f}")
         logger.info(f"  Hurdle   : {_hurdle_str()} annualized")
         logger.info(
@@ -375,6 +517,16 @@ class BTCCarryExecutor:
             f"all_time_pnl=${self.state.total_pnl*self.notional:.4f}"
         )
 
+        if self.live:
+            from src.execution.kraken.spot import KrakenSpotClient
+            from src.execution.kraken import KrakenFuturesClient
+            self._spot_client    = KrakenSpotClient()
+            self._futures_client = KrakenFuturesClient(live=True)
+            await self._spot_client.__aenter__()
+            await self._futures_client.__aenter__()
+            await self.fetcher.refresh()
+            await self._preflight_balance_check()
+
         self._running = True
         try:
             while self._running:
@@ -386,6 +538,10 @@ class BTCCarryExecutor:
         except asyncio.CancelledError:
             pass
         finally:
+            if self._spot_client is not None:
+                await self._spot_client.__aexit__(None, None, None)
+            if self._futures_client is not None:
+                await self._futures_client.__aexit__(None, None, None)
             await self._http.aclose()
             logger.info("Executor stopped.")
 
@@ -399,7 +555,7 @@ class BTCCarryExecutor:
 
         print()
         print("=" * 60)
-        print("BTC CASH-AND-CARRY EXECUTOR — STATUS")
+        print(f"BTC CASH-AND-CARRY EXECUTOR — STATUS [{self._mode_tag()}]")
         print("=" * 60)
         print(f"  Position       : {self.state.status}")
         if self.state.status == "ACTIVE":
@@ -408,6 +564,10 @@ class BTCCarryExecutor:
             print(f"  Payments rec'd : {self.state.n_funding_payments}")
             print(f"  Neg count      : {self.state.neg_count}/{NEG_STOP_PERIODS}")
             print(f"  Accrued P&L    : ${self.state.accrued_pnl*self.notional:.4f}")
+            if self.state.spot_order_id:
+                print(f"  Spot txid      : {self.state.spot_order_id}")
+            if self.state.perp_order_id:
+                print(f"  Perp order_id  : {self.state.perp_order_id}")
         print()
         if rate_ann is not None:
             hurdle = HURDLE_ANNUAL_PCT / 100.0
@@ -420,6 +580,16 @@ class BTCCarryExecutor:
             print(f"  Hurdle ({_hurdle_str()})  : {'MET ✓' if rate_ann > hurdle else f'NOT MET (need {_hurdle_str()})'}")
         else:
             print("  Live funding   : unavailable")
+
+        if self.live:
+            from src.execution.kraken.spot import KrakenSpotClient
+            async with KrakenSpotClient() as spot:
+                usd = await spot.get_usd_balance()
+                btc = await spot.get_btc_balance()
+            print()
+            print(f"  USD balance    : ${usd:,.2f}")
+            print(f"  BTC balance    : {btc:.8f}")
+
         print()
         print(f"  Completed trades : {self.state.n_trades}")
         print(f"  All-time P&L     : ${self.state.total_pnl*self.notional:.4f}")
@@ -433,7 +603,11 @@ class BTCCarryExecutor:
 # ---------------------------------------------------------------------------
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="BTC Cash-and-Carry Executor (paper mode)")
+    p = argparse.ArgumentParser(description="BTC Cash-and-Carry Executor")
+    p.add_argument(
+        "--live", action="store_true",
+        help="Place real orders on Kraken Spot + Futures (default: paper simulation)",
+    )
     p.add_argument(
         "--status", action="store_true",
         help="Print current state and live funding rate, then exit",
@@ -447,7 +621,7 @@ def parse_args() -> argparse.Namespace:
 
 async def _main() -> None:
     args     = parse_args()
-    executor = BTCCarryExecutor(notional=args.notional)
+    executor = BTCCarryExecutor(notional=args.notional, live=args.live)
 
     if args.status:
         await executor.print_status()

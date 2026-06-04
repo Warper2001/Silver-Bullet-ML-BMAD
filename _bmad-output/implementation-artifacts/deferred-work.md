@@ -1,4 +1,9 @@
 
+## Deferred from: code review of kraken-s27-live-execution (2026-06-04)
+
+- **Orphaned live order on HTTP-200-then-parse-failure** — If `place_order()` gets HTTP 200 but raises `KrakenOrderError` on parse (e.g., missing `order_id` in `sendStatus`), the exchange order may have been submitted but local state clears to flat. Fix requires position reconciliation (explicitly out of spec scope). Operator must monitor Kraken UI for ghost orders. [`submission.py:96-104`, `s27_squeeze_streaming.py` entry flow]
+- **UTC vs ET hour feature in ML** — `df.index[-2].hour` extracts UTC hour; the `vol_squeeze_ml_model.pkl` may have been trained on ET-hour features. If so, the live model receives systematically wrong hour values (offset by 5–6 hours). Verify training code and retrain if needed. [`s27_squeeze_streaming.py` ML features block]
+
 ## Deferred from: code review of 4-2-trade-logging-and-state-persistence-crash-recovery (2026-05-25)
 
 - **Vol percentile computation duplicated inline** — `volatility_regime_filter()` does not expose its internal `pct_rank`; `_last_vol_regime_pct` is populated by replicating the same formula inline in `_update_h1_structure()`. Risk: the two formulas could diverge on future changes. Needs refactor of `volatility_regime_filter` to return percentile, or extraction of a shared helper. [`tier2_streaming_working.py` _update_h1_structure]

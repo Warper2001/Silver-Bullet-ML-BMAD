@@ -15,6 +15,8 @@ _LIVE_BASE           = "https://futures.kraken.com/derivatives/api/v3"
 BASE_URL             = _DEMO_BASE   # kept for backwards compatibility
 SENDORDER_ENDPOINT   = "/derivatives/api/v3/sendorder"
 CANCELORDER_ENDPOINT = "/derivatives/api/v3/cancelorder"
+ACCOUNTS_ENDPOINT    = "/derivatives/api/v3/accounts"
+OPENORDERS_ENDPOINT  = "/derivatives/api/v3/openorders"
 
 
 class KrakenOrdersClient:
@@ -145,3 +147,70 @@ class KrakenOrdersClient:
 
         logger.warning(f"Unexpected cancel response for {order_id}: {body}")
         return False
+
+    async def get_account_balance(self) -> dict:
+        """Query account equity and margin via GET /derivatives/api/v3/accounts.
+
+        Returns:
+            Dict with keys: equity, availableMargin, marginEquity, currency (from accounts[0])
+
+        Raises:
+            KrakenAuthError: On 401
+            KrakenAPIError:  On other HTTP errors
+        """
+        headers = self._auth.get_headers(ACCOUNTS_ENDPOINT, {})
+        try:
+            response = await self._client.get(
+                f"{self._base}/accounts", headers=headers, timeout=10.0
+            )
+        except httpx.RequestError as exc:
+            raise KrakenAPIError(0, str(exc)) from exc
+
+        if response.status_code == 401:
+            raise KrakenAuthError(f"Kraken auth failed on accounts: {response.text[:200]}")
+        if response.status_code != 200:
+            raise KrakenAPIError(response.status_code, response.text)
+
+        body = response.json()
+        accounts = body.get("accounts", {})
+        # Accounts is a dict keyed by currency (e.g. "fi_xbtusd"); flatten to first entry
+        if isinstance(accounts, dict) and accounts:
+            acct = next(iter(accounts.values()))
+        elif isinstance(accounts, list) and accounts:
+            acct = accounts[0]
+        else:
+            raise KrakenAPIError(200, f"Unexpected accounts shape in response: {str(body)[:200]}")
+        return {
+            "equity":          acct.get("equity", 0.0),
+            "availableMargin": acct.get("availableMargin", 0.0),
+            "marginEquity":    acct.get("marginEquity", 0.0),
+            "currency":        acct.get("currency", ""),
+            "raw":             acct,
+        }
+
+    async def get_open_orders(self, symbol: str) -> list:
+        """Query open orders for *symbol* via GET /derivatives/api/v3/openorders.
+
+        Returns:
+            List of order dicts (Kraken shape) filtered to *symbol*.
+
+        Raises:
+            KrakenAuthError: On 401
+            KrakenAPIError:  On other HTTP errors
+        """
+        headers = self._auth.get_headers(OPENORDERS_ENDPOINT, {})
+        try:
+            response = await self._client.get(
+                f"{self._base}/openorders", headers=headers, timeout=10.0
+            )
+        except httpx.RequestError as exc:
+            raise KrakenAPIError(0, str(exc)) from exc
+
+        if response.status_code == 401:
+            raise KrakenAuthError(f"Kraken auth failed on openorders: {response.text[:200]}")
+        if response.status_code != 200:
+            raise KrakenAPIError(response.status_code, response.text)
+
+        body = response.json()
+        orders = body.get("openOrders", [])
+        return [o for o in orders if o.get("symbol") == symbol]

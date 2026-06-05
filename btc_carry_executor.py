@@ -31,7 +31,7 @@ import json
 import logging
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal, Optional
@@ -44,8 +44,10 @@ import httpx
 # ---------------------------------------------------------------------------
 HURDLE_ANNUAL_PCT  = 10.0       # minimum annualised yield to enter carry
 COST_BPS           = 15.0       # round-trip cost per leg transition (bps)
-NEG_THRESHOLD      = -0.0001    # -0.01% per 8h; below this counts as negative
-NEG_STOP_PERIODS   = 3          # consecutive negative-threshold periods to exit
+NEG_THRESHOLD             = -0.0001  # -0.01% per 8h; below this counts as negative
+NEG_WINDOW_SIZE           = 5        # rolling window length for negative-funding exit
+NEG_WINDOW_MIN_NEG        = 3        # exit if >= this many in window below threshold
+BELOW_HURDLE_EXIT_PERIODS = 12       # exit if rate < hurdle for this many consecutive payments
 SYMBOL             = "PF_XBTUSD"
 
 # Operational constants (not strategy parameters)
@@ -94,7 +96,8 @@ class CarryState:
     status:             PositionStatus = "FLAT"
     entry_time:         Optional[str]  = None   # ISO UTC
     entry_funding_ann:  float          = 0.0    # annualised rate at entry
-    neg_count:          int            = 0      # consecutive negative-threshold periods
+    payment_history:    list           = field(default_factory=list)  # last NEG_WINDOW_SIZE 8h rates
+    below_hurdle_count: int            = 0      # consecutive payments while rate < hurdle
     notional_usd:       float          = DEFAULT_NOTIONAL
     accrued_pnl:        float          = 0.0    # cumulative P&L this trade (fraction of notional)
     n_funding_payments: int            = 0      # payments received this trade
@@ -367,7 +370,8 @@ class BTCCarryExecutor:
         self.state.status             = "ACTIVE"
         self.state.entry_time         = now.isoformat()
         self.state.entry_funding_ann  = rate_ann
-        self.state.neg_count          = 0
+        self.state.payment_history    = []
+        self.state.below_hurdle_count = 0
         self.state.accrued_pnl        = -cost
         self.state.n_funding_payments = 0
         self.state.last_payment_time  = None
@@ -392,22 +396,30 @@ class BTCCarryExecutor:
         self.state.n_funding_payments += 1
         self.state.last_payment_time   = now.isoformat()
 
-        if rate_8h < NEG_THRESHOLD:
-            self.state.neg_count += 1
-        else:
-            self.state.neg_count = 0
+        # Sliding-window negative exit (Change A)
+        self.state.payment_history.append(rate_8h)
+        if len(self.state.payment_history) > NEG_WINDOW_SIZE:
+            self.state.payment_history.pop(0)
 
+        # Below-hurdle exit (Change B)
+        if rate_ann < HURDLE_ANNUAL_PCT / 100.0:
+            self.state.below_hurdle_count += 1
+        else:
+            self.state.below_hurdle_count = 0
+
+        neg_in_window = sum(r < NEG_THRESHOLD for r in self.state.payment_history)
         save_state(self.state)
         _log_position_event(
             "PAYMENT", self._mode_tag(), rate_ann, self.notional, pnl_frac,
-            self.state.n_funding_payments, self.state.neg_count, "ACTIVE",
+            self.state.n_funding_payments, neg_in_window, "ACTIVE",
         )
         logger.info(
             f"PAYMENT #{self.state.n_funding_payments} | "
             f"rate_8h={rate_8h*100:.4f}%  ({rate_ann*100:.4f}% ann.) | "
             f"pnl_this=${pnl_frac*self.notional:.4f} | "
             f"accrued=${self.state.accrued_pnl*self.notional:.4f} | "
-            f"neg_count={self.state.neg_count}/{NEG_STOP_PERIODS}"
+            f"neg={neg_in_window}/{NEG_WINDOW_MIN_NEG}of{NEG_WINDOW_SIZE} | "
+            f"bhx={self.state.below_hurdle_count}/{BELOW_HURDLE_EXIT_PERIODS}"
         )
 
     async def _exit(self, reason: str, rate_ann: float) -> None:
@@ -450,7 +462,8 @@ class BTCCarryExecutor:
         self.state.status             = "FLAT"
         self.state.entry_time         = None
         self.state.entry_funding_ann  = 0.0
-        self.state.neg_count          = 0
+        self.state.payment_history    = []
+        self.state.below_hurdle_count = 0
         self.state.accrued_pnl        = 0.0
         self.state.n_funding_payments = 0
         self.state.last_payment_time  = None
@@ -484,19 +497,25 @@ class BTCCarryExecutor:
 
         if _payment_due(self.state):
             await self._apply_payment(rate_8h, rate_ann)
-            if self.state.neg_count >= NEG_STOP_PERIODS:
-                await self._exit(f"neg_funding_x{NEG_STOP_PERIODS}", rate_ann)
+            neg_in_window = sum(r < NEG_THRESHOLD for r in self.state.payment_history)
+            if neg_in_window >= NEG_WINDOW_MIN_NEG:
+                await self._exit(f"neg_funding_{NEG_WINDOW_MIN_NEG}of{NEG_WINDOW_SIZE}", rate_ann)
+                return
+            if self.state.below_hurdle_count >= BELOW_HURDLE_EXIT_PERIODS:
+                await self._exit(f"below_hurdle_x{BELOW_HURDLE_EXIT_PERIODS}", rate_ann)
                 return
 
         if self.state.status == "FLAT" and _should_enter(rate_ann):
             await self._enter(rate_ann)
 
         price_str = f"${self.fetcher.price:,.0f}" if self.fetcher.price else "?"
+        neg_in_window = sum(r < NEG_THRESHOLD for r in self.state.payment_history)
         logger.info(
             f"poll [{self._mode_tag()}] | status={self.state.status} | "
             f"funding={rate_ann*100:.4f}%ann | btc={price_str} | "
             f"hurdle_met={_should_enter(rate_ann)} | "
-            f"neg={self.state.neg_count}/{NEG_STOP_PERIODS} | "
+            f"neg={neg_in_window}/{NEG_WINDOW_MIN_NEG}of{NEG_WINDOW_SIZE} | "
+            f"bhx={self.state.below_hurdle_count}/{BELOW_HURDLE_EXIT_PERIODS} | "
             f"accrued=${self.state.accrued_pnl*self.notional:.4f}"
         )
 
@@ -506,8 +525,12 @@ class BTCCarryExecutor:
         logger.info(f"  Notional : ${self.notional:,.0f}")
         logger.info(f"  Hurdle   : {_hurdle_str()} annualized")
         logger.info(
-            f"  Exit rule: funding < {NEG_THRESHOLD*100:.3f}%/8h "
-            f"for {NEG_STOP_PERIODS} consecutive periods"
+            f"  Exit (A) : {NEG_WINDOW_MIN_NEG}-of-{NEG_WINDOW_SIZE} payments "
+            f"< {NEG_THRESHOLD*100:.3f}%/8h  [pre-reg 79612bc]"
+        )
+        logger.info(
+            f"  Exit (B) : rate < {HURDLE_ANNUAL_PCT:.0f}% ann. "
+            f"for {BELOW_HURDLE_EXIT_PERIODS} consecutive payments  [pre-reg 7fc065a]"
         )
         logger.info("  Pre-reg  : _bmad-output/preregistration_btc_carry_backtest.md (35d9e4d)")
         logger.info("=" * 60)
@@ -562,7 +585,9 @@ class BTCCarryExecutor:
             print(f"  Entry time     : {self.state.entry_time}")
             print(f"  Entry rate     : {self.state.entry_funding_ann*100:.4f}% ann.")
             print(f"  Payments rec'd : {self.state.n_funding_payments}")
-            print(f"  Neg count      : {self.state.neg_count}/{NEG_STOP_PERIODS}")
+            neg_in_window = sum(r < NEG_THRESHOLD for r in self.state.payment_history)
+            print(f"  Neg (window)   : {neg_in_window}/{NEG_WINDOW_MIN_NEG} of {NEG_WINDOW_SIZE}")
+            print(f"  Below-hurdle   : {self.state.below_hurdle_count}/{BELOW_HURDLE_EXIT_PERIODS}")
             print(f"  Accrued P&L    : ${self.state.accrued_pnl*self.notional:.4f}")
             if self.state.spot_order_id:
                 print(f"  Spot txid      : {self.state.spot_order_id}")

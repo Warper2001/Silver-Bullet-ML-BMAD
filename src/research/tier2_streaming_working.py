@@ -998,6 +998,7 @@ class Tier2StreamingTrader:
         self.auth = None
         self.client = None
         self.dollar_bars: list[DollarBar] = []
+        self.dollar_bars_dict: list[dict] = []
         self._last_processed_timestamp: Optional[datetime] = None
         self.active_trade: Optional[ActiveTrade] = None
         self.completed_trades: list[CompletedTrade] = []
@@ -1080,11 +1081,23 @@ class Tier2StreamingTrader:
         logger.info(f"ML Filter: {'ACTIVE' if self.ml_filter.model else 'PASS-THROUGH'} | threshold={cfg.ml_threshold}")
         logger.info("=" * 70)
 
-        self.auth = TradeStationAuthV3.from_file('.access_token')
-        await self.auth.authenticate()
-        await self.auth.start_auto_refresh()
         self.client = httpx.AsyncClient(timeout=30.0)
-        self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+
+        if os.environ.get("USE_PROJECTX", "").lower() in ("1", "true", "yes"):
+            from src.research.projectx_auth import ProjectXAuth
+            from src.research.projectx_client import ProjectXClient
+            self.auth = ProjectXAuth.from_file(".projectx_api_key")
+            await self.auth.authenticate()
+            await self.auth.start_auto_refresh()
+            self._ts_client = ProjectXClient(self.auth, self._account_config, self.client)
+            logger.info("Execution: TopstepX via ProjectX Gateway API")
+        else:
+            self.auth = TradeStationAuthV3.from_file('.access_token')
+            await self.auth.authenticate()
+            await self.auth.start_auto_refresh()
+            self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+            logger.info("Execution: TradeStation SIM")
+
         self.session_start_time = datetime.now()
 
         # Crash recovery: load persisted state and reconcile with broker (FR38, NFR11, NFR12)
@@ -1422,7 +1435,18 @@ class Tier2StreamingTrader:
         if len(self.dollar_bars) < 30:
             return
 
+        # Performance shortcut: skip resampling if we are still within the same 15-minute interval
+        bar = self.dollar_bars[-1]
+        forming_start_min = bar.timestamp.minute - (bar.timestamp.minute % 15)
+        forming_start_ts = bar.timestamp.replace(minute=forming_start_min, second=0, microsecond=0)
+        predicted_completed_m15_ts = forming_start_ts - timedelta(minutes=15)
+        if predicted_completed_m15_ts <= self._m15_last_bar_ts:
+            return
+        self._m15_last_bar_ts = predicted_completed_m15_ts
+
         recent = self.dollar_bars[-3000:]
+        if not recent:
+            return
         df = pd.DataFrame([vars(b) for b in recent])
         df["timestamp"] = pd.to_datetime(df["timestamp"])
         m15 = (
@@ -1497,6 +1521,15 @@ class Tier2StreamingTrader:
                 t.pending_entry = False
                 t.bars_held = 0  # reset so MAX_HOLD_BARS counts from fill, not signal
                 logger.info(f"✅ Limit entry FILLED at {t.entry_price:.2f}")
+                # ProjectX doesn't support native bracket orders — place TP/SL now.
+                if (t.sim_tp_order_id is None and t.sim_sl_order_id is None
+                        and self._active_entry_decision is not None
+                        and hasattr(self._ts_client, "place_exit_orders")):
+                    tp_id, sl_id = await self._ts_client.place_exit_orders(
+                        self._active_entry_decision, self._account_config.account_id
+                    )
+                    t.sim_tp_order_id = tp_id
+                    t.sim_sl_order_id = sl_id
                 # Fall through to TP/SL check — might hit in the same bar
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:

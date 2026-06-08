@@ -1,0 +1,49 @@
+# ORBM-2 (ORB Breakout Momentum v2) — Topstep Combine Strategy
+# Pre-registration: frozen before any backtest run. Do not edit after commit.
+# Created: 2026-06-08
+#
+# KEY CHANGE FROM ORBM-1: Enter WITH the extension (not against it).
+# The 74.2% ORB continuation finding is the signal. ORBM-1 faded it.
+# ORBM-2 runs with it.
+
+# ── Timing (Eastern Time) ──────────────────────────────────────────────────────
+orb_start_et: "09:30"         # ORB build window start
+orb_end_et: "09:45"           # ORB build window end (bars starting before 09:45)
+extension_start_et: "09:45"   # Earliest bar for extension detection
+extension_end_et: "10:45"     # No new extensions after this time
+hard_close_et: "11:30"        # All open positions closed by this time
+
+# ── Signal ─────────────────────────────────────────────────────────────────────
+extension_threshold: 0.25     # Extension requires close ≥ 0.25 × orb_size beyond boundary
+                              # (lowered from 0.5 to increase frequency; ~80-90% of sessions)
+
+# ── Entry ──────────────────────────────────────────────────────────────────────
+# Enter IN THE DIRECTION of the extension (LONG for upward, SHORT for downward)
+# Entry at the extension bar's close (market order)
+
+# ── Stop ───────────────────────────────────────────────────────────────────────
+# Stop at the ORB boundary ± 1 tick (structural invalidation level)
+# If price re-enters the range, the breakout thesis is dead.
+# Stop distance ≈ 0.25 × orb_size from entry
+stop_cap_pts: 75              # Skip trade if stop distance > 75 pts ($150/contract)
+
+# ── Take Profit ────────────────────────────────────────────────────────────────
+tp_r_multiple: 1.5            # TP at 1.5R in the continuation direction (single target)
+
+# ── Position Sizing ────────────────────────────────────────────────────────────
+contracts_small_stop: 2       # stop_pts < 50 → 2 contracts (stop < $100/contract)
+contracts_large_stop: 1       # stop_pts 50–75 → 1 contract ($100–$150/contract)
+# skip if stop_pts > 75 (stop > $150/contract)
+
+# ── Session Management ─────────────────────────────────────────────────────────
+max_trades_per_session: 1     # One trade per RTH session maximum (first extension only)
+daily_loss_limit_usd: -200    # Halt new signals if session P&L ≤ -$200
+daily_profit_halt_usd: 750    # Halt new signals once session P&L ≥ +$750 (consistency cap buffer)
+
+# ── Quality Filter ─────────────────────────────────────────────────────────────
+orb_min_size_points: 5.0      # Skip sessions with ORB < 5 points (no real range formed)
+
+# ── Market Constants ───────────────────────────────────────────────────────────
+point_value_usd: 2.0          # USD per MNQ index point
+tick_size: 0.25               # MNQ minimum price increment
+commission_per_contract_rt: 0.40  # $0.40/contract/roundtrip

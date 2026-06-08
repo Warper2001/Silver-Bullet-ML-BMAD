@@ -1,0 +1,37 @@
+# SORM (Session Open Range Mean Reversion) v1 — Topstep Combine Strategy
+# Pre-registration: frozen before any backtest run. Do not edit after commit.
+# Created: 2026-06-08
+
+# ── Timing (all Eastern Time) ──────────────────────────────────────────────────
+orb_start_et: "09:30"         # ORB build window start
+orb_end_et: "09:45"           # ORB build window end (last bar starting at 09:44)
+extension_start_et: "09:45"   # Earliest bar allowed for extension detection
+extension_end_et: "10:45"     # No new extensions detected after this time
+hard_close_et: "11:30"        # All open positions closed by this time (time-stop)
+
+# ── Entry Conditions ───────────────────────────────────────────────────────────
+extension_threshold: 0.5      # Extension requires close ≥ 0.5 × orb_size beyond boundary
+rsi_period: 14                # RSI lookback period
+rsi_low: 30                   # RSI below this: skip (momentum too extreme, no fade)
+rsi_high: 70                  # RSI above this: skip (momentum too extreme, no fade)
+rsi_direction_lookback: 3     # Bars to measure RSI direction (must point toward mid-range)
+
+# ── Risk Parameters ────────────────────────────────────────────────────────────
+stop_skip_threshold_usd: 200  # Skip trade if stop distance > $200/contract
+stop_small_threshold_usd: 100 # Stop < $100/contract → 2 contracts; $100–$200 → 1 contract
+contracts_small_stop: 2       # Contracts when stop_dist_usd < stop_small_threshold_usd
+contracts_large_stop: 1       # Contracts when stop_dist_usd $100–$200
+daily_loss_limit_usd: -300    # Halt rest of session if session P&L ≤ -$300
+
+# ── Exit Parameters ────────────────────────────────────────────────────────────
+tp1_fraction: 0.60            # Fraction of position closed at TP1 (orb_mid)
+# TP2 target: opposite ORB boundary (orb_low for bear fade, orb_high for bull fade)
+max_trades_per_session: 1     # One trade per RTH session maximum
+
+# ── Minimum ORB Size ───────────────────────────────────────────────────────────
+orb_min_size_points: 2.0      # Skip sessions with ORB size < 2 index points (stale)
+
+# ── Market Constants ───────────────────────────────────────────────────────────
+point_value_usd: 2.0          # USD per MNQ index point
+tick_size: 0.25               # MNQ minimum price increment
+commission_per_contract_rt: 0.40  # $0.40/contract/roundtrip (both sides)

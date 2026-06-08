@@ -1479,35 +1479,40 @@ class Tier2StreamingTrader:
         # Direction gate: bearish-only by default (full-year 2025: bearish PF 1.43 vs bullish 1.06)
         # Guarded from FRRF mode — FRRF uses a separate TRUE LONG path below, not Golden Flip.
         if self.h1_bullish_sweep_active and cached_sweep is not None and not _frrf_enabled:
-            # FVG detection bypassed: forced entry on Sweep
-            fvg_signal = FVGSignal(
-                direction=Direction.BULLISH,
-                gap_size=0.0,
-                entry_price=bar.close,
-                high=bar.high,
-                low=bar.low
-            )
-            
-            fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
-            if self.lr_filter.allows(bars, "bearish"):
-                features = self._extract_features(bars, bar, fvg_dict, "bearish")
-                proba = 1.0 # Force probability for bypass
-                # PROBABILITY BYPASS: Force entry for backtest audit
-                if True: # proba >= self.ml_filter.threshold:
-                    logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry | P(Success)={proba:.3f}")
-                    self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    # Golden Flip: Create a NEW signal object with inverted direction
-                    fvg_signal = FVGSignal(
-                        direction=Direction.BEARISH,
-                        gap_size=fvg_signal.gap_size,
-                        entry_price=fvg_signal.entry_price,
-                        high=fvg_signal.high,
-                        low=fvg_signal.low
-                    )
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
-                else:
-                    logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry FILTERED | P(Success)={proba:.3f}")
-                    self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+            try:
+                fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
+            except ValueError:
+                fvg_signal = None
+            if fvg_signal and fvg_signal.direction == Direction.BULLISH:
+                # GOLDEN FLIP: Logic says Bullish, we enter BEARISH
+                fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                if self.lr_filter.allows(bars, "bearish"):
+                    features = self._extract_features(bars, bar, fvg_dict, "bearish")
+                    proba = self.ml_filter.predict_proba(features)
+                    if proba >= self.ml_filter.threshold:
+                        if not is_backfill:
+                            logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry | P(Success)={proba:.3f}")
+                            self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                        # Golden Flip: inverted FVG + synthetic sweep so make_entry_decision
+                        # accepts the bearish direction (cached sweep is bullish).
+                        flipped_fvg = FVGSignal(
+                            direction=Direction.BEARISH,
+                            gap_size=fvg_signal.gap_size,
+                            entry_price=fvg_signal.entry_price,
+                            high=fvg_signal.high,
+                            low=fvg_signal.low
+                        )
+                        _sweep_syn = SweepSignal(
+                            direction=Direction.BEARISH,
+                            bars_ago=cached_sweep.bars_ago,
+                            sweep_price=cached_sweep.sweep_price,
+                        )
+                        await self._enter_trade(flipped_fvg, bar, len(bars) - 1, is_backfill,
+                                                sweep_override=_sweep_syn)
+                    else:
+                        if not is_backfill:
+                            logger.info(f"Golden Flip: Bullish Signal -> BEARISH Entry FILTERED | P(Success)={proba:.3f}")
+                            self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
 
         # Bearish sweep path — gated on has_bearish_gate so FRRF LONG mode skips it
         if has_bearish_gate:
@@ -1526,9 +1531,7 @@ class Tier2StreamingTrader:
                         return
                     features = self._extract_features(bars, bar, fvg_dict, "bearish")
                     proba = self.ml_filter.predict_proba(features)
-                    proba = 1.0 # Force probability for bypass
-                    # PROBABILITY BYPASS: Force entry for backtest audit
-                    if True: # proba >= self.ml_filter.threshold:
+                    if proba >= self.ml_filter.threshold:
                         logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                         self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                         self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
@@ -1538,22 +1541,36 @@ class Tier2StreamingTrader:
                         self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
                         self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
                 else:
-                    proba = 1.0 # Force probability for bypass
-                    # PROBABILITY BYPASS: Force entry for backtest audit
-                    if True: # proba >= self.ml_filter.threshold:
-                        logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry | P(Success)={proba:.3f}")
-                        self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                        self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
-                        # Golden Flip: Create a NEW signal object with inverted direction
-                        fvg_signal = FVGSignal(
+                    # Golden Flip: Bearish sweep + bearish FVG → enter LONG
+                    fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                    if not self.lr_filter.allows(bars, "bullish"):
+                        self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:LR_REGIME")
+                        return
+                    features = self._extract_features(bars, bar, fvg_dict, "bullish")
+                    proba = self.ml_filter.predict_proba(features)
+                    if proba >= self.ml_filter.threshold:
+                        if not is_backfill:
+                            logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry | P(Success)={proba:.3f}")
+                            self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                            self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                        # Golden Flip: inverted FVG + synthetic sweep so make_entry_decision
+                        # accepts the bullish direction (cached sweep is bearish).
+                        flipped_fvg = FVGSignal(
                             direction=Direction.BULLISH,
                             gap_size=fvg_signal.gap_size,
                             entry_price=fvg_signal.entry_price,
                             high=fvg_signal.high,
                             low=fvg_signal.low
                         )
-                        await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
+                        _sweep_syn = SweepSignal(
+                            direction=Direction.BULLISH,
+                            bars_ago=cached_sweep.bars_ago,
+                            sweep_price=cached_sweep.sweep_price,
+                        )
+                        await self._enter_trade(flipped_fvg, bar, len(bars) - 1, is_backfill,
+                                                sweep_override=_sweep_syn)
                     else:
+                        if not is_backfill:
                             logger.info(f"Golden Flip: Bearish Signal -> BULLISH Entry FILTERED | P(Success)={proba:.3f}")
                             self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
                             self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP:ML_FILTER")
@@ -1676,20 +1693,22 @@ class Tier2StreamingTrader:
         """Round price to nearest instrument tick. Avoids float artifacts."""
         return round(round(price / self._tick_size) * self._tick_size, 10)
 
-    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool):
+    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool,
+                           sweep_override: Optional[SweepSignal] = None):
         """Resolve entry via strategy_core.make_entry_decision and arm the ActiveTrade.
 
         ``fvg`` is now a ``FVGSignal`` from ``strategy_core.detect_fvg``.
+        ``sweep_override`` is used for Golden Flip entries where the cached sweep direction
+        is opposite to the flipped FVG — pass a synthetic sweep matching the FVG direction
+        so make_entry_decision does not reject the mismatched pair.
         Tick-snapping is applied to the prices before SIM order submission.
         ``self._active_entry_decision`` stores the *snapped* EntryDecision for ``check_exit``.
         """
         self._last_entry_bar = len(self.dollar_bars)
-        # BACKTEST PATCH: Allow backfill to trigger trades
-        # if is_backfill:
-        #     return
-        pass # Force pass-through
+        if is_backfill:
+            return
 
-        sweep = self._cached_sweep
+        sweep = sweep_override if sweep_override is not None else self._cached_sweep
         if sweep is None:
             return
 

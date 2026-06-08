@@ -1,0 +1,17 @@
+[Unit]
+Description=YANK MNQ Tier2 Paper Trader
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/yank_streaming_working.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log
+
+[Install]
+WantedBy=multi-user.target

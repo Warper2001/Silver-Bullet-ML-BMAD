@@ -1,0 +1,17 @@
+[Unit]
+Description=S27 Squeeze BTC Paper Trader
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/s27_squeeze_streaming.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/s27_squeeze_streaming.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/s27_squeeze_streaming.log
+
+[Install]
+WantedBy=multi-user.target

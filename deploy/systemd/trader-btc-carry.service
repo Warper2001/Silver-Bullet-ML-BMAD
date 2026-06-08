@@ -1,0 +1,17 @@
+[Unit]
+Description=BTC Cash-and-Carry Executor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python btc_carry_executor.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/btc_carry_executor.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/btc_carry_executor.log
+
+[Install]
+WantedBy=multi-user.target

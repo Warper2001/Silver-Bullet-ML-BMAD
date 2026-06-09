@@ -1,0 +1,48 @@
+# ES/MNQ Stat Arb — Short-Only Combine Strategy Config
+# Pre-registered 2026-06-09
+# DO NOT MODIFY after the pre-registration commit SHA is recorded.
+# Any parameter change requires a new pre-registration cycle.
+
+strategy: es_mnq_stat_arb_short_only
+version: v1
+
+# ── data ranges ───────────────────────────────────────────────────────────────
+in_sample_start: "2025-05-01"   # limited by ES data availability
+in_sample_end:   "2026-02-28"
+oos_start:       "2026-03-01"   # sealed holdout — DO NOT ACCESS before Gate 1 pass
+
+# ── data files ────────────────────────────────────────────────────────────────
+mnq_paths:
+  - "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
+  - "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv"
+es_path:  "data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv"
+oos_path: "data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv"
+
+# ── signal construction ───────────────────────────────────────────────────────
+beta_window:   60   # rolling bars for OLS beta estimation (MNQ_chg ~ ES_chg)
+spread_window:  5   # bars over which cumulative divergence is summed
+
+# ── entry filter ──────────────────────────────────────────────────────────────
+direction:        short        # ONLY short: fade MNQ outperformance of ES
+threshold_pts:    20.0         # enter when 5-bar cumulative div > +20 pts (MNQ overperformed)
+stop_cap_usd:    150.0         # skip trade if stop > $150/contract
+
+# ── trade geometry ────────────────────────────────────────────────────────────
+stop_mult:        1.0          # stop at 1× divergence beyond entry (dir = short)
+tp_mult:          1.0          # TP: MNQ recovers 1× divergence back to entry
+hold_max_bars:   30            # forced exit after 30 bars (~30 min) if neither TP/stop hit
+
+# ── session timing ────────────────────────────────────────────────────────────
+rth_start:        "09:30"      # ET: RTH open
+session_close:    "15:55"      # ET: force-close all positions at or after this bar
+
+# ── instrument economics ──────────────────────────────────────────────────────
+mnq_point_value:  2.0          # $/point per contract
+commission_rt:    4.80         # $/contract round-trip (entry + exit)
+
+# ── combine risk management ───────────────────────────────────────────────────
+combine_trailing_dd:     2000.0   # $2k trailing DD limit (Topstep $50K combine)
+combine_profit_target:   3000.0   # $3k profit target
+qualifying_day_min:       150.0   # $/day minimum for a qualifying session
+daily_loss_halt:         -300.0   # halt new entries if session P&L ≤ -$300
+                                   # (~7 max-loss trades at $40/contract)

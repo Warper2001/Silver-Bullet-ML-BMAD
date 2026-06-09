@@ -107,6 +107,8 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 
 | 2026-06-09 00:35 UTC | `2e9fb90` | backtest_stat_arb_short_oos.py | Gate 2 OOS: ES/MNQ stat arb short-only. ES OOS extracted from existing in-sample file (not new download — file covered through 2026-05-20). Pre-reg: _bmad-output/preregistration_stat_arb_short_combine.md | ❌ GATE 2 FAIL — WR=45.7% PF=0.765 AvgP&L=-$7.70. Mar=54.1% OK; Apr=42.9%, May=39.5% collapse. Max DD=-$2,610 (blows combine). Direction asymmetry does not persist OOS. |
 
+| 2026-06-09 (CST) | `e1e153f` | study_hcvwap_v3_longonly.py | HCVWAP v3 Long-Only OOS: validate v2 long-side (WR=38.3%, PF=1.87, N=60 in-sample) on MNQ 2026-03-01→2026-05-19. N=10, WR=30.0% (gate 30.2%), PF=0.847, EV=-$3.72/trade. ❌ OOS GATE FAIL. HCVWAP hypothesis exhausted. Full output: data/reports/hcvwap_v3_longonly_oos_20260609.txt |
+
 ## Init — 2026-05-23T15:02:03Z
 
 - Protected: none (all already 444)

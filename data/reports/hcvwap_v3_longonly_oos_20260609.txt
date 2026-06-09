@@ -1,0 +1,99 @@
+====================================================================================================
+HCVWAP v3 Long-Only — OOS Validation Study
+Pre-registration: commit e1e153f (2026-06-09)
+Testing: v2 long-side finding (WR=38.3%, PF=1.87, N=60 in-sample)
+OOS window: 2026-03-01 → 2026-05-19  (sealed holdout, ACCESS_LOG logged)
+====================================================================================================
+
+Entry (LONG only): 5-min bar.low ≤ VWAP-2.0σ  AND  close returns above band
+Stop: 15 pts fixed  |  Target: VWAP centerline  |  Min R/R: 1.5:1
+Time windows: 09:45–11:30 ET  OR  14:00–15:00 ET
+
+  ⚠️  DISCLOSURE: long-side split was observed in-sample before this pre-registration.
+  ⚠️  This OOS test is the only methodology-clean validation path.
+
+  Loading MNQ 2026 YTD data → filtering to OOS window 2026-03-01→2026-05-19…
+  5-min bars: 4,290  (~78/day)  |  55 OOS trading days
+  OOS period: 2026-03-02 → 2026-05-19
+  Computing session VWAP + σ_vwap on 5-min bars…
+  Building 15-min HTF ranging signal…
+
+  Confirmation funnel (SD=2.0, LONG only):
+    5-min bars with valid VWAP/σ:                4,125
+    LONG rejection wicks at |z|≥2.0σ:             264   (4.80/day)
+    After time-window filter:                      155   (2.82/day)
+    After volume spike filter:                      58   (1.05/day)
+    After HTF ranging filter:                       22   (0.40/day)
+
+====================================================================================================
+HCVWAP v3 SENSITIVITY GRID — MNQ OOS  (LONG ONLY)
+NOTE: Primary spec drives the gate verdict. Grid is robustness context only.
+====================================================================================================
+    SD   Stp      N       WR     PF     AvgP&L    AvgRR   BEven    WorstMo
+    --    --    ---      ---   ----     ------   ------   -----    -------
+  1.5    12      8    50.0%  1.84  $  12.10   2.81:1   34.2%  $   3.31
+  1.5    15      6    50.0%  1.66  $  11.43   2.55:1   34.7%  $  -1.88
+  1.5    18      6    66.7%  2.77  $  24.11   2.18:1   37.2%  $  22.74
+  2.0    12     12    33.3%  1.06  $   1.25   4.06:1   27.2%  $   1.18
+  2.0    15     10    30.0%  0.85  $  -3.72   3.63:1   27.2%  $  -5.44 ◀ PRIMARY
+  2.0    18     10    30.0%  0.72  $  -7.92   3.02:1   30.4%  $  -9.44
+  2.5    12     12    50.0%  2.38  $  19.89   4.60:1   26.7%  $  11.79
+  2.5    15     10    50.0%  2.14  $  19.85   4.15:1   26.4%  $  12.14
+  2.5    18     10    50.0%  1.83  $  16.85   3.46:1   29.5%  $   9.14
+
+====================================================================================================
+PRIMARY SPEC DEEP DIVE — MNQ OOS  (SD=2.0σ, STOP=15pts, LONG ONLY)
+====================================================================================================
+
+  Signals taken:  10  (0.182/day)  over 55 OOS days
+  Exit breakdown: TP=3  STOP=7  TIME/CLOSE=0
+  Avg realized R/R: 3.63:1  (median 3.78:1)
+  Avg breakeven WR: 27.2%  (OOS gate ≥ 30.2%)
+
+  R/R distribution:
+    0.0:1–1.5:1      0 trades  (0%)
+    1.5:1–2.5:1      3 trades  (30%)
+    2.5:1–4.0:1      3 trades  (30%)
+    >4.0:1           4 trades  (40%)
+
+  Performance:
+    Win rate:        30.0%  (avg be=27.2%; gate≥30.2%)
+    Profit factor:   0.847  (OOS gate ≥ 1.10)
+    Avg net P&L:     $-3.72/trade
+    Total P&L (1c):  $-37  over 55 OOS days
+    Median stop:     $30/contract  (gate ≤ $150)
+    Worst-month avg: $-5.44/trade  (gate ≥ $-100)
+
+  By month (OOS):
+  Month           N       WR     AvgP&L    AvgRR
+  2026-03         7    28.6%  $  -2.99   4.05:1
+  2026-04         3    33.3%  $  -5.44   2.65:1
+
+  Equity sketch (1 contract):
+    Final cum. P&L:      $     -37
+    Max DD (HWM→trough): $     -70
+
+====================================================================================================
+OOS GATE VERDICT — HCVWAP v3 Long-Only  (SD=2.0σ, STOP=15pts, MNQ, OOS 2026-03-01→2026-05-19)
+====================================================================================================
+  Avg realized R/R=3.63:1  |  Avg breakeven WR=27.2%  |  OOS gate WR≥30.2%  |  Stop=$30/contract
+
+  ❌ FAIL  EV > $0                                                                [measured: $-3.72/trade]
+  ❌ FAIL  Profit factor ≥ 1.10  (OOS relaxed from 1.20)                          [measured: 0.847]
+  ✅ PASS  Median stop ≤ $150/contract                                            [measured: $30]
+  ❌ FAIL  WR ≥ avg_be_wr+3% (≥ 30.2%)  (OOS relaxed from +5%)                    [measured: 30.0%]
+  ✅ PASS  N ≥ 10  (OOS relaxed from 20)                                          [measured: N=10]
+  ✅ PASS  Worst-month avg P&L ≥ $-100/trade  (OOS relaxed from -$50)             [measured: $-5.44]
+
+  ❌ OOS GATE FAIL — HCVWAP v3 long-only edge not confirmed OOS.
+     • EV=$-3.72 ≤ $0
+     • PF=0.847 < 1.10
+     • WR=30.0% < 30.2%
+
+  → HCVWAP hypothesis declared exhausted across all architectures.
+  → Remaining live threads:
+      1. S25 paper trading — decision rule N≥20 AND ~2026-07-23
+      2. GC CPI prospective test — Event 1 = June 11, N=10 needed (~17 months)
+====================================================================================================
+
+Done.

@@ -2,7 +2,7 @@
 
 **Generated:** 2026-06-09
 **Experiment ID:** hcvwap-v3-longonly-oos
-**Pre-registration commit:** (populate after `git commit`)
+**Pre-registration commit:** e1e153f
 **Supersedes:** hcvwap-v2 (commit fb8d094) in-sample study
 **Status:** SEALED — study_hcvwap_v3_longonly.py does not yet exist at time of this document
 
@@ -157,4 +157,4 @@ Primary result is the gate verdict. Grid cells are presented for robustness cont
 |---|---|
 | study_hcvwap_v3_longonly.py | NOT YET WRITTEN |
 | hcvwap_v2_config.yaml | used as parameter source (stop=15, sd=2.0) |
-| Git HEAD at pre-registration | (populate after `git commit`) |
+| Git HEAD at pre-registration | e1e153f |

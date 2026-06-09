@@ -1,0 +1,117 @@
+# HCVWAP v2 — 5-min False-Breakout Rejection Candle Study
+# Pre-registered 2026-06-09 BEFORE any backtest run.
+# Architectural fix over v1 (commit 78b6809) based on web reconciliation:
+#   v1 failure: 1-min bar-close entry, 6-pt stop, fixed 12-pt target
+#   v2 fix:     5-min rejection-wick entry, 15-pt stop, VWAP centerline target
+# Do NOT modify after pre-registration commit.
+
+study:
+  name: "HCVWAP v2 — 5-min False-Breakout Rejection Candle × VWAP Centerline Target"
+  version: "v2"
+  instruments: ["mnq", "mes"]
+  in_sample_start: "2025-01-01"
+  in_sample_end:   "2026-02-28"
+  # Holdout (>=2026-03-01) is SEALED
+
+# ─── Core architectural change from v1 ───────────────────────────────────────
+# v1: enter at close of any 1-min bar where close >= SD_THRESH × σ_vwap
+#     (ANY touch of the 2σ band = entry)
+# v2: enter on a 5-min bar that PIERCES the 2σ band intrabar but CLOSES back
+#     inside it — the "wick rejection" / "false breakout" pattern
+#     (HIGH >= 2σ line AND CLOSE < 2σ line for shorts;
+#      LOW  <= -2σ line AND CLOSE > -2σ line for longs)
+#
+# This is the specific pattern that funded-trader research describes as the
+# high-quality VWAP fade entry. Slow drift to 2σ closes outside the band;
+# true exhaustion pierces then reverses within the bar.
+
+# ─── Signal Detection (5-min bars) ───────────────────────────────────────────
+signal:
+  bar_resolution: "5min"     # resample 1-min RTH to 5-min for all signals
+  sd_threshold: 2.0          # primary; grid: [1.5, 2.0, 2.5]
+
+  # False-breakout rejection pattern:
+  #   Short: bar.high >= vwap + sd_thresh*sigma_vwap  AND  bar.close < vwap + sd_thresh*sigma_vwap
+  #   Long:  bar.low  <= vwap - sd_thresh*sigma_vwap  AND  bar.close > vwap - sd_thresh*sigma_vwap
+  # σ_vwap: running intra-session std(close − vwap), reset daily, min 3 bars before valid
+  sigma_min_bars: 3
+
+# ─── Confirmation Stack (same 4 conditions as v1, now on 5-min bars) ─────────
+confirmation_stack:
+  # 1. Extension + rejection: (handled by signal definition above)
+
+  # 2. Time window (ET): AM and PM quality windows
+  time_windows:
+    - ["09:45", "11:30"]   # AM: CT 08:45-10:30
+    - ["14:00", "15:00"]   # PM: CT 13:00-14:00
+
+  # 3. Volume confirmation on 5-min bars
+  vol_mult: 1.5
+  vol_lookback: 20          # 20 × 5-min bars = 100 min look-back
+
+  # 4. HTF ranging: 15-min EMA(9)/EMA(21) spread < 0.5 × ATR(14)
+  htf_ema_fast: 9
+  htf_ema_slow: 21
+  htf_ema_atr_mult: 0.5
+  htf_atr_win: 14
+
+# ─── Entry / Exit Rules ───────────────────────────────────────────────────────
+trade_rules:
+  direction: "mean_reversion"   # fade the extension
+  entry: "signal_bar_close"     # enter at close of the rejection bar
+
+  # Stop: wider than v1 — must be outside the intrabar noise band
+  stop_pts: 15                  # primary; grid: [10, 15, 20]
+
+  # Target: VWAP centerline (dynamic — the actual session VWAP price at entry time)
+  # This gives 2:1 to 6:1+ R/R depending on how far price is from VWAP at entry.
+  # Minimum required R/R: target_pts must be >= MIN_RR_MULT × stop_pts
+  # (skip trade if VWAP is too close — low R/R not worth the risk)
+  target: "vwap_centerline"
+  min_rr_mult: 1.5              # skip if target < 1.5 × stop (degenerate case)
+
+  # Session management
+  rth_start: "09:30"
+  session_close: "15:55"
+  hold_max_bars: 12             # 12 × 5-min bars = 60 min (same wall-clock hold max as v1)
+
+  max_concurrent: 1
+
+# ─── Instrument Point Values ──────────────────────────────────────────────────
+instruments:
+  mnq:
+    point_value: 2.0
+    data_2025: "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
+    data_2026: "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv"
+  mes:
+    point_value: 5.0
+    data_2025_2026: "data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv"
+
+# ─── Gate 0 Thresholds ────────────────────────────────────────────────────────
+gate0:
+  ev_min: 0.0
+  pf_min: 1.20
+  stop_max_usd: 150.0           # 15pts × $2 = $30 MNQ; 15pts × $5 = $75 MES — both inside cap
+  worst_mo_pnl: -50.0
+  min_trades: 20                # lowered from 30: fewer signals expected due to false-breakout filter
+  commission: 4.80
+  # WR gate: computed per-trade using actual R/R (variable target = VWAP distance)
+  # Aggregate gate: WR ≥ 1/(avg_rr + 1) + 5pp (using realized avg R/R)
+  freq_note: "informational — not a gate (selective strategy, ~0.1-0.3/day expected)"
+
+# ─── Sensitivity Grid ─────────────────────────────────────────────────────────
+grid:
+  sd_thresholds: [1.5, 2.0, 2.5]
+  stop_pts_list: [10, 15, 20]
+  primary: {sd: 2.0, stop_pts: 15}
+
+# ─── Combine-Math Path Simulation ────────────────────────────────────────────
+path_simulation:
+  combine_contracts: 3
+  combine_target: 3000
+  combine_dd_limit: -2000
+  qualifying_day_threshold: 150
+  daily_consistency_cap: 0.50
+  sim_days: 30
+  n_simulations: 10000
+  ruin_threshold: 0.20

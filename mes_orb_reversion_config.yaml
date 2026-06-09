@@ -1,0 +1,120 @@
+# MES ORB Reversion — Opening Range False-Breakout Fade Study
+# Pre-registered 2026-06-09 BEFORE any backtest run.
+#
+# Thesis: When ES/MES price breaks the opening range high or low on a 5-min bar
+# but CLOSES BACK INSIDE the range on that same bar, the breakout has failed.
+# The rejection candle (wick beyond ORB, close back inside) is the same
+# false-breakout pattern validated on the HCVWAP v2 study — applied here to
+# the ORB boundary instead of the VWAP σ band.
+#
+# Instrument switch rationale: All 12 prior families failed on MNQ, which is
+# momentum-heavy and structurally trend-continuing. ES/MES is a broader-market
+# instrument with documented mean-reversion characteristics at intraday scale.
+# External practitioner backtests show 62-72% WR on ES mean reversion setups.
+# This is the first study targeting MES as the primary instrument.
+#
+# Do NOT modify after pre-registration commit.
+
+study:
+  name: "MES ORB Reversion — 5-min False-Breakout Fade × VWAP Centerline Target"
+  version: "v1"
+  instrument: "mes"
+  point_value: 5.0              # $5 per point, MES
+  data: "data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv"
+  in_sample_start: "2025-05-01" # First available ES 1-min data
+  in_sample_end:   "2026-02-28"
+  # Holdout (>=2026-03-01) is SEALED
+
+# ─── Opening Range Definition ────────────────────────────────────────────────
+# Opening range = first 15 minutes of RTH session (09:30–09:44 ET inclusive).
+# On 5-min bars resampled from 1-min, this is bars starting at 09:30, 09:35, 09:40.
+# ORB_HIGH = max(high) across those 3 bars.
+# ORB_LOW  = min(low)  across those 3 bars.
+# ORB_SIZE = ORB_HIGH - ORB_LOW.
+opening_range:
+  bar_resolution: "5min"
+  orb_minutes: 15               # 09:30-09:44 ET (3 five-min bars)
+  orb_min_size_pts: 5.0         # skip day if ORB < 5 pts (degenerate/flat open)
+  orb_max_size_pts: 30.0        # skip day if ORB > 30 pts (gap/extreme volatility day)
+
+# ─── Entry Signal (5-min rejection candle at ORB boundary) ───────────────────
+#
+# SHORT signal — ORB high false breakout:
+#   bar.high >= ORB_HIGH   (price PIERCED the ORB high intrabar)
+#   AND bar.close < ORB_HIGH  (close RETURNED inside the range)
+#   AND bar.time in time_window (post-ORB only: 09:45–11:30 ET)
+#
+# LONG signal — ORB low false breakout:
+#   bar.low  <= ORB_LOW    (price PIERCED the ORB low intrabar)
+#   AND bar.close > ORB_LOW   (close RETURNED inside the range)
+#   AND bar.time in time_window (post-ORB only: 09:45–11:30 ET)
+#
+# Direction sanity (same fix as HCVWAP v2):
+#   SHORT entry: target (VWAP) must be BELOW entry price
+#   LONG  entry: target (VWAP) must be ABOVE entry price
+#   Skip trade if violated (VWAP at or beyond entry on same side)
+#
+signal:
+  bar_resolution: "5min"
+  # No SD threshold here — the ORB boundary IS the level (replaces σ band)
+
+# ─── Confirmation Filters ─────────────────────────────────────────────────────
+confirmation:
+  # 1. Time window (ET): post-ORB AM session only
+  time_window: ["09:45", "11:30"]
+
+  # 2. Volume spike: 5-min bar volume > 1.5× rolling 20-bar mean
+  vol_mult: 1.5
+  vol_lookback: 20              # 20 × 5-min bars = 100 min lookback
+
+  # Note: HTF ranging filter (HCVWAP v1/v2 condition 4) is NOT included here.
+  # The ORB boundary itself provides a structural mean-reversion anchor stronger
+  # than a σ band. Adding HTF filter reduces N and is left for sensitivity only.
+
+# ─── Entry / Exit Rules ───────────────────────────────────────────────────────
+trade_rules:
+  entry: "signal_bar_close"     # enter at close of the rejection bar
+
+  # Stop: fixed pts from entry (outside the rejection wick)
+  stop_pts: 10                  # primary; grid: [8, 10, 12]
+
+  # Target: session VWAP at entry time (same dynamic target as HCVWAP v2)
+  # This gives variable R/R; min R/R filter skips degenerate trades.
+  target: "vwap_centerline"
+  min_rr_mult: 1.5              # skip if VWAP distance < 1.5 × stop_pts
+
+  rth_start: "09:30"
+  session_close: "15:55"
+  hold_max_bars: 12             # 12 × 5-min = 60 min max hold
+
+  max_concurrent: 1
+
+# ─── Gate 0 Thresholds ────────────────────────────────────────────────────────
+gate0:
+  ev_min: 0.0
+  pf_min: 1.20
+  stop_max_usd: 150.0           # 10 pts × $5 = $50/contract — well inside cap
+  worst_mo_pnl: -50.0
+  min_trades: 20
+  commission: 4.80
+  # WR gate: computed from realized per-trade R/R (variable target = VWAP distance)
+  # Gate: WR ≥ avg(1/(rr+1)) + 5pp (using realized R/R per trade)
+
+# ─── Sensitivity Grid ─────────────────────────────────────────────────────────
+# Primary spec: stop=10, target=vwap_centerline
+# Sensitivity only — never cherry-pick post-hoc
+grid:
+  stop_pts_list: [8, 10, 12]
+  target_list: ["vwap_centerline", "opp_orb_level"]
+  primary: {stop_pts: 10, target: "vwap_centerline"}
+
+# ─── Combine-Math Path Simulation ─────────────────────────────────────────────
+path_simulation:
+  combine_contracts: 3          # 3 MES = $15/pt
+  combine_target: 3000
+  combine_dd_limit: -2000
+  qualifying_day_threshold: 150
+  daily_consistency_cap: 0.50
+  sim_days: 30
+  n_simulations: 10000
+  ruin_threshold: 0.20

@@ -1,0 +1,94 @@
+# HCVWAP (High-Confirmation VWAP) Study — Frozen Primary Spec
+# Pre-registered 2026-06-09 BEFORE any backtest run.
+# Do NOT modify this file after the pre-registration commit.
+# Any parameter change requires a new pre-registration commit.
+
+study:
+  name: "HCVWAP — VWAP 2σ Fade × 4-Condition Confirmation Stack"
+  instruments: ["mnq", "mes"]
+  in_sample_start: "2025-01-01"
+  in_sample_end:   "2026-02-28"
+  # Holdout (>= 2026-03-01) is SEALED — do not access until Gate 2
+
+# ─── 4-Condition Confirmation Stack (ALL required simultaneously) ─────────────
+confirmation_stack:
+  # 1. Extension: price must be ≥ SD_THRESH standard deviations from session VWAP
+  sd_threshold: 2.0        # primary; grid: [1.5, 2.0, 2.5]
+
+  # 2. Time window (ET): only trade in these windows (exclude open noise + lunch)
+  #    09:45–11:30 ET = AM session  |  14:00–15:00 ET = PM session
+  time_windows:
+    - ["09:45", "11:30"]   # CT display: 08:45–10:30
+    - ["14:00", "15:00"]   # CT display: 13:00–14:00
+
+  # 3. Volume confirmation: current bar volume > VOL_MULT × trailing 20-bar mean
+  vol_mult: 1.5
+  vol_lookback: 20
+
+  # 4. HTF ranging filter: 15-min EMA(9)/EMA(21) spread must be < HTF_EMA_ATR_MULT × ATR(14)
+  #    Only fade VWAP when the 15-min timeframe is NOT in a strong trend
+  htf_ema_fast: 9
+  htf_ema_slow: 21
+  htf_ema_atr_mult: 0.5    # |ema9 - ema21| < 0.5 × ATR14 → ranging
+  htf_atr_win: 14
+
+# ─── Entry / Exit Rules ───────────────────────────────────────────────────────
+trade_rules:
+  direction: "mean_reversion"   # short at +2σ, long at −2σ
+  entry: "bar_close"            # enter at close of the signal bar
+
+  # Fixed-point stop/target (research-backed scalping sweet-spot)
+  stop_pts: 6                   # fixed 6 pts stop
+  tp_pts: 12                    # primary; grid: [10, 12, 16]  (2:1 R/R at primary)
+
+  # Session management
+  rth_start: "09:30"
+  session_close: "15:55"
+  hold_max_bars: 60             # time-stop: force-close if held this long
+
+  # One trade at a time; max one signal per direction per bar (no stacking)
+  max_concurrent: 1
+
+# ─── Instrument Point Values ──────────────────────────────────────────────────
+instruments:
+  mnq:
+    point_value: 2.0            # $/pt for 1 MNQ contract
+    data_2025: "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
+    data_2026: "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv"
+  mes:
+    point_value: 5.0            # $/pt for 1 MES contract (price track = ES price)
+    data_2025_2026: "data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv"
+
+# ─── Gate 0 Thresholds (pre-committed) ────────────────────────────────────────
+gate0:
+  ev_min: 0.0                   # avg net P&L/trade > $0
+  pf_min: 1.20                  # profit factor ≥ 1.20
+  stop_max_usd: 150.0           # median stop ≤ $150/contract
+  worst_mo_pnl: -50.0           # worst-month avg P&L ≥ −$50/trade (variance guard)
+  min_trades: 30                # N ≥ 30 on filtered population (Mary's rule)
+  # WR gate: breakeven+5% (computed dynamically: be_wr = (stop + commission) / ((tp_mult+1) × stop))
+  commission: 4.80              # round-trip per contract
+
+  # Frequency: INFORMATIONAL ONLY — not an auto-fail for this selective strategy
+  # This strategy is designed for 0.2–0.4 signals/day; applying freq≥1.0 would be wrong
+  # (it's what killed vol-compression, which had real edge but was too rare)
+  freq_note: "informational — not a gate for selective strategies"
+
+# ─── Sensitivity Grid (post-hoc sensitivity only, not cherry-picked) ─────────
+grid:
+  sd_thresholds: [1.5, 2.0, 2.5]
+  tp_pts_list:   [10, 12, 16]
+  stop_pts: 6                   # stop fixed across grid; only TP and SD vary
+  primary: {sd: 2.0, tp_pts: 12}
+
+# ─── Combine-Math Path Simulation (if edge gates pass) ───────────────────────
+path_simulation:
+  combine_contracts: 3          # conservative combine sizing
+  combine_target: 3000          # Topstep $50K profit target
+  combine_dd_limit: -2000       # trailing HWM drawdown limit
+  qualifying_day_threshold: 150 # ≥$150 session P&L = qualifying day
+  daily_consistency_cap: 0.50   # no single day > 50% of total P&L
+  sim_days: 30                  # simulation horizon
+  n_simulations: 10000          # Monte Carlo iterations
+  # Advance only if P(ruin) < 20% AND E[30-day P&L] > 0
+  ruin_threshold: 0.20

@@ -1,0 +1,97 @@
+# MES ORB Reversion v2 — Wide-ORB Filter + Opposite ORB Level Target
+# Pre-registered 2026-06-09 BEFORE any v2 backtest run.
+#
+# Architectural corrections derived from v1 geometric analysis (commit cfceffb):
+#
+#   v1 issue 1 — Wrong target:
+#     VWAP centerline is median 3.2 pts from ORB-area entry during AM session.
+#     Min R/R filter (1.5 × stop) eliminates every signal. N=0 on primary spec.
+#     Geometric diagnosis: opposite ORB level is the correct target for ORB
+#     reversion (96% direction sanity vs 62% for VWAP; naturally 10–20 pts away).
+#
+#   v1 issue 2 — ORB too small:
+#     Median ES ORB = 15 pts. With stop=10, intrabar noise (5-min H-L ~8-10 pts)
+#     hits the stop before the trade can breathe. The v1 grid confirmed: wider stop
+#     → higher WR but fewer signals (stop=12: WR=46.7%, PF=1.23, but N=15 < 20).
+#     The fix: require ORB ≥ 20 pts. Then opp_orb target ≥ 15 pts from entry for
+#     most signals (p50 distance was 10.5 pts at ORB≥5; with ORB≥20, it rises).
+#     With stop=10 and opp_orb≥15 pts, R/R ≥ 1.5:1 naturally — less dependent on
+#     the min_rr_mult filter. And wider ORB days tend to have stronger directional
+#     moves that then exhaust at the extremes.
+#
+# NOTE: The ORB_MIN_SIZE=20 value comes from observing the ORB size distribution
+# (p75=21.2 pts) in the v1 study. The WR or P&L of any strategy WITH this filter
+# was NOT observed before this pre-registration. This is a geometry fix, not a
+# WR/PF optimization.
+#
+# Do NOT modify after pre-registration commit.
+
+study:
+  name: "MES ORB Reversion v2 — Wide-ORB + Opposite ORB Level Target"
+  version: "v2"
+  instrument: "mes"
+  point_value: 5.0
+  data: "data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv"
+  in_sample_start: "2025-05-01"
+  in_sample_end:   "2026-02-28"
+  # Holdout (>=2026-03-01) is SEALED
+
+# ─── Opening Range Definition ─────────────────────────────────────────────────
+opening_range:
+  bar_resolution: "5min"
+  orb_minutes: 15
+  orb_min_size_pts: 20.0        # PRIMARY: raised from 5 → 20 (key architectural change)
+  orb_max_size_pts: 40.0        # raised ceiling slightly (v1 was 30; p95=33.6 pts)
+
+# ─── Entry Signal ──────────────────────────────────────────────────────────────
+# Same false-breakout rejection candle as v1:
+#   Short: bar.high >= ORB_HIGH  AND  bar.close < ORB_HIGH
+#   Long:  bar.low  <= ORB_LOW   AND  bar.close > ORB_LOW
+# Direction sanity: skip if target is on wrong side of entry.
+signal:
+  bar_resolution: "5min"
+
+# ─── Confirmation Filters ─────────────────────────────────────────────────────
+confirmation:
+  time_window: ["09:45", "11:30"]  # AM session, post-ORB
+  vol_mult: 1.5
+  vol_lookback: 20
+
+# ─── Entry / Exit Rules ───────────────────────────────────────────────────────
+trade_rules:
+  entry: "signal_bar_close"
+  stop_pts: 10                   # primary; grid: [8, 10, 12]
+  target: "opp_orb_level"        # PRIMARY: opposite ORB level (ORB_LOW for short, ORB_HIGH for long)
+  min_rr_mult: 1.5               # naturally satisfied with ORB≥20 + stop=10 for most signals
+  rth_start: "09:30"
+  session_close: "15:55"
+  hold_max_bars: 12              # 60 min max
+  max_concurrent: 1
+
+# ─── Gate 0 Thresholds ────────────────────────────────────────────────────────
+gate0:
+  ev_min: 0.0
+  pf_min: 1.20
+  stop_max_usd: 150.0            # 10 pts × $5 = $50/contract ✓
+  worst_mo_pnl: -50.0
+  min_trades: 20
+  commission: 4.80
+
+# ─── Sensitivity Grid ─────────────────────────────────────────────────────────
+# Primary: stop=10, orb_min=20
+# Show progression from v1 (orb_min=5/10/15) to v2 (orb_min=20/25)
+grid:
+  stop_pts_list: [8, 10, 12]
+  orb_min_list: [10, 15, 20, 25]
+  primary: {stop_pts: 10, orb_min: 20}
+
+# ─── Combine-Math Path Simulation ─────────────────────────────────────────────
+path_simulation:
+  combine_contracts: 3
+  combine_target: 3000
+  combine_dd_limit: -2000
+  qualifying_day_threshold: 150
+  daily_consistency_cap: 0.50
+  sim_days: 30
+  n_simulations: 10000
+  ruin_threshold: 0.20

@@ -1,0 +1,41 @@
+# GC/MGC CPI Post-Catalyst Prospective Test — Frozen Parameters
+# Pre-registration: _bmad-output/preregistration_gc_cpi_prospective.md
+# DO NOT MODIFY after pre-registration commit — any change voids the prospective test.
+version: "gc-cpi-v1"
+
+# Event filter (only CPI releases are in scope)
+event_type: CPI
+event_time_et: "08:30"          # 08:30 ET — standard BLS CPI release time
+
+# Entry timing
+wait_bars: 10                   # wait 10 min after 08:30 before entering (spike settles)
+
+# Qualification filter
+min_move_atr: 2.0               # skip if |close[T+10] - close[T-1]| < 2.0 × ATR(14)
+                                # (~60% of events qualify at this threshold)
+
+# Trade geometry (ALL FROZEN)
+stop_atr_mult: 1.5              # stop = 1.5 × ATR(14) at entry bar
+tp_mult: 2.0                    # target = 2.0 × stop_dist (2:1 reward:risk)
+hold_max_bars: 120              # 2-hour maximum hold; close at market if neither TP nor stop hit
+atr_window: 14                  # rolling(14) of (high - low) on 1-min GC bars
+
+# Direction
+direction: both                 # enter LONG if gold rallied, SHORT if gold fell
+                                # (no direction pre-selection — avoids double data-snooping)
+
+# MGC contract economics (combine-sized)
+mgc_pv: 10.0                    # $10 per point per MGC contract (10 troy oz)
+commission: 4.80                # round-trip commission
+stop_cap_usd: 150.0             # combine stop cap ($150/contract = 15 pts on MGC)
+
+# Prospective test decision rules (frozen)
+# Early stop  : HALT if PF < 0.70 after N_qualifying >= 5
+# Final PASS  : N_qualifying >= 10 AND PF >= 1.20 AND avg_pnl > 0 AND WR >= 0.40
+# Final FAIL  : otherwise
+n_min_qualifying: 10
+early_stop_n: 5
+early_stop_pf: 0.70
+final_pf_threshold: 1.20
+final_ev_threshold: 0.0
+final_wr_threshold: 0.40

@@ -1,0 +1,43 @@
+====================================================================================================
+MES ORB Reversion — 5-min False-Breakout Fade Gate 0 Study
+Pre-registration: commit db42c38 (2026-06-09)
+====================================================================================================
+
+Loading ES 1-min data…
+Building 5-min bars…
+  5-min bars: 16,429  (~76/day)  |  215 trading days
+  In-sample: 2025-05-01 → 2026-02-27
+Computing session VWAP…
+Building ORB levels (first 15 min of each RTH session)…
+  Trading days with valid ORB (5.0–30.0 pts): 199 / 215  (93%)
+  ORB size — mean: 17.0 pts  p25: 10.8  p50: 15.0  p75: 21.2  p95: 33.6 pts
+
+Signal funnel (primary spec, stop=10, target=vwap_centerline):
+  Post-ORB AM bars (09:45–11:30) with valid ORB:    4,378  (20.36/day)
+  ORB rejection wicks (raw, pre-vol):                  663  (3.08/day)
+  After volume spike filter:                           120  (0.56/day)
+  (direction sanity + min R/R applied in simulation)
+
+====================================================================================================
+MES ORB REVERSION GATE 0 GRID  (grid: STOP_PTS × TARGET)
+====================================================================================================
+   Stp  Target                  N    Freq/d       WR     PF    AvgP&L    AvgRR   BEven     WrstMo
+  ----  ------------------  -----  --------  -------  -----  --------  -------  ------  ---------
+     8  vwap_centerline         2    0.01/d     0.0%  0.00❌  $-38.55❌   1.68:1   42.0%  $ -44.80
+     8  opp_orb_level          42    0.20/d    23.8%  0.52❌  $-16.11❌   2.21:1   36.0%  $ -44.80
+    10  vwap_centerline         0    0.00/d     0.0%  0.00❌  $  0.00❌   0.00:1    0.0%  $   0.00 ◀ PRIMARY
+    10  opp_orb_level          31    0.14/d    35.5%  0.80❌  $ -6.90❌   1.97:1   37.6%  $ -54.80
+    12  vwap_centerline         0    0.00/d     0.0%  0.00❌  $  0.00❌   0.00:1    0.0%  $   0.00
+    12  opp_orb_level          15    0.07/d    46.7%  1.23✅  $  8.03✅   1.88:1   37.8%  $ -64.80
+
+====================================================================================================
+PRIMARY SPEC DEEP DIVE  (STOP=10pts, TARGET=vwap_centerline, HOLD=12×5min, WIN=09:45–11:30 ET)
+====================================================================================================
+
+  Funnel:
+    5-min RTH bars:         16,429
+    Trading days:           215
+    Valid ORB days:         199  (93%)
+    Signals taken:          0  (0.000/day)
+
+  ⚠️  N=0 — no trades generated. Check ORB/vol filter or time window.

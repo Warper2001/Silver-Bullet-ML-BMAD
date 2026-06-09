@@ -100,6 +100,12 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-05-25 21:48 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
 | 2026-05-25 22:46 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
 | 2026-05-25 23:44 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-06-07 16:19 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-06-07 16:20 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-06-07 16:23 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+| 2026-06-07 16:45 UTC | 69972c3 | backtest script | `--preregistration 69972c3` | pending |
+
+| 2026-06-09 00:35 UTC | `2e9fb90` | backtest_stat_arb_short_oos.py | Gate 2 OOS: ES/MNQ stat arb short-only. ES OOS extracted from existing in-sample file (not new download — file covered through 2026-05-20). Pre-reg: _bmad-output/preregistration_stat_arb_short_combine.md | ❌ GATE 2 FAIL — WR=45.7% PF=0.765 AvgP&L=-$7.70. Mar=54.1% OK; Apr=42.9%, May=39.5% collapse. Max DD=-$2,610 (blows combine). Direction asymmetry does not persist OOS. |
 
 ## Init — 2026-05-23T15:02:03Z
 

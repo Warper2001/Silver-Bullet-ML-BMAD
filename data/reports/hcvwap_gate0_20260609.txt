@@ -1,0 +1,273 @@
+/root/Silver-Bullet-ML-BMAD/study_hcvwap.py:588: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  mo_bars = rth[rth.index.to_period("M") == m]
+====================================================================================================
+HCVWAP — High-Confirmation VWAP Gate 0 Study
+Pre-registration: commit 4531a3d (2026-06-09)
+Hypothesis: VWAP 2σ fade × 4-condition stack has edge that unfiltered fades lack
+In-sample: 2025-01-01 → 2026-02-28  |  Holdout ≥2026-03-01 SEALED
+====================================================================================================
+
+Confirmation stack (ALL required simultaneously):
+  1. Extension:  |z_score| ≥ 2.0σ (primary)
+  2. Time window: 09:45–11:30 ET  OR  14:00–15:00 ET
+  3. Volume:     bar_vol > 1.5× trailing 20-bar mean
+  4. HTF ranging: 15-min |EMA9−EMA21| < 0.5×ATR(14)
+
+Trade spec: STOP=6pts  TP=12pts (primary)  HOLD_MAX=60bars
+
+####################################################################################################
+  INSTRUMENT: MNQ
+####################################################################################################
+
+  Loaded: 97,840 1-min RTH bars | 298 trading days
+  In-sample: 2025-01-02 → 2026-02-27
+  Point value: $2.0/pt  |  MNQ (1 contract = $2/pt)
+
+  Building session VWAP, σ_vwap, z-score, volume features…
+  Building 15-min HTF ranging signal (EMA9/21 spread vs ATR14)…
+
+  Confirmation funnel (primary SD=2.0):
+    Total 1-min RTH bars with valid z-score:     96,354
+    Raw bars at |z| ≥ 2.0σ:                  32,546   (109.21/day)
+    After time-window filter (AM + PM only):     14,619   (49.06/day)
+    After volume spike filter (>1.5× mean):    4,591   (15.41/day)
+    After HTF ranging filter:                     1,484   (4.98/day)
+
+====================================================================================================
+HCVWAP GATE 0 GRID — MNQ  (stop=6pts fixed, grid: SD × TP_PTS)
+====================================================================================================
+    SD    TP      N    Freq/d       WR     PF    AvgP&L   StopMed   WorstMoP&L   BEven
+    --    --    ---   -------      ---   ----    ------   -------  -----------   -----
+  1.5    10    641    2.15/d    49.5%  0.89❌  $ -0.97❌  $    12  $    -5.40   52.5%
+  1.5    12    636    2.13/d    42.5%  0.84❌  $ -1.52❌  $    12  $    -5.30   46.7%
+  1.5    16    630    2.11/d    33.8%  0.82❌  $ -1.96❌  $    12  $    -7.09   38.2%
+  2.0    10    486    1.63/d    49.8%  0.90❌  $ -0.87❌  $    12  $    -5.37   52.5%
+  2.0    12    481    1.61/d    41.6%  0.81❌  $ -1.83❌  $    12  $    -6.42   46.7% ◀ PRIMARY
+  2.0    16    479    1.61/d    33.4%  0.81❌  $ -2.13❌  $    12  $    -8.34   38.2%
+  2.5    10    335    1.12/d    50.4%  0.92❌  $ -0.66❌  $    12  $    -5.09   52.5%
+  2.5    12    332    1.11/d    43.1%  0.86❌  $ -1.29❌  $    12  $    -6.90   46.7%
+  2.5    16    330    1.11/d    34.2%  0.84❌  $ -1.73❌  $    12  $    -9.10   38.2%
+
+====================================================================================================
+TP SENSITIVITY  (SD=2.0, primary SD fixed) — MNQ
+====================================================================================================
+  TP_pts   BEven      N   Freq/d       WR     PF    AvgP&L   WorstMoAvg
+      10pts   52.5%    486     1.63/d    49.8%   0.90  $ -0.87❌  $    -5.37
+      12pts   46.7%    481     1.61/d    41.6%   0.81  $ -1.83❌  $    -6.42 ◀ PRIMARY
+      16pts   38.2%    479     1.61/d    33.4%   0.81  $ -2.13❌  $    -8.34
+
+====================================================================================================
+PRIMARY SPEC DEEP DIVE — MNQ  (SD=2.0σ, TP=12pts, STOP=6pts, HOLD_MAX=60)
+====================================================================================================
+
+  Funnel:
+    1-min RTH bars:    97,840
+    Trading days:      298
+    Filtered signals:  481  (1.61/day)  [expected 0.2–0.4/day]
+    Long / Short:      296 / 185  (62% long, 38% short)
+    Exit breakdown:    TP=200  STOP=281  TIME/CLOSE=0
+
+  Performance:
+    Win rate:          41.6%  (breakeven=46.7%; gate≥51.7%)
+    Profit factor:     0.813
+    Avg net P&L:       $-1.83/trade
+    Total P&L (1c):    $-881  over 298 days
+    Median stop:       $12/contract
+    75th-pct stop:     $12/contract
+    Worst-month WR:    28.8%
+    Worst-month avg:   $-6.42/trade
+
+  Long vs Short breakdown:
+    Long (fade below VWAP)        N= 296  WR= 45.3%  PF= 0.95  Avg=$  -0.50
+    Short (fade above VWAP)       N= 185  WR= 35.7%  PF= 0.63  Avg=$  -3.96
+
+  By month:
+  Month           N       WR     AvgP&L    freq/d  Status
+  2025-01        31    48.4%  $   0.62     1.41/d  ✅
+  2025-02        53    39.6%  $  -2.54     2.65/d  ✅
+  2025-03        20    50.0%  $   1.20     0.95/d  ✅
+  2025-04        14    35.7%  $  -3.94     0.67/d  ✅
+  2025-05        52    28.8%  $  -6.42     2.36/d  ✅
+  2025-06        39    43.6%  $  -1.11     1.86/d  ✅
+  2025-07        56    32.1%  $  -5.23     2.43/d  ✅
+  2025-08        33    45.5%  $  -0.44     1.65/d  ✅
+  2025-09        22    68.2%  $   7.75     1.00/d  ✅
+  2025-10        42    47.6%  $   0.34     1.83/d  ✅
+  2025-11        18    44.4%  $  -0.80     0.90/d  ✅
+  2025-12        19    47.4%  $   0.25     0.86/d  ✅
+  2026-01        40    37.5%  $  -3.30     1.90/d  ✅
+  2026-02        42    40.5%  $  -2.23     2.10/d  ✅
+
+  Time-of-day distribution (ET):
+    09:30  █████████               56 (12%)
+    10:00  ████████████████████   124 (26%)
+    10:30  ██████████████          90 (19%)
+    11:00  █████████████           81 (17%)
+    11:30                           1 (0%)
+    14:00  █████████               60 (12%)
+    14:30  ██████████              66 (14%)
+    15:00                           3 (1%)
+
+  Victor's rolling-5-day variance check:
+    Worst  5-day P&L:   $-161  (❌)
+    Best   5-day P&L:   $139
+    Median 5-day P&L:   $-12
+    % 5-day windows < $0: 58%
+    Worst single-day:   $-98
+    Days with P&L > $0: 28%  (of 298 days)
+
+  Equity / Max-DD sketch (trade-by-trade, 1 contract):
+    Final cum. P&L:    $    -881
+    Peak equity (HWM): $     110
+    Max DD (HWM→trough): $  -1,006  (✅ inside $2k limit)
+    Worst 20-trade DD: $    -230
+
+====================================================================================================
+GATE 0 VERDICT — MNQ PRIMARY SPEC  (SD=2.0σ, TP=12pts, STOP=6pts)
+====================================================================================================
+  Breakeven WR = 46.7%  |  Gate WR ≥ 51.7%  |  Stop fixed at 6pts = $12/contract
+
+  ❌ FAIL  EV > $0 (avg net P&L > $0)                                 [measured: $-1.83/trade]
+  ❌ FAIL  Profit factor ≥ 1.20                                       [measured: 0.813]
+  ✅ PASS  Median stop ≤ $150/contract                                [measured: $12]
+  ❌ FAIL  WR ≥ breakeven+5% (≥ 51.7%)                                [measured: 41.6%]
+  ✅ PASS  N ≥ 30 (min sample for edge read)                          [measured: N=481]
+  ✅ PASS  Worst-month avg P&L ≥ $-50/trade                           [measured: $-6.42]
+
+  [FREQ NOTE — informational, NOT a gate for this selective strategy]
+  Frequency: 1.614/day  (designed for 0.2–0.4/day; applying freq≥1.0 gate would be wrong — same error that killed vol-compression)
+
+  ❌ GATE 0 FAIL — MNQ confirmation-stack edge not confirmed.
+     • EV=$-1.83 ≤ $0
+     • PF=0.813 < 1.20
+     • WR=41.6% < breakeven+5% (51.7%)
+====================================================================================================
+
+####################################################################################################
+  INSTRUMENT: MES
+####################################################################################################
+
+  Loaded: 81,162 1-min RTH bars | 215 trading days
+  In-sample: 2025-05-01 → 2026-02-27
+  Point value: $5.0/pt  |  MES (1 contract = $5/pt; price from ES 1-min series)
+
+  Building session VWAP, σ_vwap, z-score, volume features…
+  Building 15-min HTF ranging signal (EMA9/21 spread vs ATR14)…/root/Silver-Bullet-ML-BMAD/study_hcvwap.py:588: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  mo_bars = rth[rth.index.to_period("M") == m]
+
+
+  Confirmation funnel (primary SD=2.0):
+    Total 1-min RTH bars with valid z-score:     80,087
+    Raw bars at |z| ≥ 2.0σ:                  28,568   (132.87/day)
+    After time-window filter (AM + PM only):     12,682   (58.99/day)
+    After volume spike filter (>1.5× mean):    3,525   (16.40/day)
+    After HTF ranging filter:                     1,143   (5.32/day)
+
+====================================================================================================
+HCVWAP GATE 0 GRID — MES  (stop=6pts fixed, grid: SD × TP_PTS)
+====================================================================================================
+    SD    TP      N    Freq/d       WR     PF    AvgP&L   StopMed   WorstMoP&L   BEven
+    --    --    ---   -------      ---   ----    ------   -------  -----------   -----
+  1.5    10    334    1.55/d    35.9%  0.71❌  $ -6.23❌  $    30  $   -12.34   43.5%
+  1.5    12    327    1.52/d    33.0%  0.72❌  $ -6.15❌  $    30  $   -12.50   38.7%
+  1.5    16    318    1.48/d    29.9%  0.74❌  $ -6.02❌  $    30  $   -14.42   31.6%
+  2.0    10    259    1.20/d    35.5%  0.68❌  $ -6.84❌  $    30  $   -24.13   43.5%
+  2.0    12    258    1.20/d    32.9%  0.70❌  $ -6.61❌  $    30  $   -22.80   38.7% ◀ PRIMARY
+  2.0    16    254    1.18/d    29.1%  0.69❌  $ -7.31❌  $    30  $   -20.13   31.6%
+  2.5    10    194    0.90/d    34.0%  0.64❌  $ -7.94❌  $    30  $   -28.13   43.5%
+  2.5    12    194    0.90/d    32.0%  0.66❌  $ -7.78❌  $    30  $   -27.30   38.7%
+  2.5    16    192    0.89/d    29.7%  0.71❌  $ -6.84❌  $    30  $   -25.63   31.6%
+
+====================================================================================================
+TP SENSITIVITY  (SD=2.0, primary SD fixed) — MES
+====================================================================================================
+  TP_pts   BEven      N   Freq/d       WR     PF    AvgP&L   WorstMoAvg
+      10pts   43.5%    259     1.20/d    35.5%   0.68  $ -6.84❌  $   -24.13
+      12pts   38.7%    258     1.20/d    32.9%   0.70  $ -6.61❌  $   -22.80 ◀ PRIMARY
+      16pts   31.6%    254     1.18/d    29.1%   0.69  $ -7.31❌  $   -20.13
+
+====================================================================================================
+PRIMARY SPEC DEEP DIVE — MES  (SD=2.0σ, TP=12pts, STOP=6pts, HOLD_MAX=60)
+====================================================================================================
+
+  Funnel:
+    1-min RTH bars:    81,162
+    Trading days:      215
+    Filtered signals:  258  (1.20/day)  [expected 0.2–0.4/day]
+    Long / Short:      162 / 96  (63% long, 37% short)
+    Exit breakdown:    TP=67  STOP=162  TIME/CLOSE=29
+
+  Performance:
+    Win rate:          32.9%  (breakeven=38.7%; gate≥43.7%)
+    Profit factor:     0.704
+    Avg net P&L:       $-6.61/trade
+    Total P&L (1c):    $-1,706  over 215 days
+    Median stop:       $30/contract
+    75th-pct stop:     $30/contract
+    Worst-month WR:    13.3%
+    Worst-month avg:   $-22.80/trade
+
+  Long vs Short breakdown:
+    Long (fade below VWAP)        N= 162  WR= 30.9%  PF= 0.61  Avg=$  -9.14
+    Short (fade above VWAP)       N=  96  WR= 36.5%  PF= 0.88  Avg=$  -2.35
+
+  By month:
+  Month           N       WR     AvgP&L    freq/d  Status
+  2025-05        36    36.1%  $  -2.44     1.64/d  ✅
+  2025-06        31    29.0%  $ -10.89     1.48/d  ✅
+  2025-07        34    47.1%  $  -1.20     1.48/d  ✅
+  2025-08        24    33.3%  $  -7.30     1.14/d  ✅
+  2025-09        28    39.3%  $   3.77     1.27/d  ✅
+  2025-10        30    20.0%  $ -16.80     1.30/d  ✅
+  2025-11        12    41.7%  $  -1.36     0.60/d  ✅
+  2025-12        26    30.8%  $  -7.83     1.18/d  ✅
+  2026-01        22    31.8%  $  -4.74     1.05/d  ✅
+  2026-02        15    13.3%  $ -22.80     0.75/d  ✅
+
+  Time-of-day distribution (ET):
+    09:30  █████████               30 (12%)
+    10:00  ████████████████████    65 (25%)
+    10:30  ████████████            40 (16%)
+    11:00  ███████████████         49 (19%)
+    11:30                           1 (0%)
+    14:00  ███████████             36 (14%)
+    14:30  ███████████             36 (14%)
+    15:00                           1 (0%)
+
+  Victor's rolling-5-day variance check:
+    Worst  5-day P&L:   $-377  (❌)
+    Best   5-day P&L:   $223
+    Median 5-day P&L:   $-32
+    % 5-day windows < $0: 64%
+    Worst single-day:   $-174
+    Days with P&L > $0: 23%  (of 215 days)
+
+  Equity / Max-DD sketch (trade-by-trade, 1 contract):
+    Final cum. P&L:    $  -1,706
+    Peak equity (HWM): $      91
+    Max DD (HWM→trough): $  -1,797  (✅ inside $2k limit)
+    Worst 20-trade DD: $    -487
+
+====================================================================================================
+GATE 0 VERDICT — MES PRIMARY SPEC  (SD=2.0σ, TP=12pts, STOP=6pts)
+====================================================================================================
+  Breakeven WR = 38.7%  |  Gate WR ≥ 43.7%  |  Stop fixed at 6pts = $30/contract
+
+  ❌ FAIL  EV > $0 (avg net P&L > $0)                                 [measured: $-6.61/trade]
+  ❌ FAIL  Profit factor ≥ 1.20                                       [measured: 0.704]
+  ✅ PASS  Median stop ≤ $150/contract                                [measured: $30]
+  ❌ FAIL  WR ≥ breakeven+5% (≥ 43.7%)                                [measured: 32.9%]
+  ✅ PASS  N ≥ 30 (min sample for edge read)                          [measured: N=258]
+  ✅ PASS  Worst-month avg P&L ≥ $-50/trade                           [measured: $-22.80]
+
+  [FREQ NOTE — informational, NOT a gate for this selective strategy]
+  Frequency: 1.200/day  (designed for 0.2–0.4/day; applying freq≥1.0 gate would be wrong — same error that killed vol-compression)
+
+  ❌ GATE 0 FAIL — MES confirmation-stack edge not confirmed.
+     • EV=$-6.61 ≤ $0
+     • PF=0.704 < 1.20
+     • WR=32.9% < breakeven+5% (43.7%)
+====================================================================================================
+
+
+Done.

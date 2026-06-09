@@ -1,0 +1,114 @@
+/root/Silver-Bullet-ML-BMAD/study_mes_orb_reversion_v2.py:515: UserWarning: Converting to PeriodArray/Index representation will drop timezone information.
+  mo_b  = bars5[bars5.index.to_period("M") == m]
+====================================================================================================
+MES ORB Reversion v2 — Wide-ORB + Opposite ORB Level Target Gate 0 Study
+Pre-registration: commit 2350bb9 (2026-06-09)
+====================================================================================================
+
+Loading ES 1-min data…
+Building 5-min bars…
+  5-min bars: 16,429  (~76/day)  |  215 trading days
+  In-sample: 2025-05-01 → 2026-02-27
+Computing session VWAP…
+
+ORB size landscape across 215 trading days:
+  Median=15.0pts  p25=10.8  p50=15.0  p75=21.2  p95=33.6pts
+  ORB >= 10pts:   169 days  (79% of trading days)
+  ORB >= 15pts:   109 days  (51% of trading days)
+  ORB >= 20pts:    65 days  (30% of trading days)
+  ORB >= 25pts:    34 days  (16% of trading days)
+  ORB >= 30pts:    16 days  (7% of trading days)
+
+Primary spec signal funnel (ORB_MIN=20.0pts, stop=10):
+  Valid ORB days (>=20.0–40.0pts): 62 / 215  (29%)
+  Post-ORB AM bars in time window:     1,364  (6.34/day)
+  ORB rejection wicks (raw):             171  (0.80/day)
+  After volume spike filter:              40  (0.19/day)
+  (direction sanity + min R/R applied in simulation)
+
+====================================================================================================
+MES ORB REVERSION v2 GATE 0 GRID  (target=opp_orb_level; grid: STOP × ORB_MIN)
+====================================================================================================
+   Stp   ORBmin      N    Freq/d       WR     PF    AvgP&L    AvgRR   BEven     WrstMo
+  ----  -------  -----  --------  -------  -----  --------  -------  ------  ---------
+     8       10     48    0.22/d    22.9%  0.53❌  $-16.13❌   2.39:1   34.6%  $ -44.80
+     8       15     45    0.21/d    24.4%  0.57❌  $-14.22❌   2.44:1   33.9%  $ -44.80
+     8       20     33    0.15/d    12.1%  0.33❌  $-25.94❌   2.69:1   31.5%  $ -44.80
+     8       25     18    0.08/d    11.1%  0.34❌  $-26.26❌   3.10:1   28.3%  $ -44.80
+    10       10     37    0.17/d    35.1%  0.84❌  $ -5.48❌   2.12:1   36.1%  $ -54.80
+    10       15     37    0.17/d    35.1%  0.84❌  $ -5.48❌   2.12:1   36.1%  $ -54.80
+    10       20     32    0.15/d    28.1%  0.70❌  $-11.40❌   2.20:1   35.2%  $ -54.80 ◀ PRIMARY
+    10       25     17    0.08/d    35.3%  1.03❌  $  1.08✅   2.55:1   31.5%  $ -54.80
+    12       10     21    0.10/d    42.9%  1.12❌  $  4.37✅   2.03:1   36.1%  $ -64.80
+    12       15     21    0.10/d    42.9%  1.12❌  $  4.37✅   2.03:1   36.1%  $ -64.80
+    12       20     21    0.10/d    42.9%  1.12❌  $  4.37✅   2.03:1   36.1%  $ -64.80
+    12       25     15    0.07/d    46.7%  1.36✅  $ 12.53✅   2.16:1   34.6%  $ -64.80
+
+====================================================================================================
+PRIMARY SPEC DEEP DIVE  (STOP=10pts, ORB_MIN=20.0pts, TARGET=opp_orb_level, HOLD=12×5min)
+====================================================================================================
+
+  Funnel:
+    5-min RTH bars:         16,429
+    Trading days:           215
+    Valid ORB days:         62  (29%)
+    Signals taken:          32  (0.149/day)
+    Long / Short:           22 / 10  (69% / 31%)
+    Exit breakdown:         TP=7  STOP=22  TIME/CLOSE=3
+    Avg realized R/R:       2.20:1  (median 2.10:1)
+    Avg breakeven WR:       35.2%  (gate ≥ 40.2%)
+
+  R/R distribution:
+    0.0–1.5:1        0 (0%)
+    1.5–2.0:1       13 (41%)
+    2.0–3.0:1       15 (47%)
+    >3.0:1           4 (12%)
+
+  ORB size at signal (pts): mean=26.4  p25=21.4  p50=25.8  p75=29.5
+
+  Performance:
+    Win rate:               28.1%  (avg be=35.2%; gate≥40.2%)
+    Profit factor:          0.702
+    Avg net P&L:            $-11.40/trade
+    Total P&L (1c):         $-365  over 215 days
+    Median stop:            $50/contract
+    Worst-month avg:        $-54.80/trade
+
+  Long vs Short:
+    Long (fade ORB low rejection)     N= 22  WR= 27.3%  PF= 0.66  AvgRR=2.13:1  Avg=$ -13.38
+    Short (fade ORB high rejection)   N= 10  WR= 30.0%  PF= 0.80  AvgRR=2.35:1  Avg=$  -7.05
+
+  By month:
+  Month          N       WR     AvgP&L    AvgRR   freq/d  Status
+  2025-05        2    50.0%  $  -5.42   2.80:1    0.09/d  ⚠️ N<3
+  2025-06        2    50.0%  $  20.20   1.89:1    0.10/d  ⚠️ N<3
+  2025-07        1     0.0%  $ -54.80   1.70:1    0.04/d  ⚠️ N<3
+  2025-08        1     0.0%  $ -54.80   1.77:1    0.05/d  ⚠️ N<3
+  2025-09        3    33.3%  $   8.12   2.48:1    0.14/d  ✅
+  2025-10        5    60.0%  $  38.70   2.08:1    0.22/d  ✅
+  2025-11        4    50.0%  $  28.01   2.34:1    0.20/d  ✅
+  2025-12        3     0.0%  $ -54.80   1.83:1    0.14/d  ❌ avg<-$50
+  2026-01        4    25.0%  $ -16.67   2.09:1    0.19/d  ✅
+  2026-02        7     0.0%  $ -54.80   2.36:1    0.35/d  ❌ avg<-$50
+
+  Time-of-day (ET):
+    09:30  ████████████████████    23 (72%)
+    10:00  ██████                   8 (25%)
+    10:30                           1 (3%)
+
+  Rolling-5-day variance:
+    Worst 5-day: $-329  |  Best 5-day: $262
+
+====================================================================================================
+GATE 0 VERDICT — MES ORB REVERSION v2  PRIMARY (STOP=10, ORB_MIN=20.0)
+====================================================================================================
+  ❌ FAIL  EV > $0                                    [measured: $-11.40/trade]
+  ❌ FAIL  Profit factor ≥ 1.20                       [measured: 0.702]
+  ❌ FAIL  WR ≥ avg_be_wr+5% (≥40.2%)                 [measured: 28.1%]
+  ✅ PASS  Median stop ≤ $150/contract                [measured: $50 (fixed)]
+  ✅ PASS  N ≥ 20                                     [measured: N=32]
+  ❌ FAIL  Worst-month avg ≥ −$50                     [measured: $-54.80/trade]
+
+❌ GATE 0 FAIL  (EV<0, PF=0.702<1.20, WR=28.1%<40.2%, WorstMo=$-54.80<-$50)
+
+  Path simulation skipped — EV/PF gates not cleared.

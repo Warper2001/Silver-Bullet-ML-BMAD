@@ -1,0 +1,13 @@
+Gate 1 Backtest: ES/MNQ Stat Arb Short-Only
+Run: 2026-06-09T00:31:48.129715
+Pre-registration commit (seal): 44cc6192c7f18b284ec9e4d5ade81430cf9bc900
+Backtest commit: (see git log)
+
+N=631  WR=57.8%  PF=1.268  AvgP&L=$6.45  Freq=2.95/d  Days=214
+Max trailing DD: $-816  (Gate 1 limit: $1500, combine limit: $2000)
+Qual days: 16/214  Qual last-20: 6/20
+Consistency: 5.6%  Worst-month WR: 38.5%
+Victor worst-5d: $-674  pct-neg: 41%
+Daily halts: 1 days
+
+Gate 1: PASS

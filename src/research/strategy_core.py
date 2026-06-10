@@ -65,6 +65,8 @@ class ExitReason(Enum):
     SL = "SL"
     TIME_STOP = "TIME_STOP"
     MANUAL = "MANUAL"
+    BREAKEVEN_SL = "BREAKEVEN_SL"
+    TRAILING_SL = "TRAILING_SL"
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,11 @@ class StrategyConfig:
     funding_rate_filter_enabled: bool = False
     funding_rate_short_threshold: float = 0.03   # >+0.03%/8h → crowded longs → SHORT bias
     funding_rate_long_threshold: float = -0.02   # <-0.02%/8h → crowded shorts → LONG bias
+    # S27 Hold-Period Exit Management — all off by default to preserve S25 baseline behaviour
+    enable_breakeven_stop: bool = False          # if True, moves SL to entry when MFE ≥ breakeven_trigger_r × gap_size
+    breakeven_trigger_r: float = 2.0             # MFE multiple of gap_size that arms the breakeven stop
+    enable_trailing_stop: bool = False           # if True, trails SL behind MFE peak when MFE ≥ trailing_stop_mult × gap_size
+    trailing_stop_mult: float = 1.5              # trail distance expressed as a multiple of gap_size
 
 
 @dataclass(frozen=True)
@@ -660,6 +667,7 @@ def check_exit(
     trade: EntryDecision,
     bars_held: int,
     config: StrategyConfig,
+    mfe_pts: float = 0.0,
 ) -> ExitDecision | None:
     """Check triple-barrier exit conditions for an active trade.
 
@@ -667,28 +675,90 @@ def check_exit(
     (lines 641-660).
 
     Resolution order (matches reference): SL first, then TP (only if SL
-    did not trigger), then time stop (only if neither SL nor TP triggered).
+    did not trigger), then S27 optional exits (breakeven/trailing), then
+    time stop (only if none of the above triggered).
     Returning ``None`` means the trade remains open.
 
     Bearish/SHORT: stop is above entry (``bar.high >= sl_price``),
     TP is below entry (``bar.low <= tp_price``).
     Bullish/LONG: stop is below entry (``bar.low <= sl_price``),
     TP is above entry (``bar.high >= tp_price``).
+
+    Parameters
+    ----------
+    mfe_pts:
+        Maximum Favourable Excursion in raw index points (not USD).  This is
+        the running maximum of ``entry_price − bar.low`` (BEARISH) or
+        ``bar.high − entry_price`` (BULLISH) across all bars since fill.
+        Caller must accumulate this value and pass the current maximum each
+        bar.  Defaults to 0.0 (S27 exits inactive even if flags are True
+        until the first favourable bar is recorded).
     """
     bar_high = float(bar["high"])
     bar_low = float(bar["low"])
     bar_close = float(bar["close"])
+
+    # Derive gap_size from the SL distance; avoids adding gap_size to EntryDecision.
+    # sl_price = entry_price + sl_multiplier × gap_size (BEARISH) so gap = |SL − entry| / sl_mult
+    gap_size = abs(trade.sl_price - trade.entry_price) / config.sl_multiplier if config.sl_multiplier else 0.0
 
     if trade.direction == Direction.BULLISH:
         if bar_low <= trade.sl_price:
             return ExitDecision(reason=ExitReason.SL, exit_price=trade.sl_price)
         if bar_high >= trade.tp_price:
             return ExitDecision(reason=ExitReason.TP, exit_price=trade.tp_price)
+
+        # S27: breakeven / trailing stop (LONG — tighter = lower price)
+        if gap_size > 0 and (config.enable_breakeven_stop or config.enable_trailing_stop):
+            effective_sl = trade.sl_price  # start with original hard SL
+            active_reason = ExitReason.SL
+
+            if config.enable_breakeven_stop and mfe_pts >= config.breakeven_trigger_r * gap_size:
+                # Move SL to entry (breakeven)
+                be_level = trade.entry_price
+                if be_level > effective_sl:  # tighter (higher) for LONG
+                    effective_sl = be_level
+                    active_reason = ExitReason.BREAKEVEN_SL
+
+            if config.enable_trailing_stop and mfe_pts >= config.trailing_stop_mult * gap_size:
+                # Trail at trailing_stop_mult × gap_size below the MFE peak
+                mfe_peak_price = trade.entry_price + mfe_pts
+                trail_level = mfe_peak_price - config.trailing_stop_mult * gap_size
+                if trail_level > effective_sl:  # tighter (higher) for LONG
+                    effective_sl = trail_level
+                    active_reason = ExitReason.TRAILING_SL
+
+            if bar_low <= effective_sl:
+                return ExitDecision(reason=active_reason, exit_price=effective_sl)
+
     else:  # BEARISH / SHORT
         if bar_high >= trade.sl_price:
             return ExitDecision(reason=ExitReason.SL, exit_price=trade.sl_price)
         if bar_low <= trade.tp_price:
             return ExitDecision(reason=ExitReason.TP, exit_price=trade.tp_price)
+
+        # S27: breakeven / trailing stop (SHORT — tighter = higher price)
+        if gap_size > 0 and (config.enable_breakeven_stop or config.enable_trailing_stop):
+            effective_sl = trade.sl_price  # start with original hard SL
+            active_reason = ExitReason.SL
+
+            if config.enable_breakeven_stop and mfe_pts >= config.breakeven_trigger_r * gap_size:
+                # Move SL to entry (breakeven)
+                be_level = trade.entry_price
+                if be_level < effective_sl:  # tighter (lower) for SHORT
+                    effective_sl = be_level
+                    active_reason = ExitReason.BREAKEVEN_SL
+
+            if config.enable_trailing_stop and mfe_pts >= config.trailing_stop_mult * gap_size:
+                # Trail at trailing_stop_mult × gap_size above the MFE peak (for SHORT, MFE peak = lowest price)
+                mfe_peak_price = trade.entry_price - mfe_pts
+                trail_level = mfe_peak_price + config.trailing_stop_mult * gap_size
+                if trail_level < effective_sl:  # tighter (lower) for SHORT
+                    effective_sl = trail_level
+                    active_reason = ExitReason.TRAILING_SL
+
+            if bar_high >= effective_sl:
+                return ExitDecision(reason=active_reason, exit_price=effective_sl)
 
     if bars_held >= config.max_hold_bars:
         return ExitDecision(reason=ExitReason.TIME_STOP, exit_price=bar_close)

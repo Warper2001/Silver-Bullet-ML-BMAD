@@ -254,6 +254,187 @@ class TestCheckExitBearish:
         assert result is None or result.reason != ExitReason.SL
 
 
+class TestS27BreakevenAndTrailingStops:
+    """S27 Hold-Period Exit Management: breakeven stop and trailing stop tests."""
+
+    # ── Bearish (SHORT) helpers ──────────────────────────────────────────────
+
+    def _bearish_trade(self, entry: float = 100.0, gap: float = 4.0) -> EntryDecision:
+        return EntryDecision(
+            direction=Direction.BEARISH,
+            entry_price=entry,
+            sl_price=entry + _CONFIG.sl_multiplier * gap,  # 120.0
+            tp_price=entry - _CONFIG.tp_multiplier * gap,  # 76.0
+            contracts=5,
+        )
+
+    def _config_be(self, trigger_r: float = 2.0) -> StrategyConfig:
+        return StrategyConfig(enable_breakeven_stop=True, breakeven_trigger_r=trigger_r)
+
+    def _config_trail(self, trail_mult: float = 1.5) -> StrategyConfig:
+        return StrategyConfig(enable_trailing_stop=True, trailing_stop_mult=trail_mult)
+
+    def _config_both(self) -> StrategyConfig:
+        return StrategyConfig(enable_breakeven_stop=True, breakeven_trigger_r=2.0,
+                              enable_trailing_stop=True, trailing_stop_mult=1.5)
+
+    # ── Test: BREAKEVEN_SL fires when MFE ≥ trigger and price returns to entry ──
+
+    def test_breakeven_sl_fires_bearish(self):
+        """Bearish: after MFE ≥ 2×gap, bar that reaches entry price exits as BREAKEVEN_SL."""
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        cfg = self._config_be(trigger_r=2.0)
+        # gap=4 → trigger = 2×4 = 8 pts; MFE=8 means price fell to 92
+        mfe_pts = 8.0
+        # Price bounces back to entry (bar.high = 100.0 = entry)
+        result = check_exit(_bar(high=100.0, low=90.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        assert result.reason == ExitReason.BREAKEVEN_SL
+        assert result.exit_price == pytest.approx(100.0)  # entry price = breakeven level
+
+    def test_breakeven_sl_pnl_approx_negative_commission(self):
+        """BREAKEVEN_SL exit price equals entry → P&L = −commission (no directional loss)."""
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        cfg = self._config_be(trigger_r=2.0)
+        mfe_pts = 8.0
+        result = check_exit(_bar(high=100.0, low=90.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        # P&L at breakeven = (entry_price − exit_price) × point_value × contracts − commission
+        # = (100 − 100) × 2 × 5 − 4 = −4 (only commission)
+        pnl = (trade.entry_price - result.exit_price) * 2.0 * 5 - _CONFIG.commission_per_roundtrip
+        assert pnl == pytest.approx(-_CONFIG.commission_per_roundtrip)
+
+    def test_breakeven_sl_not_fired_when_mfe_below_trigger(self):
+        """Breakeven trigger not yet reached → no BREAKEVEN_SL even if price returns to entry."""
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        cfg = self._config_be(trigger_r=2.0)
+        # MFE only 1×gap = 4 pts, well below 2×gap trigger
+        mfe_pts = 4.0
+        result = check_exit(_bar(high=100.0, low=90.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        # Should not exit (price at entry but trigger not armed; entry < sl_price so no hard SL hit)
+        assert result is None or result.reason != ExitReason.BREAKEVEN_SL
+
+    def test_breakeven_sl_fires_bullish(self):
+        """Bullish: after MFE ≥ 2×gap, bar that falls back to entry exits as BREAKEVEN_SL."""
+        trade = EntryDecision(
+            direction=Direction.BULLISH,
+            entry_price=200.0,
+            sl_price=200.0 - _CONFIG.sl_multiplier * 4.0,  # 180.0
+            tp_price=200.0 + _CONFIG.tp_multiplier * 4.0,  # 224.0
+            contracts=5,
+        )
+        cfg = self._config_be(trigger_r=2.0)
+        mfe_pts = 8.0  # 2×gap → trigger armed
+        # Price falls back to entry (bar.low = 200.0)
+        result = check_exit(_bar(high=205.0, low=200.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        assert result.reason == ExitReason.BREAKEVEN_SL
+        assert result.exit_price == pytest.approx(200.0)
+
+    # ── Test: TRAILING_SL fires when price retraces by trailing_mult × gap from MFE peak ──
+
+    def test_trailing_sl_fires_bearish(self):
+        """Bearish: after MFE ≥ 1.5×gap, price retraces by 1.5×gap from MFE peak → TRAILING_SL."""
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        cfg = self._config_trail(trail_mult=1.5)
+        # gap=4, trail_mult=1.5 → trail distance = 6 pts
+        # MFE=10 pts → MFE peak price = 100 - 10 = 90; trail SL = 90 + 6 = 96
+        mfe_pts = 10.0
+        # bar.high = 96 → hits trail SL
+        result = check_exit(_bar(high=96.0, low=88.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        assert result.reason == ExitReason.TRAILING_SL
+        assert result.exit_price == pytest.approx(96.0)  # trail SL level = 90 + 6
+
+    def test_trailing_sl_not_fired_when_mfe_below_activation(self):
+        """Trailing stop not activated when MFE < trailing_stop_mult × gap_size."""
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        cfg = self._config_trail(trail_mult=1.5)
+        # MFE = only 4 pts (1×gap), activation requires 1.5×gap = 6 pts
+        mfe_pts = 4.0
+        result = check_exit(_bar(high=99.0, low=95.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is None  # no exit — still inside barriers
+
+    def test_trailing_sl_fires_bullish(self):
+        """Bullish: after MFE ≥ 1.5×gap, price falls by 1.5×gap from MFE peak → TRAILING_SL."""
+        trade = EntryDecision(
+            direction=Direction.BULLISH,
+            entry_price=200.0,
+            sl_price=200.0 - _CONFIG.sl_multiplier * 4.0,  # 180.0
+            tp_price=200.0 + _CONFIG.tp_multiplier * 4.0,  # 224.0
+            contracts=5,
+        )
+        cfg = self._config_trail(trail_mult=1.5)
+        # gap=4, trail=1.5 → trail dist=6; MFE=10 → peak=210; trail SL=210−6=204
+        mfe_pts = 10.0
+        result = check_exit(_bar(high=208.0, low=204.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        assert result.reason == ExitReason.TRAILING_SL
+        assert result.exit_price == pytest.approx(204.0)
+
+    # ── Test: flags off → behaviour identical to pre-S27 ──
+
+    def test_flags_off_no_change_bearish(self):
+        """With all S27 flags False, check_exit output is identical to the pre-extension baseline."""
+        trade = self._bearish_trade()
+        mfe_pts = 10.0  # would arm both if flags were on
+        # Test each pre-existing exit type
+        sl_result = check_exit(_bar(high=121.0, low=90.0), trade, bars_held=5, config=_CONFIG, mfe_pts=mfe_pts)
+        assert sl_result is not None and sl_result.reason == ExitReason.SL
+
+        tp_result = check_exit(_bar(high=105.0, low=75.0), trade, bars_held=5, config=_CONFIG, mfe_pts=mfe_pts)
+        assert tp_result is not None and tp_result.reason == ExitReason.TP
+
+        time_result = check_exit(_bar(high=105.0, low=85.0, close=95.0), trade,
+                                 bars_held=_CONFIG.max_hold_bars, config=_CONFIG, mfe_pts=mfe_pts)
+        assert time_result is not None and time_result.reason == ExitReason.TIME_STOP
+
+        no_exit = check_exit(_bar(high=105.0, low=85.0), trade,
+                             bars_held=_CONFIG.max_hold_bars - 1, config=_CONFIG, mfe_pts=mfe_pts)
+        assert no_exit is None
+
+    def test_flags_off_no_change_default_mfe(self):
+        """With default mfe_pts=0.0 and flags off, original exit behaviour is preserved."""
+        trade = self._bearish_trade()
+        # No mfe_pts argument at all — should behave like old API
+        result_sl = check_exit(_bar(high=121.0, low=90.0), trade, bars_held=5, config=_CONFIG)
+        assert result_sl is not None and result_sl.reason == ExitReason.SL
+
+        result_time = check_exit(_bar(high=105.0, low=85.0, close=95.0), trade,
+                                 bars_held=_CONFIG.max_hold_bars, config=_CONFIG)
+        assert result_time is not None and result_time.reason == ExitReason.TIME_STOP
+
+    # ── Test: both flags on — breakeven then trailing take effect ──
+
+    def test_both_flags_trailing_tighter_than_breakeven(self):
+        """When both flags on, trailing (lower price for SHORT) is tighter than breakeven → TRAILING_SL fires."""
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        cfg = self._config_both()  # be_trigger=2.0×gap=8, trail_mult=1.5×gap=6
+        # MFE = 8 pts → MFE peak price = 92; trail SL = 92 + 6 = 98; breakeven SL = 100 (entry)
+        # For SHORT: tighter = lower price → trail (98) < breakeven (100) → TRAILING_SL is active
+        mfe_pts = 8.0
+        # bar.high = 98 → hits trail SL (98), which is below breakeven (100)
+        result = check_exit(_bar(high=98.0, low=88.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        assert result.reason == ExitReason.TRAILING_SL
+        assert result.exit_price == pytest.approx(98.0)
+
+    def test_both_flags_breakeven_only_when_trail_not_armed(self):
+        """When both flags on but only breakeven armed (MFE < trail threshold), BREAKEVEN_SL fires."""
+        # Use a high breakeven trigger vs a very low trail mult to create a gap
+        cfg = StrategyConfig(enable_breakeven_stop=True, breakeven_trigger_r=1.0,
+                             enable_trailing_stop=True, trailing_stop_mult=3.0)
+        trade = self._bearish_trade(entry=100.0, gap=4.0)
+        # gap=4: breakeven at 1×gap=4 pts, trail at 3×gap=12 pts
+        # MFE=6 pts: breakeven armed (6≥4), trail NOT armed (6<12)
+        # Breakeven SL = 100 (entry); trail not active
+        mfe_pts = 6.0
+        result = check_exit(_bar(high=100.0, low=90.0), trade, bars_held=10, config=cfg, mfe_pts=mfe_pts)
+        assert result is not None
+        assert result.reason == ExitReason.BREAKEVEN_SL
+        assert result.exit_price == pytest.approx(100.0)
+
+
 class TestCheckExitBullish:
     """Long trade: SL is below entry, TP is above entry."""
 

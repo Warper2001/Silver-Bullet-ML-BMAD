@@ -965,6 +965,8 @@ class ActiveTrade:
     m15_confirmed: bool = False
     kill_zone_active: bool = False
     vol_regime_pct: float = 0.0
+    # S27: running maximum favourable excursion in raw index points (accumulated per bar after fill)
+    mfe_pts: float = 0.0
 
 
 @dataclass
@@ -1069,8 +1071,10 @@ class Tier2StreamingTrader:
         self._ts_client: Optional[TradeStationClient] = None
 
     async def initialize(self):
+        use_projectx = os.environ.get("USE_PROJECTX", "").lower() in ("1", "true", "yes")
+        title = "TIER 2 FVG LIVE TRADING - TOPSTEP (ProjectX)" if use_projectx else "TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT"
         logger.info("=" * 70)
-        logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
+        logger.info(title)
         logger.info("=" * 70)
         cfg = self._strategy_config
         logger.info(f"Configuration: {TIER2_CONFIG}")
@@ -1086,11 +1090,12 @@ class Tier2StreamingTrader:
         if os.environ.get("USE_PROJECTX", "").lower() in ("1", "true", "yes"):
             from src.research.projectx_auth import ProjectXAuth
             from src.research.projectx_client import ProjectXClient
+            self._account_config.account_id = os.environ.get("PROJECTX_ACCOUNT_ID", "11542104")
             self.auth = ProjectXAuth.from_file(".projectx_api_key")
             await self.auth.authenticate()
             await self.auth.start_auto_refresh()
             self._ts_client = ProjectXClient(self.auth, self._account_config, self.client)
-            logger.info("Execution: TopstepX via ProjectX Gateway API")
+            logger.info("Execution: TopstepX via ProjectX Gateway API | account=%s", self._account_config.account_id)
         else:
             self.auth = TradeStationAuthV3.from_file('.access_token')
             await self.auth.authenticate()
@@ -1435,14 +1440,17 @@ class Tier2StreamingTrader:
         if len(self.dollar_bars) < 30:
             return
 
-        # Performance shortcut: skip resampling if we are still within the same 15-minute interval
-        bar = self.dollar_bars[-1]
-        forming_start_min = bar.timestamp.minute - (bar.timestamp.minute % 15)
-        forming_start_ts = bar.timestamp.replace(minute=forming_start_min, second=0, microsecond=0)
-        predicted_completed_m15_ts = forming_start_ts - timedelta(minutes=15)
-        if predicted_completed_m15_ts <= self._m15_last_bar_ts:
+        # Fast pre-check: skip the expensive resample if we haven't crossed a new M15
+        # boundary since the last evaluation.  Only skip — do NOT set _m15_last_bar_ts
+        # here; that update happens below after we read the actual completed timestamp.
+        _bar = self.dollar_bars[-1]
+        _form_min = _bar.timestamp.minute - (_bar.timestamp.minute % 15)
+        _form_ts  = _bar.timestamp.replace(minute=_form_min, second=0, microsecond=0)
+        _pred_m15 = _form_ts - timedelta(minutes=15)
+        if _pred_m15.tzinfo is None:
+            _pred_m15 = _pred_m15.replace(tzinfo=timezone.utc)
+        if _pred_m15 <= self._m15_last_bar_ts:
             return
-        self._m15_last_bar_ts = predicted_completed_m15_ts
 
         recent = self.dollar_bars[-3000:]
         if not recent:
@@ -1554,14 +1562,22 @@ class Tier2StreamingTrader:
 
         # ── Active trade: check TP / SL / time-stop via strategy_core.check_exit ──
         if self._active_entry_decision is not None:
+            # S27: update running maximum favourable excursion (in index points) before exit check
+            if t.direction == "SHORT":
+                t.mfe_pts = max(t.mfe_pts, t.entry_price - bar.low)
+            else:  # LONG
+                t.mfe_pts = max(t.mfe_pts, bar.high - t.entry_price)
+
             bar_series = pd.Series({"high": bar.high, "low": bar.low, "close": bar.close})
-            exit_dec = check_exit(bar_series, self._active_entry_decision, t.bars_held, self._strategy_config)
+            exit_dec = check_exit(bar_series, self._active_entry_decision, t.bars_held, self._strategy_config, mfe_pts=t.mfe_pts)
             if exit_dec is not None:
                 _reason_map = {
                     ExitReason.TP: "tp",
                     ExitReason.SL: "sl",
                     ExitReason.TIME_STOP: "time",
                     ExitReason.MANUAL: "time",
+                    ExitReason.BREAKEVEN_SL: "breakeven_sl",
+                    ExitReason.TRAILING_SL: "trailing_sl",
                 }
                 await self._close_active_trade(bar, exit_dec.exit_price, _reason_map[exit_dec.reason])
                 return True
@@ -1570,6 +1586,11 @@ class Tier2StreamingTrader:
     async def _close_active_trade(self, bar: DollarBar, price: float, reason: str):
         t = self.active_trade
         if reason == "time":
+            if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
+            if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
+            await self._ts_client.close_position_at_market(t.direction, self._account_config.account_id, t.contracts)
+        elif reason in ("breakeven_sl", "trailing_sl"):
+            # S27 managed exits: cancel both bracket legs and close at market (like time-stop)
             if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
             if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
             await self._ts_client.close_position_at_market(t.direction, self._account_config.account_id, t.contracts)
@@ -1593,7 +1614,10 @@ class Tier2StreamingTrader:
         except Exception as e:
             logger.warning("State persistence failed after trade close (trade record will still be written): %s", e)
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._risk_manager.daily_pnl:.2f}")
-        _exit_reason_str = reason.upper() if reason in ("tp", "sl") else "TIME_STOP" if reason == "time" else reason.upper()
+        _exit_reason_str = (
+            "TIME_STOP" if reason == "time"
+            else reason.upper()
+        )
         self._trade_logger.append_trade(TradeRecord(
             timestamp_entry=t.entry_time,
             timestamp_exit=bar.timestamp,

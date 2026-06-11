@@ -1,0 +1,21 @@
+[Unit]
+Description=MIM-NB Live Combine Bot (Topstep 50K, MNQ 1ct, sealed 6957daa/7939eed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+# REQUIRED: set to the Topstep 50K combine account before starting.
+# The bot refuses to start if this is missing.
+Environment=PROJECTX_ACCOUNT_ID=
+Environment=MIM_NB_SYMBOL=MNQU26
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/mim_nb_live.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/mim_nb_live.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/mim_nb_live.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,1208 @@
+diff --git a/src/ml/train_tier2_meta_labeling.py b/src/ml/train_tier2_meta_labeling.py
+index a444a4f..54456e7 100644
+--- a/src/ml/train_tier2_meta_labeling.py
++++ b/src/ml/train_tier2_meta_labeling.py
+@@ -2,56 +2,141 @@
+ import pandas as pd
+ import numpy as np
+ from xgboost import XGBClassifier
++from sklearn.frozen import FrozenEstimator
++from sklearn.calibration import CalibratedClassifierCV
+ from sklearn.model_selection import train_test_split
+ from sklearn.metrics import roc_auc_score, accuracy_score
+ import joblib
+ from pathlib import Path
+ 
++FEATURE_COLS = [
++    'atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week', 'signal_direction',
++    'session_displacement', 'adr_pct_used', 'fvg_to_sweep_bars', 'prior_setup_proximity', 'h1_trend_slope',
++    'sin_hour', 'cos_hour', 'session_volume_ratio', 'fvg_fill_pct', 'bar_body_ratio',
++    'sweep_window_vol', 'slope_direction_match'
++]
++
++from sklearn.base import ClassifierMixin, BaseEstimator
++
++class XGBClassifierWrapper(BaseEstimator, ClassifierMixin):
++    def __init__(self, model):
++        self.model = model
++        self.classes_ = model.classes_
++        
++    def fit(self, X, y=None):
++        return self
++        
++    def predict(self, X):
++        return self.model.predict(X)
++        
++    def predict_proba(self, X):
++        return self.model.predict_proba(X)
++
++    def __sklearn_tags__(self):
++        tags = super().__sklearn_tags__()
++        tags.estimator_type = "classifier"
++        return tags
++
+ def train_model():
+     csv_path = Path("data/ml_training/tier2_meta_labeling.csv")
++    history_path = Path("data/ml_training/oos_trade_history.csv")
+     if not csv_path.exists():
+         print(f"Error: {csv_path} not found.")
+         return
++    if not history_path.exists():
++        print(f"Error: {history_path} not found.")
++        return
+ 
+     df = pd.read_csv(csv_path)
++    df_history = pd.read_csv(history_path)
+     print(f"Loaded {len(df)} samples from {csv_path}")
+ 
+-    # Features and Label
+-    X = df.drop(columns=["label"])
++    # Ensure feature columns are correct
++    X = df[FEATURE_COLS]
+     y = df["label"]
+ 
+     print(f"Feature columns: {list(X.columns)}")
+     print(f"Label distribution: {y.value_counts(normalize=True).to_dict()}")
+ 
+-    # Split
+-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
++    n_pos = sum(y == 1)
++    n_neg = sum(y == 0)
++    scale_pos_weight = n_neg / n_pos if n_pos > 0 else 1.0
+ 
+-    # Train XGBoost
+-    # Small dataset (672 samples), so keep it simple
+-    model = XGBClassifier(
+-        n_estimators=30,
+-        max_depth=2,
+-        learning_rate=0.03,
++    # Split — shuffle=False preserves time order
++    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
++    
++    # Split history for OOS testing
++    train_idx, val_idx = train_test_split(df_history.index, test_size=0.2, random_state=42, shuffle=False)
++    y_pnl_oos = df_history.loc[val_idx, 'pnl'].values
++
++    # Train XGBoost with scale_pos_weight
++    base_model = XGBClassifier(
++        n_estimators=100,
++        max_depth=3,
++        learning_rate=0.01,
++        subsample=0.8,
++        colsample_bytree=0.8,
+         random_state=42,
+-        eval_metric="logloss"
++        eval_metric="logloss",
++        early_stopping_rounds=10,
++        scale_pos_weight=scale_pos_weight
+     )
+ 
+-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
++    base_model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
++    
++    # Platt Calibration
++    wrapped_model = XGBClassifierWrapper(base_model)
++    calibrated_model = CalibratedClassifierCV(estimator=FrozenEstimator(wrapped_model), method='sigmoid')
++    calibrated_model.fit(X_val, y_val)
++    
++    y_proba_oos = calibrated_model.predict_proba(X_val)[:, 1]
++    
++    # Stability guard: roc_auc_score fails if only one class is present
++    if len(np.unique(y_val)) < 2:
++        print("Warning: Validation set has only one class. AUC calculation skipped.")
++        auc = 0.5
++    else:
++        auc = roc_auc_score(y_val, y_proba_oos)
++        
++    print(f"Validation AUC: {auc:.4f}")
+ 
+-    # Evaluate
+-    y_proba = model.predict_proba(X_val)[:, 1]
+-    auc = roc_auc_score(y_val, y_proba)
+-    acc = accuracy_score(y_val, (y_proba > 0.5).astype(int))
++    # Feature Importances
++    importances = pd.Series(base_model.feature_importances_, index=X.columns).sort_values(ascending=False)
++    print("\nFeature Importances:")
++    print(importances)
++    
++    # PF Threshold Sweep on OOS fold
++    print("\nPF Threshold Sweep (OOS Fold):")
++    thresholds = np.arange(0.40, 0.81, 0.01)
++    best_pf, best_thresh = 0.0, 0.525
++    for t in thresholds:
++        mask = y_proba_oos >= t
++        if mask.sum() < 10: continue  # skip thresholds with too few trades
++        gross_win = y_pnl_oos[mask & (y_pnl_oos > 0)].sum()
++        gross_loss = abs(y_pnl_oos[mask & (y_pnl_oos < 0)].sum())
++        pf = gross_win / gross_loss if gross_loss > 0 else 0.0
++        print(f"  Threshold {t:.2f}: PF={pf:.3f} (Trades={mask.sum()})")
++        if pf > best_pf:
++            best_pf, best_thresh = pf, t
++            
++    print(f"\nPF-optimal threshold: {best_thresh:.2f} (PF={best_pf:.3f})")
+ 
+-    print(f"Validation AUC: {auc:.4f}")
+-    print(f"Validation Accuracy: {acc:.4f}")
++    # Save model guards
++    if auc < 0.55:
++        print(f"AUC {auc:.4f} is below baseline (0.55). Model NOT saved.")
++        return
++        
++    if best_pf <= 1.15:
++        print(f"Best PF {best_pf:.3f} is not > 1.15. Model NOT saved.")
++        return
+ 
+     # Save model
+     model_dir = Path("models/xgboost")
+     model_dir.mkdir(parents=True, exist_ok=True)
+     model_path = model_dir / "tier2_meta_labeling_model.pkl"
+-    joblib.dump(model, model_path)
++    joblib.dump(calibrated_model, model_path)
+     print(f"Model saved to {model_path}")
++    print(f"IMPORTANT: Set ML_THRESHOLD in live trader to {best_thresh:.2f}")
+ 
+ if __name__ == "__main__":
+     train_model()
+diff --git a/src/research/backtest_zero_bias_optimized.py b/src/research/backtest_zero_bias_optimized.py
+index c0215fb..6cd88b0 100644
+--- a/src/research/backtest_zero_bias_optimized.py
++++ b/src/research/backtest_zero_bias_optimized.py
+@@ -58,9 +58,7 @@ def get_mitigation_map(df, swing_prices, is_high=True):
+     return mit_map
+ 
+ def get_et_hour(timestamps):
+-    ts = pd.to_datetime(timestamps)
+-    if ts.tz is None: ts = ts.tz_localize('UTC')
+-    else: ts = ts.tz_convert('UTC') 
++    ts = pd.to_datetime(timestamps, utc=True)
+     return ts.tz_convert('US/Eastern').hour.values
+ 
+ def get_day_of_week(timestamps):
+@@ -69,6 +67,17 @@ def get_day_of_week(timestamps):
+     return ts.dayofweek.values
+ 
+ def prepare_data(df_1m: pd.DataFrame) -> pd.DataFrame:
++    # Daily for ADR
++    df_daily = df_1m.set_index('timestamp').resample('1D').agg({
++        'high': 'max', 'low': 'min'
++    }).dropna()
++    df_daily['range'] = df_daily['high'] - df_daily['low']
++    df_daily['adr_20'] = df_daily['range'].rolling(20, min_periods=5).mean()
++    df_daily = df_daily.reset_index()[['timestamp', 'adr_20']]
++    df_daily['timestamp'] = df_daily['timestamp'] + pd.Timedelta(days=1)
++    
++    df_1m = pd.merge_asof(df_1m.sort_values('timestamp'), df_daily, on='timestamp', direction='backward')
++
+     df_1h = df_1m.set_index('timestamp').resample('1h').agg({
+         'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'
+     }).dropna().reset_index()
+@@ -78,20 +87,56 @@ def prepare_data(df_1m: pd.DataFrame) -> pd.DataFrame:
+     mit_sl = get_mitigation_map(df_1h, sl, False)
+     
+     br_sw, bl_sw = np.zeros(len(df_1h), dtype=bool), np.zeros(len(df_1h), dtype=bool)
+-    for i in range(len(df_1h)):
++    # Track the 1m bar index where the 1h bar ended
++    # We can't easily do it here, but we can track the 1h bar index.
++    last_br_idx, last_bl_idx = np.full(len(df_1h), -1), np.full(len(df_1h), -1)
++    
++    cur_br, cur_bl = -1, -1
++    for i in range(3, len(df_1h)):  # start at 3 so mit_sh[:i-2] is always a positive slice
+         m_sh = np.where(mit_sh[:i-2] == i)[0]
+-        if any(df_1h.loc[i, 'close'] < sh[idx] for idx in m_sh): br_sw[i] = True
++        if any(df_1h.loc[i, 'close'] < sh[idx] for idx in m_sh): 
++            br_sw[i] = True
++            cur_br = i
+         m_sl = np.where(mit_sl[:i-2] == i)[0]
+-        if any(df_1h.loc[i, 'close'] > sl[idx] for idx in m_sl): bl_sw[i] = True
++        if any(df_1h.loc[i, 'close'] > sl[idx] for idx in m_sl): 
++            bl_sw[i] = True
++            cur_bl = i
++        last_br_idx[i] = cur_br
++        last_bl_idx[i] = cur_bl
+             
+     df_1h['br_sw_act'] = pd.Series(br_sw).rolling(6, min_periods=1).max().astype(bool)
+     df_1h['bl_sw_act'] = pd.Series(bl_sw).rolling(6, min_periods=1).max().astype(bool)
++    df_1h['last_br_idx'] = last_br_idx
++    df_1h['last_bl_idx'] = last_bl_idx
++    
++    # H1 ATR
++    df_1h['tr'] = np.maximum(df_1h['high'] - df_1h['low'], 
++                            np.maximum(np.abs(df_1h['high'] - df_1h['close'].shift(1)), 
++                                      np.abs(df_1h['low'] - df_1h['close'].shift(1))))
++    df_1h['h1_atr'] = df_1h['tr'].rolling(20, min_periods=5).mean()
+     
+-    df_1h_s = df_1h[['timestamp', 'br_sw_act', 'bl_sw_act']].copy()
++    # Shift H1 data forward so it's only available AFTER the bar completes
++    df_1h_s = df_1h[['timestamp', 'br_sw_act', 'bl_sw_act', 'h1_atr', 'last_br_idx', 'last_bl_idx']].copy()
++    
++    # We also need the last 6 H1 closes for slope. This is tricky to do in merge_asof nicely.
++    # We'll attach the h1_idx and then fetch them in run_backtest or pre-calculate slope.
++    df_1h['h1_slope'] = np.nan
++    closes = df_1h['close'].values
++    atrs = df_1h['h1_atr'].values
++    for i in range(20, len(df_1h)):
++        if atrs[i] > 0:
++            slope = np.polyfit(range(6), closes[i-5:i+1], 1)[0]
++            df_1h.loc[i, 'h1_slope'] = slope / atrs[i]
++            
++    df_1h_s = df_1h[['timestamp', 'br_sw_act', 'bl_sw_act', 'h1_atr', 'last_br_idx', 'last_bl_idx', 'h1_slope']].copy()
+     df_1h_s['timestamp'] = df_1h_s['timestamp'] + pd.Timedelta(hours=1)
+ 
+     df_1m = pd.merge_asof(df_1m.sort_values('timestamp'), df_1h_s, on='timestamp', direction='backward')
+     df_1m[['br_sw_act', 'bl_sw_act']] = df_1m[['br_sw_act', 'bl_sw_act']].fillna(False)
++    
++    # Map H1 bar index to 1m bar index for fvg_to_sweep_bars
++    # We'll do this in run_backtest by tracking when the H1 bar actually ends in 1m terms.
++    
+     return df_1m
+ 
+ # ── ML Filter ───────────────────────────────────────────────────────────────── #
+@@ -115,40 +160,97 @@ class MetaLabelingFilter:
+             return 1.0 # Pass all if no model
+         
+         # Ensure features are in correct order for model
+-        feature_cols = ['atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week', 'signal_direction']
++        feature_cols = [
++            'atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week', 'signal_direction',
++            'session_displacement', 'adr_pct_used', 'fvg_to_sweep_bars', 'prior_setup_proximity', 'h1_trend_slope'
++        ]
++        
++        # Fill missing features with defaults if necessary
++        for col in feature_cols:
++            if col not in features:
++                if col == 'signal_direction': features[col] = 0
++                elif col == 'adr_pct_used': features[col] = 0.5
++                elif col == 'fvg_to_sweep_bars': features[col] = 20
++                elif col == 'prior_setup_proximity': features[col] = 120
++                else: features[col] = 0.0
++
+         df_feat = pd.DataFrame([features])[feature_cols]
+         
+         # XGBoost expect signal_direction to be encoded if it was categorical
+-        # Let's assume 1 for bullish, 0 for bearish
+-        df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
++        if isinstance(df_feat['signal_direction'].iloc[0], str):
++            df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
+         
+         proba = self.model.predict_proba(df_feat)[0, 1]
+         return proba
+ 
+ # ── Simulation ─────────────────────────────────────────────────────────────── #
+ 
+-def simulate_trade(direction, entry, tp, sl, highs, lows, closes, start_idx, n):
++def simulate_trade(direction, entry, tp, sl, highs, lows, closes, start_idx, n, cost):
+     for j in range(1, MAX_HOLD_BARS + 1):
+         idx = start_idx + j
+         if idx >= n: break
+         h, l = highs[idx], lows[idx]
+         if direction == "bullish":
+-            if l <= sl: return {"pnl": (sl - entry) * MNQ_CONTRACT_VALUE - TRANSACTION_COST, "win": 0}
+-            if h >= tp: return {"pnl": (tp - entry) * MNQ_CONTRACT_VALUE - TRANSACTION_COST, "win": 1}
++            if l <= sl: return {"pnl": (sl - entry) * MNQ_CONTRACT_VALUE - cost, "win": 0, "bars_held": j, "exit_type": "sl"}
++            if h >= tp: return {"pnl": (tp - entry) * MNQ_CONTRACT_VALUE - cost, "win": 1, "bars_held": j, "exit_type": "tp"}
+         else:
+-            if h >= sl: return {"pnl": (entry - sl) * MNQ_CONTRACT_VALUE - TRANSACTION_COST, "win": 0}
+-            if l <= tp: return {"pnl": (entry - tp) * MNQ_CONTRACT_VALUE - TRANSACTION_COST, "win": 1}
++            if h >= sl: return {"pnl": (entry - sl) * MNQ_CONTRACT_VALUE - cost, "win": 0, "bars_held": j, "exit_type": "sl"}
++            if l <= tp: return {"pnl": (entry - tp) * MNQ_CONTRACT_VALUE - cost, "win": 1, "bars_held": j, "exit_type": "tp"}
+     ep = closes[min(start_idx + MAX_HOLD_BARS, n - 1)]
+-    pnl = ((ep - entry) if direction == "bullish" else (entry - ep)) * MNQ_CONTRACT_VALUE - TRANSACTION_COST
+-    return {"pnl": pnl, "win": 1 if pnl > 0 else 0}
++    pnl = ((ep - entry) if direction == "bullish" else (entry - ep)) * MNQ_CONTRACT_VALUE - cost
++    return {"pnl": pnl, "win": 1 if pnl > 0 else 0, "bars_held": MAX_HOLD_BARS, "exit_type": "time"}
++
++def _compute_context_features(i, df, atr_val, session_high, session_low, adr_20, last_sweep_bar, last_entry_bar, session_open_price, et_hour, session_volume_ratio, fvg_fill_pct, bar_body_ratio, silver_bullet_window, direction_sign):
++    # session_displacement
++    session_displacement = (df['close'].iloc[i] - session_open_price) / atr_val if not np.isnan(session_open_price) and atr_val > 0 else 0.0
++
++    # adr_pct_used
++    adr_pct_used = np.clip((session_high - session_low) / adr_20, 0, 2) if adr_20 > 0 else 0.5
++
++    # fvg_to_sweep_bars
++    fvg_to_sweep_bars = min(i - last_sweep_bar, 20) if last_sweep_bar >= 0 else 20
++
++    # prior_setup_proximity
++    prior_setup_proximity = min(i - last_entry_bar, 120) if last_entry_bar >= 0 else 120
++
++    # h1_trend_slope is already in df as 'h1_slope'
++    h1_trend_slope = df['h1_slope'].iloc[i] if 'h1_slope' in df.columns else 0.0
++    if np.isnan(h1_trend_slope): h1_trend_slope = 0.0
+ 
+-def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None, export_path=None):
++    # sin_hour, cos_hour
++    sin_hour = np.sin(2 * np.pi * et_hour / 24)
++    cos_hour = np.cos(2 * np.pi * et_hour / 24)
++
++    # Interaction Features
++    sweep_window_vol = silver_bullet_window * session_volume_ratio
++    slope_direction_match = 1 if np.sign(h1_trend_slope) == direction_sign else 0
++
++    return {
++        "session_displacement": session_displacement,
++        "adr_pct_used": adr_pct_used,
++        "fvg_to_sweep_bars": fvg_to_sweep_bars,
++        "prior_setup_proximity": prior_setup_proximity,
++        "h1_trend_slope": h1_trend_slope,
++        "sin_hour": sin_hour,
++        "cos_hour": cos_hour,
++        "session_volume_ratio": session_volume_ratio,
++        "fvg_fill_pct": fvg_fill_pct,
++        "bar_body_ratio": bar_body_ratio,
++        "sweep_window_vol": sweep_window_vol,
++        "slope_direction_match": slope_direction_match
++    }
++def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None, export_path=None, cost_override=None, return_trades=False):
++    cost = cost_override if cost_override is not None else TRANSACTION_COST
+     n = len(df)
+     highs, lows, opens, closes, volumes = df["high"].values, df["low"].values, df["open"].values, df["close"].values, df["volume"].values
+     timestamps = df["timestamp"].values
+     et_hours = get_et_hour(timestamps)
+     days_of_week = get_day_of_week(timestamps)
+     bl_sw, br_sw = df["bl_sw_act"].values, df["br_sw_act"].values
++    adr_20_vals = df["adr_20"].values if "adr_20" in df.columns else np.zeros(n)
++    
++    last_br_h1_idx = df["last_br_idx"].values if "last_br_idx" in df.columns else np.full(n, -1)
++    last_bl_h1_idx = df["last_bl_idx"].values if "last_bl_idx" in df.columns else np.full(n, -1)
+     
+     prev_close = pd.Series(closes).shift(1).values
+     tr = np.maximum(highs - lows, np.maximum(np.abs(highs - prev_close), np.abs(lows - prev_close)))
+@@ -162,43 +264,106 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
+     ml_data = []
+     next_bar = 0
+     
+-    for i in range(2, n):
++    # Context tracking
++    session_high, session_low = -1.0, -1.0
++    session_open_price = np.nan
++    last_entry_bar = -1
++    last_sweep_bar = -1
++    last_h1_sweep_idx = -1
++    current_date = None
++
++    # To map H1 index to 1m index, we track when the H1 index changes
++    # But last_br_idx is already available at each 1m bar.
++    # We just need to know when a NEW sweep happened.
++
++    for i in tqdm(range(2, n), desc="Simulating Trades"):
+         if i < next_bar: continue
++
++        # Reset session high/low
++        ts_i = pd.to_datetime(timestamps[i], utc=True).tz_convert('US/Eastern')
++        if current_date != ts_i.date():
++            current_date = ts_i.date()
++            session_high, session_low = highs[i], lows[i]
++            session_open_price = opens[i]
++        else:
++            session_high = max(session_high, highs[i])
++            session_low = min(session_low, lows[i])            
+         if et_hours[i] in blocked_hours: continue
+         
+         c1_h, c1_l, c3_o, c3_l, c3_h = highs[i-2], lows[i-2], opens[i], lows[i], highs[i]
+         
+         for d in ("bullish", "bearish"):
+             if d == "bullish":
+-                # FVG Confluence
+                 if not (bl_sw[i] and c1_h < c3_l and closes[i-1] > opens[i-1]): continue
+                 gap_top, gap_bot = c3_l, c1_h
+                 gap_size = gap_top - gap_bot
+                 ent = gap_top - gap_size * entry_pct
+                 tp, sl = ent + gap_size * tp_mult, ent - gap_size * sl_mult
++                
++                # Identify last sweep bar in 1m terms
++                h1_sw_idx = last_bl_h1_idx[i]
+             else:
+                 if not (br_sw[i] and c1_l > c3_h and closes[i-1] < opens[i-1]): continue
+                 gap_top, gap_bot = c1_l, c3_h
+                 gap_size = gap_top - gap_bot
+                 ent = gap_bot + gap_size * entry_pct
+                 tp, sl = ent - gap_size * tp_mult, ent + gap_size * sl_mult
++                
++                h1_sw_idx = last_br_h1_idx[i]
+             
+             if gap_size <= 0 or gap_size < atr[i] * ATR_THRESHOLD or gap_size * MNQ_CONTRACT_VALUE > MAX_GAP_DOLLARS:
+                 continue
+             
++            # Update last_sweep_bar if h1_sw_idx changed
++            # In backtest, we don't know the exact 1m bar of the sweep, 
++            # but we know which H1 bar it was. Let's assume it happened at the end of that H1 bar.
++            # We can find the first 1m bar where last_br_h1_idx == h1_sw_idx.
++            if h1_sw_idx != last_h1_sweep_idx:
++                last_h1_sweep_idx = h1_sw_idx
++                # Find the first 1m bar that has this h1_sw_idx
++                # Optimization: scan back from i
++                for j in range(i, -1, -1):
++                    if (d == "bullish" and last_bl_h1_idx[j] != h1_sw_idx) or \
++                       (d == "bearish" and last_br_h1_idx[j] != h1_sw_idx):
++                        last_sweep_bar = j + 1
++                        break
++            
+             uv, dv = up_vol[i], dn_vol[i]
+             vol_ratio = (uv/dv if dv>0 else 99) if d == "bullish" else (dv/uv if uv>0 else 99)
+ 
++            # New features computation for ML
++            et_h = et_hours[i]
++            et_m = pd.to_datetime(timestamps[i], utc=True).tz_convert('US/Eastern').minute
++            silver_bullet_window = 1 if (et_h == 3) or (et_h == 4 and et_m == 0) or (et_h == 9 and et_m >= 30) or (et_h == 10) else 0
++
++            recent_vol_mean = np.mean(volumes[max(0, i-20):i]) if i > 0 else 0
++            session_volume_ratio = volumes[i] / recent_vol_mean if recent_vol_mean > 0 else 1.0
++
++            entry_est = gap_top - gap_size * entry_pct if d == "bullish" else gap_bot + gap_size * entry_pct
++            fvg_fill_pct = (entry_est - gap_bot) / gap_size if gap_size > 0 else 0.5
++
++            bar_range = highs[i] - lows[i]
++            bar_body_ratio = abs(closes[i] - opens[i]) / bar_range if bar_range > 0 else 0.5
++
++            direction_sign = 1 if d == "bullish" else -1
++
++            # Context features
++            ctx = _compute_context_features(
++                i, df, atr[i], session_high, session_low, adr_20_vals[i], 
++                last_sweep_bar, last_entry_bar, session_open_price, et_h, 
++                session_volume_ratio, fvg_fill_pct, bar_body_ratio, silver_bullet_window, direction_sign
++            )
++
+             # Features for ML
+             features = {
+                 "atr": atr[i],
+                 "gap_size": gap_size,
+                 "volume_ratio": vol_ratio,
+-                "et_hour": et_hours[i],
++                "et_hour": et_h,
+                 "day_of_week": days_of_week[i],
+-                "signal_direction": d
+-            }
+-            
++                "signal_direction": d,
++                **ctx
++            }            
+             # ML Filter
+             if ml_filter:
+                 proba = ml_filter.predict_proba(features)
+@@ -213,15 +378,19 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
+                     fill_idx = idx; break
+             
+             if fill_idx != -1:
+-                res = simulate_trade(d, ent, tp, sl, highs, lows, closes, fill_idx, n)
++                res = simulate_trade(d, ent, tp, sl, highs, lows, closes, fill_idx, n, cost)
++                res['timestamp'] = timestamps[fill_idx]
++                res['direction'] = d
+                 trades.append(res)
+                 
+                 # Collect ML label
+                 features["label"] = 1 if res["pnl"] > 0 else 0
+                 ml_data.append(features)
+                 
+-                next_bar = fill_idx + 5
++                last_entry_bar = fill_idx
++                next_bar = fill_idx + res["bars_held"] + 1
+                 break
++
+     
+     if export_path and ml_data:
+         export_df = pd.DataFrame(ml_data)
+@@ -230,45 +399,65 @@ def run_backtest(df, blocked_hours, sl_mult, tp_mult, entry_pct, ml_filter=None,
+         export_df.to_csv(export_path, index=False)
+         print(f"Exported {len(ml_data)} trade setups to {export_path}")
+ 
+-    if not trades: return {"wr": 0, "pf": 0, "pnl": 0, "total": 0}
+-    pnl = [t["pnl"] for t in trades]
+-    wins = [p for p in pnl if p > 0]
+-    losses = [abs(p) for p in pnl if p <= 0]
+-    return {
+-        "wr": len(wins)/len(trades)*100,
+-        "pf": sum(wins)/sum(losses) if losses else 99,
+-        "pnl": sum(pnl),
+-        "total": len(trades)
+-    }
++    stats = {"wr": 0, "pf": 0, "pnl": 0, "total": 0}
++    if trades:
++        pnl = [t["pnl"] for t in trades]
++        wins = [p for p in pnl if p > 0]
++        losses = [abs(p) for p in pnl if p <= 0]
++        stats = {
++            "wr": len(wins)/len(trades)*100,
++            "pf": sum(wins)/sum(losses) if losses else 99,
++            "pnl": sum(pnl),
++            "total": len(trades)
++        }
++        
++    if return_trades:
++        return stats, trades
++    return stats
+ 
+ if __name__ == "__main__":
+     parser = argparse.ArgumentParser()
+     parser.add_argument("--export", action="store_true", help="Export trade metadata for ML training")
+     parser.add_argument("--meta-labeling", action="store_true", help="Apply ML meta-labeling filter")
+     parser.add_argument("--threshold", type=float, default=0.55, help="ML probability threshold")
++    parser.add_argument("--start", type=str, default=START_DATE, help="Start date (YYYY-MM-DD)")
++    parser.add_argument("--end", type=str, default=END_DATE, help="End date (YYYY-MM-DD)")
++    parser.add_argument("--cost", type=float, default=TRANSACTION_COST, help="Round-trip transaction cost")
++    parser.add_argument("--history", type=str, default=None, help="Export trade history to CSV")
+     args = parser.parse_args()
+ 
+     raw_df = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
+     df_p = prepare_data(raw_df)
+-    df = df_p[(df_p['timestamp'] >= START_DATE) & (df_p['timestamp'] <= END_DATE + " 23:59")].reset_index(drop=True)
++    df = df_p[(df_p['timestamp'] >= args.start) & (df_p['timestamp'] <= args.end + " 23:59")].reset_index(drop=True)
+     
+     blocked = {0, 1, 6, 8, 16, 17, 22, 23}
+     
++    if args.export and args.meta_labeling:
++        print("ERROR: --export and --meta-labeling cannot be used together. "
++              "Export generates unfiltered training labels; applying the ML filter "
++              "creates survivorship bias in the CSV. Run --export alone first.")
++        sys.exit(1)
++
+     ml_filter = None
+     if args.meta_labeling:
+         ml_filter = MetaLabelingFilter(MODEL_PATH, threshold=args.threshold)
+-    
++
+     export_path = "data/ml_training/tier2_meta_labeling.csv" if args.export else None
++    current_cost = args.cost
+     
+-    # We use Symmetric 5.0x SL and 5.0x TP as instructed
+-    res = run_backtest(df, blocked, 5.0, 5.0, 0.5, ml_filter=ml_filter, export_path=export_path)
++    res_dict, trades_list = run_backtest(df, blocked, 5.0, 5.0, 0.5, ml_filter=ml_filter, export_path=export_path, cost_override=current_cost, return_trades=True)
+     
++    if args.history:
++        history_df = pd.DataFrame(trades_list)
++        history_df.to_csv(args.history, index=False)
++        print(f"Exported {len(trades_list)} trade details to {args.history}")
++
+     print("\n" + "="*60 + "\n TIER 2 META-LABELING BACKTEST\n" + "="*60)
+     print(f"ML Filter: {'ENABLED' if args.meta_labeling else 'DISABLED'}")
+     if args.meta_labeling:
+         print(f"Threshold: {args.threshold}")
+-    print(f"Total Trades: {res['total']}")
+-    print(f"Win Rate:     {res['wr']:.2f}%")
+-    print(f"Profit Factor: {res['pf']:.2f}")
+-    print(f"Total P&L:    ${res['pnl']:.2f}")
++    print(f"Total Trades: {res_dict['total']}")
++    print(f"Win Rate:     {res_dict['wr']:.2f}%")
++    print(f"Profit Factor: {res_dict['pf']:.2f}")
++    print(f"Total P&L:    ${res_dict['pnl']:.2f}")
+     print("="*60)
+diff --git a/src/research/tier2_streaming_working.py b/src/research/tier2_streaming_working.py
+index 159086b..7ea4f4b 100755
+--- a/src/research/tier2_streaming_working.py
++++ b/src/research/tier2_streaming_working.py
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env python3
+ """
+ TIER 2 FVG Paper Trading - TradeStation HTTP Polling + SIM Order Placement
+-Configuration: SL5.0x_TP5.0x_Midpoint_H1Sweep
++Configuration: SL5.0x_TP5.0x_Midpoint_H1Sweep + ML Meta-Labeling Filter
+ 
+ Entry fires a bracket order on SIM account (entry + TP limit + SL stop).
+ The SIM account manages TP/SL fills. Local per-bar simulation is the
+@@ -11,13 +11,15 @@ authoritative P&L record and handles the time-stop (cancel bracket + flat close)
+ import asyncio
+ import logging
+ import sys
+-from dataclasses import dataclass, field
++from dataclasses import dataclass
+ from datetime import datetime, timedelta, timezone
+ from pathlib import Path
+ from typing import Optional
+ 
++import joblib
+ import numpy as np
+ import pandas as pd
++import pytz
+ import httpx
+ 
+ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+@@ -26,38 +28,44 @@ from src.data.auth_v3 import TradeStationAuthV3
+ from src.data.models import DollarBar
+ 
+ # Configuration (OPTIMIZED TIER 2)
+-TIER2_CONFIG = "SL5.0x_TP5.0x_Midpoint_H1Sweep"
++TIER2_CONFIG = "SL5.0x_TP5.0x_Midpoint_H1Sweep_MLFilter"
+ SL_MULTIPLIER = 5.0
+ TP_MULTIPLIER = 5.0
+ ENTRY_PCT = 0.5  # Midpoint entry
+ ATR_THRESHOLD = 0.5
+ MAX_GAP_DOLLARS = 60.0
+-MAX_HOLD_BARS = 120 # 2 Hours (matches final optimization)
++MAX_HOLD_BARS = 120  # 2 Hours (matches final optimization)
+ CONTRACTS_PER_TRADE = 1
+ 
+ # MNQ Specifications
+ MNQ_TICK_SIZE = 0.25
+ MNQ_POINT_VALUE = 20.0
+-MNQ_CONTRACT_VALUE = MNQ_TICK_SIZE * MNQ_POINT_VALUE  # $5/pt scaling for filters
+-MNQ_DOLLAR_VALUE = 2.0  # real MNQ: $2 per index point per contract
++MNQ_CONTRACT_VALUE = MNQ_TICK_SIZE * MNQ_POINT_VALUE  # $5/pt — gap-size dollar conversion (backtest-compatible)
++MNQ_DOLLAR_VALUE = 2.0  # $2 per index point — actual MNQ P&L scaling
+ 
+ # Transaction Costs
+ COMMISSION_PER_CONTRACT = 0.40
+ TRANSACTION_COST = COMMISSION_PER_CONTRACT * CONTRACTS_PER_TRADE * 2  # $0.80/roundtrip
+ 
++# ML Filter
++ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta_labeling_model.pkl"
++ML_THRESHOLD = 0.51
++
+ # TradeStation market data API
+ SYMBOL = "MNQM26"
+ BAR_INTERVAL = "1"
+ BAR_UNIT = "Minute"
+ BARS_BASE_URL = (f"https://api.tradestation.com/v3/marketdata/barcharts/{SYMBOL}"
+                  f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}")
+-HISTORY_HOURS = 48    # Increased to 48h to have enough data for H1 swing detection
++HISTORY_HOURS = 48  # Enough history for H1 swing detection
+ POLL_INTERVAL_SECONDS = 60
+ 
+ # TradeStation SIM order placement
+ SIM_ACCOUNT_ID = "SIM2797251F"
+ SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+ 
++ET_TZ = pytz.timezone('US/Eastern')
++
+ # Setup logging
+ log_dir = Path(__file__).parent.parent.parent / "logs"
+ log_dir.mkdir(exist_ok=True)
+@@ -73,6 +81,41 @@ logging.basicConfig(
+ logger = logging.getLogger(__name__)
+ 
+ 
++class MetaLabelingFilter:
++    """ML-based secondary filter that approves/rejects Tier 2 setups."""
++
++    FEATURE_COLS = [
++        'atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week', 'signal_direction',
++        'session_displacement', 'adr_pct_used', 'fvg_to_sweep_bars', 'prior_setup_proximity', 'h1_trend_slope',
++        'sin_hour', 'cos_hour', 'session_volume_ratio', 'fvg_fill_pct', 'bar_body_ratio',
++        'sweep_window_vol', 'slope_direction_match'
++    ]
++
++    def __init__(self, model_path: Path, threshold: float = ML_THRESHOLD):
++        self.threshold = threshold
++        self.model = None
++        if model_path.exists():
++            try:
++                self.model = joblib.load(model_path)
++                logger.info(f"ML filter loaded from {model_path} (threshold={threshold})")
++            except Exception as e:
++                logger.warning(f"ML model load failed: {e} — falling back to pass-through")
++        else:
++            logger.warning(f"ML model not found at {model_path} — falling back to pass-through")
++
++    def predict_proba(self, features: dict) -> float:
++        """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
++        if self.model is None:
++            return 1.0
++        try:
++            df_feat = pd.DataFrame([features])[self.FEATURE_COLS].copy()
++            df_feat['signal_direction'] = 1 if df_feat['signal_direction'].iloc[0] == "bullish" else 0
++            return float(self.model.predict_proba(df_feat)[0, 1])
++        except Exception as e:
++            logger.warning(f"ML inference failed: {e} — returning pass-through")
++            return 1.0
++
++
+ @dataclass
+ class ActiveTrade:
+     bar_index: int
+@@ -110,17 +153,30 @@ class Tier2StreamingTrader:
+         self._last_processed_timestamp: Optional[datetime] = None
+         self.active_trade: Optional[ActiveTrade] = None
+         self.completed_trades: list[CompletedTrade] = []
+-        self._traded_setups: set[tuple[int, str]] = set()
+         self._is_backfill: bool = True
+         self.session_start_time: Optional[datetime] = None
+-        
+-        # Tier 2 State
+-        self.h1_bars: pd.DataFrame = pd.DataFrame()
+-        self.unmitigated_sh: list[float] = []
+-        self.unmitigated_sl: list[float] = []
+-        self.last_h1_sweep_time: Optional[datetime] = None
++
++        # ML Filter
++        self.ml_filter = MetaLabelingFilter(ML_MODEL_PATH)
++
++        # H1 sweep state — flags persist until 6-hour expiry window lapses
+         self.h1_bullish_sweep_active = False
+         self.h1_bearish_sweep_active = False
++        _epoch = datetime.min.replace(tzinfo=timezone.utc)
++        self._bullish_sweep_expires: datetime = _epoch
++        self._bearish_sweep_expires: datetime = _epoch
++
++        # Feature enrichment state
++        self._last_entry_bar: int = -120
++        self._bullish_sweep_bar: int = -20
++        self._bearish_sweep_bar: int = -20
++        self._session_open_price: float = np.nan
++        self._session_high: float = float('-inf')
++        self._session_low: float = float('inf')
++        self._daily_ranges: list[float] = [] # max 20
++        self._h1_atr: float = 0.0
++        self._h1_slope: float = 0.0
++        self._current_day: Optional[datetime.date] = None
+ 
+     async def initialize(self):
+         logger.info("=" * 70)
+@@ -130,6 +186,7 @@ class Tier2StreamingTrader:
+         logger.info(f"Symbol: {SYMBOL}")
+         logger.info(f"Max hold: {MAX_HOLD_BARS} bars | SL/TP mult: {SL_MULTIPLIER}x")
+         logger.info(f"Entry Level: {ENTRY_PCT*100}% (Mean Threshold)")
++        logger.info(f"ML Filter: {'ACTIVE' if self.ml_filter.model else 'PASS-THROUGH'} | threshold={ML_THRESHOLD}")
+         logger.info("=" * 70)
+ 
+         self.auth = TradeStationAuthV3.from_file('.access_token')
+@@ -174,7 +231,7 @@ class Tier2StreamingTrader:
+             headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+             since = self._last_processed_timestamp or (datetime.now(timezone.utc) - timedelta(hours=HISTORY_HOURS))
+             url = f"{BARS_BASE_URL}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+-            
++
+             response = await self.client.get(url, headers=headers)
+             if response.status_code != 200: return
+ 
+@@ -183,14 +240,32 @@ class Tier2StreamingTrader:
+             now_utc = datetime.now(timezone.utc)
+             for bar_data in bars_data:
+                 bar = self._parse_bar(bar_data)
+-                if bar and bar.timestamp <= now_utc and (not self._last_processed_timestamp or bar.timestamp > self._last_processed_timestamp):
++                if bar and bar.timestamp <= now_utc and (
++                    not self._last_processed_timestamp or bar.timestamp > self._last_processed_timestamp
++                ):
+                     self.dollar_bars.append(bar)
+                     self._last_processed_timestamp = bar.timestamp
+                     new_bars.append(bar)
++
++                    # Update session stats
++                    bar_et = bar.timestamp.astimezone(ET_TZ)
++                    if self._current_day != bar_et.date():
++                        if self._current_day is not None:
++                            # Day closed, record range for ADR
++                            self._daily_ranges.append(self._session_high - self._session_low)
++                            if len(self._daily_ranges) > 20: self._daily_ranges.pop(0)
++                        
++                        self._current_day = bar_et.date()
++                        self._session_open_price = np.nan
++                        self._session_high, self._session_low = bar.high, bar.low
++                    else:
++                        self._session_high = max(self._session_high, bar.high)
++                        self._session_low = min(self._session_low, bar.low)
+                     
+-                    # Update H1 structure and detect sweeps
++                    if np.isnan(self._session_open_price) and bar_et.hour >= 6:
++                        self._session_open_price = bar.open
++
+                     self._update_h1_structure()
+-                    
+                     await self._advance_active_trade(bar)
+                     await self._detect_and_enter(bar, is_backfill=self._is_backfill)
+ 
+@@ -202,108 +277,269 @@ class Tier2StreamingTrader:
+ 
+     def _parse_bar(self, d: dict) -> Optional[DollarBar]:
+         try:
++            high_val = float(d["High"])
++            low_val = float(d["Low"])
++            volume = int(d.get("TotalVolume", 0))
++            # Calculate a realistic notional value to pass Pydantic validation
++            notional = max(((high_val + low_val) / 2) * volume * MNQ_POINT_VALUE, 0.01)
++
+             return DollarBar(
+                 timestamp=datetime.fromisoformat(d["TimeStamp"].replace('Z', '+00:00')),
+-                open=float(d["Open"]), high=float(d["High"]), low=float(d["Low"]),
+-                close=float(d["Close"]), volume=int(d.get("TotalVolume", 0)),
+-                notional_value=0, bar_num=len(self.dollar_bars)
++                open=float(d["Open"]), high=high_val, low=low_val,
++                close=float(d["Close"]), volume=volume,
++                notional_value=notional, bar_num=len(self.dollar_bars)
+             )
+-        except: return None
++        except Exception as e:
++            logger.warning(f"⚠️ Bar parse failed: {e}")
++            return None
+ 
+     def _update_h1_structure(self):
+-        """Resample 1m bars to H1 and detect liquidity sweeps."""
++        """Resample 1m bars to H1 and detect liquidity sweeps in the last completed H1 bar."""
+         if not self.dollar_bars: return
+-        
++
+         df = pd.DataFrame([vars(b) for b in self.dollar_bars])
+         df['timestamp'] = pd.to_datetime(df['timestamp'])
+         h1 = df.set_index('timestamp').resample('1h').agg({
+             'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'
+         }).dropna().reset_index()
++
++        # Need at least 6 completed H1 bars plus the currently forming bar
++        if len(h1) < 7: return
++
++        # Swing detection on completed bars only (exclude the forming h1.iloc[-1])
++        completed = h1.iloc[:-1].reset_index(drop=True)
++
++        # Calculate H1 ATR and Slope
++        tr = np.maximum(completed['high'] - completed['low'], 
++                        np.maximum(np.abs(completed['high'] - completed['close'].shift(1)), 
++                                  np.abs(completed['low'] - completed['close'].shift(1))))
++        h1_atr_val = tr.rolling(20, min_periods=5).mean().iloc[-1]
++        self._h1_atr = float(h1_atr_val) if not np.isnan(h1_atr_val) else 0.0
+         
+-        if len(h1) < 5: return
+-        
+-        # Detect Swing Points (window=2)
++        if len(completed) >= 6 and self._h1_atr > 0:
++            closes = completed['close'].values[-6:]
++            slope = np.polyfit(range(6), closes, 1)[0]
++            self._h1_slope = slope / self._h1_atr
++        else:
++            self._h1_slope = 0.0
++
+         sh, sl = [], []
+-        highs, lows = h1['high'].values, h1['low'].values
+-        for i in range(2, len(h1) - 2):
++        highs, lows = completed['high'].values, completed['low'].values
++        for i in range(2, len(completed) - 2):
+             if highs[i] > highs[i-1] and highs[i] > highs[i-2] and highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+-                sh.append((h1.loc[i, 'timestamp'], highs[i]))
++                sh.append((completed.loc[i, 'timestamp'], highs[i]))
+             if lows[i] < lows[i-1] and lows[i] < lows[i-2] and lows[i] < lows[i+1] and lows[i] < lows[i+2]:
+-                sl.append((h1.loc[i, 'timestamp'], lows[i]))
+-        
+-        # Detect Sweeps in the LATEST H1 bar
+-        last_h1 = h1.iloc[-1]
+-        self.h1_bullish_sweep_active = False
+-        self.h1_bearish_sweep_active = False
+-        
+-        # A sweep mitigates an unmitigated level confirmed before this bar
+-        # For simplicity in live, we check if current H1 High/Low pierces any SH/SL 
+-        # that hasn't been pierced by previous H1 closes.
++                sl.append((completed.loc[i, 'timestamp'], lows[i]))
++
++        # Check the last COMPLETED H1 bar for sweeps (not the still-forming bar)
++        last = completed.iloc[-1]
++        now_utc = datetime.now(timezone.utc)
++
++        new_bullish_sweep = False
++        new_bearish_sweep = False
++
+         for t, val in sh:
+-            if t < last_h1['timestamp'] - timedelta(hours=2): # confirmed
+-                if last_h1['high'] > val and last_h1['close'] < val:
+-                    self.h1_bearish_sweep_active = True
+-                    logger.info(f"🎯 H1 BEARISH SWEEP detected at {val}")
+-        
+-        for t, val in sl:
+-            if t < last_h1['timestamp'] - timedelta(hours=2): # confirmed
+-                if last_h1['low'] < val and last_h1['close'] > val:
+-                    self.h1_bullish_sweep_active = True
+-                    logger.info(f"🎯 H1 BULLISH SWEEP detected at {val}")
++            if t < last['timestamp'] - timedelta(hours=2):  # swing must be confirmed
++                if last['high'] > val and last['close'] < val:
++                    new_bearish_sweep = True
++                    self._bearish_sweep_bar = max(0, len(self.dollar_bars) - 60)
++                    logger.info(f"🎯 H1 BEARISH SWEEP detected at {val:.2f}")
+ 
+-    async def _advance_active_trade(self, bar: DollarBar):
+-        if not self.active_trade: return
++        for t, val in sl:
++            if t < last['timestamp'] - timedelta(hours=2):
++                if last['low'] < val and last['close'] > val:
++                    new_bullish_sweep = True
++                    self._bullish_sweep_bar = max(0, len(self.dollar_bars) - 60)
++                    logger.info(f"🎯 H1 BULLISH SWEEP detected at {val:.2f}")
++
++        # Sweep stays active for 6 H1 bars after detection; expires otherwise
++        sweep_window = timedelta(hours=6)
++        last_ts = last['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc)
++        if new_bullish_sweep:
++            self.h1_bullish_sweep_active = True
++            self._bullish_sweep_expires = last_ts + sweep_window
++        elif now_utc > self._bullish_sweep_expires:
++            self.h1_bullish_sweep_active = False
++
++        if new_bearish_sweep:
++            self.h1_bearish_sweep_active = True
++            self._bearish_sweep_expires = last_ts + sweep_window
++        elif now_utc > self._bearish_sweep_expires:
++            self.h1_bearish_sweep_active = False
++
++    async def _advance_active_trade(self, bar: DollarBar) -> bool:
++        if not self.active_trade: return False
+         t = self.active_trade
+         t.bars_held += 1
++        closed = False
+         if t.direction == "LONG":
+-            if bar.low <= t.sl_price: await self._close_active_trade(bar, t.sl_price, "sl")
+-            elif bar.high >= t.tp_price: await self._close_active_trade(bar, t.tp_price, "tp")
++            if bar.low <= t.sl_price:
++                await self._close_active_trade(bar, t.sl_price, "sl")
++                closed = True
++            elif bar.high >= t.tp_price:
++                await self._close_active_trade(bar, t.tp_price, "tp")
++                closed = True
+         else:
+-            if bar.high >= t.sl_price: await self._close_active_trade(bar, t.sl_price, "sl")
+-            elif bar.low <= t.tp_price: await self._close_active_trade(bar, t.tp_price, "tp")
+-        if t.bars_held >= MAX_HOLD_BARS: await self._close_active_trade(bar, bar.close, "time")
++            if bar.high >= t.sl_price:
++                await self._close_active_trade(bar, t.sl_price, "sl")
++                closed = True
++            elif bar.low <= t.tp_price:
++                await self._close_active_trade(bar, t.tp_price, "tp")
++                closed = True
++        # Guard: re-check self.active_trade in case close was already called
++        if not closed and self.active_trade and t.bars_held >= MAX_HOLD_BARS:
++            await self._close_active_trade(bar, bar.close, "time")
++            closed = True
++        return closed
+ 
+     async def _close_active_trade(self, bar: DollarBar, price: float, reason: str):
+         t = self.active_trade
+         pnl = ((price - t.entry_price) if t.direction == "LONG" else (t.entry_price - price)) * MNQ_DOLLAR_VALUE - TRANSACTION_COST
+-        self.completed_trades.append(CompletedTrade(t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl))
++        self.completed_trades.append(CompletedTrade(
++            t.entry_time, bar.timestamp, t.direction, t.entry_price, price, reason, t.bars_held, pnl
++        ))
+         self.active_trade = None
+         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f}")
+ 
+     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
+         if self.active_trade: return
+         bars = self.dollar_bars
+-        if len(bars) < 3: return
+-        
+-        # Confluence check: H1 Sweep Active
++        if len(bars) < 20: return  # need 20 bars for ATR and volume features
++
+         if self.h1_bullish_sweep_active:
+             fvg = self._detect_fvg(bars, bullish=True)
+-            if fvg: await self._enter_trade(fvg, bar, len(bars)-1, is_backfill)
++            if fvg:
++                features = self._extract_features(bars, bar, fvg, "bullish")
++                proba = self.ml_filter.predict_proba(features)
++                if proba >= ML_THRESHOLD:
++                    logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
++                    await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
++                else:
++                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
+         elif self.h1_bearish_sweep_active:
+             fvg = self._detect_fvg(bars, bullish=False)
+-            if fvg: await self._enter_trade(fvg, bar, len(bars)-1, is_backfill)
++            if fvg:
++                features = self._extract_features(bars, bar, fvg, "bearish")
++                proba = self.ml_filter.predict_proba(features)
++                if proba >= ML_THRESHOLD:
++                    logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
++                    await self._enter_trade(fvg, bar, len(bars) - 1, is_backfill)
++                else:
++                    logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {ML_THRESHOLD}")
++
++    def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
++        """Extract inference features matching the training data schema (raw index points)."""
++        assert direction in ("bullish", "bearish"), f"Invalid direction: {direction!r}"
++        atr = self._calculate_atr(bars)
++
++        # gap_size in raw index points — matches training CSV (not dollar-scaled)
++        gap_size = fvg["top"] - fvg["bottom"]
++
++        # Volume ratio: directional volume balance over last 20 bars
++        recent = bars[-20:]
++        up_vol = sum(b.volume for b in recent if b.close >= b.open)
++        dn_vol = sum(b.volume for b in recent if b.close < b.open)
++        if direction == "bullish":
++            vol_ratio = up_vol / dn_vol if dn_vol > 0 else 99.0
++        else:
++            vol_ratio = dn_vol / up_vol if up_vol > 0 else 99.0
+ 
+-    def _detect_fvg(self, bars, bullish: bool) -> Optional[dict]:
++        bar_et = bar.timestamp.astimezone(ET_TZ)
++        
++        # New Context Features
++        session_displacement = (bar.close - self._session_open_price) / atr if not np.isnan(self._session_open_price) and atr > 0 else 0.0
++        
++        adr_20 = np.mean(self._daily_ranges) if self._daily_ranges else 0.0
++        adr_pct_used = np.clip((self._session_high - self._session_low) / adr_20, 0, 2) if adr_20 > 0 else 0.5
++        
++        current_bar_idx = len(self.dollar_bars)
++        sweep_bar = self._bullish_sweep_bar if direction == "bullish" else self._bearish_sweep_bar
++        fvg_to_sweep_bars = min(current_bar_idx - sweep_bar, 20)
++        prior_setup_proximity = min(current_bar_idx - self._last_entry_bar, 120)
++
++        # New features
++        et_hour = bar_et.hour
++        sin_hour = np.sin(2 * np.pi * et_hour / 24)
++        cos_hour = np.cos(2 * np.pi * et_hour / 24)
++        
++        recent_vol_mean = np.mean([b.volume for b in recent]) if recent else 0
++        session_volume_ratio = bar.volume / recent_vol_mean if recent_vol_mean > 0 else 1.0
++        
++        entry_est = fvg["top"] - gap_size * ENTRY_PCT if direction == "bullish" else fvg["bottom"] + gap_size * ENTRY_PCT
++        fvg_fill_pct = (entry_est - fvg["bottom"]) / gap_size if gap_size > 0 else 0.5
++        
++        bar_range = bar.high - bar.low
++        bar_body_ratio = abs(bar.close - bar.open) / bar_range if bar_range > 0 else 0.5
++        
++        h, m = bar_et.hour, bar_et.minute
++        silver_bullet_window = 1 if (h == 3) or (h == 4 and m == 0) or (h == 9 and m >= 30) or (h == 10) else 0
++        
++        sweep_window_vol = silver_bullet_window * session_volume_ratio
++        
++        direction_sign = 1 if direction == "bullish" else -1
++        slope_direction_match = 1 if np.sign(self._h1_slope) == direction_sign else 0
++
++        features = {
++            "atr": atr,
++            "gap_size": gap_size,
++            "volume_ratio": vol_ratio,
++            "et_hour": et_hour,
++            "day_of_week": bar_et.weekday(),
++            "signal_direction": direction,
++            "session_displacement": session_displacement,
++            "adr_pct_used": adr_pct_used,
++            "fvg_to_sweep_bars": fvg_to_sweep_bars,
++            "prior_setup_proximity": prior_setup_proximity,
++            "h1_trend_slope": self._h1_slope,
++            "sin_hour": sin_hour,
++            "cos_hour": cos_hour,
++            "session_volume_ratio": session_volume_ratio,
++            "fvg_fill_pct": fvg_fill_pct,
++            "bar_body_ratio": bar_body_ratio,
++            "sweep_window_vol": sweep_window_vol,
++            "slope_direction_match": slope_direction_match
++        }
++        
++        # Log all 18 feature values at DEBUG level
++        logger.debug(f"📊 Feature Vector: ATR={atr:.2f}, Gap={gap_size:.2f}, VolRatio={vol_ratio:.2f}, Slope={self._h1_slope:.4f}, "
++                     f"ADR_Pct={adr_pct_used:.2f}, SinH={sin_hour:.2f}, CosH={cos_hour:.2f}, SessVol={session_volume_ratio:.2f}, "
++                     f"FVG_Fill={fvg_fill_pct:.2f}, BodyRatio={bar_body_ratio:.2f}, SweepVol={sweep_window_vol:.2f}, "
++                     f"SlopeMatch={slope_direction_match}")
++        logger.debug(f"Full Features: {features}")
++        return features
++
++    def _detect_fvg(self, bars: list, bullish: bool) -> Optional[dict]:
+         c1, c2, c3 = bars[-3], bars[-2], bars[-1]
+         if bullish:
+-            if not (c1.close > c3.open and c2.close > c2.open): return None
++            # True FVG: candle 1 high strictly below candle 3 low (price void)
++            if not (c1.high < c3.low and c2.close > c2.open): return None
+             top, bot = c3.low, c1.high
+         else:
+-            if not (c1.close < c3.open and c2.close < c2.open): return None
++            if not (c1.low > c3.high and c2.close < c2.open): return None
+             top, bot = c1.low, c3.high
+-        
++
+         if top <= bot: return None
+-        gap_size = (top - bot) * MNQ_CONTRACT_VALUE
+-        if gap_size < ATR_THRESHOLD * self._calculate_atr(bars) or gap_size > MAX_GAP_DOLLARS: return None
+-        
+-        return {"direction": "bullish" if bullish else "bearish", "top": top, "bottom": bot, "gap_size": gap_size}
++        gap_pts = top - bot
++        # ATR filter in raw points; dollar ceiling uses MNQ_CONTRACT_VALUE conversion
++        if gap_pts < ATR_THRESHOLD * self._calculate_atr(bars): return None
++        if gap_pts * MNQ_CONTRACT_VALUE > MAX_GAP_DOLLARS: return None
++
++        return {"direction": "bullish" if bullish else "bearish", "top": top, "bottom": bot}
+ 
+-    def _calculate_atr(self, bars):
++    def _calculate_atr(self, bars: list) -> float:
++        """20-bar mean True Range in raw index points."""
+         if len(bars) < 20: return 10.0
+-        tr = [max(b.high-b.low, abs(b.high-bars[i-1].close), abs(b.low-bars[i-1].close)) for i, b in enumerate(bars[-20:]) if i > 0]
+-        return sum(tr)/len(tr)
++        sliced = bars[-20:]
++        tr = [
++            max(b.high - b.low, abs(b.high - sliced[i-1].close), abs(b.low - sliced[i-1].close))
++            for i, b in enumerate(sliced) if i > 0
++        ]
++        return sum(tr) / len(tr)
++
++    async def _enter_trade(self, fvg: dict, bar: DollarBar, idx: int, is_backfill: bool):
++        self._last_entry_bar = len(self.dollar_bars)  # track even during backfill for feature consistency
++        if is_backfill: return  # never submit orders against historical replay bars
+ 
+-    async def _enter_trade(self, fvg, bar, idx, is_backfill):
+         direction = "LONG" if fvg["direction"] == "bullish" else "SHORT"
+         gap_size = fvg["top"] - fvg["bottom"]
+         if direction == "LONG":
+@@ -312,13 +548,14 @@ class Tier2StreamingTrader:
+         else:
+             ent = fvg["bottom"] + gap_size * ENTRY_PCT
+             tp, sl = ent - gap_size * TP_MULTIPLIER, ent + gap_size * SL_MULTIPLIER
+-            
++
+         self.active_trade = ActiveTrade(idx, bar.timestamp, direction, ent, tp, sl)
+         logger.info(f"🔔 TIER 2 ENTRY: {direction} at ${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")
+ 
+     def _print_final_report(self):
+         logger.info("Tier 2 Paper Trading Session Ended.")
+ 
++
+ async def main():
+     trader = Tier2StreamingTrader()
+     await trader.initialize()
+diff --git a/test_doji.py b/test_doji.py
+new file mode 100644
+index 0000000..c0bfb8c
+--- /dev/null
++++ b/test_doji.py
+@@ -0,0 +1,58 @@
++import sys
++import asyncio
++from datetime import datetime, timezone
++import pandas as pd
++from pathlib import Path
++sys.path.insert(0, str(Path(__file__).parent.parent))
++
++from src.research.tier2_streaming_working import MetaLabelingFilter, Tier2StreamingTrader, DollarBar, ML_MODEL_PATH
++from sklearn.base import ClassifierMixin, BaseEstimator
++
++class XGBClassifierWrapper(BaseEstimator, ClassifierMixin):
++    def __init__(self, model):
++        self.model = model
++        self.classes_ = model.classes_
++        
++    def fit(self, X, y=None):
++        return self
++        
++    def predict(self, X):
++        return self.model.predict(X)
++        
++    def predict_proba(self, X):
++        return self.model.predict_proba(X)
++
++    def __sklearn_tags__(self):
++        tags = super().__sklearn_tags__()
++        tags.estimator_type = "classifier"
++        return tags
++
++async def test_doji():
++    trader = Tier2StreamingTrader()
++    
++    # Mock data to reach extraction
++    trader.dollar_bars = [
++        DollarBar(timestamp=datetime.now(timezone.utc), open=100.0, high=101.0, low=99.0, close=100.5, volume=10, up_volume=5, down_volume=5, up_ticks=5, down_ticks=5, total_ticks=10, notional_value=1000)
++        for _ in range(20)
++    ]
++    
++    # Create doji
++    doji_bar = DollarBar(timestamp=datetime.now(timezone.utc), open=100.0, high=100.0, low=100.0, close=100.0, volume=10, up_volume=5, down_volume=5, up_ticks=5, down_ticks=5, total_ticks=10, notional_value=1000)
++    
++    trader._daily_ranges = [100.0, 100.0]
++    trader._session_open_price = 100.0
++    trader._session_high = 110.0
++    trader._session_low = 90.0
++    trader._h1_slope = 0.5
++    
++    fvg = {"top": 105.0, "bottom": 102.0}
++    
++    try:
++        features = trader._extract_features(trader.dollar_bars, doji_bar, fvg, "bullish")
++        print("SUCCESS! Extracted features for doji bar:")
++        print(f"bar_body_ratio = {features['bar_body_ratio']}")
++    except Exception as e:
++        print(f"FAILED! {type(e).__name__}: {e}")
++
++if __name__ == "__main__":
++    asyncio.run(test_doji())
+\ No newline at end of file

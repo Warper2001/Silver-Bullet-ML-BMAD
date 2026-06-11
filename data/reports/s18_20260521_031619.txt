@@ -1,0 +1,35 @@
+======================================================================
+S18 H4·M15·M15·g0.25 Holdout Test — Program C Phase 2a
+Pre-registration SHA: 9e61012
+Pre-registration doc: _bmad-output/preregistration_h4_m15_m15_g025.md
+Holdout: data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv
+======================================================================
+
+── Architecture (frozen) ────────────────────────────────────────────
+  Sweep: H4 (4-hour) liquidity sweep, expires 24h after sweep bar
+  Confirm: M15 CHoCH (close < swing_low − 0.3×M15_ATR)
+  Entry: M15 bearish FVG, midpoint entry
+  MIN_GAP_ATR_RATIO = 0.25  (Phase 1 was 0.15)
+  MAX_HOLD = 180 min  MAX_PENDING = 240 min
+
+── S18 Results ──────────────────────────────────────────────────────
+  PF              : 1.3121
+  Trade count     : 2
+  Win rate        : 50.0%
+  Net P&L (1x)    : $83.50
+  Avg win         : $351.00
+  Avg loss        : $-267.50
+
+── Comparison (pre-committed) ───────────────────────────────────────
+  S12 p90 random baseline : 1.1350
+  S18 in-sample PF (2025) : 1.6221  (N=41)
+  Minimum N for verdict   : 10
+
+── S18 Verdict (pre-committed decision rule) ────────────────────────
+  Verdict: insufficient_sample
+  N=2 < 10 minimum. Result is directional signal only.
+  Do NOT make architectural decisions based on this result alone.
+  Consider pre-registering H4·M15·M15·g0.20 (N=49 in-sample) for
+  a higher-frequency holdout test before concluding.
+
+======================================================================

@@ -1,0 +1,17 @@
+[Unit]
+Description=MNQ/ES Statistical Arbitrage Combine Trader
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/stat_arb_bot.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/stat_arb_bot.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/stat_arb_bot.log
+
+[Install]
+WantedBy=multi-user.target

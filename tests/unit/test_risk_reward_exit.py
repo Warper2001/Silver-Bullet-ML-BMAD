@@ -178,8 +178,8 @@ class TestRiskRewardExit:
         assert exit_order.exit_reason == "Take profit"
         assert exit_order.quantity == 3
         assert exit_order.exit_price == 11870.0
-        # P&L = (11870 - 11850) * 0.50 * 3 = 20 * 0.50 * 3 = $30
-        assert exit_order.pnl == pytest.approx(30.0)
+        # P&L = (11870 - 11850) * 2.0 * 3 = 20 * 2.0 * 3 = $120
+        assert exit_order.pnl == pytest.approx(120.0)
         assert exit_order.rr_ratio == pytest.approx(2.0)
 
     def test_check_exit_stop_loss_triggered(self, position, rr_exit):
@@ -200,8 +200,8 @@ class TestRiskRewardExit:
         assert exit_order.exit_type == "full"
         assert exit_order.exit_reason == "Stop loss"
         assert exit_order.exit_price == 11840.0
-        # P&L = (11840 - 11850) * 0.50 * 3 = -10 * 0.50 * 3 = -$15
-        assert exit_order.pnl == pytest.approx(-15.0)
+        # P&L = (11840 - 11850) * 2.0 * 3 = -10 * 2.0 * 3 = -$60
+        assert exit_order.pnl == pytest.approx(-60.0)
         assert exit_order.rr_ratio == -1.0
 
     def test_stop_loss_priority_over_take_profit(self, position, rr_exit):
@@ -315,8 +315,8 @@ class TestRiskRewardExit:
 
         assert exit_order is not None
         assert exit_order.exit_reason == "Take profit"
-        # P&L = (11850 - 11830) * 0.50 * 2 = 20 * 0.50 * 2 = $20
-        assert exit_order.pnl == pytest.approx(20.0)
+        # P&L = (11850 - 11830) * 2.0 * 2 = 20 * 2.0 * 2 = $80
+        assert exit_order.pnl == pytest.approx(80.0)
 
     def test_short_position_stop_loss(self, ensemble_signal):
         """Test stop loss for short position."""
@@ -366,8 +366,8 @@ class TestRiskRewardExit:
 
         assert exit_order is not None
         assert exit_order.exit_reason == "Stop loss"
-        # P&L = (11850 - 11860) * 0.50 * 2 = -10 * 0.50 * 2 = -$10
-        assert exit_order.pnl == pytest.approx(-10.0)
+        # P&L = (11850 - 11860) * 2.0 * 2 = -10 * 2.0 * 2 = -$40
+        assert exit_order.pnl == pytest.approx(-40.0)
         assert exit_order.rr_ratio == -1.0
 
     def test_partial_position_rr_exit(self, position, rr_exit):
@@ -391,5 +391,5 @@ class TestRiskRewardExit:
         # Should close remaining quantity (2), not original (3)
         assert exit_order is not None
         assert exit_order.quantity == 2
-        # P&L = (11870 - 11850) * 0.50 * 2 = 20 * 0.50 * 2 = $20
-        assert exit_order.pnl == pytest.approx(20.0)
+        # P&L = (11870 - 11850) * 2.0 * 2 = 20 * 2.0 * 2 = $80
+        assert exit_order.pnl == pytest.approx(80.0)

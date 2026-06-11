@@ -55,7 +55,7 @@ class S27SqueezeTrader:
         self.kc_mult  = 1.5
         self.sl_mult  = 2.0
         self.tp_mult  = 4.0
-        self.ml_thresh = 0.56
+        self.ml_thresh = 0.76
         self.max_hold  = 60
 
         self.bars      = []

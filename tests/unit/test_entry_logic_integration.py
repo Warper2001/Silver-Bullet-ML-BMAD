@@ -408,4 +408,4 @@ class TestEntryLogic:
         assert trade_order.entry_price == 11850.0
         assert trade_order.stop_loss == 11860.0  # Above entry for short
         assert trade_order.take_profit == 11830.0  # Below entry for short
-        assert trade_order.notional_value() == pytest.approx(11850.0 * 0.50 * 4, rel=0.01)
+        assert trade_order.notional_value() == pytest.approx(11850.0 * 2.0 * 4, rel=0.01)

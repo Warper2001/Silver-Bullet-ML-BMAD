@@ -1,0 +1,57 @@
+================================================================================
+S21 H1+M1 Gap Filter Calibration — Program C Phase 2b
+Data: data/processed/dollar_bars/1_minute/mnq_1min_2025.csv
+Bars: 289,230  (2025-01-01 → 2025-12-31)
+Architecture: H1 sweep + M1 entry (fixed)  |  8 combinations
+Baseline: H1·NoConf·M1·g0.15 = S12 pre-cutoff (PF≈1.03, N≈210)
+Pre-cutoff only — NO holdout access
+================================================================================
+
+Combination                    PF     N    WR%  Sharpe      t     IR  DSR
+-------------------------------------------------------------------------
+H1·NoConf·M1·g0.15         0.8844   412   44.4   -1.02  -1.02  17.95    
+H1·NoConf·M1·g0.20         0.9545   254   46.9   -0.30  -0.30  15.21    
+H1·NoConf·M1·g0.25         0.9463   172   44.8   -0.29  -0.29  12.41    
+H1·NoConf·M1·g0.30         0.7812   126   42.9   -1.10  -1.09   8.77    
+H1·M15·M1·g0.15            0.9382   242   45.5   -0.40  -0.40  14.60    
+H1·M15·M1·g0.20            1.0842   153   47.1    0.41   0.41  13.41    
+H1·M15·M1·g0.25            1.1656   109   47.7    0.66   0.65  12.17    
+H1·M15·M1·g0.30            1.0065    84   45.2    0.02   0.02   9.22    
+
+DSR * = t > 2.66 (Bonferroni alpha/8)  |  IR = PF × √N (information-ratio proxy)
+
+── Dose-Response: PF and N by gap_ratio ────────────────────────────────
+
+  H1·NoConf·M1:
+  gap_ratio      PF     N     IR  ~holdout N   trend
+       0.15  0.8844   412  17.95      ~107.1        
+       0.20  0.9545   254  15.21       ~66.0       ↑
+       0.25  0.9463   172  12.41       ~44.7       ↓
+       0.30  0.7812   126   8.77       ~32.8       ↓
+
+  H1·M15·M1:
+  gap_ratio      PF     N     IR  ~holdout N   trend
+       0.15  0.9382   242  14.60       ~62.9        
+       0.20  1.0842   153  13.41       ~39.8       ↑
+       0.25  1.1656   109  12.17       ~28.3       ↑
+       0.30  1.0065    84   9.22       ~21.8       ↓
+
+── Pre-Registration Candidate ──────────────────────────────────────────
+
+  PRE-REGISTRATION CANDIDATE: H1·NoConf·M1·g0.15
+    PF            = 0.8844
+    N (in-sample) = 412
+    IR            = 17.95  (highest PF×√N with N≥40)
+    WR            = 44.4%
+    DSR           = no (screening only)
+    Expected holdout N ≈ 107.1 trades (PASS ≥10)
+
+    Suggested holdout hypothesis: PF > 1.1350 (S12 p90 random baseline)
+    Suggested pre-registration:   _bmad-output/preregistration_h1-noconf-m1-g0p15.md
+
+  Runner-up candidates (N ≥ 40, sorted by IR):
+    H1·NoConf·M1·g0.20          PF=0.9545  N=254  IR=15.21  ~holdout N≈66.0
+    H1·M15·M1·g0.15             PF=0.9382  N=242  IR=14.60  ~holdout N≈62.9
+    H1·M15·M1·g0.20             PF=1.0842  N=153  IR=13.41  ~holdout N≈39.8
+
+================================================================================

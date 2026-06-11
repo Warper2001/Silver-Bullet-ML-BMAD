@@ -155,9 +155,9 @@ class TestTradeOrderModel:
             position_size=3
         )
 
-        # MNQ multiplier is $0.50 per point
-        # 11850 * $0.50 * 3 = $17,775
-        assert order.notional_value() == 17775.0
+        # MNQ multiplier is $2.00 per point
+        # 11850 * $2.00 * 3 = $71,100
+        assert order.notional_value() == 71100.0
 
     def test_risk_per_contract_calculation(self):
         """Test risk per contract calculation helper method."""

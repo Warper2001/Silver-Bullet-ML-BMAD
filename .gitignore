@@ -160,3 +160,4 @@ auth_url.txt
 data/historical/
 *.json
 *.json
+.projectx_api_key

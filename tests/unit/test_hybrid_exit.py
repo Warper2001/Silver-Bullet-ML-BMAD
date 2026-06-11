@@ -136,8 +136,8 @@ class TestHybridExit:
         # 4 * 0.50 = 2 contracts
         assert exit_order.quantity == 2
         assert exit_order.rr_ratio == 1.5
-        # P&L = (11865 - 11850) * 0.50 * 2 = 15 * 0.50 * 2 = $15
-        assert exit_order.pnl == pytest.approx(15.0)
+        # P&L = (11865 - 11850) * 2.0 * 2 = 15 * 2.0 * 2 = $60
+        assert exit_order.pnl == pytest.approx(60.0)
 
     def test_check_exit_partial_above_level(self, position, hybrid_exit):
         """Test partial exit triggered when above 1.5R."""
@@ -204,8 +204,8 @@ class TestHybridExit:
         assert exit_order.exit_type == "full"
         assert exit_order.exit_reason == "Hybrid trail (2R)"
         assert exit_order.quantity == 2  # Remaining quantity
-        # P&L = (11870 - 11850) * 0.50 * 2 = 20 * 0.50 * 2 = $20
-        assert exit_order.pnl == pytest.approx(20.0)
+        # P&L = (11870 - 11850) * 2.0 * 2 = 20 * 2.0 * 2 = $80
+        assert exit_order.pnl == pytest.approx(80.0)
         assert exit_order.rr_ratio == pytest.approx(2.0)
 
     def test_check_exit_time_stop(self, position, hybrid_exit):
@@ -407,8 +407,8 @@ class TestHybridExit:
         assert exit_order is not None
         assert exit_order.exit_reason == "Hybrid partial (1.5R)"
         assert exit_order.quantity == 2
-        # P&L = (11850 - 11835) * 0.50 * 2 = 15 * 0.50 * 2 = $15
-        assert exit_order.pnl == pytest.approx(15.0)
+        # P&L = (11850 - 11835) * 2.0 * 2 = 15 * 2.0 * 2 = $60
+        assert exit_order.pnl == pytest.approx(60.0)
 
     def test_custom_partial_percent(self, position):
         """Test hybrid exit with custom partial percentage."""
@@ -444,8 +444,8 @@ class TestHybridExit:
 
         exit_order = hybrid_exit.check_exit(state)
 
-        # P&L = (11865 - 11850) * 0.50 * 2 = $15
-        assert exit_order.pnl == pytest.approx(15.0)
+        # P&L = (11865 - 11850) * 2.0 * 2 = $60
+        assert exit_order.pnl == pytest.approx(60.0)
 
     def test_final_exit_after_partial_trail(self, position, ensemble_signal):
         """Test final exit calculation after partial with trailed stop."""

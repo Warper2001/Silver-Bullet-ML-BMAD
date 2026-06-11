@@ -3,7 +3,7 @@ sl_multiplier: 5.0
 tp_multiplier: 6.0
 entry_pct: 0.5
 atr_threshold: 0.5
-max_gap_dollars: 60.0
+max_gap_dollars: 500.0
 max_hold_bars: 60
 max_pending_bars: 240
 contracts_per_trade: 1

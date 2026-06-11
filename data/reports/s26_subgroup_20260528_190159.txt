@@ -1,0 +1,108 @@
+=========================================================================================================
+S26 SUBGROUP ANALYSIS — 1-Year Backtest (bearish_only=False, tuesday_exclusion=False, no KZ gate)
+  Generated : 20260528_190159
+  Period    : 2025-05-19 → 2026-05-19
+  Total trades : 70
+=========================================================================================================
+
+── OVERALL (all trades) ─────────────────────────────────────────────────────────────────────────────────
+  All trades                                    N= 70 ( 100%)  PF=1.4038  WR= 54.3%  Net=$   +8062  Sharpe= 2.251  MaxDD=$   3621  [sl=13 time=41 tp=16]
+
+    Bearish                                     N=  0  (  0%)  --
+
+    Bullish                                     N=  0  (  0%)  --
+
+
+── S26 FILTER SPLIT ─────────────────────────────────────────────────────────────────────────────
+   KZ_HOURS={10,11,14}  →  10:00-12:00 ET + 14:00-15:00 ET   |   BLOCKED_DOW={0} (Mon)
+  S26 ELIGIBLE  (KZ hours + not Mon)            N= 22 (  31%)  PF=1.5252  WR= 54.5%  Net=$   +3612  Sharpe= 2.952  MaxDD=$   2008  [sl=5 time=10 tp=7]
+
+  S26 EXCLUDED  (off-hours or Mon)              N= 48 (  69%)  PF=1.3400  WR= 54.2%  Net=$   +4450  Sharpe= 1.895  MaxDD=$   3496  [sl=8 time=31 tp=9]
+
+
+── S26 ELIGIBLE — DIRECTION SPLIT ───────────────────────────────────────────────────────────────
+    S26 eligible · Bearish                      N=  0  (  0%)  --
+
+    S26 eligible · Bullish                      N=  0  (  0%)  --
+
+
+── KZ HOUR BREAKDOWN (not Mon, any direction) ───────────────────────────────────────────────────
+    10:00-11:00 ET (AM open)                    N= 13 (  19%)  PF=0.9126  WR= 46.2%  Net=$    -457  Sharpe=-0.651  MaxDD=$   3816  [sl=4 time=5 tp=4]
+
+    11:00-12:00 ET (AM mid)                     N=  4 (   6%)  PF=1.0524  WR= 25.0%  Net=$     +86  Sharpe= 0.331  MaxDD=$   1650  [sl=1 time=2 tp=1]
+
+    14:00-15:00 ET (PM open)                    N=  5 (   7%)  PF=   inf  WR=100.0%  Net=$   +3982  Sharpe=34.030  MaxDD=$      0  [time=3 tp=2]
+
+
+── S26 EXCLUDED — HOUR BREAKDOWN (non-KZ hours) ─────────────────────────────────────────────────
+    Hour 03:00-04:00 ET                         N=  2 (   3%)  PF=0.3055  WR= 50.0%  Net=$    -923  Sharpe=-8.445  MaxDD=$   1329  [sl=1 time=1]
+
+    Hour 04:00-05:00 ET                         N=  1 (   1%)  PF=   inf  WR=100.0%  Net=$    +184  Sharpe=   nan  MaxDD=$      0  [time=1]
+
+    Hour 05:00-06:00 ET                         N=  2 (   3%)  PF=16.2464  WR= 50.0%  Net=$   +1052  Sharpe=14.034  MaxDD=$     69  [time=1 tp=1]
+
+    Hour 06:00-07:00 ET                         N=  3 (   4%)  PF=0.8257  WR= 66.7%  Net=$     -50  Sharpe=-1.320  MaxDD=$    284  [time=3]
+
+    Hour 07:00-08:00 ET                         N=  1 (   1%)  PF=   inf  WR=100.0%  Net=$   +1451  Sharpe=   nan  MaxDD=$      0  [tp=1]
+
+    Hour 08:00-09:00 ET                         N=  6 (   9%)  PF=1.4330  WR= 50.0%  Net=$    +744  Sharpe= 2.507  MaxDD=$   1154  [sl=1 time=3 tp=2]
+
+    Hour 09:00-10:00 ET                         N= 14 (  20%)  PF=1.2843  WR= 64.3%  Net=$   +1379  Sharpe= 1.737  MaxDD=$   3728  [sl=4 time=6 tp=4]
+
+    Hour 10:00-11:00 ET                         N=  2 (   3%)  PF=   inf  WR=100.0%  Net=$   +1837  Sharpe=28.731  MaxDD=$      0  [time=2]
+
+    Hour 12:00-13:00 ET                         N=  3 (   4%)  PF=0.0000  WR=  0.0%  Net=$   -1472  Sharpe=-20.259  MaxDD=$   1472  [time=3]
+
+    Hour 13:00-14:00 ET                         N=  4 (   6%)  PF=2.4231  WR= 50.0%  Net=$    +912  Sharpe= 5.880  MaxDD=$    640  [time=3 tp=1]
+
+    Hour 15:00-16:00 ET                         N=  1 (   1%)  PF=0.0000  WR=  0.0%  Net=$   -1054  Sharpe=   nan  MaxDD=$   1054  [sl=1]
+
+    Hour 16:00-17:00 ET                         N=  3 (   4%)  PF=0.0000  WR=  0.0%  Net=$   -1122  Sharpe=-14.473  MaxDD=$   1122  [sl=1 time=2]
+
+    Hour 18:00-19:00 ET                         N=  3 (   4%)  PF=5.3050  WR= 66.7%  Net=$    +910  Sharpe=12.122  MaxDD=$    212  [time=3]
+
+    Hour 20:00-21:00 ET                         N=  2 (   3%)  PF=0.4307  WR= 50.0%  Net=$    -193  Sharpe=-6.317  MaxDD=$    339  [time=2]
+
+    Hour 21:00-22:00 ET                         N=  1 (   1%)  PF=   inf  WR=100.0%  Net=$    +796  Sharpe=   nan  MaxDD=$      0  [time=1]
+
+
+── S26 ELIGIBLE — DAY-OF-WEEK ───────────────────────────────────────────────────────────────────
+    Mon                                         N=  0  (  0%)  --
+
+    Wed                                         N= 10 (  14%)  PF=2.4387  WR= 60.0%  Net=$   +3408  Sharpe= 6.715  MaxDD=$   1310  [sl=2 time=4 tp=4]
+
+    Thu                                         N=  6 (   9%)  PF=2.9203  WR= 66.7%  Net=$   +1566  Sharpe= 6.856  MaxDD=$    816  [time=5 tp=1]
+
+    Fri                                         N=  6 (   9%)  PF=0.6314  WR= 33.3%  Net=$   -1362  Sharpe=-3.291  MaxDD=$   1968  [sl=3 time=1 tp=2]
+
+
+── S26 ELIGIBLE — MONTHLY BREAKDOWN ─────────────────────────────────────────────────────────────
+    2025-05                                     N=  1 (   1%)  PF=   inf  WR=100.0%  Net=$    +791  Sharpe=   nan  MaxDD=$      0  [time=1]
+
+    2025-06                                     N=  2 (   3%)  PF=1.1040  WR= 50.0%  Net=$    +107  Sharpe= 0.785  MaxDD=$   1029  [sl=1 tp=1]
+
+    2025-07                                     N=  3 (   4%)  PF=0.0000  WR=  0.0%  Net=$    -980  Sharpe=-35.999  MaxDD=$    980  [time=3]
+
+    2025-10                                     N=  2 (   3%)  PF=   inf  WR=100.0%  Net=$    +340  Sharpe=52.579  MaxDD=$      0  [time=2]
+
+    2025-11                                     N=  2 (   3%)  PF=   inf  WR=100.0%  Net=$   +1772  Sharpe=39.619  MaxDD=$      0  [time=1 tp=1]
+
+    2025-12                                     N=  1 (   1%)  PF=   inf  WR=100.0%  Net=$   +1181  Sharpe=   nan  MaxDD=$      0  [tp=1]
+
+    2026-01                                     N=  7 (  10%)  PF=1.0048  WR= 42.9%  Net=$     +12  Sharpe= 0.035  MaxDD=$   1793  [sl=2 time=3 tp=2]
+
+    2026-02                                     N=  2 (   3%)  PF=1.9418  WR= 50.0%  Net=$    +842  Sharpe= 5.082  MaxDD=$    894  [sl=1 tp=1]
+
+    2026-03                                     N=  2 (   3%)  PF=0.6884  WR= 50.0%  Net=$    -453  Sharpe=-2.929  MaxDD=$   1454  [sl=1 tp=1]
+
+
+── SUMMARY COMPARISON ───────────────────────────────────────────────────────────────────────────
+   Unfiltered base  : N= 70       PF=1.4038  Sharpe=2.251  Net=$   +8062
+   S26 subgroup     : N= 22 (31%)  PF=1.5252  Sharpe=2.952  Net=$   +3612
+   PF lift          : +0.1214
+   Sharpe lift      : +0.701
+
+   Expected live freq (S26 filtered): 0.060 trades/day
+     → N=20 in ~332 days at backtest rate
+     → N=20 in ~553 days at conservative (60%) rate
+=========================================================================================================

@@ -202,9 +202,9 @@ class TestTimeBasedExit:
 
         exit_order = time_exit.check_exit(state)
 
-        # P&L = (11860 - 11850) * 0.50 * 2 = 10 * 0.50 * 2 = $10
+        # P&L = (11860 - 11850) * 2.0 * 2 = 10 * 2.0 * 2 = $40
         assert exit_order is not None
-        assert exit_order.pnl == pytest.approx(10.0)
+        assert exit_order.pnl == pytest.approx(40.0)
 
     def test_exit_order_pnl_calculation_short(self, ensemble_signal):
         """Test P&L calculation for short position exit."""
@@ -252,9 +252,9 @@ class TestTimeBasedExit:
 
         exit_order = time_exit.check_exit(state)
 
-        # P&L = (11850 - 11840) * 0.50 * 2 = 10 * 0.50 * 2 = $10
+        # P&L = (11850 - 11840) * 2.0 * 2 = 10 * 2.0 * 2 = $40
         assert exit_order is not None
-        assert exit_order.pnl == pytest.approx(10.0)
+        assert exit_order.pnl == pytest.approx(40.0)
 
     def test_exit_order_rr_calculation(self, position, time_exit):
         """Test R:R calculation in exit order."""

@@ -1,0 +1,104 @@
+========================================================================
+ORBM-2 Combine Strategy — In-Sample Backtest
+Pre-registration: 16abdd9
+In-sample: 2025-01-01 → 2026-02-28
+Run at: 2026-06-08 03:57:45
+========================================================================
+
+Verifying against pre-registration 16abdd9…
+
+Loading config…
+  extension_threshold: 0.25
+  stop_cap_pts:        75.0
+  tp_r_multiple:       1.5
+  orb_min_size_points: 5.0
+  daily_loss_halt:     $-200.0
+  daily_profit_halt:   $750.0
+
+Loading bars…
+  318,387 bars (2025-01-01 → 2026-02-27)
+
+────────────────────────────────────────────────────────────────────────
+FUNNEL SUMMARY
+────────────────────────────────────────────────────────────────────────
+  Session days:                   302
+  Sessions with valid ORB:        296  (98%)
+  Sessions with extension:        246  (83% of ORB sessions)
+  Skipped (stop > 75 pts):          6  (2% of extensions)
+  Trades executed:                240  (98% of extensions)
+
+────────────────────────────────────────────────────────────────────────
+PERFORMANCE SUMMARY
+────────────────────────────────────────────────────────────────────────
+  Total net P&L:           $  938.55
+  N trades:                     240
+  Win rate:                   41.2%  (gate: ≥55%)  ❌
+  Profit factor:              1.057  (gate: ≥1.40)  ❌
+  Avg win (net):           $  176.39
+  Avg loss (net):          $ -117.19
+  Win/loss ratio:              1.51
+  Max trailing DD:         $ 1588.55  (gate: ≤$1500)  ❌
+  Per-trade Sharpe:           0.026  (gate: ≥0.20)  ❌
+
+  Frequency (trades/ORB day): 0.811  (gate: ≥1.0)  ❌
+  Total session days:        302
+  Qualifying sessions:        63  (all in-sample, P&L ≥ $150)
+  Qual sessions / recent 20: 6  (gate: ≥6)  ✅
+  Largest day as % total:    31.1%  (gate: ≤40%)  ✅
+
+────────────────────────────────────────────────────────────────────────
+EXIT REASON BREAKDOWN
+────────────────────────────────────────────────────────────────────────
+  TP hit:          93 (38.8%)
+  SL hit:         137 (57.1%)
+  Time stop:       10 (4.2%)
+
+────────────────────────────────────────────────────────────────────────
+DIRECTION BREAKDOWN
+────────────────────────────────────────────────────────────────────────
+  LONG (upward ext): N= 128  WR=40.6%  PF=1.00  P&L=$+1.20
+  SHORT (downward ext): N= 112  WR=42.0%  PF=1.12  P&L=$+937.35
+
+────────────────────────────────────────────────────────────────────────
+BY-MONTH
+────────────────────────────────────────────────────────────────────────
+  Month          N      WR      PF        P&L   Qual
+  ──────────  ────  ──────  ──────  ─────────  ─────
+  2025-01       19     21%    0.38  $-1089.40      1
+  2025-02       18     50%    1.37  $  402.15      6
+  2025-03       18     61%    2.60  $ 1484.85     10
+  2025-04       16     50%    1.41  $  465.45      7
+  2025-05       19     42%    1.18  $  205.30      6
+  2025-06       14     43%    0.98  $  -23.20      2
+  2025-07       18     39%    0.96  $  -37.90      3
+  2025-08       19     21%    0.59  $ -564.20      3
+  2025-09       17     35%    0.65  $ -412.70      1
+  2025-10       18     44%    1.18  $  175.90      3
+  2025-11       15     60%    2.00  $  874.35      8
+  2025-12       16     19%    0.43  $ -909.10      2
+  2026-01       17     53%    1.10  $  120.45      5
+  2026-02       16     44%    1.20  $  246.60      6
+
+────────────────────────────────────────────────────────────────────────
+TRAILING DRAWDOWN PATH (equity peaks and troughs)
+────────────────────────────────────────────────────────────────────────
+
+========================================================================
+GATE 1 VERDICT
+========================================================================
+  ❌ FAIL  Win rate ≥ 55% [REQUIRED]
+  ❌ FAIL  Profit factor ≥ 1.40 [REQUIRED]
+  ❌ FAIL  Max DD ≤ $1500 [REQUIRED]
+  ❌ FAIL  Frequency ≥ 1.0/day [REQUIRED]
+  ✅ PASS  N trades ≥ 80 [REQUIRED]
+  ✅ PASS  Qualifying sessions ≥ 6 / last 20 [REQUIRED]
+  ✅ PASS  Largest day ≤ 40% of total [advisory]
+  ❌ FAIL  Per-trade Sharpe ≥ 0.20 [advisory]
+
+  ❌ GATE 1 FAIL — required criteria not met:
+     • Win rate ≥ 55%
+     • Profit factor ≥ 1.40
+     • Max DD ≤ $1500
+     • Frequency ≥ 1.0/day
+  → OOS holdout remains sealed. Do not access ≥ 2026-03-01 data.
+========================================================================

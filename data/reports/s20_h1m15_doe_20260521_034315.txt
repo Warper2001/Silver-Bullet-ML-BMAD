@@ -1,0 +1,52 @@
+================================================================================
+S20 H1-Sweep Frequency DOE — Program C Phase 2b (PIVOT)
+Data: data/processed/dollar_bars/1_minute/mnq_1min_2025.csv
+Bars: 289,230  (2025-01-01 → 2025-12-31)
+Architecture: H1 sweep + M15 entry (fixed)  |  6 combinations
+Pre-cutoff only — NO holdout access
+================================================================================
+
+Combination                    PF     N    WR%  Sharpe      t     IR  DSR
+-------------------------------------------------------------------------
+H1·NoConf·M15·g0.15        0.9761    90   42.2   -0.09  -0.09   9.26    
+H1·NoConf·M15·g0.20        1.0121    76   44.7    0.04   0.04   8.82    
+H1·NoConf·M15·g0.25        1.1375    62   45.2    0.40   0.40   8.96    
+H1·M15·M15·g0.15           1.0464    75   44.0    0.16   0.16   9.06    
+H1·M15·M15·g0.20           1.0790    66   45.5    0.25   0.25   8.77    
+H1·M15·M15·g0.25           1.0626    57   43.9    0.18   0.18   8.02    
+
+DSR * = t > 2.64 (Bonferroni alpha/6)  |  IR = PF × √N (information-ratio proxy)
+
+── Dose-Response: PF and N by gap_ratio ────────────────────────────────
+
+  H1·NoConf·M15:
+  gap_ratio      PF     N     IR  ~holdout N   trend
+       0.15  0.9761    90   9.26       ~23.4        
+       0.20  1.0121    76   8.82       ~19.8       ↑
+       0.25  1.1375    62   8.96       ~16.1       ↑
+
+  H1·M15·M15:
+  gap_ratio      PF     N     IR  ~holdout N   trend
+       0.15  1.0464    75   9.06       ~19.5        
+       0.20  1.0790    66   8.77       ~17.2       ↑
+       0.25  1.0626    57   8.02       ~14.8       ↓
+
+── Pre-Registration Candidate ──────────────────────────────────────────
+
+  PRE-REGISTRATION CANDIDATE: H1·NoConf·M15·g0.15
+    PF            = 0.9761
+    N (in-sample) = 90
+    IR            = 9.26  (highest PF×√N with N≥40)
+    WR            = 42.2%
+    DSR           = no (screening only)
+    Expected holdout N ≈ 23.4 trades (PASS ≥10)
+
+    Suggested holdout hypothesis: PF > 1.1350 (S12 p90 random baseline)
+    Suggested pre-registration:   _bmad-output/preregistration_h1-noconf-m15-g0p15.md
+
+  Runner-up candidates (N ≥ 40, sorted by IR):
+    H1·M15·M15·g0.15            PF=1.0464  N=75  IR=9.06  ~holdout N≈19.5
+    H1·NoConf·M15·g0.25         PF=1.1375  N=62  IR=8.96  ~holdout N≈16.1
+    H1·NoConf·M15·g0.20         PF=1.0121  N=76  IR=8.82  ~holdout N≈19.8
+
+================================================================================

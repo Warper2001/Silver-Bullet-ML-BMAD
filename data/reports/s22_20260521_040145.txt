@@ -1,0 +1,34 @@
+======================================================================
+S22 H1·M15·M1·g0.25 Holdout Test — Program C Phase 2b
+Pre-registration SHA: 57bd819
+Pre-registration doc: _bmad-output/preregistration_h1_m15_m1_g025.md
+Holdout: data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv
+======================================================================
+
+── Architecture (frozen) ────────────────────────────────────────────
+  Sweep:   H1 (1-hour) liquidity sweep, expires 6h after sweep bar
+  Confirm: M15 CHoCH (close < swing_low − 0.3×M15_ATR)
+  Entry:   M1 bearish FVG, midpoint entry
+  MIN_GAP_ATR_RATIO = 0.25
+  MAX_HOLD = 60 M1 bars  MAX_PENDING = 240 M1 bars
+
+── S22 Results ──────────────────────────────────────────────────────
+  PF              : 1.2742
+  Trade count     : 15
+  Win rate        : 46.7%
+  Net P&L (1x)    : $240.50
+  Avg win         : $159.64
+  Avg loss        : $-109.62
+
+── Comparison (pre-committed) ───────────────────────────────────────
+  S12 p90 random baseline    : 1.1350
+  S22 in-sample PF (2025)    : 1.1656  (N=109, g0.25)
+  Minimum N for verdict      : 10
+
+── S22 Verdict (pre-committed decision rule) ────────────────────────
+  Verdict: edge_exceeds_insample
+  PF 1.2742 > in-sample PF 1.1656.
+  Unusually strong holdout result. Proceed to Phase 2 ML with
+  high confidence.
+
+======================================================================

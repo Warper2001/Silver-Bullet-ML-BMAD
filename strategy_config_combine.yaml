@@ -1,0 +1,26 @@
+# strategy_config_combine.yaml — S26 Combine Edition (MBT)
+# Pre-registration: _bmad-output/preregistration_btc_combine_50k.md
+# Sealed: 2026-06-09
+
+sl_multiplier: 2.0
+tp_multiplier: 4.0
+entry_pct: 0.5
+atr_threshold: 0.5
+max_gap_dollars: 500.0  # Wide to allow BTC gaps
+max_hold_bars: 60
+max_pending_bars: 240
+contracts_per_trade: 5  # 5 MBT contracts = 0.5 BTC
+max_daily_loss: -1000.0 # Standard 50k combine limit
+vol_regime_lookback: 120
+vol_regime_threshold: 0.95 # Highly relaxed so it doesn't block crypto's natural flow
+min_gap_atr_ratio: 0.20 # Soft FVG equivalent
+ml_threshold: 0.62      # The mathematically optimized threshold
+bearish_only: false     # Crypto trends both ways smoothly
+h1_sweep_lookback: 6
+tuesday_exclusion: false
+m15_confirmation: false # S26 doesn't use this
+enable_kill_zone_filter: false # S26 trades 24/7 (except exchange halts)
+kill_zone_start_et: "00:00"
+kill_zone_end_et: "00:00"
+commission_per_roundtrip: 2.50 # $2.50 standard for MBT
+enable_ifvg_fallback: false

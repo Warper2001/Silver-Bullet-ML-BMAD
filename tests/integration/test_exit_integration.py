@@ -284,8 +284,8 @@ class TestExitLogicIntegration:
 
         assert exit_order is not None
         assert exit_order.exit_reason == "Take profit"
-        # P&L = (11850 - 11830) * 0.50 * 3 = 20 * 0.50 * 3 = $30
-        assert exit_order.pnl == pytest.approx(30.0)
+        # P&L = (11850 - 11830) * 2.0 * 3 = 20 * 2.0 * 3 = $120
+        assert exit_order.pnl == pytest.approx(120.0)
 
     def test_hybrid_partial_quantity_rounding(self, open_position):
         """Test hybrid exit with various quantities for rounding."""
@@ -436,5 +436,5 @@ class TestExitLogicIntegration:
         rr_order = rr_exit.check_exit(state_tp)
 
         # Both should have same P&L for full position
-        assert time_order.pnl == pytest.approx(30.0)  # (11870-11850) * 0.50 * 3
-        assert rr_order.pnl == pytest.approx(30.0)
+        assert time_order.pnl == pytest.approx(120.0)  # (11870-11850) * 2.0 * 3
+        assert rr_order.pnl == pytest.approx(120.0)

@@ -84,8 +84,10 @@ async def main():
         if np.isnan(trader._session_open_price) and bar_et.hour >= 6:
             trader._session_open_price = bar.open
 
-        trader._update_h1_structure()
-        trader._update_m15_choch()
+        if bar_et.minute == 0:
+            trader._update_h1_structure()
+        if bar_et.minute % 15 == 0:
+            trader._update_m15_choch()
         await trader._advance_active_trade(bar)
         
         await trader._detect_and_enter(bar, is_backfill=False)

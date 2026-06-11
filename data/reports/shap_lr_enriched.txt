@@ -1,0 +1,45 @@
+Silver Bullet XGBoost — LR-Enriched Model  (2026-05-15 20:23)
+==============================================================
+Training data:  827 | Val: 177 | Test: 178
+Features:       27 (incl. 1 LR channel features)
+
+── Test-set metrics ─────────────────────────────────────────
+  Accuracy:   0.6215
+  Precision:  0.4722
+  Recall:     0.5397
+  F1:         0.5037
+  ROC-AUC:    0.6494
+
+── SHAP feature importance (mean |SHAP|) ────────────────────
+   1. vwap                                0.5345  ██████████████████████████████
+   2. volume_std_20                       0.3484  ███████████████████
+   3. stoch_k_ma_14                       0.3464  ███████████████████
+   4. macd                                0.2482  █████████████
+   5. close_position                      0.2400  █████████████
+   6. stoch_k                             0.2326  █████████████
+   7. lr_price_pos_50                     0.2320  █████████████ ◄ LR
+   8. day_of_week                         0.2069  ███████████
+   9. atr_std_14                          0.2066  ███████████
+  10. volume_ratio                        0.1951  ██████████
+  11. rsi_ma_14                           0.1668  █████████
+  12. rsi_std_14                          0.1250  ███████
+  13. parkinson_volatility                0.1191  ██████
+  14. macd_std_9                          0.1140  ██████
+  15. high_low_range                      0.1012  █████
+  16. roc                                 0.0938  █████
+  17. volume_ma_20                        0.0835  ████
+  18. atr                                 0.0740  ████
+  19. range_std_20                        0.0717  ████
+  20. stoch_d                             0.0696  ███
+  21. hour                                0.0691  ███
+  22. rsi                                 0.0560  ███
+  23. macd_histogram                      0.0539  ███
+  24. day_sin                             0.0506  ██
+  25. is_ny_pm                            0.0392  ██
+
+── LR channel features summary ──────────────────────────────
+  lr_slope_50                          NOT in selected feature set
+  lr_slope_100                         NOT in selected feature set
+  lr_dev_50                            NOT in selected feature set
+  lr_dev_100                           NOT in selected feature set
+  lr_price_pos_50                      SHAP rank # 7  |SHAP|=0.2320  XGB_imp=0.0348

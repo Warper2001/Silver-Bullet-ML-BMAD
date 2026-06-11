@@ -1,0 +1,12 @@
+# Backtest Report Metadata
+# Generated: 2026-05-22 23:00:20.526841
+# Backtest Date: 2026-05-22 23:00:20.526837
+# Data Range: ('N/A', 'N/A')
+# Signal Count: N/A
+# ML Model Version: N/A
+
+# Performance Metrics
+
+metric,value
+sharpe_ratio,2.5
+

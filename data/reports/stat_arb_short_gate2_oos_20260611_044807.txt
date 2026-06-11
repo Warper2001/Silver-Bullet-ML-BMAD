@@ -1,0 +1,13 @@
+Gate 2 OOS Backtest: ES/MNQ Stat Arb Short-Only
+Run: 2026-06-11T04:48:07.151919
+Pre-registration commit: 2e9fb90  (seal: 44cc6192)
+OOS period: 2026-03-02 → 2026-05-19  (55 days)
+
+N=199  WR=45.7%  PF=0.765  AvgP&L=$-7.70  Freq=3.62/d
+PF retention: 60.4% (in-sample PF=1.268)
+Max trailing DD: $-2610
+Qual days: 3/55  Worst-mo WR: 39.5%
+Victor worst-5d: $-994
+Daily halts: 2 days
+
+Gate 2: FAIL

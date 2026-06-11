@@ -368,7 +368,29 @@ def build_report(trades, start: datetime, end: datetime) -> tuple[str, list[dict
         mdd = max_drawdown(mp)
         msh = per_trade_sharpe(mp)
         marker = " ← best" if month == best_month else (" ← worst" if month == worst_month else "")
-        lines.append(f"  {month:>8}  {len(mp):>6}  {mwr:>5.1%}  {mpf_str}  ${mnet:>+9,.0f}  ${mdd:>8,.0f}  {msh:>7.3f}{marker}")
+        lines.append(f"  {month:>8}  {len(mp):>6}  {mwr:>5.1%}  {mpf_str}  ${mnet:>9,.0f}  ${mdd:>8,.0f}  {msh:>7.3f}{marker}")
+
+    # Add WEEKLY BREAKDOWN
+    lines.append("\nWEEKLY BREAKDOWN")
+    hdr_week = f"  {'WEEK':>8}  {'TRADES':>6}  {'WIN%':>5}  {'PF':>6}  {'NET_PNL':>10}  {'MAX_DD':>9}  {'SHARPE':>7}"
+    lines.append(hdr_week)
+    lines.append("  " + "-" * 65)
+    
+    by_week: dict[str, list[float]] = defaultdict(list)
+    for t in trades:
+        # Group by ISO year and week number (e.g., 2026-W01)
+        key = t.entry_time.astimezone(ET_TZ).strftime("%G-W%V")
+        by_week[key].append(t.pnl)
+        
+    for w in sorted(by_week):
+        wp = by_week[w]
+        ww = sum(1 for p in wp if p > 0)
+        wwr = ww / len(wp) if wp else 0.0
+        wpf_str = f"{profit_factor(wp):6.3f}" if len([p for p in wp if p < 0]) > 0 else "   inf"
+        wnet = sum(wp)
+        wdd = max_drawdown(wp)
+        wsh = per_trade_sharpe(wp)
+        lines.append(f"  {w:>8}  {len(wp):>6}  {wwr:>5.1%}  {wpf_str}  ${wnet:>9,.0f}  ${wdd:>8,.0f}  {wsh:>7.3f}")
 
     # Equity sparkline
     if cum_pnl:

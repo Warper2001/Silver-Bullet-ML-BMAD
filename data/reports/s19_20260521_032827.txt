@@ -1,0 +1,36 @@
+======================================================================
+S19 H4·M15·M15·g0.20 Holdout Test — Program C Phase 2a
+Pre-registration SHA: 39a1039
+Pre-registration doc: _bmad-output/preregistration_h4_m15_m15_g020.md
+Holdout: data/sealed_holdout/mnq_1min_holdout_20260301_plus.csv
+======================================================================
+
+── Architecture (frozen) ────────────────────────────────────────────
+  Sweep: H4 (4-hour) liquidity sweep, expires 24h after sweep bar
+  Confirm: M15 CHoCH (close < swing_low − 0.3×M15_ATR)
+  Entry: M15 bearish FVG, midpoint entry
+  MIN_GAP_ATR_RATIO = 0.2  (S18 was 0.25; Phase 1 was 0.15)
+  MAX_HOLD = 180 min  MAX_PENDING = 240 min
+
+── S19 Results ──────────────────────────────────────────────────────
+  PF              : 3.1888
+  Trade count     : 5
+  Win rate        : 80.0%
+  Net P&L (1x)    : $585.50
+  Avg win         : $213.25
+  Avg loss        : $-267.50
+
+── Comparison (pre-committed) ───────────────────────────────────────
+  S12 p90 random baseline    : 1.1350
+  S19 in-sample PF (2025)    : 1.3226  (N=49, g0.20)
+  S18 result (g0.25, N=2)    : insufficient_sample
+  Minimum N for verdict      : 10
+
+── S19 Verdict (pre-committed decision rule) ────────────────────────
+  Verdict: insufficient_sample
+  N=5 < 10 minimum. Both g0.25 (S18) and g0.20 (S19) are too
+  sparse on this holdout window. This is an architectural concern.
+  Consider pivoting to a different architecture or extending the
+  holdout window in a new pre-registration.
+
+======================================================================

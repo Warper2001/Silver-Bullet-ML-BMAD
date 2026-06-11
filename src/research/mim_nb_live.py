@@ -279,7 +279,32 @@ class MimNbLive:
                            "otype": otype, "side": side, "size": CONTRACTS,
                            "price": price or "", "outcome": "OK" if oid else "REJECTED",
                            "detail": ""})
+        if oid is not None and otype == _TYPE_MARKET:
+            asyncio.get_event_loop().create_task(self._log_fill(oid))
         return oid
+
+    async def _log_fill(self, order_id):
+        """Best-effort: fetch the venue fill price for a market order and log it
+        (slippage evidence per deployment prereg halt trigger #2)."""
+        await asyncio.sleep(3)
+        try:
+            headers = await self.px._headers()
+            since = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+            r = await self.http.post(f"{_BASE_URL}/Trade/search",
+                                     json={"accountId": self.account_id,
+                                           "startTimestamp": since}, headers=headers)
+            if r.status_code == 200 and r.json().get("trades"):
+                t = r.json()["trades"][0]
+                orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
+                                   "event": "FILL", "order_id": order_id,
+                                   "otype": _TYPE_MARKET, "side": t.get("side"),
+                                   "size": t.get("size"), "price": t.get("price"),
+                                   "outcome": "OK",
+                                   "detail": f"fees={t.get('fees')}"})
+                logger.info("FILL order #%s @ %s (fees %s)", order_id,
+                            t.get("price"), t.get("fees"))
+        except Exception as exc:
+            logger.warning("fill logging failed for #%s: %s", order_id, exc)
 
     async def _cancel_cat_stop(self):
         if self.cat_stop_id:
@@ -491,7 +516,10 @@ class MimNbLive:
                             self.last_bar_ts = ts
             except Exception as exc:
                 logger.error("poll loop error: %s", exc)
-            await asyncio.sleep(10)
+            # 2s cadence in the first 20s of each minute (catch the completed bar
+            # the moment TradeStation publishes it, ~6-9s past the minute);
+            # 10s otherwise. Bounds check-to-order latency at the API publish lag.
+            await asyncio.sleep(2 if datetime.now(timezone.utc).second < 20 else 10)
 
 
 if __name__ == "__main__":

@@ -155,9 +155,22 @@ class MimNbLive:
                                  projectx_account_id=self.account_id)
         await self._backfill()
         await self._reconcile_startup()
+        await self._catch_up_today()
+
+    async def _ts_token(self) -> str:
+        """Token source of truth is the .access_token file — a sibling bot's
+        auto-refresh loop rewrites it every ~minute. Re-read per request so we
+        never serve a stale in-memory token (root cause of the 2026-06-11 401s)."""
+        tok_path = BASE_DIR / ".access_token"
+        age = datetime.now(timezone.utc).timestamp() - tok_path.stat().st_mtime
+        if age > 1800:
+            logger.error("ALERT: .access_token is %.0f min stale — refresher down? "
+                         "Falling back to own refresh.", age / 60)
+            return await self.ts_auth.authenticate()
+        return tok_path.read_text().strip()
 
     async def _ts_get_bars(self, barsback=1500):
-        token = await self.ts_auth.authenticate()
+        token = await self._ts_token()
         url = f"{BARS_URL}&barsback={barsback}"
         r = await self.http.get(url, headers={"Authorization": f"Bearer {token}"})
         r.raise_for_status()
@@ -214,6 +227,43 @@ class MimNbLive:
                                "outcome": "SENT", "detail": "STARTUP_RECONCILE"})
         else:
             logger.info("Startup reconcile: FLAT ✓")
+
+    async def _catch_up_today(self):
+        """If started/restarted mid-session, rebuild today's intraday state
+        (open anchor, VWAP, sigma moves) from completed bars WITHOUT acting on
+        missed checks — missed signals are skipped, never back-traded."""
+        now_et = datetime.now(ET)
+        if not ("09:31" <= now_et.strftime("%H:%M") <= "16:00"):
+            return
+        bars = await self._ts_get_bars(barsback=1500)
+        todays = [b for b in bars
+                  if self._bar_et(b).date() == now_et.date()
+                  and "09:31" <= self._bar_et(b).strftime("%H:%M") <= "16:00"]
+        if not todays:
+            return
+        first_hm = self._bar_et(todays[0]).strftime("%H:%M")
+        if first_hm != "09:31":
+            logger.warning("Catch-up: today's 09:31 bar unavailable (first=%s) — standing down today",
+                           first_hm)
+            return
+        self._new_session(now_et.date())
+        skipped_checks = 0
+        for b in todays:
+            et = self._bar_et(b)
+            hm = et.strftime("%H:%M")
+            o, c = float(b["Open"]), float(b["Close"])
+            v = float(b.get("TotalVolume", 0) or 0)
+            if self.open_d is None:
+                self.open_d = o
+            self.cum_pv += c * v
+            self.cum_v += v
+            self.today_moves[hm] = abs(c / self.open_d - 1.0)
+            if hm in CHECK_MARKS:
+                skipped_checks += 1
+            self.last_bar_ts = b["TimeStamp"]
+        logger.warning("Catch-up complete: open_d=%.2f, %d bars rebuilt, %d check marks "
+                       "MISSED (not back-traded, per seal fill model). Live from next check.",
+                       self.open_d, len(todays), skipped_checks)
 
     # ------------------------------------------------------------------
     # Order helpers (market / stop via ProjectX)
@@ -429,7 +479,7 @@ class MimNbLive:
                 if now_et.strftime("%H:%M") >= "16:01" and self.position != 0:
                     logger.warning("SAFETY: position open after 16:01 ET — flattening")
                     await self._flatten("SAFETY_1601")
-                bars = await self._ts_get_bars(barsback=5)
+                bars = await self._ts_get_bars(barsback=60)
                 for b in bars:
                     ts = b["TimeStamp"]
                     if self.last_bar_ts is None or ts > self.last_bar_ts:

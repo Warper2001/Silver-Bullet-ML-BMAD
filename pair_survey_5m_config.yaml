@@ -1,0 +1,132 @@
+# Cross-Pair Divergence-Fade Survey — 5-MINUTE timeframe extension (2026-06-12)
+#
+# Frozen BEFORE any 5m simulation runs. See
+# _bmad-output/precommit_pair_survey_addendum_5m_2026-06.md for hypothesis,
+# multiplicity disclosure, and decision rule. One-shot extension of the closed
+# 1-min survey (prereg b54fb08 + 9f4ae9a): same pairs, same structure, 5m bars.
+#
+# Grid scaling rationale (frozen): 5m residuals are ~sqrt(5)=2.24x the 1-min
+# scale, so the validated 1-min primary ($40) maps to ~$89; primary frozen at
+# $80 (rounded down, keeps 2.0x stop cells under the $150 cap at lower rungs).
+# All bar-count parameters (beta 60, spread 5, hold 30) unchanged in BAR units.
+
+global:
+  bar_minutes: 5
+  dev_start: "2025-05-01"
+  dev_end: "2026-02-28"
+  rth_start: "09:30"
+  session_close: "15:55"
+  beta_window: 60
+  spread_window: 5
+  hold_max: 30
+  thresh_usd_grid: [40, 60, 80, 100]
+  stop_mults: [1.0, 2.0]
+  primary_thresh_usd: 80
+  primary_stop_mult: 1.0
+  stop_cap_usd: 150.0           # unchanged; 2.0x cells above $75 self-cap to zero
+  gate0:
+    ev_min: 0.0
+    freq_min: 1.0
+    worst_month_wr_min: 0.35
+  metals_alt_session: ["08:30", "13:25"]
+  grid_csv: _bmad-output/pair_survey_gate0_grid_5m.csv
+
+# Same universe as the 1-min survey. MNQ_ES is a candidate here, not a control
+# (no validated 5m template exists); its 1-min numbers are the reference prior.
+pairs:
+  - name: SI_GC
+    order: 1
+    description: "Silver vs gold — 5m"
+    leg_a: {root: SI, csvs: [data/processed/dollar_bars/1_minute/si_1min_2025_2026.csv]}
+    leg_b: {root: GC, csvs: [data/processed/dollar_bars/1_minute/gc_1min_2025_2026.csv]}
+    traded_micro: SIL
+    point_value: 1000.0
+    tick_size: 0.005
+    tick_value: 5.0
+    commission_rt: 3.74
+    slippage_stress_rt: 10.0
+    roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-09-16",
+                 "2025-10-13", "2025-12-08", "2025-12-16", "2026-02-09"]
+
+  - name: RTY_ES
+    order: 2
+    description: "Small caps vs large caps — 5m"
+    leg_a: {root: RTY, csvs: [data/processed/dollar_bars/1_minute/rty_1min_2025_2026.csv]}
+    leg_b: {root: ES, csvs: [data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv]}
+    traded_micro: M2K
+    point_value: 5.0
+    tick_size: 0.10
+    tick_value: 0.50
+    commission_rt: 1.24
+    slippage_stress_rt: 1.00
+    roll_dates: ["2025-06-09", "2025-09-08", "2025-12-08"]
+
+  - name: YM_ES
+    order: 3
+    description: "Dow vs S&P — 5m"
+    leg_a: {root: YM, csvs: [data/processed/dollar_bars/1_minute/ym_1min_2025_2026.csv]}
+    leg_b: {root: ES, csvs: [data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv]}
+    traded_micro: MYM
+    point_value: 0.50
+    tick_size: 1.0
+    tick_value: 0.50
+    commission_rt: 1.24
+    slippage_stress_rt: 1.00
+    roll_dates: ["2025-06-09", "2025-09-08", "2025-12-08"]
+
+  - name: HG_GC
+    order: 4
+    description: "Copper vs gold — 5m"
+    leg_a: {root: HG, csvs: [data/processed/dollar_bars/1_minute/hg_1min_2025_2026.csv]}
+    leg_b: {root: GC, csvs: [data/processed/dollar_bars/1_minute/gc_1min_2025_2026.csv]}
+    traded_micro: MHG
+    point_value: 2500.0
+    tick_size: 0.0005
+    tick_value: 1.25
+    commission_rt: 3.74
+    slippage_stress_rt: 2.50
+    roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-09-16",
+                 "2025-10-13", "2025-12-08", "2025-12-16", "2026-02-09"]
+
+  - name: PL_GC
+    order: 5
+    description: "Platinum vs gold — 5m — INFORMATIONAL ONLY (no micro)"
+    informational_only: true
+    leg_a: {root: PL, csvs: [data/processed/dollar_bars/1_minute/pl_1min_2025_2026.csv]}
+    leg_b: {root: GC, csvs: [data/processed/dollar_bars/1_minute/gc_1min_2025_2026.csv]}
+    traded_micro: PL
+    point_value: 50.0
+    tick_size: 0.10
+    tick_value: 5.0
+    commission_rt: 4.00
+    slippage_stress_rt: 10.0
+    roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-10-13",
+                 "2025-10-17", "2025-12-08", "2026-01-15", "2026-02-09"]
+
+  - name: MNQ_ES
+    order: 6
+    description: "Nasdaq vs S&P — 5m (candidate, not control; 1-min is the live edge)"
+    leg_a: {root: MNQ, csvs: [data/processed/dollar_bars/1_minute/mnq_1min_2025.csv,
+                              data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv]}
+    leg_b: {root: ES, csvs: [data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv]}
+    traded_micro: MNQ
+    point_value: 2.0
+    tick_size: 0.25
+    tick_value: 0.50
+    commission_rt: 4.80
+    slippage_stress_rt: 1.00
+    roll_dates: []
+
+  - name: BTC_ETH
+    order: 7
+    description: "BTC vs ETH — 5m (Kraken perp signal, MBT economics)"
+    leg_a: {root: XBT, csvs: [data/kraken/PF_XBTUSD_1min.csv]}
+    leg_b: {root: ETH, csvs: [data/kraken/PF_ETHUSD_1min.csv]}
+    traded_micro: MBT
+    point_value: 0.10
+    tick_size: 25.0
+    tick_value: 2.50
+    commission_rt: 2.84
+    slippage_stress_rt: 5.00
+    beta_clip: [0.0, 200.0]
+    roll_dates: []

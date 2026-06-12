@@ -55,10 +55,16 @@ def load_leg(csvs):
 def prepare_pair(pair, g, session=None):
     """Join legs, slice dev window + session, compute beta and divergence."""
     rth_start, sess_close = session or (g["rth_start"], g["session_close"])
-    a = load_leg(pair["leg_a"]["csvs"])
-    b = load_leg(pair["leg_b"]["csvs"])
-    both = (a[["close"]].rename(columns={"close": "a"})
-            .join(b[["close"]].rename(columns={"close": "b"}), how="inner"))
+    a = load_leg(pair["leg_a"]["csvs"])[["close"]].rename(columns={"close": "a"})
+    b = load_leg(pair["leg_b"]["csvs"])[["close"]].rename(columns={"close": "b"})
+    bar_minutes = g.get("bar_minutes", 1)
+    if bar_minutes > 1:
+        # right label/close: bar stamped T contains data through T (no lookahead;
+        # same convention both legs, so the divergence stays aligned)
+        rule = f"{bar_minutes}min"
+        a = a.resample(rule, label="right", closed="right").last().dropna()
+        b = b.resample(rule, label="right", closed="right").last().dropna()
+    both = a.join(b, how="inner")
     both = both[DEV_START:DEV_END]
     rth = both.between_time(rth_start, sess_close).copy()
 
@@ -217,9 +223,11 @@ def gate0_verdict(s, be_wr, be_wr_stress, g0, robust_pos, informational):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pair", help="run a single pair by name (e.g. SI_GC)")
+    ap.add_argument("--config", default=str(CONFIG_PATH),
+                    help="frozen survey config YAML (default: pair_survey_config.yaml)")
     args = ap.parse_args()
 
-    cfg = yaml.safe_load(CONFIG_PATH.read_text())
+    cfg = yaml.safe_load(Path(args.config).read_text())
     g = cfg["global"]
     assert g["dev_start"] == DEV_START and g["dev_end"] == DEV_END, \
         "YAML dev window differs from hard-coded constants"
@@ -339,9 +347,10 @@ def main():
               f"{r['worst_mo']:>8.1%}  {verdict}")
 
     if grid_rows:
-        GRID_CSV_OUT.parent.mkdir(exist_ok=True)
-        pd.DataFrame(grid_rows).to_csv(GRID_CSV_OUT, index=False)
-        print(f"\nGrid results → {GRID_CSV_OUT}")
+        grid_out = Path(g.get("grid_csv", GRID_CSV_OUT))
+        grid_out.parent.mkdir(exist_ok=True)
+        pd.DataFrame(grid_rows).to_csv(grid_out, index=False)
+        print(f"\nGrid results → {grid_out}")
     print(f"\nDev window used: {DEV_START} → {DEV_END} (hard-coded; holdout untouched)")
 
 

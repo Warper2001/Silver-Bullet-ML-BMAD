@@ -1,0 +1,121 @@
+# Cross-Pair Divergence-Fade Survey — frozen configuration (2026-06-12)
+#
+# Pre-committed BEFORE any Gate 0 simulation runs. See
+# _bmad-output/precommit_pair_divergence_survey_2026-06.md for protocol,
+# decision rules, and rationale. Template strategy: study_stat_arb_short_only.py
+# (the validated MNQ/MES divergence fade, live on combine acct 23884932).
+#
+# Signal data = full-size contract bars; traded-leg economics = micro contract
+# applied at sim time (the GC/MGC pattern). All thresholds specified in DOLLAR
+# stop per traded contract, converted to leg-A points via point_value.
+
+global:
+  dev_start: "2025-05-01"
+  dev_end: "2026-02-28"          # hard cut — 2026-03-01+ is sealed holdout era
+  rth_start: "09:30"             # ET, all pairs (comparability with MNQ/MES)
+  session_close: "15:55"
+  beta_window: 60                # rolling OLS on 1-min price changes
+  spread_window: 5               # 5-bar cumulative divergence
+  hold_max: 30                   # bars
+  thresh_usd_grid: [30, 40, 50, 60]
+  stop_mults: [1.0, 2.0]
+  primary_thresh_usd: 40         # frozen primary spec (= validated MNQ 20pt x $2)
+  primary_stop_mult: 1.0
+  stop_cap_usd: 150.0            # skip entry if stop $ exceeds this
+  gate0:
+    # WR gate is per-pair: breakeven WR = (stop$ + commission) / (2 x stop$)
+    ev_min: 0.0                  # avg net P&L per trade must be > this
+    freq_min: 1.0                # trades/day
+    worst_month_wr_min: 0.35
+  # Labeled-exploratory sensitivity for metals pairs only (appendix; cannot
+  # promote a pair by itself): COMEX pit-aligned hours.
+  metals_alt_session: ["08:30", "13:25"]
+
+# Test order is pre-committed. Direction is NOT pre-selected: both directions
+# (short leg A on +divergence / long leg A on -divergence) are simulated and
+# gated independently for every pair.
+pairs:
+  - name: SI_GC
+    order: 1
+    description: "Silver vs gold — silver is the high-beta/overshooting leg"
+    leg_a: {root: SI, csvs: [data/processed/dollar_bars/1_minute/si_1min_2025_2026.csv]}
+    leg_b: {root: GC, csvs: [data/processed/dollar_bars/1_minute/gc_1min_2025_2026.csv]}
+    traded_micro: SIL            # micro silver, 1,000 oz
+    point_value: 1000.0          # $ per 1.00 move per SIL contract
+    tick_size: 0.005
+    tick_value: 5.0
+    commission_rt: 3.74          # TopstepX micro-metal estimate (MGC-class)
+    slippage_stress_rt: 10.0     # 1 tick per side
+    # Union of both legs' roll dates inside the dev window (entries skipped)
+    roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-09-16",
+                 "2025-10-13", "2025-12-08", "2025-12-16", "2026-02-09"]
+
+  - name: RTY_ES
+    order: 2
+    description: "Small caps vs large caps — closest analog to validated MNQ/MES"
+    leg_a: {root: RTY, csvs: [data/processed/dollar_bars/1_minute/rty_1min_2025_2026.csv]}
+    leg_b: {root: ES, csvs: [data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv]}
+    traded_micro: M2K            # micro Russell 2000
+    point_value: 5.0
+    tick_size: 0.10
+    tick_value: 0.50
+    commission_rt: 1.24          # TopstepX micro-index (MNQ-class)
+    slippage_stress_rt: 1.00
+    roll_dates: ["2025-06-09", "2025-09-08", "2025-12-08"]  # synchronous quarterly rolls
+
+  - name: YM_ES
+    order: 3
+    description: "Dow vs S&P — tight coupling; frequency is the a-priori risk"
+    leg_a: {root: YM, csvs: [data/processed/dollar_bars/1_minute/ym_1min_2025_2026.csv]}
+    leg_b: {root: ES, csvs: [data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv]}
+    traded_micro: MYM            # micro Dow
+    point_value: 0.50
+    tick_size: 1.0
+    tick_value: 0.50
+    commission_rt: 1.24
+    slippage_stress_rt: 1.00
+    roll_dates: ["2025-06-09", "2025-09-08", "2025-12-08"]
+
+  - name: HG_GC
+    order: 4
+    description: "Copper vs gold — macro spread; weakest economic coupling"
+    leg_a: {root: HG, csvs: [data/processed/dollar_bars/1_minute/hg_1min_2025_2026.csv]}
+    leg_b: {root: GC, csvs: [data/processed/dollar_bars/1_minute/gc_1min_2025_2026.csv]}
+    traded_micro: MHG            # micro copper, 2,500 lb
+    point_value: 2500.0          # $ per 1.00 $/lb move per MHG contract
+    tick_size: 0.0005
+    tick_value: 1.25
+    commission_rt: 3.74
+    slippage_stress_rt: 2.50
+    roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-09-16",
+                 "2025-10-13", "2025-12-08", "2025-12-16", "2026-02-09"]
+
+  - name: PL_GC
+    order: 5
+    description: "Platinum vs gold — INFORMATIONAL ONLY (no micro; thin book)"
+    informational_only: true     # Gate 0 pass does NOT qualify for Gate 1
+    leg_a: {root: PL, csvs: [data/processed/dollar_bars/1_minute/pl_1min_2025_2026.csv]}
+    leg_b: {root: GC, csvs: [data/processed/dollar_bars/1_minute/gc_1min_2025_2026.csv]}
+    traded_micro: PL             # full contract, 50 oz — no micro exists
+    point_value: 50.0
+    tick_size: 0.10
+    tick_value: 5.0
+    commission_rt: 4.00
+    slippage_stress_rt: 10.0     # optimistic 1 tick/side; thin book may be 2-3x
+    roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-10-13",
+                 "2025-10-17", "2025-12-08", "2026-01-15", "2026-02-09"]
+
+  - name: MNQ_ES
+    order: 6
+    description: "CONTROL — must reproduce study_stat_arb_short_only.py exactly"
+    control: true
+    leg_a: {root: MNQ, csvs: [data/processed/dollar_bars/1_minute/mnq_1min_2025.csv,
+                              data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv]}
+    leg_b: {root: ES, csvs: [data/processed/dollar_bars/1_minute/es_1min_2025_2026.csv]}
+    traded_micro: MNQ
+    point_value: 2.0
+    tick_size: 0.25
+    tick_value: 0.50
+    commission_rt: 4.80          # matches template exactly (reproduction test)
+    slippage_stress_rt: 1.00
+    roll_dates: []               # template had no roll skip — keep empty to reproduce

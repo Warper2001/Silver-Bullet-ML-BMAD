@@ -118,3 +118,8 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 
 - Protected: none (all already 444)
 - Already protected: ['mnq_1min_holdout_20260301_plus.csv']
+
+## Init — 2026-06-12T17:50:43Z
+
+- Protected: ['gc_1min_holdout_20260301_plus.csv', 'hg_1min_holdout_20260301_plus.csv', 'pl_1min_holdout_20260301_plus.csv', 'rty_1min_holdout_20260301_plus.csv', 'si_1min_holdout_20260301_plus.csv', 'ym_1min_holdout_20260301_plus.csv']
+- Already protected: ['es_1min_holdout_20260301_plus.csv', 'mnq_1min_holdout_20260301_plus.csv']

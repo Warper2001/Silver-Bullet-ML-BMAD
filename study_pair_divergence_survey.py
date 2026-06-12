@@ -66,7 +66,10 @@ def prepare_pair(pair, g, session=None):
     rth["b_chg"] = rth["b"].diff()
     roll_cov = rth["a_chg"].rolling(g["beta_window"]).cov(rth["b_chg"])
     roll_var = rth["b_chg"].rolling(g["beta_window"]).var()
-    rth["beta"] = (roll_cov / roll_var.replace(0, np.nan)).ffill().clip(0, 10)
+    # clip is a numerical-stability bound, sized to the pair's price-change
+    # scale (template default [0,10] fits index/metals; BTC/ETH needs wider)
+    clip_lo, clip_hi = pair.get("beta_clip", [0.0, 10.0])
+    rth["beta"] = (roll_cov / roll_var.replace(0, np.nan)).ffill().clip(clip_lo, clip_hi)
     rth["div"] = (rth["a_chg"].rolling(g["spread_window"]).sum()
                   - rth["beta"] * rth["b_chg"].rolling(g["spread_window"]).sum())
     rth = rth.dropna(subset=["div", "beta"])

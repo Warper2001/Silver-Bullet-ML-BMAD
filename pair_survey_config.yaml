@@ -105,6 +105,23 @@ pairs:
     roll_dates: ["2025-06-09", "2025-07-17", "2025-08-11", "2025-10-13",
                  "2025-10-17", "2025-12-08", "2026-01-15", "2026-02-09"]
 
+  # ── Addendum 2026-06-12 (committed before first BTC_ETH run; see
+  # _bmad-output/precommit_pair_survey_addendum_btc_eth_2026-06.md) ──────────
+  - name: BTC_ETH
+    order: 7
+    description: "BTC vs ETH — Kraken perp signal, CME MBT economics (addendum)"
+    leg_a: {root: XBT, csvs: [data/kraken/PF_XBTUSD_1min.csv]}
+    leg_b: {root: ETH, csvs: [data/kraken/PF_ETHUSD_1min.csv]}
+    traded_micro: MBT            # micro bitcoin, 0.1 BTC — MET excluded (PV too
+    point_value: 0.10            # small: $40 thresh = ~15-25% of ETH price)
+    tick_size: 25.0              # index points
+    tick_value: 2.50
+    commission_rt: 2.84          # TopstepX MBT
+    slippage_stress_rt: 5.00     # 1 tick per side
+    beta_clip: [0.0, 200.0]      # BTC/ETH price-change beta ~20-45; template
+                                 # clip [0,10] would silently break the hedge
+    roll_dates: []               # perpetuals — continuous, no roll artifacts
+
   - name: MNQ_ES
     order: 6
     description: "CONTROL — must reproduce study_stat_arb_short_only.py exactly"

@@ -85,6 +85,32 @@ is not a session artifact.
    asymmetric in the direction costs favor. None of the five candidates shares all
    three properties.
 
+## Addendum (2026-06-12, prereg `9f4ae9a`): BTC–ETH — FAIL both directions
+
+Run after the parent survey under the identical frozen protocol (addendum doc:
+`precommit_pair_survey_addendum_btc_eth_2026-06.md`; log:
+`logs/pair_survey_btc_eth.log`). Signal = Kraken perps (continuous, no rolls);
+economics = CME MBT (0.1 BTC, $2.84 RT, tick $2.50); MET excluded as traded leg
+(PV makes the frozen grid unreachable); pair-level beta clip [0,200]
+pre-registered (template [0,10] would have silently broken the hedge at BTC/ETH
+price scale). Control re-run after the harness change: bit-identical (N=633,
+WR 58.0%, PF 1.27).
+
+| Dir | N | WR | BE WR | BE stress | PF | Avg$/trade | $/day/ct | Worst-mo | Verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| SHORT BTC | 101 | 53.5% | 53.6% | 59.8% | 1.16 | +$2.60 | +$0.87 | 33.3% | 🔴 FAIL |
+| LONG BTC | 114 | 50.9% | 53.6% | 59.8% | 0.92 | −$1.62 | −$0.61 | 42.9% | 🔴 FAIL |
+
+**Kill: frequency + cost floor.** The RTY–ES shape again: a $40 MBT stop = 400
+BTC index points (~0.5%) of 5-bar beta-hedged divergence occurs only 0.33×/day
+(gate: 1.0). The short side (fade BTC outperformance vs ETH — same direction as
+the index asymmetry) is gross-positive (PF 1.16, +$2.60/trade) but sits 0.1pt
+below even the unstressed breakeven WR, with worst-month 33.3% and no path to
+the 59.8% stressed bar. At $30 the frequency only reaches 0.85/day with the
+edge collapsing (+$0.40/trade). BTC–ETH residuals at 1-min are either too small
+to clear MBT's cost floor or too rare to matter. **Pair CLOSED** per the
+addendum decision rule.
+
 ## Disposition
 
 - All five pairs **CLOSED** per the pre-committed rule — no parameter sweeps beyond the

@@ -30,8 +30,11 @@ RTH = ("09:30", "15:55")
 
 
 def main():
-    df = pd.read_csv(CSV, parse_dates=["ts_utc"])
-    df["ts_utc"] = df["ts_utc"].dt.tz_localize("UTC")
+    df = pd.read_csv(CSV)
+    if df.empty:
+        print(f"INSUFFICIENT DATA — {CSV} has no samples yet. Keep capturing.")
+        return
+    df["ts_utc"] = pd.to_datetime(df["ts_utc"], utc=True)
     df["et"] = df["ts_utc"].dt.tz_convert("America/New_York")
 
     sil = df[(df["symbol"] == "SILN26")

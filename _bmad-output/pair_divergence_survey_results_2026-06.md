@@ -111,6 +111,46 @@ edge collapsing (+$0.40/trade). BTC–ETH residuals at 1-min are either too smal
 to clear MBT's cost floor or too rare to matter. **Pair CLOSED** per the
 addendum decision rule.
 
+## Addendum 2 (2026-06-12, prereg `023d0de`): 5-minute extension — NO qualification; family CLOSED across timeframes
+
+One-shot 5m re-test of all 7 pairs (√5-scaled grid, primary $80/1.0×, log:
+`logs/pair_survey_5m.log`, grid: `pair_survey_gate0_grid_5m.csv`). The 1-min
+control re-ran bit-identical (N=633, WR 58.0%, PF 1.27) after the resample
+harness change.
+
+**The mechanism hypothesis was confirmed — and still didn't clear the bar.**
+
+| Pair | Dir | N | WR | BE / BE-stress | PF | Avg$ | $/day | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| **SI–GC** | **LONG** | **462** | **57.8%** | **52.3% / 58.6%** | **1.27** | **+$12.60** | **+$27.85** | 🟡 **passes all 5 Gate 0 gates; fails ONLY the slippage-stress clause by 0.8pt** |
+| PL–GC | LONG | 632 | 52.4% | 52.5% / 58.8% | 1.05 | +$2.83 | +$8.80 | 🔴 sub-breakeven (info-only anyway) |
+| MNQ–ES | SHORT | 169 | 55.6% | 53.0% / 53.6% | 1.17 | +$7.66 | +$6.05 | 🔴 freq 0.81/d + worst-mo 33.3% — 1-min is MNQ's scale |
+| HG–GC | LONG | 89 | 57.3% | 52.3% / 53.9% | 1.37 | +$11.03 | +$4.63 | 🔴 freq 0.43/d |
+| YM–ES | LONG | 35 | 68.6% | 50.8% / 51.4% | 1.97 | +$20.97 | +$3.41 | 🔴 freq 0.17/d (tiny N) |
+| BTC–ETH | LONG | 50 | 52.0% | 51.8% / 54.9% | 1.06 | +$2.06 | +$0.34 | 🔴 freq + stress |
+| (all SHORT metals/crypto, RTY both) | | | | | | | | 🔴 negative or tiny |
+
+**SI–GC long deep-dive (the near-miss):** cost-fraction mechanism worked as
+hypothesized — avg edge scaled $1.91 → $12.60/trade while frequency held
+(13.9/d → 2.21/d but each trade 6.6× larger), PF 1.05 → 1.27, 10/10 months
+≥ 45% WR floor, monotone improvement with threshold ($100 cell: WR 59.2%,
+PF 1.36, +$18.11). The sole failing clause is the frozen 1-tick/side SIL
+slippage stress: measured 57.8% vs required 58.6% — a 0.35-SE gap (N=462),
+statistically indistinguishable, and the house precedent (HCVWAP v3: WR 30.0%
+vs gate 30.2% = DEAD) is that the gate is the gate. SIL's real spread is
+plausibly 1–2 ticks ($5–10/side), so the stress assumption is realistic, not
+conservative.
+
+**Disposition per addendum-2 rule: the divergence-fade family is CLOSED across
+timeframes for these pairs.** The grid observation that edge rises with
+threshold is recorded but explicitly NOT actionable (banned sweep). The one
+legitimate future path, requiring a fresh pre-registration and Alex's explicit
+decision: empirically measure live SIL spread/slippage (prospective quote
+capture, no historical re-test), and only if measured cost < the stressed
+assumption would a re-evaluation of this exact frozen result be justified.
+Direction asymmetry note: at 5m the LONG side dominated nearly everywhere —
+consistent with the 1-min metals finding.
+
 ## Disposition
 
 - All five pairs **CLOSED** per the pre-committed rule — no parameter sweeps beyond the

@@ -551,9 +551,11 @@ if __name__ == "__main__":
                         help="Enable both bullish and bearish signals")
     parser.add_argument("--blocked-months", type=str, default="",
                         help="Comma-separated month numbers to skip, e.g. '8,9,10' (default: none)")
+    parser.add_argument("--data", type=str, default=str(DATA_PATH),
+                        help="Override input 1-min bar CSV path (default: 2025 file)")
     args = parser.parse_args()
 
-    raw_df = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
+    raw_df = pd.read_csv(args.data, parse_dates=["timestamp"])
     df_p = prepare_data(raw_df)
     df = df_p[(df_p['timestamp'] >= args.start) & (df_p['timestamp'] <= args.end + " 23:59")].reset_index(drop=True)
 

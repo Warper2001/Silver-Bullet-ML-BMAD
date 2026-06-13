@@ -1,0 +1,19 @@
+====================================================================================
+BTC CARRY — ENTRY-CONFIRMATION (v3 exit held constant)
+Run: 2026-06-13 18:47 UTC
+====================================================================================
+  Arm                     Trades  CostLoss  %Carry  AvgAnn   AnnRet  Sharpe   MaxDD
+  ----------------------------------------------------------------------------------
+  H0  single >10%              7         6   88.3%   25.5%   +23.3%   12.38   2.18%
+  H1  >=3 consec >10%          4         3   84.5%   26.6%   +24.0%   13.28   1.28%
+  H2  single >15%              5         4   85.8%   26.3%   +23.8%   13.04   1.53%
+
+  H0  single >10%        d_BE=10.9d  PASS (yield +23.3% > 10%, maxdd 2.18% < 5%)
+  H1  >=3 consec >10%    d_BE=10.9d  PASS (yield +24.0% > 10%, maxdd 1.28% < 5%)
+  H2  single >15%        d_BE=7.3d  PASS (yield +23.8% > 10%, maxdd 1.53% < 5%)
+
+  DECISION RULE (adopt H1 over H0 iff BOTH):
+    (a) H1 ann_return (+24.0%) >= 90% of H0 (+23.3%): YES
+    (b) H1 cost-loss trips (3) < H0 (6): YES
+    => ADOPT H1 — pre-register as live entry change
+====================================================================================

@@ -79,3 +79,32 @@ annualized funding while in carry, and the **key differentiator: cost-loss round
   until the decision rule says "adopt."
 - The current live carry position is held per the existing v3 rules regardless of this
   backtest; no hand-trading on one day of data.
+
+---
+
+## RESULTS (post-seal, run 2026-06-13 18:47 UTC, harness SHA verified unchanged)
+
+Report: `data/reports/backtest_btc_carry_v3_entry_20260613_184753.txt`
+
+| Arm | Trades | Cost-loss trips | %Carry | AnnRet | Sharpe | MaxDD | Gate |
+|---|---|---|---|---|---|---|---|
+| H0 single >10% (live) | 7 | 6 | 88.3% | +23.3% | 12.38 | 2.18% | PASS |
+| **H1 ≥3 consec >10%** | 4 | **3** | 84.5% | **+24.0%** | **13.28** | **1.28%** | PASS |
+| H2 single >15% | 5 | 4 | 85.8% | +23.8% | 13.04 | 1.53% | PASS |
+
+**Decision rule fired: ADOPT H1.** (a) H1 return +24.0% ≥ 90% of H0 +23.3% ✅;
+(b) H1 cost-loss trips 3 < H0 6 ✅. H1 dominates H0 on every reported metric.
+H2 confirms the level lever is dominated by confirmation (H1 ≥ H2 on return, Sharpe, DD).
+
+**Honest caveats:**
+- **Low N:** 7 vs 4 round-trips over 18 months. The 6→3 cost-loss reduction is a small-count
+  result; directionally clean (H1 better on all axes) but not high-powered.
+- **Not a fresh holdout:** this funding series (Nov 2024–May 2026) also developed v1/v2/v3.
+  H1's edge is in-sample-consistent, not out-of-sample-proven. The live position entered
+  2026-06-12 is the first forward data point and should be logged as such.
+
+**Authorized next step:** per the decision rule, H1 may be implemented as the live entry
+rule — change `btc_carry_executor.py` entry from single-reading to `≥3 consecutive 8h
+readings > 10%`. This is a live-system change and is left to Alex's explicit go-ahead;
+the executor is NOT edited by this backtest. The current open position is unaffected and
+held per existing v3 rules.

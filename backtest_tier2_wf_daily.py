@@ -408,13 +408,18 @@ def make_plot(rec: pd.DataFrame, has_prod: bool, out_png: Path) -> None:
 
 def main() -> None:
     import argparse
-    global TRAIN_WINDOW_DAYS, VAL_TAIL_DAYS, MIN_TRAIN_SAMPLES, EXPANDING
+    global TRAIN_WINDOW_DAYS, VAL_TAIL_DAYS, MIN_TRAIN_SAMPLES, EXPANDING, FEATURES_PATH, HISTORY_PATH
     ap = argparse.ArgumentParser()
     ap.add_argument("--window", type=int, default=TRAIN_WINDOW_DAYS, help="Rolling training window / warmup length (calendar days)")
     ap.add_argument("--val-tail", type=int, default=None, help="Val-tail window for threshold search (days); default = window/3")
     ap.add_argument("--min-train", type=int, default=None, help="Min signals required in window to fit")
     ap.add_argument("--expanding", action="store_true", help="Train on ALL prior data each day (expanding window) instead of rolling")
+    ap.add_argument("--features", type=str, default=str(FEATURES_PATH), help="Feature CSV path")
+    ap.add_argument("--history", type=str, default=str(HISTORY_PATH), help="History CSV path")
+    ap.add_argument("--tag", type=str, default="", help="Extra suffix for output filenames (e.g. 'bearish')")
     args = ap.parse_args()
+    FEATURES_PATH = Path(args.features)
+    HISTORY_PATH = Path(args.history)
     TRAIN_WINDOW_DAYS = args.window
     VAL_TAIL_DAYS = args.val_tail if args.val_tail is not None else max(21, TRAIN_WINDOW_DAYS // 3)
     if args.min_train is not None:
@@ -436,6 +441,8 @@ def main() -> None:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now().strftime("%Y%m%d")
     tag = f"{date_str}_" + ("expanding" if EXPANDING else f"w{TRAIN_WINDOW_DAYS}")
+    if args.tag:
+        tag += f"_{args.tag}"
     txt = REPORT_DIR / f"tier2_wf_daily_{tag}.txt"
     csv = REPORT_DIR / f"tier2_wf_daily_trajectory_{tag}.csv"
     png = REPORT_DIR / f"tier2_wf_daily_{tag}.png"

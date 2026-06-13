@@ -44,6 +44,11 @@ import httpx
 # ---------------------------------------------------------------------------
 HURDLE_ANNUAL_PCT  = 10.0       # minimum annualised yield to enter carry
 COST_BPS           = 15.0       # round-trip cost per leg transition (bps)
+# H1 entry confirmation (prereg 02b5ec3, results f1931b8 — ADOPT H1): require the
+# annualised funding to exceed the hurdle for this many consecutive 8h periods
+# before entering, mirroring the BELOW_HURDLE_EXIT_PERIODS exit confirmation.
+# Backtest (v3 exit held constant): H1 dominated single-reading H0 on every metric.
+ENTRY_CONFIRM_PERIODS     = 3        # consecutive 8h readings > hurdle to enter
 NEG_THRESHOLD             = -0.0001  # -0.01% per 8h; below this counts as negative
 NEG_WINDOW_SIZE           = 5        # rolling window length for negative-funding exit
 NEG_WINDOW_MIN_NEG        = 3        # exit if >= this many in window below threshold
@@ -98,6 +103,8 @@ class CarryState:
     entry_funding_ann:  float          = 0.0    # annualised rate at entry
     payment_history:    list           = field(default_factory=list)  # last NEG_WINDOW_SIZE 8h rates
     below_hurdle_count: int            = 0      # consecutive payments while rate < hurdle
+    above_hurdle_count: int            = 0      # H1: consecutive 8h samples > hurdle while FLAT
+    last_entry_check_time: Optional[str] = None # H1: ISO UTC of last entry-confirmation sample
     notional_usd:       float          = DEFAULT_NOTIONAL
     accrued_pnl:        float          = 0.0    # cumulative P&L this trade (fraction of notional)
     n_funding_payments: int            = 0      # payments received this trade
@@ -251,6 +258,11 @@ def _should_enter(rate_ann: float) -> bool:
     return rate_ann > (HURDLE_ANNUAL_PCT / 100.0)
 
 
+def _entry_confirmed(state: CarryState) -> bool:
+    """H1: entry requires ENTRY_CONFIRM_PERIODS consecutive 8h samples > hurdle."""
+    return state.above_hurdle_count >= ENTRY_CONFIRM_PERIODS
+
+
 def _hurdle_str() -> str:
     return f"{HURDLE_ANNUAL_PCT:.1f}%"
 
@@ -372,6 +384,8 @@ class BTCCarryExecutor:
         self.state.entry_funding_ann  = rate_ann
         self.state.payment_history    = []
         self.state.below_hurdle_count = 0
+        self.state.above_hurdle_count = 0
+        self.state.last_entry_check_time = None
         self.state.accrued_pnl        = -cost
         self.state.n_funding_payments = 0
         self.state.last_payment_time  = None
@@ -464,6 +478,8 @@ class BTCCarryExecutor:
         self.state.entry_funding_ann  = 0.0
         self.state.payment_history    = []
         self.state.below_hurdle_count = 0
+        self.state.above_hurdle_count = 0
+        self.state.last_entry_check_time = None
         self.state.accrued_pnl        = 0.0
         self.state.n_funding_payments = 0
         self.state.last_payment_time  = None
@@ -505,8 +521,10 @@ class BTCCarryExecutor:
                 await self._exit(f"below_hurdle_x{BELOW_HURDLE_EXIT_PERIODS}", rate_ann)
                 return
 
-        if self.state.status == "FLAT" and _should_enter(rate_ann):
-            await self._enter(rate_ann)
+        if self.state.status == "FLAT":
+            self._update_entry_confirmation(rate_ann)
+            if _should_enter(rate_ann) and _entry_confirmed(self.state):
+                await self._enter(rate_ann)
 
         price_str = f"${self.fetcher.price:,.0f}" if self.fetcher.price else "?"
         neg_in_window = sum(r < NEG_THRESHOLD for r in self.state.payment_history)
@@ -514,10 +532,27 @@ class BTCCarryExecutor:
             f"poll [{self._mode_tag()}] | status={self.state.status} | "
             f"funding={rate_ann*100:.4f}%ann | btc={price_str} | "
             f"hurdle_met={_should_enter(rate_ann)} | "
+            f"entry={self.state.above_hurdle_count}/{ENTRY_CONFIRM_PERIODS} | "
             f"neg={neg_in_window}/{NEG_WINDOW_MIN_NEG}of{NEG_WINDOW_SIZE} | "
             f"bhx={self.state.below_hurdle_count}/{BELOW_HURDLE_EXIT_PERIODS} | "
             f"accrued=${self.state.accrued_pnl*self.notional:.4f}"
         )
+
+    def _update_entry_confirmation(self, rate_ann: float) -> None:
+        """Sample funding at most once per 8h while FLAT; count consecutive
+        samples above the hurdle (reset on a below-hurdle sample). Mirrors the
+        backtest's per-8h-period entry confirmation (H1)."""
+        now = datetime.now(timezone.utc)
+        last = (datetime.fromisoformat(self.state.last_entry_check_time)
+                if self.state.last_entry_check_time else None)
+        if last is not None and now < last + timedelta(hours=8):
+            return  # not yet a new 8h sample
+        if rate_ann > (HURDLE_ANNUAL_PCT / 100.0):
+            self.state.above_hurdle_count += 1
+        else:
+            self.state.above_hurdle_count = 0
+        self.state.last_entry_check_time = now.isoformat()
+        save_state(self.state)
 
     async def run(self) -> None:
         logger.info("=" * 60)

@@ -27,7 +27,10 @@ import pandas as pd
 import pytz
 import httpx
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from src.monitoring.trade_db import TradeDatabase
+
+# ... (keep existing imports)
+# [Note to agent: I'll apply this carefully as a replacement for the import block]
 
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
@@ -266,6 +269,29 @@ class TradeLogger:
 
     def append_trade(self, record: TradeRecord) -> None:
         import csv as _csv
+        # Log to DB
+        from src.monitoring.trade_db import TradeDatabase
+        db = TradeDatabase()
+        db.log_trade(
+            trader_id='trader-yank',
+            timestamp=record.timestamp_exit.isoformat(),
+            pnl=round(record.pnl_usd, 2),
+            direction=record.direction,
+            entry_price=round(record.entry_price, 4),
+            exit_price=round(record.exit_price, 4),
+            exit_reason=record.exit_reason,
+            metadata={
+                'tp_price': record.tp_price,
+                'sl_price': record.sl_price,
+                'gap_size': record.gap_size,
+                'h1_sweep_bars_ago': record.h1_sweep_bars_ago,
+                'm15_confirmed': record.m15_confirmed,
+                'kill_zone_active': record.kill_zone_active,
+                'vol_regime_pct': record.vol_regime_pct,
+                'contracts': record.contracts
+            }
+        )
+        
         self._LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         try:
             with self._LOG_PATH.open("a", newline="", encoding="utf-8") as f:

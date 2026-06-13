@@ -63,6 +63,8 @@ class S27SqueezeTrader:
         self.last_ts   = None
 
         self.trade_log_path = log_dir / "s27_squeeze_trade_log.csv"
+        from src.monitoring.trade_db import TradeDatabase
+        self.db = TradeDatabase()
 
         # Order execution (None → paper simulation only)
         self._orders: Optional[KrakenOrdersClient] = None
@@ -318,6 +320,19 @@ class S27SqueezeTrader:
                             self.active_trade = None
 
     def log_trade(self, t: dict, exit_price: float, reason: str, pnl: float) -> None:
+        # Log to DB
+        self.db.log_trade(
+            trader_id='trader-s27',
+            timestamp=t['ts'].isoformat(),
+            pnl=round(pnl, 2),
+            direction=t['dir'],
+            entry_price=round(t['entry'], 2),
+            exit_price=round(exit_price, 2),
+            exit_reason=reason,
+            ml_proba=round(t['proba'], 3),
+            metadata={'contracts': self.contracts}
+        )
+        # Maintain legacy CSV for backward compatibility/redundancy
         write_header = not self.trade_log_path.exists()
         with open(self.trade_log_path, 'a', newline='') as f:
             writer = csv.writer(f)

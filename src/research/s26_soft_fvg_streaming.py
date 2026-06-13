@@ -43,6 +43,8 @@ class S26SoftFVGTrader:
         self.last_ts = None
         
         self.trade_log_path = log_dir / "s26_soft_fvg_trade_log.csv"
+        from src.monitoring.trade_db import TradeDatabase
+        self.db = TradeDatabase()
 
     async def run(self):
         logger.info("Starting S26 Soft-FVG + Sweep Trader...")
@@ -221,6 +223,18 @@ class S26SoftFVGTrader:
                     pass
 
     def log_trade(self, t, exit_price, reason, pnl):
+        # Log to DB
+        self.db.log_trade(
+            trader_id='trader-s26',
+            timestamp=t['ts'].isoformat(),
+            pnl=round(pnl, 2),
+            direction=t['dir'],
+            entry_price=round(t['entry'], 2),
+            exit_price=round(exit_price, 2),
+            exit_reason=reason,
+            ml_proba=round(t['proba'], 3)
+        )
+        # Maintain legacy CSV for backward compatibility/redundancy
         write_header = not self.trade_log_path.exists()
         with open(self.trade_log_path, 'a', newline='') as f:
             writer = csv.writer(f)

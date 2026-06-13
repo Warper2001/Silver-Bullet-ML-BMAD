@@ -365,13 +365,28 @@ class MimNbLive:
     def _record_trade(self, exit_px, exit_t, reason):
         pnl_pts = self.position * (exit_px - self.entry_px)
         pnl_usd = pnl_pts * PT_VAL * CONTRACTS
+        
+        # Log to DB
+        from src.monitoring.trade_db import TradeDatabase
+        db = TradeDatabase()
+        db.log_trade(
+            trader_id='trader-mim-nb',
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            pnl=round(pnl_usd, 2),
+            direction='L' if self.position == 1 else 'S',
+            entry_price=self.entry_px,
+            exit_price=exit_px,
+            exit_reason=reason,
+            metadata={'pnl_pts': pnl_pts}
+        )
+
         self.day_pnl += pnl_usd
         trades_log.append({"day": str(self.day), "dir": self.position,
                            "entry_t": self.entry_t, "entry_px": f"{self.entry_px:.2f}",
                            "exit_t": exit_t, "exit_px": f"{exit_px:.2f}", "reason": reason,
                            "pnl_pts": f"{pnl_pts:+.2f}", "pnl_usd": f"{pnl_usd:+.2f}",
                            "day_pnl_usd": f"{self.day_pnl:+.2f}"})
-        logger.info("TRADE CLOSED %s %s→%s %+.2f pts ($%+.2f) day P&L $%+.2f [%s]",
+        logger.info("TRADE CLOSED %s %s→%s %+.2f pts ($%+.2f) day P&L %+.2f [%s]",
                     "L" if self.position == 1 else "S", self.entry_t, exit_t,
                     pnl_pts, pnl_usd, self.day_pnl, reason)
         self.position = 0

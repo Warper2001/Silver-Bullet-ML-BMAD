@@ -109,14 +109,20 @@ def run_combined_mc(measured_spread):
         rows.append((label, slip, sg_ev, p, b, p - p0))
     return p0, b0, rows, len(tdf), float(tdf["win"].mean())
 
-def draft_prereg(measured_spread, p0, rows):
+def draft_prereg(measured_spread, p0, rows, basis):
     best = max(r[5] for r in rows)
+    label, slip, ev, p, b, d = basis
+    caution = ("" if label == "full-spread" else
+               f"\n**⚠ Basis caution:** triggered by the OPTIMISTIC half-spread assumption "
+               f"(${slip:.2f}/RT); at the conservative full-spread (${measured_spread:.2f}/RT) the "
+               f"combined edge does NOT clear breakeven. Confirm realized fills before relying on this.")
     ts = datetime.now(timezone.utc)
     body = f"""# Pre-Registration (DRAFT): SI-GC Combined-Edge Gate 1 (holdout OOS)
 
 **Generated:** {ts:%Y-%m-%d} (auto-drafted by rerun_sigc_combined_mc.py)
 **Status:** DRAFT — requires Alex review before sealing. No holdout consumed, no live config changed.
 **Trigger:** SIL slippage verdict = PASS; measured median SILN26 RTH spread = ${measured_spread:.2f}/RT.
+**Qualifying basis:** {label} (modeled cost ${slip:.2f}/RT, combined Δpass {d*100:+.1f}pp).{caution}
 
 ## Rationale
 The 2026-06-14 in-sample scoping showed SI-GC LONG 5m is uncorrelated with MIM-NB
@@ -127,7 +133,7 @@ spread ${measured_spread:.2f}/RT, the re-run shows combined Δpass up to {best*1
 
 ## Pre-registered one-shot OOS test (frozen BEFORE touching the holdout)
 - Strategy: SI-GC LONG 5m primary (thresh $80, stop 1.0×, hold 30 bars), traded via SIL,
-  cost basis = measured ${measured_spread:.2f}/RT spread (full-spread, conservative).
+  cost basis = {label} ${slip:.2f}/RT (from measured median spread ${measured_spread:.2f}/RT).
 - Data: sealed SI/GC holdout `data/sealed_holdout/{{si,gc}}_1min_holdout_20260301_plus.csv` (2026-03-01+),
   consumed ONCE. MIM-NB daily P&L over the same dates from the live ledger / sealed engine.
 - Gates (all must pass):
@@ -169,14 +175,18 @@ def main():
         verdict_word = "ADDS VALUE" if d > 0 else "no help"
         log(f"  {label:11} (cost ${slip:.2f}/RT): SIG EV=${ev:+.1f}/day | "
             f"combined pass={p*100:.1f}% blow={b*100:.1f}% | Δpass={d*100:+.1f}pp [{verdict_word}]")
-    best = max(r[5] for r in rows)
-    if best > 0 and med <= BREAKEVEN:
-        tier = "CLEARLY WORTHWHILE" if med <= WORTHWHILE else "ADDITIVE"
-        log(f"VERDICT: measured ${med:.2f}/RT ≤ breakeven ${BREAKEVEN} → SI-GC {tier} as 2nd edge.")
-        draft_prereg(med, p0, rows)
+    # draft if EITHER cost basis (full- or half-spread) clears the breakeven with Δpass>0
+    clearing = [r for r in rows if r[1] <= BREAKEVEN and r[5] > 0]
+    if clearing:
+        basis = clearing[0]   # prefer conservative full-spread when it qualifies (rows ordered full, half)
+        label, slip, ev, p, b, d = basis
+        tier = "CLEARLY WORTHWHILE" if slip <= WORTHWHILE else "ADDITIVE"
+        log(f"VERDICT: {label} basis (cost ${slip:.2f}/RT) ≤ breakeven ${BREAKEVEN} with "
+            f"Δpass {d*100:+.1f}pp → SI-GC {tier} as 2nd edge.")
+        draft_prereg(med, p0, rows, basis)
     else:
-        log(f"VERDICT: measured ${med:.2f}/RT > breakeven ${BREAKEVEN} (or no Δpass>0) → "
-            f"SI-GC remains a net drag on the combine; second-edge thread stays closed.")
+        log(f"VERDICT: neither full- nor half-spread basis clears breakeven ${BREAKEVEN} with "
+            f"Δpass>0 at measured ${med:.2f}/RT → SI-GC remains a net drag; thread stays closed.")
     open(DONE, "w").write(f"PASS med=${med:.2f} {datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}\n")
     log("Done. Sentinel written; timer will no-op on remaining fires.")
 

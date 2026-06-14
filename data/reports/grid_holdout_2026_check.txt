@@ -1,0 +1,6 @@
+2026 holdout check (train 2025 / freeze / score 2026, bearish-only)
+SL5.0/TP8.0/thr0.5: noML PF=1.064 $692 (n=226) | ML PF=1.131 $902 WR=41.3% n=109 DD=$-1,909
+SL5.0/TP8.0/thr0.45: noML PF=1.064 $692 (n=226) | ML PF=1.019 $184 WR=39.4% n=180 DD=$-2,483
+SL4.0/TP6.0/thr0.5: noML PF=1.071 $722 (n=256) | ML PF=1.109 $726 WR=45.4% n=141 DD=$-1,415
+SL5.0/TP5.0/thr0.5: noML PF=0.962 $-417 (n=254) | ML PF=1.001 $6 WR=51.7% n=145 DD=$-1,849
+SL2.0/TP8.0/thr0.5: noML PF=1.231 $1,718 (n=281) | ML PF=1.518 $2,146 WR=27.4% n=135 DD=$-819

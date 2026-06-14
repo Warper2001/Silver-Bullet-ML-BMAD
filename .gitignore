@@ -161,3 +161,4 @@ data/historical/
 *.json
 *.json
 .projectx_api_key
+.grid_cache/

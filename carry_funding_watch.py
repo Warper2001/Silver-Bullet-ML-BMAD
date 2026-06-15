@@ -69,8 +69,12 @@ def main():
               f"confirmation completed. DECISION: review and decide on going LIVE "
               f"(needs Kraken creds in .env + executor --live). entry_ann="
               f"{st.get('entry_funding_ann',0)*100:.2f}%")
-    # 2) normalisation onset / progress while still FLAT (count climbing toward entry)
-    elif status == "FLAT" and above > prev["above"] and above >= 1:
+    # 2) normalisation onset / progress while still FLAT (count climbing toward entry).
+    #    Gate on CURRENT funding > hurdle: above_hurdle_count can be stale (it only
+    #    refreshes on a new 8h sample), so a climbing count while live funding is below
+    #    the hurdle is stale state, not real normalisation — do not alert on it.
+    elif (status == "FLAT" and above > prev["above"] and above >= 1
+          and fund is not None and fund > 10.0):
         eta = "ENTRY IMMINENT next 8h period" if above >= CONFIRM_PERIODS - 1 else "watching"
         alert(f"🟡 BTC funding normalising{fstr}: {above}/{CONFIRM_PERIODS} consecutive "
               f"8h readings > +10% hurdle — {eta}.")

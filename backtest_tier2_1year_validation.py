@@ -212,7 +212,7 @@ def sparkline(values: list[float], width: int = 60) -> str:
 
 # ── Core backtest run ──────────────────────────────────────────────────────────
 
-async def run_backtest(bars: list[DollarBar]) -> list:
+async def run_backtest(bars: list[DollarBar], ml_threshold: float | None = None) -> list:
     trader = Tier2StreamingTrader()
 
     # Mock out all broker I/O and state persistence for backtest replay
@@ -221,8 +221,11 @@ async def run_backtest(bars: list[DollarBar]) -> list:
     mock_client.cancel_order = AsyncMock(return_value=True)
     mock_client.close_position_at_market = AsyncMock(return_value=None)
     mock_client.reconcile_state = AsyncMock(return_value=None)
+    mock_client.place_exit_orders = AsyncMock(return_value=(None, None))  # newer trader path
     trader._ts_client = mock_client
     trader.ml_filter._log_decision = lambda *a, **kw: None
+    if ml_threshold is not None:
+        trader.ml_filter.threshold = ml_threshold  # override for ML on/off comparison
 
     # Suppress state persistence writes during replay
     tier2_mod.StatePersistence.save_state = staticmethod(lambda *a, **kw: None)
@@ -417,6 +420,13 @@ async def main():
             f"{HOLDOUT_CUTOFF.date()} (sealed holdout cutoff)."
         ),
     )
+    parser.add_argument(
+        "--ml-threshold",
+        type=float,
+        default=None,
+        help="Override the ML meta-label filter threshold (default: trader's loaded value). "
+             "Use 0.0 to disable the filter, e.g. 0.50 to gate at 0.50.",
+    )
     args = parser.parse_args()
 
     print(f"Loading bars {START_DATE.date()} → {END_DATE.date()} …", flush=True)
@@ -454,7 +464,7 @@ async def main():
         append_access_log(args.preregistration, sys.argv)
 
     print("Running backtest …", flush=True)
-    trades = await run_backtest(bars)
+    trades = await run_backtest(bars, ml_threshold=args.ml_threshold)
     print(f"Completed: {len(trades)} trades\n")
 
     report, trade_rows, equity_rows = build_report(trades, START_DATE, END_DATE)

@@ -1,10 +1,13 @@
-# strategy_config.yaml — S25 live paper trading config
-# Pre-registration: _bmad-output/preregistration_s25_live_deployment.md
-# Sealed: 2026-05-21, SHA 69972c3
+# strategy_config.yaml — YANK live paper trading config
+# Pre-registration (current): _bmad-output/preregistration_yank_sl2tp8_ml050.md  (2026-06-15)
+# Supersedes S25 seal (_bmad-output/preregistration_s25_live_deployment.md, 2026-05-21, SHA 69972c3).
+#   Config had drifted unsealed from S25 (S25 = SL5/TP6/ML-disabled); this re-seals the running config.
+# 2026-06-15: ml_threshold corrected 0.75 -> 0.50 (0.75 was a dead value; the meta-label filter's
+#   effective gate is 0.50, from models/xgboost/tier2_threshold.json). See prereg above.
 # DO NOT change any value without a new pre-registration commit first.
 
 sl_multiplier: 2.0
-tp_multiplier: 4.0
+tp_multiplier: 8.0
 entry_pct: 0.5
 atr_threshold: 0.5
 max_gap_dollars: 60.0
@@ -15,7 +18,7 @@ max_daily_loss: -750.0
 vol_regime_lookback: 120
 vol_regime_threshold: 0.75
 min_gap_atr_ratio: 0.25
-ml_threshold: 0.65
+ml_threshold: 0.50
 bearish_only: true
 h1_sweep_lookback: 6
 tuesday_exclusion: true

@@ -53,9 +53,6 @@ from src.research.strategy_core import (
     volatility_regime_filter,
 )
 
-# Configuration (OPTIMIZED TIER 2)
-TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25"  # S25 pre-reg SHA 69972c3
-
 # Strategy parameters live in StrategyConfig (strategy_core.py) — the single source
 # of truth shared by live trader and backtest engine.  Do not add duplicates here.
 # Default values: SL 5.0×, TP 6.0×, entry 50%, gap≥25% ATR, vol-regime 75th pct,
@@ -868,7 +865,10 @@ class Tier2StreamingTrader:
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
         logger.info("=" * 70)
         cfg = self._strategy_config
-        logger.info(f"Configuration: {TIER2_CONFIG}")
+        logger.info(
+            f"Configuration: SL{cfg.sl_multiplier}x_TP{cfg.tp_multiplier}x_Midpoint_"
+            f"H1_M15CHoCH_M1FVG_g{cfg.min_gap_atr_ratio} | ml_threshold={cfg.ml_threshold}"
+        )
         logger.info(f"Symbol: {self._symbol} | point_value={self._point_value} tick={self._tick_size} contracts={self._contracts}")
         logger.info(f"Max hold: {cfg.max_hold_bars} bars | SL/TP mult: {cfg.sl_multiplier}x")
         logger.info(f"Entry Level: {cfg.entry_pct * 100}% (Mean Threshold)")

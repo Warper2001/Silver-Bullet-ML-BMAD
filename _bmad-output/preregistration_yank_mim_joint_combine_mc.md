@@ -3,7 +3,7 @@
 **Generated:** 2026-06-17
 **Experiment ID:** yank-mim-joint-combine-mc
 **Pre-registration base commit:** fd2bb26 (seal commit SHA recorded by the commit itself)
-**Status:** DRAFT — the joint (two-strategy) combine MC has NOT been computed on any data. Single-strategy MC results cited below are prior, already-observed numbers.
+**Status:** SEALED (re-seal v2). The joint MC has not been computed under this corrected spec. Per §7, the first seal (bfecfd1) omitted MIM-NB's deployed 500-pt cat-stop from the input series (it modeled the pre-cat-stop V2 at a 48.4% baseline instead of the deployed 54%); §3 is corrected and the experiment is re-sealed before the governing run.
 **Objective (fixed by Alex, 2026-06-17):** maximize Topstep 50K combine **PASS probability**. Steady-income optimization is explicitly deferred until there is account headroom. This experiment is scored on pass% / blow%, not on Sharpe or expectancy.
 
 ---
@@ -35,10 +35,11 @@ This is **diversification of two independently held-out-validated edges**, not r
 
 ## 3. Inputs (Frozen)
 
-**MIM-NB** — deployed V2 variant, net of $2.24/ct ($1.12 pts) per completed trade, $2/pt.
+**MIM-NB** — deployed V2 variant **+ 500-pt catastrophe stop** (the live config), net of $2.24/ct ($1.12 pts) per completed trade, $2/pt.
 - Dev 2025: `data/reports/mim_nb_gate0_v2_2025.csv` — sha256 `fb26140b0c1d88ab…`
 - OOS 2026: `data/reports/mim_nb_gate1_v2_2026oos.csv` — sha256 `027741fe2a926694…`
 - 163 traded days, 2025-01-24 … 2026-05-19. Per-trade `pnl_pts`, grouped by ET `day`.
+- **Cat-stop (binding):** the gate CSVs are the raw V2 trades *without* the deployed catastrophe stop. The live bot runs `CAT_STOP_PTS=500`, so each trade's point P&L is floored at −500 before cost: `net1ct = (max(pnl_pts, −500) − 1.12) × 2`. This is the variant that produces the **54% / 33% single-strategy baseline** used in the gate (verified: cap=500 → 54.0%/33.3%; cap=None → 48.4%/41.4%). YANK's own SL2 stop is already baked into its backtested trades, so no analogous cap is applied to YANK.
 
 **YANK** — sealed config SL2 / TP8 / ml_threshold 0.50, seal run 181838.
 - Trades (primary input): `data/reports/backtest_1year_20260615_181838.csv` — sha256 `88c026b0c113712e…`

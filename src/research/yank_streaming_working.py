@@ -876,6 +876,10 @@ class Tier2StreamingTrader:
         self._ts_client: Optional[TradeStationClient] = None
 
     async def initialize(self):
+        _halt = Path(__file__).parent.parent.parent / "data" / "combine_joint" / "HALT"
+        if _halt.exists():
+            raise SystemExit(f"HALT flag present ({_halt}) — combine floor monitor halted trading; "
+                             "remove the flag after review to resume.")
         logger.info("=" * 70)
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
         logger.info("=" * 70)

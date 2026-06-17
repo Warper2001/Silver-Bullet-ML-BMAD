@@ -293,22 +293,52 @@ class MimNbLive:
             logger.warning("Fewer than %d complete sessions in backfill — entries blocked until depth reached",
                            LOOKBACK_DAYS)
 
+    def _load_persisted_position(self):
+        """Read MIM-NB's OWN last-known state from its hash-chained state.json.
+        Required for commingling-safe recovery: MIM-NB shares account+contract with
+        YANK, which net into ONE position, so we recover from our own file — never
+        from net account position."""
+        p = DATA_DIR / "state.json"
+        if not p.exists():
+            return None
+        try:
+            return json.loads(p.read_text())
+        except Exception as exc:
+            logger.warning("state.json read failed (%s) — treating as flat", exc)
+            return None
+
     async def _reconcile_startup(self):
-        st = await self.px.reconcile_state(str(self.account_id))
-        if st.status != "FLAT":
-            qty = getattr(st, "position_qty", 0) or 0
-            logger.warning("Startup reconcile: account not flat (%s qty=%s) — flattening per seal",
-                           st.status, qty)
-            await self.px.cancel_all_pending_orders(str(self.account_id))
-            if qty != 0:
-                await self.px.close_position_at_market(
-                    "LONG" if qty > 0 else "SHORT", str(self.account_id), contracts=abs(qty))
-            orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
-                               "event": "FLATTEN", "order_id": "", "otype": _TYPE_MARKET,
-                               "side": "", "size": abs(qty), "price": "",
-                               "outcome": "SENT", "detail": "STARTUP_RECONCILE"})
+        """Commingling-safe startup recovery. NEVER reads net position or flattens/
+        cancels-all (that would clobber YANK, which shares this account+contract).
+        Recovers our position from our own state file and verifies our own cat-stop
+        order by ID."""
+        st = self._load_persisted_position()
+        believed = int(st.get("position", 0)) if st else 0
+        if believed == 0:
+            logger.info("Startup reconcile: own state FLAT — no account action ✓")
+            return
+        # We believed we were holding — restore our own state.
+        self.position = believed
+        self.entry_px = float(st.get("entry_px", 0.0))
+        self.entry_t = st.get("entry_t")
+        self.day = st.get("day")
+        cat_id = st.get("cat_stop_id")
+        self.cat_stop_id = cat_id
+        open_flag = await self.px.is_order_open(cat_id) if cat_id is not None else None
+        if open_flag is True:
+            logger.warning("Startup reconcile: RESUMED %s position (entry %.2f, cat-stop #%s live)",
+                           "LONG" if believed == 1 else "SHORT", self.entry_px, cat_id)
+        elif open_flag is False:
+            # cat-stop gone while we were offline → it filled. Book the stop exit.
+            stop_px = self.entry_px - CAT_STOP_PTS if believed == 1 else self.entry_px + CAT_STOP_PTS
+            self._record_trade(stop_px, datetime.now(ET).strftime("%H:%M"), "CAT_STOP_OFFLINE")
+            await self.px.cancel_orders([cat_id])
+            self.cat_stop_id = None
+            logger.warning("Startup reconcile: cat-stop #%s filled while offline — booked CAT_STOP @ %.2f",
+                           cat_id, stop_px)
         else:
-            logger.info("Startup reconcile: FLAT ✓")
+            logger.warning("Startup reconcile: cat-stop status UNKNOWN (id=%s) — resuming holding; "
+                           "next check-mark verifies", cat_id)
 
     async def _catch_up_today(self):
         """If started/restarted mid-session, rebuild today's intraday state
@@ -428,7 +458,7 @@ class MimNbLive:
         return True
 
     async def _flatten(self, reason):
-        await self.px.cancel_all_pending_orders(str(self.account_id))
+        await self.px.cancel_orders([self.cat_stop_id])  # commingling-safe: only our own resting order
         self.cat_stop_id = None
         if self.position != 0:
             await self.px.close_position_at_market(
@@ -533,12 +563,14 @@ class MimNbLive:
                 await self._exit(c, hm, "EOD")
                 action = "EOD_EXIT"
         else:
-            live_pos = await self._verify_position()
-            if self.position != 0 and live_pos == 0:
+            # Commingling-safe: the account nets MIM+YANK, so detect our OWN cat-stop
+            # fill by whether its order ID is still open — never by net position.
+            cat_filled = self.cat_stop_id is not None and (await self.px.is_order_open(self.cat_stop_id) is False)
+            if self.position != 0 and cat_filled:
                 # catastrophe stop filled since last check
                 stop_px = self.entry_px - CAT_STOP_PTS if self.position == 1 else self.entry_px + CAT_STOP_PTS
                 self._record_trade(stop_px, hm, "CAT_STOP")
-                await self.px.cancel_all_pending_orders(str(self.account_id))
+                await self.px.cancel_orders([self.cat_stop_id])
                 self.cat_stop_id = None
                 action = "CAT_STOP_DETECTED"
             elif self.position == 1 and c < lb:
@@ -569,18 +601,6 @@ class MimNbLive:
         if hm == "16:00":
             self.prev_close = c
             self._save_state()
-
-    async def _verify_position(self):
-        try:
-            headers = await self.px._headers()
-            r = await self.http.post(f"{_BASE_URL}/Position/searchOpen",
-                                     json={"accountId": self.account_id,
-                                           "contractId": self.contract_id}, headers=headers)
-            if r.status_code == 200:
-                return sum(int(p.get("size", 0)) for p in r.json().get("positions", []))
-        except Exception as exc:
-            logger.warning("position verify failed: %s", exc)
-        return self.position  # fall back to local belief on error
 
     def _save_state(self):
         (DATA_DIR / "state.json").write_text(json.dumps({

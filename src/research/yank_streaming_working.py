@@ -769,6 +769,9 @@ class ActiveTrade:
     m15_confirmed: bool = False
     kill_zone_active: bool = False
     vol_regime_pct: float = 0.0
+    # Passive drift canary: meta-model P(success) at entry, paired with realized
+    # outcome at close (logs/yank_ml_canary.csv). Logging only — no control effect.
+    ml_proba: float = float("nan")
 
 
 @dataclass
@@ -928,6 +931,7 @@ class Tier2StreamingTrader:
                     m15_confirmed=bool(state.get("m15_confirmed", False)),
                     kill_zone_active=bool(state.get("kill_zone_active", False)),
                     vol_regime_pct=float(state.get("vol_regime_pct", 0.0)),
+                    ml_proba=float(state.get("ml_proba", float("nan"))),
                 )
                 logger.info("✅ Crash recovery: resumed active trade from persisted state")
             elif broker_state.status == "PENDING":
@@ -1349,8 +1353,40 @@ class Tier2StreamingTrader:
             vol_regime_pct=t.vol_regime_pct,
             contracts=self._contracts,
         ))
+        self._log_ml_canary(t, _exit_reason_str, pnl)
         self._log_trade_metrics()
         self._write_equity_curve()
+
+    def _log_ml_canary(self, t: "ActiveTrade", exit_reason: str, pnl: float) -> None:
+        """Passive drift canary: pair the entry meta-model P(success) with the realized
+        outcome (logs/yank_ml_canary.csv). Logging only — never gates a trade. Rolled up
+        weekly (rolling AUC/Brier vs the ~0.50 baseline) per the 2026-06-16 party-mode
+        decision: keep the PF<0.90-after-N>=20 P&L guardrail as the actuator; observe here.
+
+        Skipped when the ML model is inactive (pass-through) or no proba was captured
+        (e.g. a trade resumed via crash recovery before this field was persisted)."""
+        if self.ml_filter.model is None or np.isnan(t.ml_proba):
+            return
+        import csv as _csv
+        log_path = Path(__file__).parent.parent.parent / "logs" / "yank_ml_canary.csv"
+        row = {
+            "timestamp_entry": str(t.entry_time),
+            "direction":       t.direction,
+            "ml_proba":        round(float(t.ml_proba), 4),
+            "threshold":       self.ml_filter.threshold,
+            "exit_reason":     exit_reason,
+            "pnl_usd":         round(float(pnl), 2),
+            "win":             int(pnl > 0),
+        }
+        write_header = not log_path.exists()
+        try:
+            with log_path.open("a", newline="") as _f:
+                _w = _csv.DictWriter(_f, fieldnames=list(row.keys()))
+                if write_header:
+                    _w.writeheader()
+                _w.writerow(row)
+        except Exception as _e:
+            logger.warning(f"ML canary log write failed: {_e}")
 
     # _log_trade() removed in Story 4-2 — replaced by TradeLogger.append_trade() (AC#1, AC#2)
     # _check_daily_reset_and_halt() removed in Story 4-3 — replaced by RiskManager.check_and_update() (AC#1)
@@ -1480,7 +1516,7 @@ class Tier2StreamingTrader:
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill, ml_proba=proba)
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
@@ -1502,7 +1538,7 @@ class Tier2StreamingTrader:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill, ml_proba=proba)  # type: ignore[arg-type]
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
@@ -1601,7 +1637,8 @@ class Tier2StreamingTrader:
         """Round price to nearest instrument tick. Avoids float artifacts."""
         return round(round(price / self._tick_size) * self._tick_size, 10)
 
-    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool):
+    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool,
+                           ml_proba: float = float("nan")):
         """Resolve entry via strategy_core.make_entry_decision and arm the ActiveTrade.
 
         ``fvg`` is now a ``FVGSignal`` from ``strategy_core.detect_fvg``.
@@ -1652,6 +1689,7 @@ class Tier2StreamingTrader:
             m15_confirmed=_m15_confirmed,
             kill_zone_active=_kill_zone_active,
             vol_regime_pct=_vol_regime_pct,
+            ml_proba=ml_proba,
         )
         # Persist active-trade state + daily risk for crash recovery (AR14, AR15, NFR12)
         StatePersistence.save_state({
@@ -1668,6 +1706,7 @@ class Tier2StreamingTrader:
             "m15_confirmed": _m15_confirmed,
             "kill_zone_active": _kill_zone_active,
             "vol_regime_pct": _vol_regime_pct,
+            "ml_proba": ml_proba,
             **self._risk_manager.to_state_dict(),
         })
         logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction_str} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")

@@ -41,7 +41,8 @@ from src.research.projectx_client import (
 # ----------------------------------------------------------------------
 # Frozen configuration (deployment prereg 7939eed — do not edit without a new seal)
 # ----------------------------------------------------------------------
-SYMBOL = os.environ.get("MIM_NB_SYMBOL", "MNQU26")   # front month; mechanical roll rule
+SYMBOL = os.environ.get("MIM_NB_SYMBOL", "MNQU26")   # startup seed / fallback when autoroll disabled
+AUTOROLL = os.environ.get("MIM_NB_AUTOROLL", "1") != "0"  # set 0 to pin MIM_NB_SYMBOL (manual roll)
 CONTRACTS = 1
 CAT_STOP_PTS = 500.0
 LOOKBACK_DAYS = 14
@@ -62,7 +63,45 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mim_nb")
 
-BARS_URL = f"https://api.tradestation.com/v3/marketdata/barcharts/{SYMBOL}?interval=1&unit=Minute"
+def _bars_url(symbol: str) -> str:
+    return f"https://api.tradestation.com/v3/marketdata/barcharts/{symbol}?interval=1&unit=Minute"
+
+
+def _contract_id_to_symbol(contract_id: str) -> str:
+    """'CON.F.US.MNQ.U26' -> 'MNQU26' (inverse of projectx_client._to_contract_id)."""
+    parts = contract_id.split(".")
+    return f"{parts[3]}{parts[4]}"
+
+
+async def resolve_front_month(http, px_auth, root: str = "MNQ") -> str:
+    """Return the active front-month TradeStation symbol (e.g. 'MNQU26').
+
+    Source of truth is ProjectX's own `activeContract` flag via /Contract/search —
+    i.e. the exact contract the broker will accept orders for. Falls back to the
+    date-based FuturesSymbolGenerator (third-Friday math) only if the API call
+    fails, so a broker outage never blocks the bot. Added after the 2026-06-16
+    incident where a stale front month silently rejected every entry.
+    """
+    try:
+        token = await px_auth.authenticate()
+        headers = {"Authorization": f"Bearer {token}",
+                   "Content-Type": "application/json", "Accept": "application/json"}
+        r = await http.post(f"{_BASE_URL}/Contract/search",
+                            json={"searchText": root, "live": False}, headers=headers)
+        if r.status_code == 200:
+            active = [c for c in r.json().get("contracts", [])
+                      if c.get("activeContract")
+                      and str(c.get("id", "")).split(".")[3:4] == [root]]
+            if active:
+                return _contract_id_to_symbol(active[0]["id"])
+            logger.warning("Contract/search: no active %s contract in response — date fallback", root)
+        else:
+            logger.warning("Contract/search HTTP %s — date fallback", r.status_code)
+    except Exception as exc:
+        logger.warning("Contract/search failed (%s) — date fallback", exc)
+    from src.data.futures_symbols import FuturesSymbolGenerator
+    return FuturesSymbolGenerator()._find_current_contract().symbol
+
 
 ENTRY_MARKS = {f"{h:02d}:{m}" for h in range(10, 16) for m in ("00", "30")} - {"16:00"}
 CHECK_MARKS = ENTRY_MARKS | {"16:00"}
@@ -119,6 +158,8 @@ class MimNbLive:
         self.ts_auth = None
         self.px_auth = None
         self.px = None
+        self._cfg = None
+        self.symbol = SYMBOL
         self.contract_id = _to_contract_id(SYMBOL)
 
         # strategy state
@@ -138,24 +179,65 @@ class MimNbLive:
         self.last_bar_ts = None
 
     # ------------------------------------------------------------------
+    def _apply_symbol(self, sym: str):
+        """Point every contract reference (bars URL, ProjectX orders, position
+        verify) at `sym`. Single place that mutates the active contract."""
+        self.symbol = sym
+        self.contract_id = _to_contract_id(sym)
+        if self.px is not None:
+            self.px._contract_id = self.contract_id
+        if self._cfg is not None:
+            self._cfg.symbol = sym
+
     async def initialize(self):
-        logger.info("=" * 70)
-        logger.info("MIM-NB LIVE — %s — %d contract — cat stop %.0f pts — account %s",
-                    SYMBOL, CONTRACTS, CAT_STOP_PTS, self.account_id)
-        logger.info("Sealed spec 6957daa / deployment 7939eed")
-        logger.info("=" * 70)
         self.http = httpx.AsyncClient(timeout=30)
         self.ts_auth = TradeStationAuthV3.from_file(".access_token")
         await self.ts_auth.authenticate()
         self.px_auth = ProjectXAuth.from_file(".projectx_api_key")
 
-        class _Cfg:
-            symbol = SYMBOL
-        self.px = ProjectXClient(self.px_auth, _Cfg(), self.http,
+        # Auto-roll: resolve the broker's active front month at startup so a
+        # restart always trades the contract that will actually accept orders.
+        if AUTOROLL:
+            sym = await resolve_front_month(self.http, self.px_auth)
+            if sym != self.symbol:
+                logger.info("AUTOROLL startup: %s → %s (broker active contract)", self.symbol, sym)
+            self._apply_symbol(sym)
+        else:
+            logger.info("AUTOROLL disabled (MIM_NB_AUTOROLL=0) — pinned to %s", self.symbol)
+
+        logger.info("=" * 70)
+        logger.info("MIM-NB LIVE — %s — %d contract — cat stop %.0f pts — account %s",
+                    self.symbol, CONTRACTS, CAT_STOP_PTS, self.account_id)
+        logger.info("Sealed spec 6957daa / deployment 7939eed")
+        logger.info("=" * 70)
+
+        self._cfg = type("_Cfg", (), {"symbol": self.symbol})()
+        self.px = ProjectXClient(self.px_auth, self._cfg, self.http,
                                  projectx_account_id=self.account_id)
         await self._backfill()
         await self._reconcile_startup()
         await self._catch_up_today()
+
+    async def _maybe_roll(self):
+        """At a session boundary, roll to the new front month if the broker's
+        active contract changed. Only runs while FLAT (MIM-NB is flat overnight),
+        so it never strands a live position. Re-seeds sigma/prev_close from the
+        new contract's price series. Fixes the 2026-06-16 stale-contract incident
+        without needing a manual restart each quarter."""
+        if not AUTOROLL or self.position != 0:
+            return
+        sym = await resolve_front_month(self.http, self.px_auth)
+        if sym == self.symbol:
+            return
+        logger.warning("AUTOROLL: front month %s → %s — reseeding on new contract",
+                       self.symbol, sym)
+        self._apply_symbol(sym)
+        await self._backfill()              # reseed sigma_hist + prev_close on new contract
+        self.open_d = None                  # backfill is authoritative; skip _new_session re-fold
+        self.today_moves = {}
+        orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
+                           "event": "ROLL", "order_id": "", "otype": "", "side": "",
+                           "size": "", "price": "", "outcome": sym, "detail": "AUTOROLL"})
 
     async def _ts_token(self) -> str:
         """Token source of truth is the .access_token file — a sibling bot's
@@ -171,7 +253,7 @@ class MimNbLive:
 
     async def _ts_get_bars(self, barsback=1500):
         token = await self._ts_token()
-        url = f"{BARS_URL}&barsback={barsback}"
+        url = f"{_bars_url(self.symbol)}&barsback={barsback}"
         r = await self.http.get(url, headers={"Authorization": f"Bearer {token}"})
         r.raise_for_status()
         return r.json().get("Bars", [])
@@ -423,6 +505,7 @@ class MimNbLive:
         if not ("09:31" <= hm <= "16:00"):
             return
         if et.date() != self.day:
+            await self._maybe_roll()       # quarterly contract roll, while flat
             self._new_session(et.date())
         if self.open_d is None:
             if hm != "09:31":

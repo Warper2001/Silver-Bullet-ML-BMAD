@@ -3,24 +3,24 @@
 **Generated:** 2026-06-17
 **Experiment ID:** yank-mim-joint-combine-deploy
 **Base commit:** (seal commit SHA recorded by the commit itself)
-**Authorizing result:** `yank-mim-joint-combine-mc` — joint combine MC (re-seal 75fc1eb, results aca5785) at **MIM 1ct : YANK 2ct** → primary **64.8% pass / 26.2% blow** vs the 54%/33% MIM-only baseline; pass gain is timeout→pass conversion at flat blow.
+**Authorizing result:** `yank-mim-joint-combine-mc` (re-seal 75fc1eb / results aca5785) → ADOPT at **MIM 1ct : YANK 2ct**. **Re-validated under the Topstep-session constraint** (`results_yank_mim_joint_constrained.md` — the GOVERNING figures): primary **61.2% pass / 29.2% blow** vs the 54%/33% MIM-only baseline (the unconstrained run was 64.8%/26.2%, but used a YANK that can't legally trade the combine). 1:2 is the *smallest* size that beats baseline on both axes once YANK obeys the 15:10 CT flatten.
 **Decision:** Alex authorized adding YANK to the live combine at the vol-balanced **1:2** ratio (2026-06-17).
-**Status:** SEALED — committed before the YANK→ProjectX execution-port code is written.
+**Status:** SEALED (re-seal v2) — re-sealed after the §6 #3 Topstep-session finding: YANK spec now includes the combine-mandated flatten and the authorization uses the constrained MC. Committed before the YANK→ProjectX execution-port code is written.
 
 ---
 
 ## 0. What is new vs the MIM-NB-only deployment (prereg 7939eed)
 
 This adds a **second, independently-sealed strategy (YANK) to the same Topstep 50K combine account**. The strategy logic of neither bot changes. What is new and therefore what this document governs:
-1. **YANK executes on the combine** (ProjectX), down-sized **5ct → 2ct**, where today it runs only on a separate TradeStation SIM paper account.
+1. **YANK executes on the combine** (ProjectX), down-sized **5ct → 2ct** AND made **Topstep-session-compliant** (flat by 15:10 CT, no new entries 15:08–17:00 CT, no overnight carry across the close), where today it runs unconstrained 24h on a separate TradeStation SIM paper account.
 2. **One shared trailing floor.** Both bots' fills hit one account; the MLL ratchet is on **combined** equity. Halt triggers and the consistency rule are re-derived on the aggregate, not per-strategy.
 3. **Two independent processes, one account.** A coordination/monitor layer is required so neither bot is blind to the joint risk state.
 4. **A derived distance-to-floor circuit breaker** (§5), calibrated from the MC paths — the binding mitigation for the thin-data risk. Realized correlation is logged as an **observe-only diagnostic** (the backtest can't guarantee the ~0.015 holds out of sample, but correlation is not used as a trigger — see §5 rationale).
 
 ## 1. Integrity Disclosure
 
-- The joint MC that authorizes this (64.8%/26.2% @ 1:2) rests on a **thin joint pool — only 18 days where both strategies traded** — and both instruments are MNQ, so a true tail regime can lift the benign correlation. The 1:2 size was chosen *because* it sits below where blow starts climbing (1:3 → 29.2%) and leaves headroom to trim. **The binding mitigation is the derived distance-to-floor circuit breaker (§5) — calibrated from the MC paths, not asserted — plus the headroom to trim YANK toward 1ct. Correlation is logged as an observe-only diagnostic, never a trigger.**
-- Neither strategy's parameters are touched. MIM-NB = sealed mim-nb-v2-catstop S-B (6957daa). YANK = sealed Tier2 SL2/TP8/ml0.50 (138cab1). Adding them is composition of two independently held-out-validated edges, not new fitting.
+- The authorizing constrained MC (61.2%/29.2% @ 1:2) rests on a **thin joint pool — only 18 days where both strategies traded** — and both instruments are MNQ, so a true tail regime can lift the benign correlation. The 1:2 size sits below where blow hits the gate ceiling (constrained 1:3 → 32.2%, near the 33% bar). **The binding mitigation is the derived distance-to-floor circuit breaker (§5) — calibrated from the MC paths, not asserted. Trimming YANK toward 1ct lowers blow but also loses the pass-edge (constrained 1:1 only matches baseline), so it is a defensive lever, not a free one. Correlation is logged as an observe-only diagnostic, never a trigger.**
+- **MIM-NB parameters are untouched** (sealed mim-nb-v2-catstop S-B, 6957daa). **YANK = sealed Tier2 SL2/TP8/ml0.50 (138cab1) with two deployment changes: contracts 5→2, and a Topstep-session flatten (§2) required for venue compliance.** The flatten is not a strategy edit for edge — it is a venue constraint, and its effect is fully modeled in the constrained MC. Composition of two independently held-out-validated edges, not new fitting.
 - No joint live data exists yet. This is sealed before the execution-port code is written.
 
 ## 2. Strategy (frozen — by reference to each seal)
@@ -28,9 +28,10 @@ This adds a **second, independently-sealed strategy (YANK) to the same Topstep 5
 **MIM-NB** — unchanged from live (prereg 7939eed): MNQ front month, **1 contract**, noise-band breakout, 500-pt cat-stop, EOD-flat, per-strategy DLL −$1,000. Already live on ProjectX combine 23884932.
 
 **YANK** — sealed Tier2 SL2/TP8/ml_threshold 0.50 (138cab1), **down-sized to 2 contracts** (from 5):
-- MNQ front month, bracket entry (limit at FVG midpoint) + TP limit + SL stop; SL = 2×, TP = 8× gap; ML filter threshold **0.50** (must be verified live-effective — see §6 hazard).
-- All other YANK parameters identical to the seal. Only `contracts` changes (5 → 2). Any other change requires a new pre-registration.
-- YANK retains its **native daily-loss guard (−$750)**, which is *more* conservative than the −$1,000 the MC modeled → live blow risk is bounded at or below the modeled 26.2%.
+- MNQ front month, bracket entry (limit at FVG midpoint) + TP limit + SL stop; SL = 2×, TP = 8× gap; ML filter threshold **0.50** (verified live-effective — see §6).
+- **Topstep-session flatten (deployment change, venue compliance):** flatten any open position at **15:10 CT** market, cancel pendings; **no new entries 15:08–17:00 CT**; never carry across the close. Evening/Globex trading (17:00 CT onward) is retained (Topstep permits it). This is the only logic change beyond sizing; its P&L effect is modeled in the constrained MC (`results_yank_mim_joint_constrained.md`).
+- Contracts **5 → 2**. All other YANK parameters identical to the seal. Any further change requires a new pre-registration.
+- YANK retains its **native daily-loss guard (−$750)**, *more* conservative than the −$1,000 the MC modeled → live blow risk bounded at or below the modeled 29.2%.
 
 ## 3. Execution & Account
 
@@ -63,7 +64,7 @@ Both bots run as independent systemd services hitting one account. Rules:
 
 1. **ML threshold effective = 0.50.** The YANK `--ml-threshold 0.50` override silently ran **no-ML** on fresh backtest invocation (only sealed run 181838 applied ml0.50). Verify the live YANK's effective ML threshold is actually 0.50 (not 0.0/disabled) by inspecting a live decision log where the ML gate is exercised. The authorizing MC used the ml0.50 series; if live is no-ML, the MC does not describe it → do not cut over. See [[project_yank_mim_correlation_portfolio]].
 2. **YANK day-deactivation matches the model.** The joint MC modeled a per-strategy daily-loss deactivation (the strategy stops trading for the day once its DLL is hit). MIM-NB does this (−$1,000). **Confirm the live YANK/Tier2 bot actually deactivates for the day at its −$750 DLL** — not merely logs the number. If YANK has no day-deactivation, the MC's per-strategy DLL is unmodeled and live blow risk can exceed the modeled 26.2% → fix before cutover. (The −$750-vs-modeled-−$1,000 gap is conservative *only if* the deactivation actually fires.)
-3. **Overnight/Globex permitted.** YANK trades ~24h on Globex with short holds (≤60 bars), while MIM-NB is RTH-only / EOD-flat — so the combine carries YANK activity overnight and the floor is monitored 24h. Confirm Topstep combine rules permit YANK's overnight-session trading on this account before cutover.
+3. **Topstep session compliance — RESOLVED in design, verify in code.** Finding (2026-06-17, `precutover_verification_results.md`): Topstep permits Globex/evening trading but auto-flattens all positions at 15:10 CT and blocks entries 15:08–17:00 CT; the original 24h YANK violated this. Resolution: the flatten is now in the YANK spec (§2) and its P&L effect is modeled in the constrained authorizing MC (61.2%/29.2%). **Remaining binding check: the LIVE YANK code must actually enforce the 15:10 CT flatten + 15:08 entry cutoff** — verify by replaying a session where a position would otherwise have carried past 15:10 CT and confirming it flattens. Until the live code enforces this, live behavior ≠ the re-validated analysis → do not cut over.
 
 ## 7. Data-Integrity Logging
 
@@ -71,7 +72,7 @@ YANK gets the same hash-chained append-only artifacts as MIM-NB, under `data/yan
 
 ## 8. Honest Expectations (from joint MC @ 1:2)
 
-64.8% pass / 26.2% blow / 9% still-running at 90 days; median ~40 trading days. The cleanest modeled improvement over MIM-only is the **blow tail (33% → ~26%)**; the pass lift comes from the second stream supplying drift to reach target faster, not from added risk. A blown combine remains a priced ~26% outcome — it does not invalidate the approach unless a halt trigger fires. The thin-data correlation caveat is real; the mitigations are the **derived distance-to-floor circuit breaker (§5)** and the headroom to trim YANK toward 1ct — correlation is logged observe-only, not used as a trigger. Combine running cost: $49/mo + $149 activation (unchanged — same single account).
+**Constrained MC (governing): 61.2% pass / 29.2% blow / 9.7% still-running at 90 days.** The modeled improvement over MIM-only solo (54.0%/33.3%) is +7.2pp pass and −4.1pp blow — thinner than the unconstrained 64.8%/26.2% once YANK obeys the 15:10 CT flatten (which removes ~19% of YANK's window edge). A blown combine remains a priced ~29% outcome — it does not invalidate the approach unless a halt trigger fires. The thin-data correlation caveat is real; the binding mitigation is the **derived distance-to-floor circuit breaker (§5)** (correlation is observe-only, never a trigger). Combine running cost: $49/mo + $149 activation (unchanged — same single account).
 
 ## 9. Out of scope
 

@@ -31,3 +31,13 @@ The 64.8% pass / 26.2% blow authorization is therefore **not valid for the live 
 5. Re-seal the deployment prereg against the corrected analysis, THEN proceed.
 
 This is a structural finding, not a tuning issue: YANK-on-the-combine ≠ YANK-as-validated. The standalone YANK paper track record (24h, unconstrained) is also not combine-representative.
+
+---
+
+## RESOLUTION (2026-06-17) — re-validated, deployment re-sealed
+
+**Impact correction:** the initial estimate (22% trades / 42% P&L) was WRONG — it counted allowed evening Globex entries (17:00–23:00 CT) as blocked and used calendar-midnight instead of Topstep's 15:10 CT session boundary. **Corrected impact: 8/82 trades (7 force-flattened + 1 blocked), YANK window P&L $7,804 → $6,316 = −19%.** Still net-positive.
+
+**Re-validation** (`results_yank_mim_joint_constrained.md`, tools `build_yank_topstep_constrained.py` + `joint_combine_mc_constrained.py`): constrained joint MC at 1:2 = **61.2% pass / 29.2% blow** (vs 54.0%/33.3% solo and the unconstrained 64.8%/26.2%). **ADOPT still holds; 1:2 is now the *smallest* qualifying size** (constrained 1:1 only matches baseline). Both derived triggers unchanged: distance-to-floor $500, combined-PF 0.70.
+
+**Disposition:** §6 #3 moves from BLOCKER to RESOLVED-IN-DESIGN. The Topstep flatten is now in the YANK spec (§2) and modeled in the authorizing MC. The one remaining binding item is **live-code enforcement** of the 15:10 CT flatten / 15:08 entry cutoff (part of the YANK→ProjectX execution port). Checks #1 and #2 remain PASS. Deployment re-sealed.

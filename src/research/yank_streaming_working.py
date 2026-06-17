@@ -141,6 +141,13 @@ def _default_account_config(symbol: str) -> AccountConfig:
 
 ET_TZ = pytz.timezone('US/Eastern')
 _NY_TZ = pytz.timezone('America/New_York')
+CT_TZ = pytz.timezone('America/Chicago')  # Topstep session clock
+# Topstep combine compliance: auto-flatten at 15:10 CT, no new entries 15:08-17:00 CT,
+# no overnight carry. Evening/Globex (17:00 CT+) trading is retained. Modeled in the
+# constrained joint MC (results_yank_mim_joint_constrained.md).
+TOPSTEP_FLATTEN_MIN = 15 * 60 + 10   # 15:10 CT
+TOPSTEP_BLOCK_LO = 15 * 60 + 8       # 15:08 CT — risk managers start flattening
+TOPSTEP_BLOCK_HI = 17 * 60           # 17:00 CT — session reopens
 
 # Rolling buffer cap — 125 H1 bars × 60 min covers vol_regime_lookback=120 H1 bars (AR16).
 _BUFFER_CAP: int = 7500
@@ -1246,6 +1253,22 @@ class Tier2StreamingTrader:
         t = self.active_trade
         t.bars_held += 1
 
+        # ── Topstep combine: flatten by 15:10 CT, never carry across the close ──
+        # Only the [15:10, 17:00) CT close window — evening/Globex (17:00 CT+) is a new session.
+        bar_ct = bar.timestamp.astimezone(CT_TZ)
+        _ct_min = bar_ct.hour * 60 + bar_ct.minute
+        if TOPSTEP_FLATTEN_MIN <= _ct_min < TOPSTEP_BLOCK_HI:
+            if t.pending_entry:
+                for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
+                    if oid: await self._ts_client.cancel_order(oid)
+                self.active_trade = None
+                self._active_entry_decision = None
+                logger.info("🏁 Topstep 15:10 CT flatten — cancelled unfilled pending entry")
+                return False
+            logger.info("🏁 Topstep 15:10 CT flatten — closing active position at market")
+            await self._close_active_trade(bar, bar.close, "time")
+            return True
+
         # ── Pending limit entry: wait for price to reach FVG midpoint ──────────
         if t.pending_entry:
             filled = (
@@ -1412,6 +1435,12 @@ class Tier2StreamingTrader:
             return
         bars = self.dollar_bars
         if len(bars) < 20: return  # need 20 bars for ATR and volume features
+
+        # Topstep combine: no new entries 15:08-17:00 CT (positions auto-flatten at 15:10 CT)
+        bar_ct = bar.timestamp.astimezone(CT_TZ)
+        ct_min = bar_ct.hour * 60 + bar_ct.minute
+        if TOPSTEP_BLOCK_LO <= ct_min < TOPSTEP_BLOCK_HI:
+            return
 
         # Tuesday filter: consistently PF<1.0 across all 5 months of backtest data
         if bar_et.weekday() == 1:  # 1 = Tuesday

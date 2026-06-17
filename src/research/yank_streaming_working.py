@@ -125,6 +125,9 @@ POLL_INTERVAL_SECONDS = 60
 # TradeStation SIM order placement
 SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+# Execution backend (Phase B): if PROJECTX_ACCOUNT_ID is set, YANK executes on the
+# Topstep combine via ProjectX at YANK_CONTRACTS size; else TradeStation SIM (paper).
+YANK_CONTRACTS = int(os.environ.get("YANK_CONTRACTS", "0"))  # >0 overrides per-symbol spec (combine uses 2)
 
 def _default_account_config(symbol: str) -> AccountConfig:
     """Build AccountConfig from SYMBOL_SPECS for *symbol*. Caller must validate symbol first."""
@@ -141,6 +144,13 @@ def _default_account_config(symbol: str) -> AccountConfig:
 
 ET_TZ = pytz.timezone('US/Eastern')
 _NY_TZ = pytz.timezone('America/New_York')
+CT_TZ = pytz.timezone('America/Chicago')  # Topstep session clock
+# Topstep combine compliance: auto-flatten at 15:10 CT, no new entries 15:08-17:00 CT,
+# no overnight carry. Evening/Globex (17:00 CT+) trading is retained. Modeled in the
+# constrained joint MC (results_yank_mim_joint_constrained.md).
+TOPSTEP_FLATTEN_MIN = 15 * 60 + 10   # 15:10 CT
+TOPSTEP_BLOCK_LO = 15 * 60 + 8       # 15:08 CT — risk managers start flattening
+TOPSTEP_BLOCK_HI = 17 * 60           # 17:00 CT — session reopens
 
 # Rolling buffer cap — 125 H1 bars × 60 min covers vol_regime_lookback=120 H1 bars (AR16).
 _BUFFER_CAP: int = 7500
@@ -483,13 +493,13 @@ class TradeStationClient:
             logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
             return False
 
-    async def close_position_at_market(self, direction: str, account_id: str) -> Optional[str]:
+    async def close_position_at_market(self, direction: str, account_id: str, contracts: Optional[int] = None) -> Optional[str]:
         """Submit a market order to flatten the open position. Returns order ID or None on failure."""
         close_action = "SELL" if direction == "LONG" else "BUY"
         payload = {
             "AccountID": account_id,
             "Symbol": self._cfg.symbol,
-            "Quantity": str(self._cfg.contracts),
+            "Quantity": str(contracts if contracts is not None else self._cfg.contracts),
             "OrderType": "Market",
             "TradeAction": close_action,
             "TimeInForce": {"Duration": "DAY"},
@@ -788,7 +798,9 @@ class Tier2StreamingTrader:
         self._symbol: str = symbol
         self._point_value: float = spec["point_value"]
         self._tick_size: float = spec["tick_size"]
-        self._contracts: int = spec["contracts"]
+        self._contracts: int = YANK_CONTRACTS or spec["contracts"]
+        self._on_combine: bool = False        # set in initialize() from PROJECTX_ACCOUNT_ID
+        self._exec_account: str = SIM_ACCOUNT_ID
         self._bars_base_url: str = (
             f"https://api.tradestation.com/v3/marketdata/barcharts/{symbol}"
             f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}"
@@ -864,6 +876,10 @@ class Tier2StreamingTrader:
         self._ts_client: Optional[TradeStationClient] = None
 
     async def initialize(self):
+        _halt = Path(__file__).parent.parent.parent / "data" / "combine_joint" / "HALT"
+        if _halt.exists():
+            raise SystemExit(f"HALT flag present ({_halt}) — combine floor monitor halted trading; "
+                             "remove the flag after review to resume.")
         logger.info("=" * 70)
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
         logger.info("=" * 70)
@@ -883,7 +899,23 @@ class Tier2StreamingTrader:
         await self.auth.authenticate()
         await self.auth.start_auto_refresh()
         self.client = httpx.AsyncClient(timeout=30.0)
-        self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+        # Execution backend: ProjectX/TopstepX combine if PROJECTX_ACCOUNT_ID set, else SIM paper.
+        # Market data stays on TradeStation REST (self.auth) either way.
+        px_acct = os.environ.get("PROJECTX_ACCOUNT_ID", "")
+        if px_acct:
+            from src.research.projectx_auth import ProjectXAuth
+            from src.research.projectx_client import ProjectXClient
+            self._on_combine = True
+            self._exec_account = px_acct
+            self._px_auth = ProjectXAuth.from_file('.projectx_api_key')
+            self._ts_client = ProjectXClient(self._px_auth, self._account_config, self.client,
+                                             projectx_account_id=int(px_acct))
+            logger.info("EXECUTION: ProjectX/TopstepX combine acct %s | %d contracts", px_acct, self._contracts)
+        else:
+            self._on_combine = False
+            self._exec_account = SIM_ACCOUNT_ID
+            self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+            logger.info("EXECUTION: TradeStation SIM paper (%s) | %d contracts", SIM_ACCOUNT_ID, self._contracts)
         self.session_start_time = datetime.now()
 
         # Crash recovery: load persisted state and reconcile with broker (FR38, NFR11, NFR12)
@@ -906,7 +938,15 @@ class Tier2StreamingTrader:
             and state.get("entry_price") is not None
             and state.get("entry_time")
         ):
-            broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
+            if self._on_combine:
+                # Commingling-safe: the account nets MIM+YANK, so never read net position.
+                # Trust our own persisted trade; classify via our OWN entry order ID.
+                from src.research.tier2_streaming_working import TradeState
+                entry_id = state.get("sim_entry_order_id")
+                entry_open = await self._ts_client.is_order_open(entry_id) if entry_id else None
+                broker_state = TradeState(status="PENDING" if entry_open else "ACTIVE")
+            else:
+                broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
             if broker_state.status == "ACTIVE":
                 self.active_trade = ActiveTrade(
                     bar_index=0,
@@ -1250,6 +1290,22 @@ class Tier2StreamingTrader:
         t = self.active_trade
         t.bars_held += 1
 
+        # ── Topstep combine: flatten by 15:10 CT, never carry across the close ──
+        # Only the [15:10, 17:00) CT close window — evening/Globex (17:00 CT+) is a new session.
+        bar_ct = bar.timestamp.astimezone(CT_TZ)
+        _ct_min = bar_ct.hour * 60 + bar_ct.minute
+        if TOPSTEP_FLATTEN_MIN <= _ct_min < TOPSTEP_BLOCK_HI:
+            if t.pending_entry:
+                for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
+                    if oid: await self._ts_client.cancel_order(oid)
+                self.active_trade = None
+                self._active_entry_decision = None
+                logger.info("🏁 Topstep 15:10 CT flatten — cancelled unfilled pending entry")
+                return False
+            logger.info("🏁 Topstep 15:10 CT flatten — closing active position at market")
+            await self._close_active_trade(bar, bar.close, "time")
+            return True
+
         # ── Pending limit entry: wait for price to reach FVG midpoint ──────────
         if t.pending_entry:
             filled = (
@@ -1260,6 +1316,12 @@ class Tier2StreamingTrader:
                 t.pending_entry = False
                 t.bars_held = 0  # reset so MAX_HOLD_BARS counts from fill, not signal
                 logger.info(f"✅ Limit entry FILLED at {t.entry_price:.2f}")
+                # ProjectX defers TP/SL until the entry fills — place them now (commingling-safe:
+                # they become this bot's own order IDs). TradeStation already placed them at submit.
+                if self._on_combine and t.sim_tp_order_id is None and self._active_entry_decision is not None:
+                    tp_id, sl_id = await self._ts_client.place_exit_orders(self._active_entry_decision, self._exec_account)
+                    t.sim_tp_order_id, t.sim_sl_order_id = tp_id, sl_id
+                    logger.info("TP/SL placed on fill (ProjectX): tp #%s sl #%s", tp_id, sl_id)
                 # Fall through to TP/SL check — might hit in the same bar
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
@@ -1291,7 +1353,7 @@ class Tier2StreamingTrader:
         if reason == "time":
             if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
             if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
-            await self._ts_client.close_position_at_market(t.direction, SIM_ACCOUNT_ID)
+            await self._ts_client.close_position_at_market(t.direction, self._exec_account, self._contracts)
         else:
             # Bracket leg hit (TP or SL) - cancel the other leg
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
@@ -1448,6 +1510,12 @@ class Tier2StreamingTrader:
             return
         bars = self.dollar_bars
         if len(bars) < 20: return  # need 20 bars for ATR and volume features
+
+        # Topstep combine: no new entries 15:08-17:00 CT (positions auto-flatten at 15:10 CT)
+        bar_ct = bar.timestamp.astimezone(CT_TZ)
+        ct_min = bar_ct.hour * 60 + bar_ct.minute
+        if TOPSTEP_BLOCK_LO <= ct_min < TOPSTEP_BLOCK_HI:
+            return
 
         # Tuesday filter: consistently PF<1.0 across all 5 months of backtest data
         if bar_et.weekday() == 1:  # 1 = Tuesday
@@ -1639,7 +1707,7 @@ class Tier2StreamingTrader:
             entry_price=ent,
             sl_price=sl,
             tp_price=tp,
-            contracts=entry_dec.contracts,
+            contracts=self._contracts,
         )
         self._active_entry_decision = snapped_dec
 
@@ -1651,7 +1719,7 @@ class Tier2StreamingTrader:
         _kill_zone_active = kill_zone_filter(bar.timestamp, self._strategy_config)
         _vol_regime_pct = self._last_vol_regime_pct
 
-        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, SIM_ACCOUNT_ID)
+        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, self._exec_account)
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,

@@ -190,6 +190,10 @@ class MimNbLive:
             self._cfg.symbol = sym
 
     async def initialize(self):
+        _halt = BASE_DIR / "data" / "combine_joint" / "HALT"
+        if _halt.exists():
+            raise SystemExit(f"HALT flag present ({_halt}) — combine floor monitor halted trading; "
+                             "remove the flag after review to resume.")
         self.http = httpx.AsyncClient(timeout=30)
         self.ts_auth = TradeStationAuthV3.from_file(".access_token")
         await self.ts_auth.authenticate()

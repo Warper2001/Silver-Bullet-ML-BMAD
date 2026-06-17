@@ -343,6 +343,54 @@ class ProjectXClient:
                 cancelled.append(str(oid))
         return cancelled
 
+    # ------------------------------------------------------------------
+    # Account-level reads (for the combined-account floor monitor).
+    # ------------------------------------------------------------------
+    async def account_balance(self, account_id) -> Optional[float]:
+        """Return the account's balance from /Account/search (None on error). The
+        combine floor monitor uses this as the equity base for distance-to-floor."""
+        try:
+            headers = await self._headers()
+            resp = await self._http.post(
+                f"{_BASE_URL}/Account/search",
+                json={"onlyActiveAccounts": False},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                return None
+            for a in resp.json().get("accounts", []):
+                if str(a.get("id")) == str(account_id):
+                    return float(a.get("balance"))
+            return None
+        except Exception as exc:
+            logger.warning(f"⚠️ account_balance failed: {exc}")
+            return None
+
+    async def net_position(self, account_id) -> tuple:
+        """Return (net_size, unrealized_pnl) across all open positions on the account.
+        net_size > 0 long, < 0 short. Best-effort; (0, 0.0) on error. Used by the
+        monitor to add open MtM to equity and to flatten the whole account on a halt."""
+        try:
+            headers = await self._headers()
+            resp = await self._http.post(
+                f"{_BASE_URL}/Position/searchOpen",
+                json={"accountId": int(account_id)},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                return 0, 0.0
+            size, upl = 0, 0.0
+            for p in resp.json().get("positions", []):
+                q = int(p.get("size", 0))
+                # ProjectX position type: 1 = Long, 2 = Short
+                signed = q if p.get("type") == 1 else -q
+                size += signed
+                upl += float(p.get("profitAndLoss", 0) or 0)
+            return size, upl
+        except Exception as exc:
+            logger.warning(f"⚠️ net_position failed: {exc}")
+            return 0, 0.0
+
 
 # ------------------------------------------------------------------
 # Module-level helpers

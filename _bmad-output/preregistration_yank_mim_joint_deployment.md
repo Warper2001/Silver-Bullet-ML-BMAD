@@ -5,7 +5,7 @@
 **Base commit:** (seal commit SHA recorded by the commit itself)
 **Authorizing result:** `yank-mim-joint-combine-mc` — joint combine MC (re-seal 75fc1eb, results aca5785) at **MIM 1ct : YANK 2ct** → primary **64.8% pass / 26.2% blow** vs the 54%/33% MIM-only baseline; pass gain is timeout→pass conversion at flat blow.
 **Decision:** Alex authorized adding YANK to the live combine at the vol-balanced **1:2** ratio (2026-06-17).
-**Status:** DRAFT — pending Alex review. The seal commit will set this to SEALED before the YANK→ProjectX execution-port code is written.
+**Status:** SEALED — committed before the YANK→ProjectX execution-port code is written.
 
 ---
 

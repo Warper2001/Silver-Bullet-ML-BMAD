@@ -1,0 +1,22 @@
+[Unit]
+Description=Combine Floor Monitor (YANK+MIM-NB joint, Topstep 50K acct 23884932)
+After=network-online.target trader-mim-nb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+Environment=PROJECTX_ACCOUNT_ID=23884932
+# COMBINE_START: set to the actual cutover timestamp at Phase D so the combined-PF
+# trigger counts only live joint trades (excludes backtest rows in trades.db).
+Environment=COMBINE_START=2026-06-17T00:00:00+00:00
+Environment=MONITOR_POLL_SEC=30
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/combine_floor_monitor.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/combine_floor_monitor.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/combine_floor_monitor.log
+
+[Install]
+WantedBy=multi-user.target

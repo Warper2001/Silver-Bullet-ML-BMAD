@@ -64,6 +64,9 @@ ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta
 # Per-instrument specifications (point value, tick size, default contract count)
 SYMBOL_SPECS: dict[str, dict] = {
     "MNQM26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},
+    "MNQU26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},  # Sept (active from 06-2026 roll)
+    "MNQZ26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},  # Dec (next roll ~2026-09-11)
+    "MNQH27": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},  # Mar 2027
     "MESM26": {"point_value": 5.0,  "tick_size": 0.25, "contracts": 2},
     "M2KM26": {"point_value": 5.0,  "tick_size": 0.10, "contracts": 2},
 }

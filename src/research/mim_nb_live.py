@@ -445,6 +445,7 @@ class MimNbLive:
             return False
         logger.info("ENTER %s @~%.2f (mark %s) cat-stop %.2f #%s",
                     "LONG" if direction == 1 else "SHORT", ref_px, mark, stop_px, sid)
+        self._save_state()  # persist holding state so an intraday restart recovers it (commingling-safe)
         return True
 
     async def _exit(self, ref_px, mark, reason):
@@ -502,6 +503,7 @@ class MimNbLive:
                     "L" if self.position == 1 else "S", self.entry_t, exit_t,
                     pnl_pts, pnl_usd, self.day_pnl, reason)
         self.position = 0
+        self._save_state()  # persist flat state immediately after close (commingling-safe recovery)
         if self.day_pnl <= DLL_GUARD_USD and not self.day_deactivated:
             self.day_deactivated = True
             logger.warning("DLL GUARD: day P&L $%.2f ≤ -$1,000 — entries disabled until next session",

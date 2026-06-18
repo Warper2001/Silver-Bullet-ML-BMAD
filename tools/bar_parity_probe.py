@@ -104,7 +104,7 @@ def best_offset(ts_df: pd.DataFrame, px_df: pd.DataFrame, span: int = 3):
     return best
 
 
-def report(ts_df: pd.DataFrame, px_df: pd.DataFrame, show: int) -> None:
+def report(ts_df: pd.DataFrame, px_df: pd.DataFrame, show: int, symbol: str = "the PX contract") -> None:
     ts_idx, px_idx = set(ts_df.index), set(px_df.index)
     common = sorted(ts_idx & px_idx)
     ts_only = sorted(ts_idx - px_idx)
@@ -149,6 +149,21 @@ def report(ts_df: pd.DataFrame, px_df: pd.DataFrame, show: int) -> None:
             print(f"  {t}  TS {float(a.loc[t,'close']):>10.2f}  PX {float(b.loc[t,'close']):>10.2f}"
                   f"  Δ {float(a.loc[t,'close'])-float(b.loc[t,'close']):+.2f}")
 
+    # Contract-mismatch guard: a large, ~constant signed close offset is a calendar
+    # spread (TS reference on a different front month than the PX contract — e.g. across
+    # a roll boundary), NOT a feed divergence. bars_raw.csv spans rolls, so this is a
+    # real trap. Detect: big median AND a roughly constant signed gap.
+    signed = (a["close"].astype(float) - b["close"].astype(float))
+    if ohlc_median > 20 and abs(signed.mean()) > 20 and signed.std() < abs(signed.mean()) * 0.5:
+        print("\n" + "-" * 70)
+        print("VERDICT")
+        print(f"  ⛔ LIKELY DIFFERENT CONTRACT — close gap ≈ {signed.mean():+.1f}pt, near-constant "
+              f"(std {signed.std():.1f}).")
+        print("     That's a calendar spread, not a feed divergence. The TS reference for this")
+        print("     window is probably a different front month than PX (bars_raw spans rolls).")
+        print(f"     Pick a window where bars_raw is the same contract as {symbol}.")
+        return
+
     print("\n" + "-" * 70)
     print("VERDICT")
     print(f"  OHLC abs-diff: median {ohlc_median:.4f} | {within_tick*100:.1f}% within 1 tick | max {ohlc_max:.4f}")
@@ -171,7 +186,9 @@ async def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--symbol", default="MNQU26")
     ap.add_argument("--ts-csv", type=Path, default=BASE / "data" / "mim_nb" / "bars_raw.csv")
-    ap.add_argument("--hours", type=float, default=6.0, help="window = last N hours of TS data")
+    ap.add_argument("--hours", type=float, default=6.0, help="window length in hours")
+    ap.add_argument("--end", default=None,
+                    help="window end (ISO UTC, e.g. 2026-06-17T20:00Z); default = last TS bar")
     ap.add_argument("--live", action="store_true", help="request ProjectX 'live' market data")
     ap.add_argument("--offset", type=int, default=None,
                     help="pin the PX bar-label offset (minutes); default = auto-detect")
@@ -181,10 +198,13 @@ async def main() -> int:
     if not args.ts_csv.exists():
         raise SystemExit(f"TradeStation reference not found: {args.ts_csv}")
 
-    # Window = last --hours of available TS data (so the two feeds actually overlap).
+    # Window = [end - hours, end]; end defaults to the last available TS bar.
     full = pd.read_csv(args.ts_csv)
     last_ts = pd.to_datetime(full["ts_utc"], utc=True).max().to_pydatetime()
-    end = last_ts
+    if args.end:
+        end = pd.Timestamp(args.end.replace("Z", "+00:00")).tz_convert("UTC").to_pydatetime()
+    else:
+        end = last_ts
     start = end - timedelta(hours=args.hours)
     print(f"Window: {start.isoformat()} → {end.isoformat()}  (last {args.hours}h of {args.ts_csv.name})\n")
 
@@ -211,7 +231,7 @@ async def main() -> int:
         px_df.index = px_df.index + pd.Timedelta(minutes=args.offset)
         print(f"Applied user --offset {args.offset:+d} min to ProjectX bars.\n")
 
-    report(ts_df, px_df, args.show)
+    report(ts_df, px_df, args.show, symbol=args.symbol)
     return 0
 
 

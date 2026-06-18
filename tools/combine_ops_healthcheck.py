@@ -45,21 +45,27 @@ FLOOR_STATE = JOINT / "floor_state.json"
 HALT_DISTANCE = 500.0      # mirrors combine_floor_monitor.HALT_DISTANCE (derived trigger)
 WARN_DISTANCE = 1500.0     # heartbeat early-warning: well above the hard trigger
 
-# name -> (critical?, log filename, max staleness seconds, window_or_None)
+# name -> (critical?, log filename, max staleness seconds, window_or_None, fresh_path_or_None)
 # window = ((start_h, start_m), (end_h, end_m)) in ET, weekdays only. When the current
 # time is OUTSIDE a service's window, the service is EXPECTED to idle-sleep, so we check
 # only that it is active and skip the freshness alarm (avoids crying wolf — a monitor
 # that false-alarms gets ignored, which defeats its whole purpose).
+# fresh_path = BASE-relative file whose mtime stands in for liveness (None => logs/<log>).
+# Use it when a service's journal log is written far less often than it actually does work
+# (e.g. a heartbeat line every N rows) but it continuously appends to a data file.
 SERVICES = {
-    "trader-yank":           (True,  "yank_streaming_working.log", 240, None),
-    "trader-mim-nb":         (True,  "mim_nb_live.log",            240, None),
-    "combine-floor-monitor": (True,  "combine_floor_monitor.log",  120, None),
-    "trader-btc-carry":      (False, "btc_carry_executor.log",     900, None),
-    "trader-s26-combine":    (False, "btc_s26_combine.log",        900, None),
-    "trader-s26":            (False, "s26_soft_fvg_streaming.log",  900, None),
-    "trader-s27":            (False, "s27_squeeze_streaming.log",   900, None),
+    "trader-yank":           (True,  "yank_streaming_working.log", 240, None, None),
+    "trader-mim-nb":         (True,  "mim_nb_live.log",            240, None, None),
+    "combine-floor-monitor": (True,  "combine_floor_monitor.log",  120, None, None),
+    "trader-btc-carry":      (False, "btc_carry_executor.log",     900, None, None),
+    "trader-s26-combine":    (False, "btc_s26_combine.log",        900, None, None),
+    "trader-s26":            (False, "s26_soft_fvg_streaming.log",  900, None, None),
+    "trader-s27":            (False, "s27_squeeze_streaming.log",   900, None, None),
     # SIL capture only runs 09:25-16:00 ET Mon-Fri (capture_sil_quotes.py); idle otherwise.
-    "sil-quote-capture":     (False, "sil_quote_capture.log",       900, ((9, 25), (16, 0))),
+    # Its log only prints a heartbeat every 1200 rows (~53 min), so check the CSV it flushes
+    # every 5s poll instead — kills false flapping AND catches a real 401-loop stall in minutes.
+    "sil-quote-capture":     (False, "sil_quote_capture.log",       300, ((9, 25), (16, 0)),
+                              "data/quotes/sil_quote_capture.csv"),
 }
 
 
@@ -73,6 +79,21 @@ def in_window(window) -> bool:
     (sh, sm), (eh, em) = window
     return dtime(sh, sm) <= now.time() <= dtime(eh, em)
 
+
+def secs_into_window(window):
+    """Seconds since today's window opened (ET), or None if no window / outside it.
+
+    Note in_window(None) is True ("always on"), so the explicit None check is required
+    before unpacking the window bounds below.
+    """
+    if window is None or not in_window(window):
+        return None
+    now = datetime.now(ET)
+    (sh, sm), _ = window
+    open_dt = now.replace(hour=sh, minute=sm, second=0, microsecond=0)
+    return (now - open_dt).total_seconds()
+
+
 CRIT, WARN, OK = 2, 1, 0
 
 
@@ -85,8 +106,9 @@ def is_active(svc: str) -> bool:
         return False
 
 
-def log_age(fname: str):
-    p = BASE / "logs" / fname
+def file_age(relpath: str):
+    """Seconds since the BASE-relative file was last modified, or None if absent."""
+    p = BASE / relpath
     if not p.exists():
         return None
     return time.time() - p.stat().st_mtime
@@ -130,8 +152,9 @@ def main() -> int:
     else:
         emit(OK, "no HALT flag")
 
-    # 2) Services: active + log freshness (freshness only inside the service's window)
-    for svc, (critical, log, max_stale, window) in SERVICES.items():
+    # 2) Services: active + freshness (freshness only inside the service's window).
+    # Freshness is measured on fresh_path when set, else the journal log.
+    for svc, (critical, log, max_stale, window, fresh_path) in SERVICES.items():
         lvl_if_bad = CRIT if critical else WARN
         if not is_active(svc):
             emit(lvl_if_bad, f"{svc}: NOT active")
@@ -139,15 +162,25 @@ def main() -> int:
         if not in_window(window):
             emit(OK, f"{svc}: active, idle (outside capture window — freshness not checked)")
             continue
-        age = log_age(log)
+        fresh_rel = fresh_path or f"logs/{log}"
         thresh = args.max_stale if args.max_stale is not None else max_stale
+        # Window-open grace: right after the window opens the producer may not have written
+        # yet (it was idle-sleeping), so its file still carries the prior session's mtime.
+        # Suppress the staleness alarm until we're at least `thresh` seconds into the window
+        # — long enough that a healthy producer would have written by now.
+        into = secs_into_window(window)
+        if into is not None and into < thresh:
+            emit(OK, f"{svc}: active, window just opened ({into:.0f}s) — freshness not yet checked")
+            continue
+        age = file_age(fresh_rel)
         if age is None:
-            emit(WARN, f"{svc}: active but log {log} missing")
+            emit(WARN, f"{svc}: active but {fresh_rel} missing")
         elif age > thresh:
             emit(lvl_if_bad if critical else WARN,
-                 f"{svc}: active but log stale {age:.0f}s > {thresh}s (possible silent stall / 401-loop)")
+                 f"{svc}: active but {fresh_rel} stale {age:.0f}s > {thresh}s "
+                 f"(possible silent stall / 401-loop)")
         else:
-            emit(OK, f"{svc}: active, log fresh ({age:.0f}s)")
+            emit(OK, f"{svc}: active, fresh ({age:.0f}s)")
 
     # 3) Floor monitor data freshness + distance-to-floor headroom
     row = last_monitor_row()

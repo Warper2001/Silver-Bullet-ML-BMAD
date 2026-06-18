@@ -1,33 +1,42 @@
 #!/usr/bin/env bash
-# Daily ProjectX shadow-parity check -> Telegram.
+# Daily ProjectX shadow-parity check -> Telegram, ALERT-ONLY.
 #
-# Runs tools/analyze_shadow_parity.py against both bots' live shadow logs and pushes
-# a compact summary (the OVERALL + GATE lines) to Telegram. Stage-1 cutover-gate
-# tracking for the data-feed migration — fires until ≥10 clean sessions/bot, then the
-# GATE line flips to PASS. Read-only; never touches the live traders.
+# Runs tools/analyze_shadow_parity.py on both bots' live shadow logs and pushes to
+# Telegram ONLY when something needs attention:
+#   PROBLEM  — parity degraded (median > tick / <95% within tick / coverage gaps /
+#              fetch errors / contract mismatch)
+#   PASS     — a bot cleared the cutover gate (≥10 clean sessions) -> ready to pre-register
+# Silent while both bots are just ACCUMULATING clean sessions. Read-only.
 set -uo pipefail
 
 BASE="/root/Silver-Bullet-ML-BMAD"
 PY="$BASE/.venv/bin/python"
 [ -f "$BASE/.env.telegram" ] && . "$BASE/.env.telegram"
 
-summarize() {  # $1=csv  — prints "(N sessions)\n  OVERALL\n  GATE"
-  local csv="$1"
-  if [ ! -f "$csv" ]; then printf '(no log yet)\n'; return; fi
-  local out; out="$("$PY" "$BASE/tools/analyze_shadow_parity.py" --csv "$csv" 2>&1)"
-  local sessions overall gate
-  sessions="$(printf '%s' "$out" | grep -oE '[0-9]+ sessions' | head -1)"
-  overall="$(printf '%s' "$out" | grep -A1 '^OVERALL:' | tail -1 | sed 's/^ *//')"
-  gate="$(printf '%s' "$out" | grep -E 'GATE \(' | sed 's/^ *//')"
-  printf '(%s)\n  %s\n  %s\n' "${sessions:-?}" "${overall:-n/a}" "${gate:-n/a}"
-}
+YCSV="$BASE/logs/yank_shadow_parity.csv"
+MCSV="$BASE/data/mim_nb/shadow_parity.csv"
 
-msg="$(printf '📊 Shadow parity — %s\n\nYANK %s\nMIM %s' \
-  "$(date -u '+%Y-%m-%d %H:%MZ')" \
-  "$(summarize "$BASE/logs/yank_shadow_parity.csv")" \
-  "$(summarize "$BASE/data/mim_nb/shadow_parity.csv")")"
+ystat="$("$PY" "$BASE/tools/analyze_shadow_parity.py" --status --csv "$YCSV" 2>&1)"
+mstat="$("$PY" "$BASE/tools/analyze_shadow_parity.py" --status --csv "$MCSV" 2>&1)"
+ytok="${ystat%% *}"; mtok="${mstat%% *}"
 
-echo "$msg"   # also to journal
+echo "$(date -u '+%Y-%m-%dT%H:%MZ')  YANK: $ystat | MIM: $mstat"   # journal trail
+
+# Alert only if either bot is PROBLEM or PASS.
+notable() { case "$1" in PROBLEM|PASS) return 0;; *) return 1;; esac; }
+if ! notable "$ytok" && ! notable "$mtok"; then
+  echo "both ACCUMULATING/NODATA — no alert."
+  exit 0
+fi
+
+hdr="📊 Shadow parity"
+notable "$ytok" && [ "$ytok" = PROBLEM ] && hdr="⚠️ Shadow parity PROBLEM"
+notable "$mtok" && [ "$mtok" = PROBLEM ] && hdr="⚠️ Shadow parity PROBLEM"
+{ [ "$ytok" = PASS ] || [ "$mtok" = PASS ]; } && [ "$hdr" = "📊 Shadow parity" ] && hdr="✅ Shadow parity GATE PASS"
+
+msg="$(printf '%s — %s\n\nYANK: %s\nMIM:  %s\n\n(silent while both just accumulate clean sessions)' \
+  "$hdr" "$(date -u '+%Y-%m-%d %H:%MZ')" "$ystat" "$mstat")"
+echo "$msg"
 
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
   curl -s --max-time 20 \

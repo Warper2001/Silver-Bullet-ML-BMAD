@@ -54,22 +54,62 @@ def _verdict_line(g: pd.DataFrame) -> tuple[str, dict]:
     return "", m
 
 
+def classify(df: pd.DataFrame) -> tuple[str, str]:
+    """Machine-readable status for alerting:
+      PASS         — quality holds AND ≥10 sessions (ready to pre-register cutover)
+      PROBLEM      — parity degraded (median > tick / <95% within tick / coverage gaps /
+                     fetch errors / contract mismatch) — worth a look
+      ACCUMULATING — quality holds, still <10 sessions (no action; silent in daily alert)
+      NODATA       — no matched bars yet
+    Returns (status, one_line_reason)."""
+    _, A = _verdict_line(df)
+    n_sessions = df["session"].nunique()
+    if not A["both"]:
+        return "NODATA", "no matched (both-feed) minutes yet"
+    gap_frac = (A["ts_only"] + A["px_only"]) / max(A["minutes"], 1)
+    err_frac = A["err"] / max(A["minutes"], 1)
+    if A["ohlc_median"] > 20 and abs(A["close_signed_mean"]) > 20 \
+            and A["close_signed_std"] < abs(A["close_signed_mean"]) * 0.5:
+        return "PROBLEM", f"contract mismatch (close gap ≈ {A['close_signed_mean']:+.1f}pt)"
+    if A["ohlc_median"] > TICK:
+        return "PROBLEM", f"OHLC median {A['ohlc_median']:.3f} > {TICK} tick"
+    if A["within_tick"] < 0.95:
+        return "PROBLEM", f"only {A['within_tick']*100:.1f}% within 1 tick (<95%)"
+    if gap_frac > 0.01:
+        return "PROBLEM", f"coverage gaps {gap_frac*100:.1f}% (ts_only {A['ts_only']}, px_only {A['px_only']})"
+    if err_frac > 0.02:
+        return "PROBLEM", f"fetch-error rate {err_frac*100:.1f}%"
+    if n_sessions >= 10:
+        return "PASS", f"{n_sessions} sessions, median {A['ohlc_median']:.3f}, {A['within_tick']*100:.1f}% within tick"
+    return "ACCUMULATING", f"{n_sessions}/10 sessions, parity clean"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--csv", type=Path, default=BASE / "logs" / "yank_shadow_parity.csv")
+    ap.add_argument("--status", action="store_true",
+                    help="print just a machine-readable status line (PASS/PROBLEM/ACCUMULATING/NODATA) and exit")
     args = ap.parse_args()
     if not args.csv.exists():
-        print(f"No shadow-parity log yet at {args.csv} — nothing to analyze.")
+        if args.status:
+            print("NODATA | no shadow log yet")
+        else:
+            print(f"No shadow-parity log yet at {args.csv} — nothing to analyze.")
         return 0
 
     df = pd.read_csv(args.csv)
     if df.empty:
-        print(f"{args.csv} is empty.")
+        print("NODATA | empty log" if args.status else f"{args.csv} is empty.")
         return 0
     for c in ("d_open", "d_high", "d_low", "d_close", "d_vol", "ohlc_max_abs", "px_fetch_ms"):
         if c in df:
             df[c] = pd.to_numeric(df[c], errors="coerce")
     df["session"] = (pd.to_datetime(df["minute"], utc=True).dt.tz_convert(ET).dt.date)
+
+    if args.status:
+        st, reason = classify(df)
+        print(f"{st} | {reason}")
+        return 0
 
     print("=" * 90)
     print(f"Shadow parity — {args.csv}  ({len(df)} minutes, {df['session'].nunique()} sessions)")

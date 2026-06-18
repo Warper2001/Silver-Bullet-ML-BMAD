@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Combine ops alerting wrapper (LOCAL-ONLY, no external push — choice 2026-06-18).
+# Combine ops alerting wrapper (local log + journal + optional Telegram push).
 #
 # Runs tools/combine_ops_healthcheck.py and:
 #   - always prints to stdout (captured by the systemd journal: journalctl -u combine-ops-healthcheck)
 #   - always refreshes a current-status snapshot (data/combine_joint/ops_status.txt)
 #   - on WARN/CRITICAL, appends to logs/combine_ops_alerts.log — but only on a STATE CHANGE
 #     (dedup), so a persistent condition logs once, not every 5 minutes for weeks.
+#   - on that same STATE CHANGE (and on RECOVERED), pushes a Telegram message IF
+#     TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID are set (sourced from .env.telegram, gitignored).
+#     No creds -> silently skips Telegram; the local log/journal path is unaffected.
 #
 # Exits 0 always: the alert signal is the log/journal, not the exit code, so the
 # systemd timer unit never accumulates a "failed" state that would itself need triage.
@@ -18,6 +21,20 @@ PY="$BASE/.venv/bin/python"
 : "${ALERT_LOG:=$BASE/logs/combine_ops_alerts.log}"
 : "${STATUS:=$BASE/data/combine_joint/ops_status.txt}"
 : "${SIGFILE:=$BASE/data/combine_joint/.ops_alert_sig}"
+
+# Optional Telegram credentials (gitignored). Absent file => local-only, no error.
+[ -f "$BASE/.env.telegram" ] && . "$BASE/.env.telegram"
+
+notify_telegram() {
+  # $1 = message text. No-op unless both creds are present.
+  [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || return 0
+  curl -s --max-time 15 \
+    --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+    --data-urlencode "text=$1" \
+    --data "disable_web_page_preview=true" \
+    "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" >/dev/null \
+    || echo "WARN: telegram send failed (alert is still in $ALERT_LOG)" >&2
+}
 
 ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 # Extra args ("$@") pass through to the healthcheck (e.g. --max-stale for a forced test).
@@ -38,11 +55,15 @@ last="$(cat "$SIGFILE" 2>/dev/null || true)"
 if [ "$rc" -ne 0 ] && [ "$sig" != "$last" ]; then
   level="WARN"; [ "$rc" -ge 2 ] && level="CRITICAL"
   { echo "===== $ts  $level (exit $rc) ====="; echo "$out"; echo; } >> "$ALERT_LOG"
+  # Only the failing lines in the push (keep it phone-readable); full detail is in the log.
+  fails="$(printf '%s\n' "$out" | grep -E 'CRIT!|WARN' || true)"
+  notify_telegram "$(printf '🛑 Combine ops %s (%s)\n%s\n\nsnapshot: data/combine_joint/ops_status.txt' "$level" "$ts" "$fails")"
 fi
 
 # Record recovery transitions too (failing -> all-clear)
 if [ "$rc" -eq 0 ] && [ -n "$last" ]; then
   { echo "===== $ts  RECOVERED (exit 0) ====="; echo "$out"; echo; } >> "$ALERT_LOG"
+  notify_telegram "$(printf '✅ Combine ops RECOVERED (%s) — all checks OK.' "$ts")"
 fi
 
 printf '%s' "$sig" > "$SIGFILE"

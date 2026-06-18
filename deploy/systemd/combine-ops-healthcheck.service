@@ -1,0 +1,9 @@
+[Unit]
+Description=Combine ops healthcheck — YANK+MIM-NB Topstep 50K liveness/floor heartbeat (local-only alerts)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/tools/combine_ops_alert.sh

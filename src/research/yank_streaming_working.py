@@ -1146,23 +1146,28 @@ class Tier2StreamingTrader:
                 logger.info(f"✅ Tier 2 Backfill complete ({len(self.dollar_bars)} bars)")
 
             if self._data_shadow:
-                await self._run_shadow_parity(since, now_utc)
+                await self._run_shadow_parity(now_utc)
         except (httpx.TimeoutException, asyncio.TimeoutError):
             logger.warning("API_TIMEOUT: request timed out — skipping bar")
         except Exception as e:
             logger.error(f"❌ Error in poll cycle: {e}", exc_info=True)
 
-    async def _run_shadow_parity(self, since, now_utc):
+    async def _run_shadow_parity(self, now_utc):
         """Stage-1 shadow: fetch ProjectX bars in parallel and log TS-vs-PX parity to
         logs/yank_shadow_parity.csv. Observation only — never touches trade state or the
-        TradeStation signal path. Every failure is swallowed (must not affect trading)."""
+        TradeStation signal path. Every failure is swallowed (must not affect trading).
+
+        Uses a fixed ~15-min lookback (NOT the incremental poll `since`): a settled
+        minute must still be inside the compared window when it crosses the 2-min
+        settle lag, or it falls through the crack (the incremental window is ~1 bar)."""
         try:
+            shadow_since = now_utc - timedelta(minutes=15)
             t0 = _time_mod.perf_counter()
             error = ""
             try:
                 px = await fetch_px_ts_shaped(
                     self.client, self._px_auth, self._px_data_contract_id,
-                    now_utc=now_utc, live=self._data_px_live, since_utc=since)
+                    now_utc=now_utc, live=self._data_px_live, since_utc=shadow_since)
             except ProjectXBarFetchError as e:
                 px, error = [], str(e)
             fetch_ms = (_time_mod.perf_counter() - t0) * 1000.0
@@ -1170,7 +1175,7 @@ class Tier2StreamingTrader:
             ts_by_min = {
                 b.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"):
                     (b.open, b.high, b.low, b.close, float(b.volume))
-                for b in self.dollar_bars if b.timestamp >= since
+                for b in self.dollar_bars if b.timestamp >= shadow_since
             }
             self._shadow_logger.log_poll(ts_by_min, px_by_min, now_utc, fetch_ms, error)
         except Exception as e:

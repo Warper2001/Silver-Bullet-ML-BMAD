@@ -37,6 +37,8 @@ from src.research.projectx_client import (
     ProjectXClient, _to_contract_id, _BASE_URL,
     _TYPE_MARKET, _TYPE_STOP, _SIDE_BUY, _SIDE_SELL,
 )
+from src.research.projectx_bars import fetch_px_ts_shaped, ProjectXBarFetchError
+from src.research.shadow_parity import ShadowParityLogger, bars_by_minute
 
 # ----------------------------------------------------------------------
 # Frozen configuration (deployment prereg 7939eed — do not edit without a new seal)
@@ -178,6 +180,13 @@ class MimNbLive:
         self.day_deactivated = False
         self.last_bar_ts = None
 
+        # Data backend (Stage-1 shadow migration to ProjectX). Default = TradeStation REST.
+        self._data_source = os.environ.get("MIM_NB_DATA_SOURCE", "tradestation")
+        self._data_shadow = (os.environ.get("MIM_NB_DATA_SHADOW", "0") == "1"
+                             and self._data_source == "tradestation")
+        self._data_px_live = os.environ.get("MIM_NB_DATA_PX_LIVE", "0") == "1"
+        self._shadow_logger = None
+
     # ------------------------------------------------------------------
     def _apply_symbol(self, sym: str):
         """Point every contract reference (bars URL, ProjectX orders, position
@@ -218,6 +227,11 @@ class MimNbLive:
         self._cfg = type("_Cfg", (), {"symbol": self.symbol})()
         self.px = ProjectXClient(self.px_auth, self._cfg, self.http,
                                  projectx_account_id=self.account_id)
+        if self._data_shadow:
+            self._shadow_logger = ShadowParityLogger(DATA_DIR / "shadow_parity.csv")
+        logger.info("DATA: %s (signal)%s | px_contract=%s live=%s", self._data_source,
+                    " + projectx SHADOW" if self._data_shadow else "",
+                    self.contract_id, self._data_px_live)
         await self._backfill()
         await self._reconcile_startup()
         await self._catch_up_today()
@@ -256,11 +270,37 @@ class MimNbLive:
         return tok_path.read_text().strip()
 
     async def _ts_get_bars(self, barsback=1500):
+        # Data backend: ProjectX bars (TS-shaped, +1-min-aligned, roll-tracked via
+        # self.contract_id) when MIM_NB_DATA_SOURCE=projectx; else TradeStation REST.
+        if self._data_source == "projectx":
+            return await fetch_px_ts_shaped(
+                self.http, self.px_auth, self.contract_id,
+                now_utc=datetime.now(timezone.utc), live=self._data_px_live, barsback=barsback)
         token = await self._ts_token()
         url = f"{_bars_url(self.symbol)}&barsback={barsback}"
         r = await self.http.get(url, headers={"Authorization": f"Bearer {token}"})
         r.raise_for_status()
         return r.json().get("Bars", [])
+
+    async def _run_shadow_parity(self, ts_bars):
+        """Stage-1 shadow: fetch ProjectX bars in parallel and log TS-vs-PX parity to
+        data/mim_nb/shadow_parity.csv. Observation only — never touches trade state.
+        All failures swallowed (must not affect the live MIM-NB signal path)."""
+        try:
+            import time as _t
+            now_utc = datetime.now(timezone.utc)
+            t0 = _t.perf_counter()
+            error = ""
+            try:
+                px = await fetch_px_ts_shaped(self.http, self.px_auth, self.contract_id,
+                                              now_utc=now_utc, live=self._data_px_live, barsback=60)
+            except ProjectXBarFetchError as e:
+                px, error = [], str(e)
+            fetch_ms = (_t.perf_counter() - t0) * 1000.0
+            self._shadow_logger.log_poll(bars_by_minute(ts_bars), bars_by_minute(px),
+                                         now_utc, fetch_ms, error)
+        except Exception as e:
+            logger.warning("shadow parity logging failed (non-fatal): %s", e)
 
     @staticmethod
     def _bar_et(bar):
@@ -638,6 +678,8 @@ class MimNbLive:
                                 bar_et.astimezone(timezone.utc)) >= timedelta(seconds=2):
                             await self.on_bar(b)
                             self.last_bar_ts = ts
+                if self._data_shadow:
+                    await self._run_shadow_parity(bars)
             except Exception as exc:
                 logger.error("poll loop error: %s", exc)
             # 2s cadence in the first 20s of each minute (catch the completed bar

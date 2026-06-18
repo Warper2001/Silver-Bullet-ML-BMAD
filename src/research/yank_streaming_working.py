@@ -31,6 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
+from src.research.projectx_bars import fetch_px_ts_shaped, ProjectXBarFetchError, _to_contract_id
+from src.research.shadow_parity import ShadowParityLogger, bars_by_minute
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
     Direction,
@@ -809,9 +811,21 @@ class Tier2StreamingTrader:
             f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}"
         )
 
+        # Data backend (Stage-1 shadow migration to ProjectX). Default = TradeStation REST.
+        # YANK_DATA_SOURCE=projectx makes ProjectX the SIGNAL source; YANK_DATA_SHADOW=1
+        # fetches+logs ProjectX in parallel while TradeStation stays the signal source.
+        self._data_source: str = os.environ.get("YANK_DATA_SOURCE", "tradestation")
+        self._data_shadow: bool = (
+            os.environ.get("YANK_DATA_SHADOW", "0") == "1" and self._data_source == "tradestation"
+        )
+        self._data_px_live: bool = os.environ.get("YANK_DATA_PX_LIVE", "0") == "1"
+        self._px_data_contract_id: Optional[str] = None   # set in initialize()
+        self._shadow_logger = None                        # set in initialize() if shadow on
+
         self.running = False
         self.auth = None
         self.client = None
+        self._px_auth = None    # ProjectXAuth — set in initialize() for execution and/or data
         self.dollar_bars: list[DollarBar] = []
         self._last_processed_timestamp: Optional[datetime] = None
         self.active_trade: Optional[ActiveTrade] = None
@@ -919,6 +933,22 @@ class Tier2StreamingTrader:
             self._exec_account = SIM_ACCOUNT_ID
             self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
             logger.info("EXECUTION: TradeStation SIM paper (%s) | %d contracts", SIM_ACCOUNT_ID, self._contracts)
+
+        # Data backend: ProjectX bars if requested (full source or shadow), else TradeStation REST.
+        # Reuses the execution ProjectXAuth when on the combine; constructs one otherwise.
+        if self._data_source == "projectx" or self._data_shadow:
+            self._px_data_contract_id = _to_contract_id(self._symbol)
+            if self._px_auth is None:
+                from src.research.projectx_auth import ProjectXAuth
+                self._px_auth = ProjectXAuth.from_file('.projectx_api_key')
+                await self._px_auth.start_auto_refresh()
+            if self._data_shadow:
+                self._shadow_logger = ShadowParityLogger(
+                    Path(__file__).parent.parent.parent / "logs" / "yank_shadow_parity.csv")
+        logger.info("DATA: %s (signal)%s%s", self._data_source,
+                    " + projectx SHADOW" if self._data_shadow else "",
+                    f" | px_contract={self._px_data_contract_id} live={self._data_px_live}"
+                    if (self._data_source == "projectx" or self._data_shadow) else "")
         self.session_start_time = datetime.now()
 
         # Crash recovery: load persisted state and reconcile with broker (FR38, NFR11, NFR12)
@@ -1047,20 +1077,31 @@ class Tier2StreamingTrader:
 
     async def _poll_and_process(self):
         try:
-            token = await self.auth.authenticate()
-            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-            since = self._last_processed_timestamp or (datetime.now(timezone.utc) - timedelta(hours=HISTORY_HOURS))
-            url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            now_utc = datetime.now(timezone.utc)
+            since = self._last_processed_timestamp or (now_utc - timedelta(hours=HISTORY_HOURS))
 
-            response = await self.client.get(url, headers=headers)
-            if response.status_code != 200: return
+            if self._data_source == "projectx":
+                # ProjectX bars (already TS-shaped + 1-min-aligned). Skip poll on fetch error
+                # (self-healing: _last_processed_timestamp only advances on a successful append).
+                try:
+                    bars_data = await fetch_px_ts_shaped(
+                        self.client, self._px_auth, self._px_data_contract_id,
+                        now_utc=now_utc, live=self._data_px_live, since_utc=since)
+                except ProjectXBarFetchError as e:
+                    logger.warning("PX_DATA_ERROR: %s — skipping poll", e)
+                    return
+            else:
+                token = await self.auth.authenticate()
+                headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+                url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+                response = await self.client.get(url, headers=headers)
+                if response.status_code != 200: return
+                bars_data = response.json().get("Bars", [])
 
-            bars_data = response.json().get("Bars", [])
             if not bars_data:
-                logger.warning("DATA_GAP: no bars returned at %s", datetime.now(timezone.utc).isoformat())
+                logger.warning("DATA_GAP: no bars returned at %s", now_utc.isoformat())
                 return
             new_bars = []
-            now_utc = datetime.now(timezone.utc)
             for bar_data in bars_data:
                 bar = self._parse_bar(bar_data)
                 if bar and bar.timestamp <= now_utc and (
@@ -1103,10 +1144,37 @@ class Tier2StreamingTrader:
             if self._is_backfill and new_bars:
                 self._is_backfill = False
                 logger.info(f"✅ Tier 2 Backfill complete ({len(self.dollar_bars)} bars)")
+
+            if self._data_shadow:
+                await self._run_shadow_parity(since, now_utc)
         except (httpx.TimeoutException, asyncio.TimeoutError):
             logger.warning("API_TIMEOUT: request timed out — skipping bar")
         except Exception as e:
             logger.error(f"❌ Error in poll cycle: {e}", exc_info=True)
+
+    async def _run_shadow_parity(self, since, now_utc):
+        """Stage-1 shadow: fetch ProjectX bars in parallel and log TS-vs-PX parity to
+        logs/yank_shadow_parity.csv. Observation only — never touches trade state or the
+        TradeStation signal path. Every failure is swallowed (must not affect trading)."""
+        try:
+            t0 = _time_mod.perf_counter()
+            error = ""
+            try:
+                px = await fetch_px_ts_shaped(
+                    self.client, self._px_auth, self._px_data_contract_id,
+                    now_utc=now_utc, live=self._data_px_live, since_utc=since)
+            except ProjectXBarFetchError as e:
+                px, error = [], str(e)
+            fetch_ms = (_time_mod.perf_counter() - t0) * 1000.0
+            px_by_min = bars_by_minute(px)
+            ts_by_min = {
+                b.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"):
+                    (b.open, b.high, b.low, b.close, float(b.volume))
+                for b in self.dollar_bars if b.timestamp >= since
+            }
+            self._shadow_logger.log_poll(ts_by_min, px_by_min, now_utc, fetch_ms, error)
+        except Exception as e:
+            logger.warning("shadow parity logging failed (non-fatal): %s", e)
 
     def _parse_bar(self, d: dict) -> Optional[DollarBar]:
         try:

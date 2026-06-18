@@ -1553,6 +1553,11 @@ class Tier2StreamingTrader:
         action: str,
     ) -> None:
         """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
+        # Do NOT log during the startup backfill: those bars are historical and were
+        # re-logged on every restart, ballooning the file (9.2M rows / 631MB observed).
+        # Only live (steady-state) bars should produce a decision trail.
+        if self._is_backfill:
+            return  # backfill bars are historical — see comment above
         try:
             log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
             log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1660,6 +1665,11 @@ class Tier2StreamingTrader:
                     self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
             else:
                 self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP")
+        else:
+            # No bearish sweep / M15 CHoCH this bar — log the live no-setup decision so
+            # the steady-state trail isn't silent on the dominant case.
+            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
+                                      self._m15_choch_active, False, "SKIP")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

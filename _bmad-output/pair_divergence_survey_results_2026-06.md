@@ -161,3 +161,30 @@ consistent with the 1-min metals finding.
 - The live MNQ/MES stat-arb bot and MIM-NB bot are unaffected; no config touched.
 - Data assets gained: SI, HG, PL, RTY, YM 1-min bars 2025-05-01 → 2026-06-12
   (`data/processed/dollar_bars/1_minute/*_1min_2025_2026.csv`, ~285k–366k bars each).
+
+## SIL Slippage Verdict (2026-06-19) — 🔴 FAIL: divergence-fade closure CONFIRMED FINAL
+
+The one open thread — SI–GC LONG (5m and 15m near-misses, both contingent on real SIL
+micro-silver execution cost) — is now closed by prospective measurement, per prereg
+`c61d381` (addendum 3). The `sil-quote-capture.service` polled SILN26 quotes every 5s
+during RTH for 5 sessions (2026-06-15 → 06-19); `analyze_sil_quotes.py` evaluated the
+frozen rule.
+
+| | Frozen PASS bar | Measured |
+|---|---|---|
+| Pooled median SILN26 RTH spread | ≤ $8.74/RT | **$15.00/RT (3.0 ticks)** |
+| Every session median ≤ $10 | required | **$15.00 every session (Jun 15–19)** |
+| % samples at ≤1 tick | — | **0.9%** |
+| Median quote size | — | 2 × 2 |
+| (context) SIN26 full-silver spread | — | $100/RT |
+
+**Verdict: FAIL — decisively, not marginally.** Realized micro-silver spread is **3 ticks
+($15/RT)**, ~3× the optimistic 1-tick stress assumption and well above even the $8.74
+reopen threshold. The SI–GC 5m/15m LONG near-misses (which needed effective cost below
+the stressed bar) are dead at real execution cost. This also clears the tighter
+combine-relevant breakeven question: $15/RT is far above the ~$7.3/RT at which SI–GC
+would even *help* a combined MIM-NB book, so the second-sleeve idea fails on the same
+microstructure. **The divergence-fade family is CLOSED FINAL across all instruments and
+timeframes (1m/5m/15m/60m).** No reopen path remains without genuinely cheaper silver
+execution (different venue/contract), which is out of scope. Sealed SI/GC holdout was
+never consumed. Capture + analysis systemd units disabled.

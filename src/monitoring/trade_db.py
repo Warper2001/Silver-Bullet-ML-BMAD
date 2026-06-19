@@ -44,6 +44,14 @@ class TradeDatabase:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_trader ON trades(trader_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON trades(timestamp)")
+            # Idempotency: a natural-key UNIQUE index makes every writer (live bot,
+            # backfill replay, ad-hoc sync script) safe to re-run without inserting
+            # duplicate rows. Paired with INSERT OR IGNORE in log_trade(). A restart-
+            # replay re-logging trades was silently doubling P&L (s26/yank, 2026-06-19).
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_trade_identity "
+                "ON trades(trader_id, timestamp, direction, entry_price, exit_price, pnl)"
+            )
             conn.commit()
 
     def log_trade(
@@ -65,7 +73,7 @@ class TradeDatabase:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("""
-                    INSERT INTO trades 
+                    INSERT OR IGNORE INTO trades 
                     (trader_id, timestamp, symbol, direction, entry_price, exit_price, pnl, exit_reason, ml_proba, metadata, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (

@@ -160,6 +160,7 @@ class MimNbLive:
         self.ts_auth = None
         self.px_auth = None
         self.px = None
+        self._ts_sim_mirror = None  # TSSimMirror when MIM_MIRROR_TS_SIM=1
         self._cfg = None
         self.symbol = SYMBOL
         self.contract_id = _to_contract_id(SYMBOL)
@@ -225,8 +226,22 @@ class MimNbLive:
         logger.info("=" * 70)
 
         self._cfg = type("_Cfg", (), {"symbol": self.symbol})()
-        self.px = ProjectXClient(self.px_auth, self._cfg, self.http,
-                                 projectx_account_id=self.account_id)
+        # Optional best-effort TradeStation SIM order mirror (default OFF). Cannot
+        # delay/block/crash the authoritative ProjectX combine path — see ts_sim_mirror.
+        if os.environ.get("MIM_MIRROR_TS_SIM", "0") == "1":
+            from src.research.ts_sim_mirror import TSSimMirror, MirrorProjectXClient, SimScaler
+            _scaler = SimScaler("MIM-NB", base_contracts=CONTRACTS,
+                                state_path=BASE_DIR / "data" / "ts_sim_mirror" / "mim_nb_scaler.json",
+                                log=logger)
+            self._ts_sim_mirror = TSSimMirror(self.ts_auth, scaler=_scaler, log=logger)
+            await self._ts_sim_mirror.start()
+            self.px = MirrorProjectXClient(self.px_auth, self._cfg, self.http,
+                                           projectx_account_id=self.account_id,
+                                           ts_mirror=self._ts_sim_mirror)
+            logger.info("TS SIM MIRROR: ENABLED — combine orders also copied to SIM (best-effort)")
+        else:
+            self.px = ProjectXClient(self.px_auth, self._cfg, self.http,
+                                     projectx_account_id=self.account_id)
         if self._data_shadow:
             self._shadow_logger = ShadowParityLogger(DATA_DIR / "shadow_parity.csv")
         logger.info("DATA: %s (signal)%s | px_contract=%s live=%s", self._data_source,

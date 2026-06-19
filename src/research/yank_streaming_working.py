@@ -891,6 +891,7 @@ class Tier2StreamingTrader:
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
         self._ts_client: Optional[TradeStationClient] = None
+        self._ts_sim_mirror = None  # TSSimMirror when YANK_MIRROR_TS_SIM=1 (combine path only)
 
     async def initialize(self):
         _halt = Path(__file__).parent.parent.parent / "data" / "combine_joint" / "HALT"
@@ -925,8 +926,24 @@ class Tier2StreamingTrader:
             self._on_combine = True
             self._exec_account = px_acct
             self._px_auth = ProjectXAuth.from_file('.projectx_api_key')
-            self._ts_client = ProjectXClient(self._px_auth, self._account_config, self.client,
-                                             projectx_account_id=int(px_acct))
+            # Optional best-effort TradeStation SIM order mirror (default OFF). The mirror
+            # can never delay/block/crash this authoritative combine path — see ts_sim_mirror.
+            if os.environ.get("YANK_MIRROR_TS_SIM", "0") == "1":
+                from src.research.ts_sim_mirror import TSSimMirror, MirrorProjectXClient, SimScaler
+                _scaler_state = (Path(__file__).parent.parent.parent
+                                 / "data" / "ts_sim_mirror" / "yank_scaler.json")
+                _scaler = SimScaler("YANK", base_contracts=self._contracts,
+                                    state_path=_scaler_state, log=logger)
+                self._ts_sim_mirror = TSSimMirror(self.auth, scaler=_scaler, log=logger)
+                await self._ts_sim_mirror.start()
+                self._ts_client = MirrorProjectXClient(
+                    self._px_auth, self._account_config, self.client,
+                    projectx_account_id=int(px_acct), ts_mirror=self._ts_sim_mirror)
+                logger.info("TS SIM MIRROR: ENABLED — combine orders also copied to %s (best-effort)",
+                            SIM_ACCOUNT_ID)
+            else:
+                self._ts_client = ProjectXClient(self._px_auth, self._account_config, self.client,
+                                                 projectx_account_id=int(px_acct))
             logger.info("EXECUTION: ProjectX/TopstepX combine acct %s | %d contracts", px_acct, self._contracts)
         else:
             self._on_combine = False
@@ -1072,6 +1089,8 @@ class Tier2StreamingTrader:
         self.running = False
         if self.active_trade and self.dollar_bars:
             await self._close_active_trade(self.dollar_bars[-1], self.dollar_bars[-1].close, "time")
+        if self._ts_sim_mirror is not None:
+            await self._ts_sim_mirror.stop()
         if self.client: await self.client.aclose()
         self._print_final_report()
 

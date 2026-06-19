@@ -968,12 +968,21 @@ class Tier2StreamingTrader:
             # Optional best-effort TradeStation SIM order mirror (default OFF). The mirror
             # can never delay/block/crash this authoritative combine path — see ts_sim_mirror.
             if os.environ.get("YANK_MIRROR_TS_SIM", "0") == "1":
-                from src.research.ts_sim_mirror import TSSimMirror, MirrorProjectXClient, SimScaler
-                _scaler_state = (Path(__file__).parent.parent.parent
-                                 / "data" / "ts_sim_mirror" / "yank_scaler.json")
-                _scaler = SimScaler("YANK", base_contracts=self._contracts,
-                                    state_path=_scaler_state, log=logger)
-                self._ts_sim_mirror = TSSimMirror(self.auth, scaler=_scaler, log=logger)
+                from src.research.ts_sim_mirror import (TSSimMirror, MirrorProjectXClient,
+                                                        SimScaler, InvVolScaler)
+                _sim_dir = (Path(__file__).parent.parent.parent / "data" / "ts_sim_mirror")
+                if os.environ.get("SIM_INVVOL", "0") == "1":
+                    # Inverse-vol allocation paper-track: YANK trimmed to 1ct in SIM
+                    # (vs the live combine 2ct) to measure giveback-from-HWM. The
+                    # equity curve is logged for offline analysis. See InvVolScaler.
+                    _scaler = InvVolScaler("YANK", contracts=1, log=logger)
+                    _eq_log = _sim_dir / "yank_invvol_equity.csv"
+                else:
+                    _scaler = SimScaler("YANK", base_contracts=self._contracts,
+                                        state_path=_sim_dir / "yank_scaler.json", log=logger)
+                    _eq_log = None
+                self._ts_sim_mirror = TSSimMirror(self.auth, scaler=_scaler,
+                                                  equity_log_path=_eq_log, log=logger)
                 await self._ts_sim_mirror.start()
                 self._ts_client = MirrorProjectXClient(
                     self._px_auth, self._account_config, self.client,

@@ -229,11 +229,20 @@ class MimNbLive:
         # Optional best-effort TradeStation SIM order mirror (default OFF). Cannot
         # delay/block/crash the authoritative ProjectX combine path — see ts_sim_mirror.
         if os.environ.get("MIM_MIRROR_TS_SIM", "0") == "1":
-            from src.research.ts_sim_mirror import TSSimMirror, MirrorProjectXClient, SimScaler
-            _scaler = SimScaler("MIM-NB", base_contracts=CONTRACTS,
-                                state_path=BASE_DIR / "data" / "ts_sim_mirror" / "mim_nb_scaler.json",
-                                log=logger)
-            self._ts_sim_mirror = TSSimMirror(self.ts_auth, scaler=_scaler, log=logger)
+            from src.research.ts_sim_mirror import (TSSimMirror, MirrorProjectXClient,
+                                                    SimScaler, InvVolScaler)
+            _sim_dir = BASE_DIR / "data" / "ts_sim_mirror"
+            if os.environ.get("SIM_INVVOL", "0") == "1":
+                # Inverse-vol allocation paper-track: MIM held at 1ct in SIM (same
+                # as the live combine) alongside YANK trimmed to 1ct — see InvVolScaler.
+                _scaler = InvVolScaler("MIM-NB", contracts=1, log=logger)
+                _eq_log = _sim_dir / "mim_invvol_equity.csv"
+            else:
+                _scaler = SimScaler("MIM-NB", base_contracts=CONTRACTS,
+                                    state_path=_sim_dir / "mim_nb_scaler.json", log=logger)
+                _eq_log = None
+            self._ts_sim_mirror = TSSimMirror(self.ts_auth, scaler=_scaler,
+                                              equity_log_path=_eq_log, log=logger)
             await self._ts_sim_mirror.start()
             self.px = MirrorProjectXClient(self.px_auth, self._cfg, self.http,
                                            projectx_account_id=self.account_id,

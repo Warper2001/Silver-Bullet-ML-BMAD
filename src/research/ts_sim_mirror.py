@@ -48,6 +48,7 @@ import json
 import logging
 import math
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -254,6 +255,41 @@ class SimScaler:
         return contracts
 
 
+class InvVolScaler:
+    """Fixed-size scaler for the inverse-vol allocation PAPER-TRACK (SIM only).
+
+    Unlike :class:`SimScaler` (which grows size by equity to dress-rehearse the
+    eventual live scaling), this holds a CONSTANT per-bot contract count so the
+    SIM account runs the two bots at a candidate inverse-vol allocation while the
+    real combine keeps its live size. Comparing realized giveback-from-HWM
+    between the two answers the open question (party-mode 2026-06-19; Quinn vs
+    Mary, John's ruling): does trimming YANK's weight actually reduce giveback?
+
+    First experiment (Alex, 2026-06-19): YANK 1ct / MIM 1ct in SIM (treatment)
+    vs the live combine's YANK 2ct / MIM 1ct (control) — a sign-stable one-notch
+    YANK trim, minimal assumptions, no dependence on the N=13 correlation lift.
+
+    Duck-types the interface :class:`TSSimMirror` uses: ``strategy``,
+    ``target_contracts()`` and ``update_equity()``. Selected via ``SIM_INVVOL=1``.
+    """
+
+    def __init__(self, strategy: str, contracts: int = 1,
+                 log: Optional[logging.Logger] = None) -> None:
+        self.strategy = strategy
+        self.contracts = int(contracts)
+        self._log = log or logger
+        self.equity: Optional[float] = None  # recorded for the equity log only
+
+    def update_equity(self, equity: float, buying_power: Optional[float] = None) -> None:
+        """Record the latest SIM equity (for the equity-curve log). Size is fixed,
+        so the reading never changes the contract count."""
+        if equity is not None:
+            self.equity = equity
+
+    def target_contracts(self) -> int:
+        return self.contracts
+
+
 class TSSimMirror:
     """Best-effort TradeStation SIM order mirror running on its own worker task.
 
@@ -271,8 +307,9 @@ class TSSimMirror:
         order_base_url: str = SIM_ORDER_BASE,
         maxsize: int = 256,
         http: Optional[httpx.AsyncClient] = None,
-        scaler: Optional[SimScaler] = None,
+        scaler=None,
         equity_poll_interval: float = 30.0,
+        equity_log_path: Optional[Path] = None,
         log: Optional[logging.Logger] = None,
     ) -> None:
         self._auth = ts_auth
@@ -287,6 +324,7 @@ class TSSimMirror:
         self._task: Optional[asyncio.Task] = None
         self._scaler = scaler
         self._equity_poll_interval = equity_poll_interval
+        self._equity_log_path = equity_log_path  # SIM equity-curve CSV (giveback evidence)
         self._poll_task: Optional[asyncio.Task] = None
         self.dropped = 0  # count of queue-overflow drops (observability)
 
@@ -425,6 +463,30 @@ class TSSimMirror:
         bp = _to_float(b.get("BuyingPower"))
         if equity is not None and self._scaler is not None:
             self._scaler.update_equity(equity, bp)
+        if equity is not None:
+            self._log_equity(equity, bp)
+
+    def _log_equity(self, equity: float, bp: Optional[float]) -> None:
+        """Append one SIM equity-curve row (for offline giveback-from-HWM analysis).
+
+        No-op unless ``equity_log_path`` was set. Firewalled: a logging failure
+        never propagates into the poll loop. NOTE: both bots mirror to the same
+        SIM account, so this curve is the SHARED-account (portfolio) equity — which
+        is exactly the series whose giveback we want for the inverse-vol test."""
+        p = self._equity_log_path
+        if not p:
+            return
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            new = not p.exists()
+            ct = self._scaler.target_contracts() if self._scaler else ""
+            with open(p, "a") as f:
+                if new:
+                    f.write("ts_utc,equity,buying_power,contracts\n")
+                f.write(f"{datetime.now(timezone.utc).isoformat()},{equity},"
+                        f"{bp if bp is not None else ''},{ct}\n")
+        except Exception as exc:  # noqa: BLE001 — never break the poll loop
+            self._log.warning("TS SIM equity log failed: %s", exc)
 
 
 def _to_float(v) -> Optional[float]:

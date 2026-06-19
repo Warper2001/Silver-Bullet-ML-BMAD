@@ -2,7 +2,7 @@
 
 **Generated:** 2026-06-19
 **Experiment ID:** ml-proba-ordinal-v1
-**Pre-registration commit:** (populate after `git commit`)
+**Pre-registration commit:** `110a533`
 **Prospective cutoff:** entry date **≥ 2026-06-20** (strictly after the seal)
 
 ---

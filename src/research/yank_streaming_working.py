@@ -248,6 +248,15 @@ class TradeLogger:
 
     Single-writer pattern: only this class appends to tier2_trade_log.csv.
     Header written only when file is empty (f.tell() == 0) — avoids TOCTOU race (AC#2).
+
+    Idempotent (2026-06-19): a completed trade's identity is (timestamp_entry,
+    direction). The bot replays historical bars on every restart (backfill), which
+    re-closes already-logged trades; without a guard that re-appended each trade on
+    every restart (a diagnostic found 1,676 of 2,827 rows were dupes, plus 131
+    entries logged with conflicting backfill-recomputed exits). The first logged
+    exit for an entry wins (it is the live exit — see the not-backfill gate at the
+    call site); subsequent appends of the same identity are skipped. The seen-key
+    set is seeded from the existing file so the guard survives process restarts.
     """
 
     _LOG_PATH = Path(__file__).parent.parent.parent / "logs" / "tier2_trade_log.csv"
@@ -258,11 +267,40 @@ class TradeLogger:
         "vol_regime_pct", "contracts",
     ]
 
+    def __init__(self, log_path: Optional[Path] = None) -> None:
+        # log_path override exists so tests can point at a tmp file (default = prod path).
+        self._log_path: Path = log_path or self._LOG_PATH
+        self._seen_keys: Optional[set] = None  # lazily seeded from the existing file
+
+    @staticmethod
+    def _identity(timestamp_entry_iso: str, direction: str) -> tuple:
+        return (timestamp_entry_iso, direction)
+
+    def _load_seen(self) -> set:
+        """Seed the dedup set from rows already in the file (survives restarts)."""
+        import csv as _csv
+        seen: set = set()
+        if self._log_path.exists():
+            try:
+                with self._log_path.open(newline="", encoding="utf-8") as f:
+                    for row in _csv.DictReader(f):
+                        seen.add(self._identity(row.get("timestamp_entry", ""),
+                                                row.get("direction", "")))
+            except Exception as e:  # noqa: BLE001 — a read failure must not block logging
+                logger.warning("TradeLogger seen-key load failed: %s", e)
+        return seen
+
     def append_trade(self, record: TradeRecord) -> None:
         import csv as _csv
-        self._LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if self._seen_keys is None:
+            self._seen_keys = self._load_seen()
+        key = self._identity(record.timestamp_entry.isoformat(), record.direction)
+        if key in self._seen_keys:
+            logger.debug("TradeLogger: duplicate trade %s skipped (already logged)", key)
+            return
+        self._log_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with self._LOG_PATH.open("a", newline="", encoding="utf-8") as f:
+            with self._log_path.open("a", newline="", encoding="utf-8") as f:
                 writer = _csv.DictWriter(f, fieldnames=self._COLUMNS)
                 if f.tell() == 0:
                     writer.writeheader()
@@ -283,6 +321,7 @@ class TradeLogger:
                     "vol_regime_pct":    round(record.vol_regime_pct, 4),
                     "contracts":         record.contracts,
                 })
+            self._seen_keys.add(key)
         except Exception as e:
             logger.warning("Trade log write failed: %s", e)
 
@@ -1470,23 +1509,29 @@ class Tier2StreamingTrader:
             logger.warning("State persistence failed after trade close (trade record will still be written): %s", e)
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._risk_manager.daily_pnl:.2f}")
         _exit_reason_str = reason.upper() if reason in ("tp", "sl") else "TIME_STOP" if reason == "time" else reason.upper()
-        self._trade_logger.append_trade(TradeRecord(
-            timestamp_entry=t.entry_time,
-            timestamp_exit=bar.timestamp,
-            direction=t.direction,
-            entry_price=t.entry_price,
-            exit_price=price,
-            tp_price=t.tp_price,
-            sl_price=t.sl_price,
-            gap_size=t.gap_size,
-            pnl_usd=pnl,
-            exit_reason=_exit_reason_str,
-            h1_sweep_bars_ago=t.h1_sweep_bars_ago,
-            m15_confirmed=t.m15_confirmed,
-            kill_zone_active=t.kill_zone_active,
-            vol_regime_pct=t.vol_regime_pct,
-            contracts=self._contracts,
-        ))
+        # Backfill replays historical bars on every restart and re-closes already-logged
+        # trades; logging during backfill is what re-appended phantom (recomputed) exits.
+        # Only persist live closes. The TradeLogger idempotency guard is the second line
+        # of defense against any restart re-logging. (NOTE: yank_ml_canary.csv and
+        # equity_curve.csv have the same backfill exposure — follow-up.)
+        if not self._is_backfill:
+            self._trade_logger.append_trade(TradeRecord(
+                timestamp_entry=t.entry_time,
+                timestamp_exit=bar.timestamp,
+                direction=t.direction,
+                entry_price=t.entry_price,
+                exit_price=price,
+                tp_price=t.tp_price,
+                sl_price=t.sl_price,
+                gap_size=t.gap_size,
+                pnl_usd=pnl,
+                exit_reason=_exit_reason_str,
+                h1_sweep_bars_ago=t.h1_sweep_bars_ago,
+                m15_confirmed=t.m15_confirmed,
+                kill_zone_active=t.kill_zone_active,
+                vol_regime_pct=t.vol_regime_pct,
+                contracts=self._contracts,
+            ))
         self._log_ml_canary(t, _exit_reason_str, pnl)
         self._log_trade_metrics()
         self._write_equity_curve()

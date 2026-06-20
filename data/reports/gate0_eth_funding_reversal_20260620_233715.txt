@@ -1,0 +1,53 @@
+
+======================================================================================
+ETH (S2 primary): 1692 8h funding rows  (2024-12-04..2026-06-20, 1.54y)  mean funding +11.8% ann
+======================================================================================
+
+PERCENTILE SWEEP @ hold=21p (7d), cost 10.0bps RT  (PRIMARY)
+ pctl    n   /yr short/long  net_bps    dir   fund   win      h1      h2     tot  shrp
+   80   62  40.2      34/28   -100.2 -105.3   15.1 0.435  -410.3   209.9  -0.583 -0.75
+   85   58  37.6      24/34   -256.1 -262.0   15.9 0.397  -364.1  -148.0   -0.84 -1.65
+   90   50  32.4      23/27   -249.5 -257.6   18.1  0.46  -430.8   -68.2   -0.79 -1.44
+   95   40  26.0      18/22   -291.8 -299.0   17.1 0.475  -518.9   -64.8  -0.764 -1.46
+ 97.5   31  20.1      14/17   -361.4 -369.6   18.2 0.452  -598.5  -139.1  -0.749 -1.46
+
+HOLD-HORIZON ROBUSTNESS @ pctl=90 (3d/7d/14d)
+ hold    n   /yr  net_bps    dir   fund   win      h1      h2
+    9   96  62.3   -185.3 -185.1    9.8 0.406  -221.9  -148.6
+   21   50  32.4   -249.5 -257.6   18.1  0.46  -430.8   -68.2
+   42   28  18.2    143.2  143.0   10.2 0.536   121.0   165.4
+
+======================================================================================
+BTC (cross-asset check): 1710 8h funding rows  (2024-11-08..2026-05-31, 1.56y)  mean funding +21.5% ann
+======================================================================================
+
+PERCENTILE SWEEP @ hold=21p (7d), cost 10.0bps RT  (PRIMARY)
+ pctl    n   /yr short/long  net_bps    dir   fund   win      h1      h2     tot  shrp
+   80   59  37.9      22/37     -8.5   -3.2    4.6 0.542   -44.7    26.4  -0.121  -0.1
+   85   58  37.2      23/35    -22.6  -19.9    7.3 0.466   -19.2   -26.1  -0.195 -0.25
+   90   50  32.1      19/31     -9.6  -11.8   12.2  0.56    20.8   -40.0   -0.13 -0.09
+   95   42  27.0      14/28    -30.7  -29.1    8.4 0.476    -9.2   -52.1  -0.194 -0.26
+ 97.5   27  17.3       9/18      2.5    1.6   10.9 0.556   124.4  -110.7  -0.033  0.02
+
+HOLD-HORIZON ROBUSTNESS @ pctl=90 (3d/7d/14d)
+ hold    n   /yr  net_bps    dir   fund   win      h1      h2
+    9   91  58.4    -19.7  -14.8    5.1 0.505   -37.0    -2.7
+   21   50  32.1     -9.6  -11.8   12.2  0.56    20.8   -40.0
+   42   28  18.0     24.5   30.2    4.3 0.536   163.6  -114.5
+
+######################################################################################
+S2 GATE 0 VERDICT (ETH)
+######################################################################################
+Thresholds reaching >=30 events/yr: [80, 85, 90]
+Thresholds that ALSO clear cost + both time-halves: []
+  pctl 80: net -100.2 = dir -105.3 + fund +15.1  [dir<=0 (edge is just funding=carry)]
+  pctl 85: net -256.1 = dir -262.0 + fund +15.9  [dir<=0 (edge is just funding=carry)]
+  pctl 90: net -249.5 = dir -257.6 + fund +18.1  [dir<=0 (edge is just funding=carry)]
+  pctl 95: net -291.8 = dir -299.0 + fund +17.1  [dir<=0 (edge is just funding=carry)]
+  pctl 97.5: net -361.4 = dir -369.6 + fund +18.2  [dir<=0 (edge is just funding=carry)]
+
+VERDICT: FAIL - thresholds reach 30/yr but none clears cost in BOTH halves.
+         The reversion edge does not survive cost net of regime. KILL S2.
+
+(Gate 0 only. Provisional/in-sample; sealed prereg + regime-aware OOS required
+ before any capital. OI-confirmation gate omitted - would only reduce events.)

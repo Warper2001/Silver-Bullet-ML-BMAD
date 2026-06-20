@@ -1,0 +1,69 @@
+================================================================================
+ETH SESSION-MOMENTUM H2-FAILURE POST-MORTEM  (diagnostic, not validation)
+================================================================================
+Session-days: 548   H1: 2024-12-04..2025-09-03   H2: 2025-09-04..2026-06-04
+BTC-funding coverage of session-days: 99% (proxy for crypto funding regime)
+
+--- H1 vs H2 regime character ---
+  H1: session-mom net=+19.38 bps | funding_ann(BTC)=+28.0% | %days funding<0=2% | ETH 30d-trend=+5.9% | %days uptrend=38% | ETH RV20=0.0395
+  H2: session-mom net= -0.45 bps | funding_ann(BTC)=+9.5% | %days funding<0=27% | ETH 30d-trend=-6.3% | %days uptrend=39% | ETH RV20=0.0330
+
+(conditioning on rows with full regime features: n=514)
+
+By FUNDING sign (BTC proxy):
+  funding POSITIVE             n= 434  mean_net= +10.46 bps  winrate=0.544  sum_net=+45.4 %ret
+  funding <= 0                 n=  80  mean_net= +14.25 bps  winrate=0.425  sum_net=+11.4 %ret
+
+By FUNDING level (low vs high tertile):
+  funding HIGH tertile         n= 172  mean_net= +24.57 bps  winrate=0.576  sum_net=+42.3 %ret
+  funding LOW tertile          n= 171  mean_net=  +0.72 bps  winrate=0.462  sum_net=+1.2 %ret
+
+By ETH 30d TREND sign:
+  ETH uptrend                  n= 213  mean_net=  -8.29 bps  winrate=0.516  sum_net=-17.7 %ret
+  ETH downtrend                n= 301  mean_net= +24.74 bps  winrate=0.532  sum_net=+74.5 %ret
+
+By ETH 20d realized VOL (high vs low tertile):
+  vol HIGH tertile             n= 172  mean_net= +34.90 bps  winrate=0.517  sum_net=+60.0 %ret
+  vol LOW tertile              n= 172  mean_net=  -5.20 bps  winrate=0.523  sum_net=-8.9 %ret
+
+--- Monthly breakdown ---
+  month  n net_bps funding_ann eth_ret     rv
+2024-12 28   -12.2      +53.4%  -13.4% 0.0343
+2025-01 31   -31.1      +31.6%   -0.9% 0.0332
+2025-02 28   +30.5      +18.4%  -32.2% 0.0334
+2025-03 31   +70.9      +14.8%  -18.5% 0.0504
+2025-04 30  +121.7      +15.3%   -1.6% 0.0474
+2025-05 31   +54.3      +28.4%  +40.9% 0.0482
+2025-06 30   -20.8      +13.3%   -1.6% 0.0318
+2025-07 31   +39.3      +38.7%  +48.7% 0.0302
+2025-08 31   -72.5      +38.6%  +18.8% 0.0413
+2025-09 30   -24.0      +22.9%   -5.6% 0.0320
+2025-10 31   -95.0      +19.7%   -7.2% 0.0404
+2025-11 30   +18.1      +19.3%  -22.2% 0.0350
+2025-12 31   +45.1      +15.2%   -0.8% 0.0330
+2026-01 31   +50.8      +23.0%  -17.5% 0.0249
+2026-02 28   +96.1       -2.3%  -19.8% 0.0524
+2026-03 31   -16.9       -2.9%   +7.0% 0.0369
+2026-04 30   -24.6      -10.1%   +7.3% 0.0307
+2026-05 31   -46.1       +1.4%  -11.2% 0.0169
+2026-06  4   -23.0         NaN  -11.8% 0.0191
+
+--- Monthly correlation of session-momentum edge with regime variables ---
+  corr(monthly net_bps, funding_ann) = -0.12
+  corr(monthly net_bps, ETH month ret) = -0.07
+  corr(monthly net_bps, ETH realized vol) = +0.45
+
+################################################################################
+DIAGNOSIS
+################################################################################
+H1 mean funding +28.0% -> H2 mean funding +9.5%  (dropped=True)
+%days funding<0:  H1=2%  H2=27%
+Strongest monthly driver of the edge: vol (|corr|=0.45), then funding (0.12).
+
+=> Funding DID compress into H2, but the edge tracks vol more
+   tightly than funding. H2 failure is better explained by vol
+   regime than by funding sign per se (the three are confounded). S2's
+   funding mechanism is NOT automatically doomed by the same variable -
+   evaluate S2 on its own funding-event count, not S1's trend/vol decay.
+
+(Diagnostic only. No subset is being promoted to a strategy.)

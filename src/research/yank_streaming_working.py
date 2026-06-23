@@ -1114,6 +1114,12 @@ class Tier2StreamingTrader:
 
     def _check_stale(self, bar: DollarBar) -> bool:
         """Return True if bar timestamp is >5 min old during RTH (sets/clears _data_stale)."""
+        # During the startup backfill the bars are historical by definition, so the
+        # age check would false-positive (and log a scary STALE_DATA halt) on every
+        # restart. Entries are already gated by the is_backfill path; skip here and
+        # let the steady-state check take over once backfill completes.
+        if self._is_backfill:
+            return False
         now_utc = datetime.now(timezone.utc)
         now_et = now_utc.astimezone(ET_TZ)
         if not self._is_rth(now_et):
@@ -1541,6 +1547,30 @@ class Tier2StreamingTrader:
                 vol_regime_pct=t.vol_regime_pct,
                 contracts=self._contracts,
             ))
+            # Mirror the realized close into the shared trade DB (trader_id='trader-yank')
+            # so the combine floor monitor's combined-PF halt trigger and the status
+            # tooling see YANK's live combine trades. PnL here is the strategy-modeled
+            # close (entry/exit prices minus commission), matching how MIM-NB logs —
+            # keeps the combined PF apples-to-apples. Defensive: a DB failure must never
+            # disrupt trading. Idempotent via trades.db natural-key UNIQUE index +
+            # INSERT OR IGNORE; guarded by `not self._is_backfill` so restart-replay
+            # never re-logs (the phantom-PnL failure mode from 2026-06-19).
+            try:
+                from src.monitoring.trade_db import TradeDatabase
+                _exit_ts = bar.timestamp if bar.timestamp.tzinfo else bar.timestamp.replace(tzinfo=timezone.utc)
+                TradeDatabase().log_trade(
+                    trader_id='trader-yank',
+                    timestamp=_exit_ts.astimezone(timezone.utc).isoformat(),
+                    pnl=round(pnl, 2),
+                    symbol=self._symbol,
+                    direction='L' if t.direction == 'LONG' else 'S',
+                    entry_price=t.entry_price,
+                    exit_price=price,
+                    exit_reason=_exit_reason_str,
+                    metadata={'contracts': self._contracts, 'bars_held': t.bars_held, 'gap_size': t.gap_size},
+                )
+            except Exception as e:
+                logger.warning("trades.db log failed (trade still in tier2_trade_log.csv): %s", e)
         self._log_ml_canary(t, _exit_reason_str, pnl)
         self._log_trade_metrics()
         self._write_equity_curve()

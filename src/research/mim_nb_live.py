@@ -207,6 +207,9 @@ class MimNbLive:
         self.http = httpx.AsyncClient(timeout=30)
         self.ts_auth = TradeStationAuthV3.from_file(".access_token")
         await self.ts_auth.authenticate()
+        # Keep the TS token fresh so the SIM mirror does not 401 on stale
+        # tokens (TS access tokens expire ~20 min). Matches YANK:957.
+        await self.ts_auth.start_auto_refresh()
         self.px_auth = ProjectXAuth.from_file(".projectx_api_key")
 
         # Auto-roll: resolve the broker's active front month at startup so a

@@ -416,6 +416,14 @@ class TSSimMirror:
             return
         headers = await self._headers()
         resp = await self._http.post(self._orders_url, headers=headers, json=ts_order)
+        if resp.status_code == 401:
+            # token expired between refresh cycles -- force-refresh once and retry
+            try:
+                await self._auth._refresh_token_flow()
+                headers = await self._headers()
+                resp = await self._http.post(self._orders_url, headers=headers, json=ts_order)
+            except Exception as exc:  # noqa: BLE001 -- firewall; mirror never disrupts trading
+                self._log.warning("TS SIM mirror place: refresh-retry failed: %s", exc)
         if resp.status_code not in (200, 201):
             self._log.warning("TS SIM mirror place HTTP %s: %s", resp.status_code, resp.text[:160])
             return
@@ -436,6 +444,14 @@ class TSSimMirror:
         headers = await self._headers()
         url = f"{self._order_base}/{ts_oid}"
         resp = await self._http.delete(url, headers=headers)
+        if resp.status_code == 401:
+            # token expired between refresh cycles -- force-refresh once and retry
+            try:
+                await self._auth._refresh_token_flow()
+                headers = await self._headers()
+                resp = await self._http.delete(url, headers=headers)
+            except Exception as exc:  # noqa: BLE001 -- firewall; mirror never disrupts trading
+                self._log.warning("TS SIM mirror cancel: refresh-retry failed: %s", exc)
         if resp.status_code not in (200, 204, 404):
             self._log.warning("TS SIM mirror cancel HTTP %s for ts #%s", resp.status_code, ts_oid)
 

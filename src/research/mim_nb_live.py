@@ -22,6 +22,7 @@ import hashlib
 import json
 import logging
 import os
+import signal
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -51,6 +52,10 @@ LOOKBACK_DAYS = 14
 DLL_GUARD_USD = -500.0  # tracks CAT_STOP: 250pt × $2/pt × 1ct = $500/trade max
 PT_VAL = 2.0
 ET = pytz.timezone("America/New_York")
+
+# Combine account math (Topstep 50K EOD trailing drawdown)
+COMBINE_START_BALANCE = 50_000.0
+MLL_DD = 2_000.0  # Topstep 50K maximum loss limit (trailing, EOD)
 
 BASE_DIR = Path(__file__).parent.parent.parent
 DATA_DIR = BASE_DIR / "data" / "mim_nb"
@@ -180,6 +185,11 @@ class MimNbLive:
         self.day_pnl = 0.0
         self.day_deactivated = False
         self.last_bar_ts = None
+        self._running = True
+
+        # Combine balance tracking for buffer-aware risk gates
+        self._realized_pnl = 0.0       # cumulative realized P&L across all sessions
+        self._mll_eod_hwm = COMBINE_START_BALANCE  # EOD high-water mark for MLL floor
 
         # Data backend (Stage-1 shadow migration to ProjectX). Default = TradeStation REST.
         self._data_source = os.environ.get("MIM_NB_DATA_SOURCE", "tradestation")
@@ -187,6 +197,45 @@ class MimNbLive:
                              and self._data_source == "tradestation")
         self._data_px_live = os.environ.get("MIM_NB_DATA_PX_LIVE", "0") == "1"
         self._shadow_logger = None
+
+    # ------------------------------------------------------------------
+    # Combine buffer tracking (risk gate support)
+    # ------------------------------------------------------------------
+    def _init_combine_balance(self):
+        """Replay trades.csv to compute cumulative realized P&L and EOD MLL floor.
+        Called once at startup so the buffer gate has accurate state from day one."""
+        path = DATA_DIR / "trades.csv"
+        if not path.exists():
+            return
+        try:
+            running = COMBINE_START_BALANCE
+            hwm = COMBINE_START_BALANCE
+            with open(path) as f:
+                for row in csv.DictReader(f):
+                    pnl = float(row.get("pnl_usd", "0").replace("+", ""))
+                    running += pnl
+                    hwm = max(hwm, running)
+            self._realized_pnl = running - COMBINE_START_BALANCE
+            self._mll_eod_hwm = hwm
+            mll_floor = hwm - MLL_DD
+            buf = running - mll_floor
+            cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS
+            logger.info("COMBINE BALANCE: realized=%+.2f balance=%.2f hwm=%.2f "
+                        "mll_floor=%.2f buffer=%.2f cat_cost=%.2f",
+                        self._realized_pnl, running, hwm, mll_floor, buf, cat_cost)
+            if buf <= cat_cost:
+                logger.warning("BUFFER WARNING: %.2f ≤ cat-stop cost %.2f — "
+                               "entries will be blocked until buffer recovers",
+                               buf, cat_cost)
+        except Exception as exc:
+            logger.warning("combine balance init failed: %s — buffer gate disabled", exc)
+
+    def _remaining_mll_buffer(self) -> float:
+        """Remaining Topstep MLL buffer = current estimated balance − MLL floor.
+        Uses cumulative realized P&L + today's open day P&L as balance proxy."""
+        balance = COMBINE_START_BALANCE + self._realized_pnl + self.day_pnl
+        mll_floor = self._mll_eod_hwm - MLL_DD
+        return balance - mll_floor
 
     # ------------------------------------------------------------------
     def _apply_symbol(self, sym: str):
@@ -259,6 +308,7 @@ class MimNbLive:
         logger.info("DATA: %s (signal)%s | px_contract=%s live=%s", self._data_source,
                     " + projectx SHADOW" if self._data_shadow else "",
                     self.contract_id, self._data_px_live)
+        self._init_combine_balance()
         await self._backfill()
         await self._reconcile_startup()
         await self._catch_up_today()
@@ -565,20 +615,28 @@ class MimNbLive:
         )
 
         self.day_pnl += pnl_usd
+        self._realized_pnl += pnl_usd
+        self._mll_eod_hwm = max(self._mll_eod_hwm,
+                                COMBINE_START_BALANCE + self._realized_pnl)
         trades_log.append({"day": str(self.day), "dir": self.position,
                            "entry_t": self.entry_t, "entry_px": f"{self.entry_px:.2f}",
                            "exit_t": exit_t, "exit_px": f"{exit_px:.2f}", "reason": reason,
                            "pnl_pts": f"{pnl_pts:+.2f}", "pnl_usd": f"{pnl_usd:+.2f}",
                            "day_pnl_usd": f"{self.day_pnl:+.2f}"})
-        logger.info("TRADE CLOSED %s %s→%s %+.2f pts ($%+.2f) day P&L %+.2f [%s]",
+        buf = self._remaining_mll_buffer()
+        logger.info("TRADE CLOSED %s %s→%s %+.2f pts ($%+.2f) day P&L %+.2f buffer %.2f [%s]",
                     "L" if self.position == 1 else "S", self.entry_t, exit_t,
-                    pnl_pts, pnl_usd, self.day_pnl, reason)
+                    pnl_pts, pnl_usd, self.day_pnl, buf, reason)
         self.position = 0
         self._save_state()  # persist flat state immediately after close (commingling-safe recovery)
-        if self.day_pnl <= DLL_GUARD_USD and not self.day_deactivated:
+        # Dynamic DLL: allow losing at most (buffer - cat_stop_cost) today, up to static cap
+        cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS
+        dynamic_dll = -min(abs(DLL_GUARD_USD), max(0.0, buf + cat_cost))
+        if self.day_pnl <= dynamic_dll and not self.day_deactivated:
             self.day_deactivated = True
-            logger.warning("DLL GUARD: day P&L $%.2f ≤ -$1,000 — entries disabled until next session",
-                           self.day_pnl)
+            logger.warning("DLL GUARD: day P&L $%.2f ≤ %.2f (dynamic) buffer=%.2f — "
+                           "entries disabled until next session",
+                           self.day_pnl, dynamic_dll, buf)
 
     # ------------------------------------------------------------------
     # Bar processing — mirrors the sealed backtest engine
@@ -653,7 +711,12 @@ class MimNbLive:
                 await self._exit(c, hm, "STOP")
                 action = "BAND_STOP_EXIT"
             if not self.day_deactivated and hm in ENTRY_MARKS:
-                if c > ub and self.position != 1:
+                buf = self._remaining_mll_buffer()
+                cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS
+                if buf <= cat_cost:
+                    logger.warning("BUFFER_GATE %s: buffer=%.2f ≤ cat_cost=%.2f — entry blocked",
+                                   hm, buf, cat_cost)
+                elif c > ub and self.position != 1:
                     if self.position == -1:
                         await self._exit(c, hm, "REVERSAL")
                     if await self._enter(1, c, hm):
@@ -685,10 +748,29 @@ class MimNbLive:
             "saved_at": datetime.now(timezone.utc).isoformat()}, indent=2))
 
     # ------------------------------------------------------------------
+    async def _shutdown(self, sig_name: str):
+        """Graceful shutdown: flatten any open position before exiting.
+        Registered on SIGTERM/SIGINT so `systemctl stop` closes live positions
+        rather than leaving them orphaned until the cat-stop fires."""
+        if not self._running:
+            return
+        self._running = False
+        logger.warning("SHUTDOWN (%s) — flattening if held", sig_name)
+        if self.position != 0:
+            try:
+                await self._flatten(f"SHUTDOWN_{sig_name}")
+            except Exception as exc:
+                logger.error("flatten on shutdown failed: %s", exc)
+        logger.info("SHUTDOWN complete")
+
     async def run(self):
         await self.initialize()
+        loop = asyncio.get_event_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(
+                sig, lambda s=sig: asyncio.ensure_future(self._shutdown(s.name)))
         logger.info("Polling loop started (10s)")
-        while True:
+        while self._running:
             try:
                 now_et = datetime.now(ET)
                 # safety net: never hold past 16:01 ET
@@ -712,7 +794,9 @@ class MimNbLive:
             # 2s cadence in the first 20s of each minute (catch the completed bar
             # the moment TradeStation publishes it, ~6-9s past the minute);
             # 10s otherwise. Bounds check-to-order latency at the API publish lag.
-            await asyncio.sleep(2 if datetime.now(timezone.utc).second < 20 else 10)
+            if self._running:
+                await asyncio.sleep(2 if datetime.now(timezone.utc).second < 20 else 10)
+        logger.info("Poll loop exited cleanly")
 
 
 if __name__ == "__main__":

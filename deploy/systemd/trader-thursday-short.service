@@ -1,0 +1,21 @@
+[Unit]
+Description=Thursday Short — BTC+ETH weekly short (TradeStation SIM MBT/MET)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+EnvironmentFile=/root/Silver-Bullet-ML-BMAD/.env
+Environment="THU_TS_SIM_ACCOUNT=SIM2797251F"
+Environment="THU_MBT_SIZE=1"
+Environment="THU_STOP_PCT=5.0"
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python thursday_short.py
+Restart=on-failure
+RestartSec=60
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/thursday_short.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/thursday_short.log
+
+[Install]
+WantedBy=multi-user.target

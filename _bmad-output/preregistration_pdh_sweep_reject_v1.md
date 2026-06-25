@@ -145,3 +145,22 @@ IS + OOS (after Gate 0 confirms pass):
     .venv/bin/python backtest_pdh_sweep_reject.py --oos --log-access
 
 Output: data/reports/pdh_sweep_IS_<timestamp>.csv and data/reports/pdh_sweep_OOS_<timestamp>.csv
+
+---
+
+## ARCHIVE RECORD
+
+**Archived:** 2026-06-25
+**Result:** GATE 0 FAIL
+
+Formal backtest result:
+- N=65, WR=33.8%, PF=0.9231, Net=-$276.50 (1ct, IS 2025)
+- PF=0.9231 < 1.10 gate: FAIL
+- WR=33.8% < 35% gate: FAIL
+
+The PF=1.510 estimated by the research agent did not reproduce in the formal backtest.
+Likely cause: the $400/trade risk cap (combine safety requirement) filtered the
+high-risk setups that were carrying the agent's IS estimate.
+
+OOS data was NOT accessed. Strategy is archived. To reopen this hypothesis a fresh
+pre-registration is required per project methodology.

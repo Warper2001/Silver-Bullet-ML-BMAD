@@ -213,6 +213,33 @@ def fetch_btc_lr_slopes():
         return None, None
 
 
+class ChainedCsv:
+    """Tamper-evident hash-chained CSV (local copy of the MIM-NB pattern)."""
+
+    def __init__(self, path, fields):
+        self.path = path
+        self.fields = list(fields) + ["chain"]
+        self.head = "GENESIS"
+        if path.exists():
+            try:
+                with open(path) as f:
+                    for row in csv.DictReader(f):
+                        self.head = row.get("chain", self.head)
+            except Exception:
+                logger.warning("chain reload failed for %s — restarting chain", path.name)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w", newline="") as f:
+                csv.DictWriter(f, fieldnames=self.fields).writeheader()
+
+    def append(self, row):
+        payload = "|".join(str(row.get(k, "")) for k in self.fields if k != "chain")
+        self.head = hashlib.sha256((self.head + "|" + payload).encode()).hexdigest()[:16]
+        row = dict(row); row["chain"] = self.head
+        with open(self.path, "a", newline="") as f:
+            csv.DictWriter(f, fieldnames=self.fields, extrasaction="ignore").writerow(row)
+
+
 class ThursdayShortTrader:
     """Weekly Thursday short on BTC and ETH.
 
@@ -243,6 +270,9 @@ class ThursdayShortTrader:
         self.ts_n_mbt = 0
         self.ts_n_met = 0
         self.ts_entry_attempted_date: Optional[str] = None
+        self.ts_entry_time = ""
+        self._trades_log = None       # ChainedCsv data/thursday_ts/trades.csv (--tssim)
+        self._decisions_log = None    # ChainedCsv data/thursday_ts/decisions.csv (--tssim)
 
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
         _hdr = ["date", "asset", "entry_price", "exit_price",
@@ -633,15 +663,35 @@ class ThursdayShortTrader:
             await asyncio.sleep(2)
         return await client.get_open_positions()
 
+    def _log_decision(self, action: str, detail: str = "", mbt=None, met=None,
+                      pb=None, pe=None, n_mbt=0, n_met=0) -> None:
+        """One row per Thursday entry decision (ENTERED/REJECTED/SKIPPED/...),
+        with the LR-regime tags — feeds the prospective N count + LR-gate subset."""
+        if self._decisions_log is None:
+            return
+        self._decisions_log.append({
+            "ts_utc": datetime.now(timezone.utc).isoformat(),
+            "thursday": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "mbt_sym": mbt or "", "met_sym": met or "",
+            "mark_btc": pb or "", "mark_eth": pe or "",
+            "n_mbt": n_mbt, "n_met": n_met,
+            "lr_slope20_bpd": "" if self._lr20 is None else round(self._lr20, 3),
+            "lr_slope40_bpd": "" if self._lr40 is None else round(self._lr40, 3),
+            "action": action, "detail": detail,
+        })
+
     async def _enter_tssim(self, client) -> None:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         self.ts_entry_attempted_date = today  # G3: record attempt regardless of outcome
+        self._lr20, self._lr40 = fetch_btc_lr_slopes()  # regime tag at entry
+        self._lr_cache_date = today
         logger.info("=" * 60)
         logger.info("THURSDAY SHORT — ENTERING SHORT POSITIONS [TSSIM]")
 
         pre = await client.get_open_positions()           # G1 pre-trade reconcile
         if pre:
             self._alarm(f"unexpected open position before entry: {[p.get('Symbol') for p in pre]}")
+            self._log_decision("SKIPPED_NOT_FLAT", str([p.get('Symbol') for p in pre]))
             return
 
         front = await client.resolve_front_month()
@@ -650,6 +700,7 @@ class ThursdayShortTrader:
         pe = await client.last_price(met)
         if not pb or not pe:
             self._alarm(f"no marks for {mbt}/{met}")
+            self._log_decision("NO_MARKS", f"{mbt}/{met}", mbt, met)
             return
         n_mbt = MBT_SIZE
         n_met = max(1, round(n_mbt * pb / pe))            # equal-notional (~1:38)
@@ -666,18 +717,22 @@ class ThursdayShortTrader:
             for p in pos:                                  # flatten any partial leg
                 act = "BUY" if self._is_short(p) else "SELL"
                 await client.place_order(p["Symbol"], act, abs(int(float(p["Quantity"]))))
+            self._log_decision("REJECTED", f"mbt#{o1} met#{o2}", mbt, met, pb, pe, n_mbt, n_met)
             return                                         # position_open stays False (anti-phantom)
 
         self.btc_entry = float(held[mbt].get("AveragePrice") or pb)
         self.eth_entry = float(held[met].get("AveragePrice") or pe)
         self.ts_mbt_sym, self.ts_met_sym = mbt, met
         self.ts_n_mbt, self.ts_n_met = n_mbt, n_met
+        self.ts_entry_time = datetime.now(timezone.utc).strftime("%H:%M")
         self.position_open = True
         self.current_thursday = today
+        self._log_decision("ENTERED", "", mbt, met, self.btc_entry, self.eth_entry, n_mbt, n_met)
         logger.info(f"✓ TSSIM SHORT confirmed | {mbt} @ {self.btc_entry} | {met} @ {self.eth_entry}")
 
     async def _exit_tssim(self, reason: str, client) -> None:
         logger.info(f"THURSDAY SHORT — EXITING ({reason}) [TSSIM]")
+        exit_t = datetime.now(timezone.utc).strftime("%H:%M")
         for sym, entry, qty, label in [
             (self.ts_mbt_sym, self.btc_entry, self.ts_n_mbt, "MBT"),
             (self.ts_met_sym, self.eth_entry, self.ts_n_met, "MET"),
@@ -694,7 +749,15 @@ class ThursdayShortTrader:
                 if ret_bps > 0:
                     self.n_wins += 1
                 logger.info(f"{label} {sym} EXIT [TSSIM]: {entry:.2f}→{exit_price:.2f} {ret_bps:+.1f}bps ${pnl:+.2f}")
-                self._log_trade(sym, entry, exit_price, qty, ret_bps, pnl, reason, "TSSIM")
+                if self._trades_log is not None:
+                    self._trades_log.append({
+                        "thursday": self.current_thursday or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                        "symbol": sym, "dir": "short", "entry_t": self.ts_entry_time, "entry_px": entry,
+                        "exit_t": exit_t, "exit_px": exit_price, "qty": qty,
+                        "ret_bps": round(ret_bps, 2), "pnl_usd": round(pnl, 2), "reason": reason,
+                        "lr_slope20_bpd": "" if self._lr20 is None else round(self._lr20, 3),
+                        "lr_slope40_bpd": "" if self._lr40 is None else round(self._lr40, 3),
+                    })
             except Exception as e:
                 logger.error(f"{label} TSSIM exit FAILED: {e}")
         pos = await client.get_open_positions()                     # confirm flat
@@ -716,6 +779,13 @@ class ThursdayShortTrader:
         await auth.start_auto_refresh()                              # keep token fresh (d4c0c39)
         async with httpx.AsyncClient(timeout=30) as http:
             client = TradeStationThursdayClient(auth, TS_SIM_ACCOUNT, http)
+            _tdir = ALARM_FILE.parent
+            self._trades_log = ChainedCsv(_tdir / "trades.csv",
+                ["thursday", "symbol", "dir", "entry_t", "entry_px", "exit_t", "exit_px",
+                 "qty", "ret_bps", "pnl_usd", "reason", "lr_slope20_bpd", "lr_slope40_bpd"])
+            self._decisions_log = ChainedCsv(_tdir / "decisions.csv",
+                ["ts_utc", "thursday", "mbt_sym", "met_sym", "mark_btc", "mark_eth",
+                 "n_mbt", "n_met", "lr_slope20_bpd", "lr_slope40_bpd", "action", "detail"])
             orphan = await client.get_open_positions()              # G2 startup reconcile
             if orphan:
                 logger.warning(f"orphan position(s) at startup: {[p.get('Symbol') for p in orphan]} — flattening")

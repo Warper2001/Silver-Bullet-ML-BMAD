@@ -51,11 +51,12 @@ GATE0_WR_MIN = 0.35
 OOS_EARLY_STOP_N  = 10
 OOS_EARLY_STOP_PF = 0.80
 
-# ── Data paths ─────────────────────────────────────────────────────────────────
-CSV_2025     = Path("data/processed/dollar_bars/1_minute/mnq_1min_2025.csv")
-CSV_2026     = Path("data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv")
-REPORTS      = Path("data/reports")
-ACCESS_LOG   = Path("data/sealed_holdout/ACCESS_LOG.md")
+# ── Data paths (resolved from repo root, works from worktree) ─────────────────
+_REPO        = Path(__file__).resolve().parents[3]
+CSV_2025     = _REPO / "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
+CSV_2026     = _REPO / "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv"
+REPORTS      = _REPO / "data/reports"
+ACCESS_LOG   = _REPO / "data/sealed_holdout/ACCESS_LOG.md"
 
 ET_TZ = pytz.timezone("US/Eastern")
 RTH_START_MINS = 9 * 60 + 30    # 570
@@ -130,12 +131,14 @@ def run_backtest(rth_df: pd.DataFrame, pdh_map: dict, label: str) -> list[dict]:
             bm = bar["bar_mins_et"]
 
             # Phase 1: look for upside sweep within the kill-zone window
-            if bm < RTH_START_MINS + SWEEP_WINDOW_MINS and not in_watch:
+            # Always continue after Phase 1 processing — if we just set in_watch,
+            # we skip reject-check on the sweep bar itself (next bar starts Phase 2)
+            if not in_watch and bm < RTH_START_MINS + SWEEP_WINDOW_MINS:
                 if bar["high"] > pdh:
                     in_watch   = True
                     sweep_high = bar["high"]
                     sweep_idx  = i
-                continue if in_watch else None  # don't also check reject on same bar
+                continue
 
             # Phase 2: in sweep watch — look for rejection close within REJECT_BARS
             if in_watch:

@@ -39,10 +39,11 @@ GATE_WR_MIN     = 0.55
 GATE_MAX_CON_L  = 10
 GATE_WORST_MO   = -600.0   # worst single month P&L floor (gross, 1ct)
 
-# ── Data paths ─────────────────────────────────────────────────────────────────
-CSV_2025 = Path("data/processed/dollar_bars/1_minute/mnq_1min_2025.csv")
-CSV_2026 = Path("data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv")
-REPORTS  = Path("data/reports")
+# ── Data paths (resolved from repo root, works from worktree) ─────────────────
+_REPO = Path(__file__).resolve().parents[3]
+CSV_2025 = _REPO / "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
+CSV_2026 = _REPO / "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv"
+REPORTS  = _REPO / "data/reports"
 
 ET_TZ = pytz.timezone("US/Eastern")
 RTH_START = (9, 30)   # inclusive

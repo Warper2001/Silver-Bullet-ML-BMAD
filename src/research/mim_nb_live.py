@@ -7,8 +7,8 @@ Strategy: sealed mim-nb-v2-catstop S-B spec (prereg 6957daa, deployment prereg 7
   - UB = O*(1+sigma) + max(Cprev-O,0); LB = O*(1-sigma) - max(O-Cprev,0)
   - Entry/reversal checks at HH:00/HH:30 completions 10:00-15:30 ET (market order)
   - Wide band-stop checks 10:00-16:00 (long exits close<LB, short exits close>UB)
-  - Catastrophe stop: resting stop at entry -/+ 500 pts, placed after entry
-  - EOD flatten at the 16:00 ET bar; DLL guard: day P&L <= -$1,000 -> no entries
+  - Catastrophe stop: resting stop at entry -/+ 250 pts, placed after entry
+  - EOD flatten at the 16:00 ET bar; DLL guard: day P&L <= -$500 -> no entries
   - 1 contract, MNQ front month
 
 Data: TradeStation REST 1-min bars (poll). Execution: ProjectX (TopstepX).
@@ -39,13 +39,13 @@ from src.research.projectx_client import (
 )
 
 # ----------------------------------------------------------------------
-# Frozen configuration (deployment prereg 7939eed — do not edit without a new seal)
+# Frozen configuration (catstop-250 prereg 30bc6a8 — do not edit without a new seal)
 # ----------------------------------------------------------------------
 SYMBOL = os.environ.get("MIM_NB_SYMBOL", "MNQU26")   # front month; mechanical roll rule
 CONTRACTS = 1
-CAT_STOP_PTS = 500.0
+CAT_STOP_PTS = 250.0   # was 500 — halved to bring max loss to 25% of $2k trailing DD
 LOOKBACK_DAYS = 14
-DLL_GUARD_USD = -1000.0
+DLL_GUARD_USD = -500.0  # tracks CAT_STOP: 250pt × $2/pt × 1ct = $500/trade max
 PT_VAL = 2.0
 ET = pytz.timezone("America/New_York")
 

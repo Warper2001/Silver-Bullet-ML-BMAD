@@ -69,6 +69,10 @@ STOP_PCT    = float(os.environ.get("THU_STOP_PCT",  "5.0"))    # % against posit
 LOG_FILE    = Path("logs/kraken_thursday_short.csv")
 LIVE        = "--live"   in sys.argv
 MARGIN      = "--margin" in sys.argv
+TSSIM       = "--tssim"  in sys.argv  # CME micro futures MBT/MET on TradeStation SIM
+TS_SIM_ACCOUNT = os.environ.get("THU_TS_SIM_ACCOUNT", "SIM2797251F")
+MBT_SIZE    = int(os.environ.get("THU_MBT_SIZE", "1"))  # BTC-leg contracts; MET sized to match notional
+ALARM_FILE  = Path("data/thursday_ts/ALARM")
 
 ENTRY_HOUR   = 0     # 00:00 UTC Thursday
 EXIT_HOUR    = 23
@@ -233,6 +237,12 @@ class ThursdayShortTrader:
         self._lr_cache_date: Optional[str] = None
         self._lr20: Optional[float] = None
         self._lr40: Optional[float] = None
+        # TradeStation SIM (--tssim) per-Thursday execution state
+        self.ts_mbt_sym: Optional[str] = None
+        self.ts_met_sym: Optional[str] = None
+        self.ts_n_mbt = 0
+        self.ts_n_met = 0
+        self.ts_entry_attempted_date: Optional[str] = None
 
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
         _hdr = ["date", "asset", "entry_price", "exit_price",
@@ -427,6 +437,8 @@ class ThursdayShortTrader:
         self.position_open = False
         self.btc_entry = self.eth_entry = None
         self.btc_order_id = self.eth_order_id = None
+        self.ts_mbt_sym = self.ts_met_sym = None
+        self.ts_n_mbt = self.ts_n_met = 0
         wr = 100 * self.n_wins / self.n_trades if self.n_trades > 0 else 0
         logger.info(f"Session P&L: ${self.total_pnl_usd:+.2f} | Trades: {self.n_trades} | WR: {wr:.0f}%")
 
@@ -595,8 +607,173 @@ class ThursdayShortTrader:
             logger.warning("Shutdown with open position — attempting close [MARGIN]")
             await self._exit_margin("shutdown", client)
 
+    # ── TradeStation SIM (--tssim): MBT/MET micro futures ─────────────────
+
+    def _alarm(self, reason: str) -> None:
+        """Hard integrity alarm: write the ALARM flag + ERROR. Startup refuses to
+        run while the flag exists (forces human review after any breach)."""
+        try:
+            ALARM_FILE.parent.mkdir(parents=True, exist_ok=True)
+            ALARM_FILE.write_text(f"{datetime.now(timezone.utc).isoformat()} {reason}\n")
+        except Exception as e:
+            logger.error(f"failed to write ALARM flag: {e}")
+        logger.error(f"🚨 TSSIM ALARM: {reason}")
+
+    @staticmethod
+    def _is_short(p: dict) -> bool:
+        return str(p.get("LongShort", "")).lower().startswith("s")
+
+    async def _confirm_positions(self, client, want_syms, timeout: int = 25) -> list:
+        """Poll broker positions until all want_syms are present (or timeout)."""
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            pos = await client.get_open_positions()
+            if all(any(p.get("Symbol") == s for p in pos) for s in want_syms):
+                return pos
+            await asyncio.sleep(2)
+        return await client.get_open_positions()
+
+    async def _enter_tssim(self, client) -> None:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        self.ts_entry_attempted_date = today  # G3: record attempt regardless of outcome
+        logger.info("=" * 60)
+        logger.info("THURSDAY SHORT — ENTERING SHORT POSITIONS [TSSIM]")
+
+        pre = await client.get_open_positions()           # G1 pre-trade reconcile
+        if pre:
+            self._alarm(f"unexpected open position before entry: {[p.get('Symbol') for p in pre]}")
+            return
+
+        front = await client.resolve_front_month()
+        mbt, met = front["MBT"], front["MET"]
+        pb = await client.last_price(mbt)
+        pe = await client.last_price(met)
+        if not pb or not pe:
+            self._alarm(f"no marks for {mbt}/{met}")
+            return
+        n_mbt = MBT_SIZE
+        n_met = max(1, round(n_mbt * pb / pe))            # equal-notional (~1:38)
+        logger.info(f"  {n_mbt} {mbt} (~${n_mbt*pb*0.1:,.0f}) + {n_met} {met} (~${n_met*pe*0.1:,.0f}) short")
+
+        o1 = await client.place_order(mbt, "SELL", n_mbt)
+        o2 = await client.place_order(met, "SELL", n_met)
+
+        pos = await self._confirm_positions(client, [mbt, met])   # G1: broker truth
+        held = {p.get("Symbol"): p for p in pos}
+        ok = (mbt in held and met in held and self._is_short(held[mbt]) and self._is_short(held[met]))
+        if not ok:
+            self._alarm(f"entry NOT confirmed (mbt#{o1} met#{o2}); broker shows {[p.get('Symbol') for p in pos]}")
+            for p in pos:                                  # flatten any partial leg
+                act = "BUY" if self._is_short(p) else "SELL"
+                await client.place_order(p["Symbol"], act, abs(int(float(p["Quantity"]))))
+            return                                         # position_open stays False (anti-phantom)
+
+        self.btc_entry = float(held[mbt].get("AveragePrice") or pb)
+        self.eth_entry = float(held[met].get("AveragePrice") or pe)
+        self.ts_mbt_sym, self.ts_met_sym = mbt, met
+        self.ts_n_mbt, self.ts_n_met = n_mbt, n_met
+        self.position_open = True
+        self.current_thursday = today
+        logger.info(f"✓ TSSIM SHORT confirmed | {mbt} @ {self.btc_entry} | {met} @ {self.eth_entry}")
+
+    async def _exit_tssim(self, reason: str, client) -> None:
+        logger.info(f"THURSDAY SHORT — EXITING ({reason}) [TSSIM]")
+        for sym, entry, qty, label in [
+            (self.ts_mbt_sym, self.btc_entry, self.ts_n_mbt, "MBT"),
+            (self.ts_met_sym, self.eth_entry, self.ts_n_met, "MET"),
+        ]:
+            if not sym or entry is None:
+                continue
+            try:
+                exit_price = await client.last_price(sym)
+                await client.place_order(sym, "BUY", qty)            # close short
+                ret_bps = (entry - exit_price) / entry * 10_000
+                pnl = (entry - exit_price) * qty * 0.1               # micro = 0.1 underlying
+                self.total_pnl_usd += pnl
+                self.n_trades += 1
+                if ret_bps > 0:
+                    self.n_wins += 1
+                logger.info(f"{label} {sym} EXIT [TSSIM]: {entry:.2f}→{exit_price:.2f} {ret_bps:+.1f}bps ${pnl:+.2f}")
+                self._log_trade(sym, entry, exit_price, qty, ret_bps, pnl, reason, "TSSIM")
+            except Exception as e:
+                logger.error(f"{label} TSSIM exit FAILED: {e}")
+        pos = await client.get_open_positions()                     # confirm flat
+        t0 = time.time()
+        while pos and time.time() - t0 < 25:
+            await asyncio.sleep(2); pos = await client.get_open_positions()
+        if pos:
+            self._alarm(f"NOT flat after exit: {[p.get('Symbol') for p in pos]}")
+        self._clear_position()
+
+    async def _run_tssim(self) -> None:
+        """TradeStation SIM mode — MBT/MET micro futures, broker-confirmed state."""
+        from src.data.auth_v3 import TradeStationAuthV3
+        from src.research.ts_thursday_client import TradeStationThursdayClient
+        if ALARM_FILE.exists():
+            raise SystemExit(f"ALARM flag present ({ALARM_FILE}); review and remove to resume.")
+        auth = TradeStationAuthV3.from_file(".access_token")
+        await auth.authenticate()
+        await auth.start_auto_refresh()                              # keep token fresh (d4c0c39)
+        async with httpx.AsyncClient(timeout=30) as http:
+            client = TradeStationThursdayClient(auth, TS_SIM_ACCOUNT, http)
+            orphan = await client.get_open_positions()              # G2 startup reconcile
+            if orphan:
+                logger.warning(f"orphan position(s) at startup: {[p.get('Symbol') for p in orphan]} — flattening")
+                for p in orphan:
+                    act = "BUY" if self._is_short(p) else "SELL"
+                    await client.place_order(p["Symbol"], act, abs(int(float(p["Quantity"]))))
+                self._alarm("orphan position at startup (flattened)")
+            while self.running:
+                try:
+                    now = datetime.now(timezone.utc)
+                    dow = now.weekday(); hour, minute = now.hour, now.minute
+                    today = now.strftime("%Y-%m-%d")
+                    day_names = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+
+                    if (dow == 3 and hour == ENTRY_HOUR and minute < 5
+                            and not self.position_open and self.current_thursday != today):
+                        await self._enter_tssim(client)
+                    elif (self.position_open and dow == 3
+                          and hour == EXIT_HOUR and minute >= EXIT_MINUTE):
+                        await self._exit_tssim("scheduled_exit", client)
+                    elif self.position_open and dow == 4:
+                        logger.warning("Open position on Friday — emergency close [TSSIM]")
+                        await self._exit_tssim("emergency_friday", client)
+                    elif self.position_open:
+                        pos = await client.get_open_positions()     # G2 per-poll reconcile
+                        held = {p.get("Symbol") for p in pos}
+                        if not ({self.ts_mbt_sym, self.ts_met_sym} <= held):
+                            self._alarm(f"local/broker divergence: local {self.ts_mbt_sym}/{self.ts_met_sym}, broker {sorted(held)}")
+                        bp = await client.last_price(self.ts_mbt_sym)
+                        ep = await client.last_price(self.ts_met_sym)
+                        if bp and ep and self._check_stop(bp, ep):
+                            await self._exit_tssim("stop_loss", client)
+                        else:
+                            bbps = (self.btc_entry - bp)/self.btc_entry*10_000 if (self.btc_entry and bp) else 0
+                            ebps = (self.eth_entry - ep)/self.eth_entry*10_000 if (self.eth_entry and ep) else 0
+                            logger.info(f"TSSIM {self.ts_mbt_sym} {bbps:+.1f}bps ({bp}) {self.ts_met_sym} {ebps:+.1f}bps ({ep}) | {day_names[dow]} {now.strftime('%H:%M UTC')}")
+                    else:
+                        if (dow == 3 and (hour, minute) > (ENTRY_HOUR, 5)
+                                and self.ts_entry_attempted_date != today
+                                and self.current_thursday != today):
+                            self._alarm(f"no entry attempted on Thursday {today}")    # G3 absence
+                            self.ts_entry_attempted_date = today                       # alarm once
+                        logger.info(f"Waiting [{day_names[dow]} {now.strftime('%H:%M UTC')}] — next trade: next Thursday 00:00 UTC")
+
+                    await asyncio.sleep(60 if self.position_open else 300)
+                except asyncio.CancelledError:
+                    break
+                except Exception as exc:
+                    logger.error(f"Loop error: {exc}", exc_info=True)
+                    await asyncio.sleep(30)
+            if self.position_open:
+                logger.warning("Shutdown with open position — attempting close [TSSIM]")
+                await self._exit_tssim("shutdown", client)
+
     async def run(self) -> None:
-        if MARGIN:
+        if TSSIM:
+            mode = "TSSIM"
+        elif MARGIN:
             mode = "MARGIN"
         elif LIVE:
             mode = "LIVE"
@@ -609,7 +786,9 @@ class ThursdayShortTrader:
         logger.info(f"  Stop: {STOP_PCT}% | Entry: Thu 00:00 UTC | Exit: Thu 23:05 UTC")
         logger.info("=" * 60)
         self.running = True
-        if MARGIN:
+        if TSSIM:
+            await self._run_tssim()
+        elif MARGIN:
             await self._run_margin()
         elif LIVE:
             await self._run_live()

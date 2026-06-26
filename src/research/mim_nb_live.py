@@ -59,6 +59,12 @@ MLL_DD = 2_000.0  # Topstep 50K maximum loss limit (trailing, EOD)
 
 BASE_DIR = Path(__file__).parent.parent.parent
 DATA_DIR = BASE_DIR / "data" / "mim_nb"
+# Authoritative shared floor written every tick by combine_floor_monitor. Its
+# balance/equity reflect the REAL combined account (incl. YANK), and its floor is
+# the recalibrated Topstep trailing floor — single source of truth for the buffer
+# gate. MIM falls back to its own realized ledger only if this state is stale/absent.
+FLOOR_STATE_FILE = BASE_DIR / "data" / "combine_joint" / "floor_state.json"
+FLOOR_STATE_MAX_AGE_S = 300.0  # 10 monitor ticks; older => assume monitor down, fall back
 LOG_DIR = BASE_DIR / "logs"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(exist_ok=True)
@@ -190,6 +196,7 @@ class MimNbLive:
         # Combine balance tracking for buffer-aware risk gates
         self._realized_pnl = 0.0       # cumulative realized P&L across all sessions
         self._mll_eod_hwm = COMBINE_START_BALANCE  # EOD high-water mark for MLL floor
+        self._buffer_source = "own-ledger"  # set by _remaining_mll_buffer: "shared" | "own-ledger"
 
         # Data backend (Stage-1 shadow migration to ProjectX). Default = TradeStation REST.
         self._data_source = os.environ.get("MIM_NB_DATA_SOURCE", "tradestation")
@@ -230,9 +237,33 @@ class MimNbLive:
         except Exception as exc:
             logger.warning("combine balance init failed: %s — buffer gate disabled", exc)
 
+    def _shared_floor_buffer(self):
+        """Remaining MLL buffer from the floor monitor's authoritative state, using
+        the REAL combined equity (incl. YANK) and the recalibrated trailing floor.
+        Returns None if the shared state is missing/stale/malformed so the caller
+        falls back to MIM's own conservative ledger (never trade on stale risk data)."""
+        try:
+            st = json.loads(FLOOR_STATE_FILE.read_text())
+            floor = float(st["floor"])
+            equity = float(st["equity"])
+            age = (datetime.now(timezone.utc)
+                   - datetime.fromisoformat(st["ts_utc"])).total_seconds()
+            if age > FLOOR_STATE_MAX_AGE_S:
+                return None
+            return equity - floor
+        except Exception:
+            return None
+
     def _remaining_mll_buffer(self) -> float:
-        """Remaining Topstep MLL buffer = current estimated balance − MLL floor.
-        Uses cumulative realized P&L + today's open day P&L as balance proxy."""
+        """Remaining Topstep MLL buffer = current estimated equity − MLL floor.
+        Prefers the floor monitor's shared state (real combined account incl. YANK,
+        recalibrated floor); falls back to MIM's own realized ledger if that state
+        is unavailable/stale."""
+        shared = self._shared_floor_buffer()
+        if shared is not None:
+            self._buffer_source = "shared"
+            return shared
+        self._buffer_source = "own-ledger"
         balance = COMBINE_START_BALANCE + self._realized_pnl + self.day_pnl
         mll_floor = self._mll_eod_hwm - MLL_DD
         return balance - mll_floor
@@ -714,8 +745,8 @@ class MimNbLive:
                 buf = self._remaining_mll_buffer()
                 cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS
                 if buf <= cat_cost:
-                    logger.warning("BUFFER_GATE %s: buffer=%.2f ≤ cat_cost=%.2f — entry blocked",
-                                   hm, buf, cat_cost)
+                    logger.warning("BUFFER_GATE %s: buffer=%.2f ≤ cat_cost=%.2f [%s] — entry blocked",
+                                   hm, buf, cat_cost, self._buffer_source)
                 elif c > ub and self.position != 1:
                     if self.position == -1:
                         await self._exit(c, hm, "REVERSAL")

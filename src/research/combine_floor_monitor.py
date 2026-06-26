@@ -206,6 +206,12 @@ async def main():
             pf, n = combined_pf_and_count(DB_PATH, COMBINE_START)
             reason = evaluate_triggers(equity, st["floor"], pf, n)
             log_tick(st, equity, st["floor"], pf, n, reason)
+            # Publish the real combined balance/equity so trader buffer gates can
+            # consume the authoritative shared floor (single source of truth incl.
+            # both bots) instead of each recomputing it from its own ledger.
+            st["balance"] = round(bal, 2)
+            st["equity"] = round(equity, 2)
+            st["ts_utc"] = datetime.now(timezone.utc).isoformat()
             save_state(st)
             if equity >= PASS_TARGET:
                 logger.info("✅ PASS target reached: equity $%.0f >= $%.0f — confirm consistency rule, halt entries",

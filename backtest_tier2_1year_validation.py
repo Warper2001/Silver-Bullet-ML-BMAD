@@ -90,6 +90,21 @@ INSTRUMENTS: dict[str, dict] = {
         "files": [(_DB1 / "hg_1min_2025_2026.csv", None, None)],
         "label": "HG→MHG (Micro Copper)",
     },
+    "es": {
+        "symbol": "MES",
+        "files": [(_DB1 / "es_1min_2025_2026.csv", None, None)],
+        "label": "ES→MES (Micro S&P)",
+    },
+    "gc": {
+        "symbol": "MGC",
+        "files": [(_DB1 / "gc_1min_2025_2026.csv", None, None)],
+        "label": "GC→MGC (Micro Gold)",
+    },
+    "pl": {
+        "symbol": "PL",
+        "files": [(_DB1 / "pl_1min_2025_2026.csv", None, None)],
+        "label": "PL (Platinum, full 50oz)",
+    },
 }
 
 # Structural-mode config overrides: neutralize dollar-scaled / path-dependent gates

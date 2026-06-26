@@ -87,6 +87,10 @@ SYMBOL_SPECS: dict[str, dict] = {
     "MYM":    {"point_value": 0.5,    "tick_size": 1.0,    "contracts": 1},  # Micro Dow (full YM $5/pt)
     "M2K":    {"point_value": 5.0,    "tick_size": 0.10,   "contracts": 1},  # Micro Russell (full RTY $50/pt)
     "MHG":    {"point_value": 2500.0, "tick_size": 0.0005, "contracts": 1},  # Micro Copper (full HG $25000/pt)
+    # Fan-out batch 2 (Victor): ES/GC/PL — full mult confirmed from notional column.
+    "MES":    {"point_value": 5.0,    "tick_size": 0.25,   "contracts": 1},  # Micro S&P (full ES $50/pt)
+    "MGC":    {"point_value": 10.0,   "tick_size": 0.10,   "contracts": 1},  # Micro Gold (full GC $100/pt)
+    "PL":     {"point_value": 50.0,   "tick_size": 0.10,   "contracts": 1},  # Platinum full 50oz (no CME micro)
 }
 
 # Account and trade state types (FR14: SIM ↔ live via config; FR10: per-cycle reconciliation)

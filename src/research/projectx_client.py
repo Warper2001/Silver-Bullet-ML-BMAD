@@ -305,6 +305,92 @@ class ProjectXClient:
             logger.warning(f"⚠️ cancel_all_pending_orders failed: {exc}")
         return cancelled
 
+    # ------------------------------------------------------------------
+    # Commingling-safe, order-ID-scoped helpers. Needed when MORE THAN ONE bot
+    # trades the SAME contract on ONE account (MIM-NB + YANK): the account nets
+    # positions, so Position/searchOpen and "cancel all" see the OTHER bot's
+    # state. These let a bot reason about ONLY its own orders by ID.
+    # ------------------------------------------------------------------
+    async def is_order_open(self, order_id) -> Optional[bool]:
+        """True if `order_id` is currently an open order on this account, False if
+        it is no longer open (filled or cancelled), None on error. A bot detects
+        its OWN stop/limit fill by checking whether its order ID has left the open
+        set — never by reading net account position."""
+        if order_id is None:
+            return False
+        try:
+            headers = await self._headers()
+            resp = await self._http.post(
+                f"{_BASE_URL}/Order/searchOpen",
+                json={"accountId": self._account_id},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                return None
+            ids = {str(o.get("id")) for o in resp.json().get("orders", [])}
+            return str(order_id) in ids
+        except Exception as exc:
+            logger.warning(f"⚠️ is_order_open({order_id}) failed: {exc}")
+            return None
+
+    async def cancel_orders(self, order_ids) -> list:
+        """Cancel ONLY the given order IDs (commingling-safe). Unlike
+        cancel_all_pending_orders, this never touches another bot's orders on a
+        shared account. Returns the IDs successfully cancelled."""
+        cancelled: list = []
+        for oid in order_ids:
+            if oid and await self.cancel_order(str(oid)):
+                cancelled.append(str(oid))
+        return cancelled
+
+    # ------------------------------------------------------------------
+    # Account-level reads (for the combined-account floor monitor).
+    # ------------------------------------------------------------------
+    async def account_balance(self, account_id) -> Optional[float]:
+        """Return the account's balance from /Account/search (None on error). The
+        combine floor monitor uses this as the equity base for distance-to-floor."""
+        try:
+            headers = await self._headers()
+            resp = await self._http.post(
+                f"{_BASE_URL}/Account/search",
+                json={"onlyActiveAccounts": False},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                return None
+            for a in resp.json().get("accounts", []):
+                if str(a.get("id")) == str(account_id):
+                    return float(a.get("balance"))
+            return None
+        except Exception as exc:
+            logger.warning(f"⚠️ account_balance failed: {exc}")
+            return None
+
+    async def net_position(self, account_id) -> tuple:
+        """Return (net_size, unrealized_pnl) across all open positions on the account.
+        net_size > 0 long, < 0 short. Best-effort; (0, 0.0) on error. Used by the
+        monitor to add open MtM to equity and to flatten the whole account on a halt."""
+        try:
+            headers = await self._headers()
+            resp = await self._http.post(
+                f"{_BASE_URL}/Position/searchOpen",
+                json={"accountId": int(account_id)},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                return 0, 0.0
+            size, upl = 0, 0.0
+            for p in resp.json().get("positions", []):
+                q = int(p.get("size", 0))
+                # ProjectX position type: 1 = Long, 2 = Short
+                signed = q if p.get("type") == 1 else -q
+                size += signed
+                upl += float(p.get("profitAndLoss", 0) or 0)
+            return size, upl
+        except Exception as exc:
+            logger.warning(f"⚠️ net_position failed: {exc}")
+            return 0, 0.0
+
 
 # ------------------------------------------------------------------
 # Module-level helpers

@@ -31,6 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
+from src.research.projectx_bars import fetch_px_ts_shaped, ProjectXBarFetchError, _to_contract_id
+from src.research.shadow_parity import ShadowParityLogger, bars_by_minute
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
     Direction,
@@ -64,6 +66,9 @@ ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta
 # Per-instrument specifications (point value, tick size, default contract count)
 SYMBOL_SPECS: dict[str, dict] = {
     "MNQM26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},
+    "MNQU26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},  # Sept (active from 06-2026 roll)
+    "MNQZ26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},  # Dec (next roll ~2026-09-11)
+    "MNQH27": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},  # Mar 2027
     "MESM26": {"point_value": 5.0,  "tick_size": 0.25, "contracts": 2},
     "M2KM26": {"point_value": 5.0,  "tick_size": 0.10, "contracts": 2},
 }
@@ -125,6 +130,9 @@ POLL_INTERVAL_SECONDS = 60
 # TradeStation SIM order placement
 SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+# Execution backend (Phase B): if PROJECTX_ACCOUNT_ID is set, YANK executes on the
+# Topstep combine via ProjectX at YANK_CONTRACTS size; else TradeStation SIM (paper).
+YANK_CONTRACTS = int(os.environ.get("YANK_CONTRACTS", "0"))  # >0 overrides per-symbol spec (combine uses 2)
 
 def _default_account_config(symbol: str) -> AccountConfig:
     """Build AccountConfig from SYMBOL_SPECS for *symbol*. Caller must validate symbol first."""
@@ -141,6 +149,13 @@ def _default_account_config(symbol: str) -> AccountConfig:
 
 ET_TZ = pytz.timezone('US/Eastern')
 _NY_TZ = pytz.timezone('America/New_York')
+CT_TZ = pytz.timezone('America/Chicago')  # Topstep session clock
+# Topstep combine compliance: auto-flatten at 15:10 CT, no new entries 15:08-17:00 CT,
+# no overnight carry. Evening/Globex (17:00 CT+) trading is retained. Modeled in the
+# constrained joint MC (results_yank_mim_joint_constrained.md).
+TOPSTEP_FLATTEN_MIN = 15 * 60 + 10   # 15:10 CT
+TOPSTEP_BLOCK_LO = 15 * 60 + 8       # 15:08 CT — risk managers start flattening
+TOPSTEP_BLOCK_HI = 17 * 60           # 17:00 CT — session reopens
 
 # Rolling buffer cap — 125 H1 bars × 60 min covers vol_regime_lookback=120 H1 bars (AR16).
 _BUFFER_CAP: int = 7500
@@ -233,6 +248,15 @@ class TradeLogger:
 
     Single-writer pattern: only this class appends to tier2_trade_log.csv.
     Header written only when file is empty (f.tell() == 0) — avoids TOCTOU race (AC#2).
+
+    Idempotent (2026-06-19): a completed trade's identity is (timestamp_entry,
+    direction). The bot replays historical bars on every restart (backfill), which
+    re-closes already-logged trades; without a guard that re-appended each trade on
+    every restart (a diagnostic found 1,676 of 2,827 rows were dupes, plus 131
+    entries logged with conflicting backfill-recomputed exits). The first logged
+    exit for an entry wins (it is the live exit — see the not-backfill gate at the
+    call site); subsequent appends of the same identity are skipped. The seen-key
+    set is seeded from the existing file so the guard survives process restarts.
     """
 
     _LOG_PATH = Path(__file__).parent.parent.parent / "logs" / "tier2_trade_log.csv"
@@ -243,11 +267,40 @@ class TradeLogger:
         "vol_regime_pct", "contracts",
     ]
 
+    def __init__(self, log_path: Optional[Path] = None) -> None:
+        # log_path override exists so tests can point at a tmp file (default = prod path).
+        self._log_path: Path = log_path or self._LOG_PATH
+        self._seen_keys: Optional[set] = None  # lazily seeded from the existing file
+
+    @staticmethod
+    def _identity(timestamp_entry_iso: str, direction: str) -> tuple:
+        return (timestamp_entry_iso, direction)
+
+    def _load_seen(self) -> set:
+        """Seed the dedup set from rows already in the file (survives restarts)."""
+        import csv as _csv
+        seen: set = set()
+        if self._log_path.exists():
+            try:
+                with self._log_path.open(newline="", encoding="utf-8") as f:
+                    for row in _csv.DictReader(f):
+                        seen.add(self._identity(row.get("timestamp_entry", ""),
+                                                row.get("direction", "")))
+            except Exception as e:  # noqa: BLE001 — a read failure must not block logging
+                logger.warning("TradeLogger seen-key load failed: %s", e)
+        return seen
+
     def append_trade(self, record: TradeRecord) -> None:
         import csv as _csv
-        self._LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if self._seen_keys is None:
+            self._seen_keys = self._load_seen()
+        key = self._identity(record.timestamp_entry.isoformat(), record.direction)
+        if key in self._seen_keys:
+            logger.debug("TradeLogger: duplicate trade %s skipped (already logged)", key)
+            return
+        self._log_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with self._LOG_PATH.open("a", newline="", encoding="utf-8") as f:
+            with self._log_path.open("a", newline="", encoding="utf-8") as f:
                 writer = _csv.DictWriter(f, fieldnames=self._COLUMNS)
                 if f.tell() == 0:
                     writer.writeheader()
@@ -268,6 +321,7 @@ class TradeLogger:
                     "vol_regime_pct":    round(record.vol_regime_pct, 4),
                     "contracts":         record.contracts,
                 })
+            self._seen_keys.add(key)
         except Exception as e:
             logger.warning("Trade log write failed: %s", e)
 
@@ -483,13 +537,13 @@ class TradeStationClient:
             logger.warning(f"⚠️ Cancel order #{order_id} exception: {e}")
             return False
 
-    async def close_position_at_market(self, direction: str, account_id: str) -> Optional[str]:
+    async def close_position_at_market(self, direction: str, account_id: str, contracts: Optional[int] = None) -> Optional[str]:
         """Submit a market order to flatten the open position. Returns order ID or None on failure."""
         close_action = "SELL" if direction == "LONG" else "BUY"
         payload = {
             "AccountID": account_id,
             "Symbol": self._cfg.symbol,
-            "Quantity": str(self._cfg.contracts),
+            "Quantity": str(contracts if contracts is not None else self._cfg.contracts),
             "OrderType": "Market",
             "TradeAction": close_action,
             "TimeInForce": {"Duration": "DAY"},
@@ -762,6 +816,9 @@ class ActiveTrade:
     m15_confirmed: bool = False
     kill_zone_active: bool = False
     vol_regime_pct: float = 0.0
+    # Passive drift canary: meta-model P(success) at entry, paired with realized
+    # outcome at close (logs/yank_ml_canary.csv). Logging only — no control effect.
+    ml_proba: float = float("nan")
 
 
 @dataclass
@@ -785,15 +842,29 @@ class Tier2StreamingTrader:
         self._symbol: str = symbol
         self._point_value: float = spec["point_value"]
         self._tick_size: float = spec["tick_size"]
-        self._contracts: int = spec["contracts"]
+        self._contracts: int = YANK_CONTRACTS or spec["contracts"]
+        self._on_combine: bool = False        # set in initialize() from PROJECTX_ACCOUNT_ID
+        self._exec_account: str = SIM_ACCOUNT_ID
         self._bars_base_url: str = (
             f"https://api.tradestation.com/v3/marketdata/barcharts/{symbol}"
             f"?interval={BAR_INTERVAL}&unit={BAR_UNIT}"
         )
 
+        # Data backend (Stage-1 shadow migration to ProjectX). Default = TradeStation REST.
+        # YANK_DATA_SOURCE=projectx makes ProjectX the SIGNAL source; YANK_DATA_SHADOW=1
+        # fetches+logs ProjectX in parallel while TradeStation stays the signal source.
+        self._data_source: str = os.environ.get("YANK_DATA_SOURCE", "tradestation")
+        self._data_shadow: bool = (
+            os.environ.get("YANK_DATA_SHADOW", "0") == "1" and self._data_source == "tradestation"
+        )
+        self._data_px_live: bool = os.environ.get("YANK_DATA_PX_LIVE", "0") == "1"
+        self._px_data_contract_id: Optional[str] = None   # set in initialize()
+        self._shadow_logger = None                        # set in initialize() if shadow on
+
         self.running = False
         self.auth = None
         self.client = None
+        self._px_auth = None    # ProjectXAuth — set in initialize() for execution and/or data
         self.dollar_bars: list[DollarBar] = []
         self._last_processed_timestamp: Optional[datetime] = None
         self.active_trade: Optional[ActiveTrade] = None
@@ -859,8 +930,13 @@ class Tier2StreamingTrader:
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
         self._ts_client: Optional[TradeStationClient] = None
+        self._ts_sim_mirror = None  # TSSimMirror when YANK_MIRROR_TS_SIM=1 (combine path only)
 
     async def initialize(self):
+        _halt = Path(__file__).parent.parent.parent / "data" / "combine_joint" / "HALT"
+        if _halt.exists():
+            raise SystemExit(f"HALT flag present ({_halt}) — combine floor monitor halted trading; "
+                             "remove the flag after review to resume.")
         logger.info("=" * 70)
         logger.info("TIER 2 FVG PAPER TRADING - SIM ORDER PLACEMENT")
         logger.info("=" * 70)
@@ -880,7 +956,64 @@ class Tier2StreamingTrader:
         await self.auth.authenticate()
         await self.auth.start_auto_refresh()
         self.client = httpx.AsyncClient(timeout=30.0)
-        self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+        # Execution backend: ProjectX/TopstepX combine if PROJECTX_ACCOUNT_ID set, else SIM paper.
+        # Market data stays on TradeStation REST (self.auth) either way.
+        px_acct = os.environ.get("PROJECTX_ACCOUNT_ID", "")
+        if px_acct:
+            from src.research.projectx_auth import ProjectXAuth
+            from src.research.projectx_client import ProjectXClient
+            self._on_combine = True
+            self._exec_account = px_acct
+            self._px_auth = ProjectXAuth.from_file('.projectx_api_key')
+            # Optional best-effort TradeStation SIM order mirror (default OFF). The mirror
+            # can never delay/block/crash this authoritative combine path — see ts_sim_mirror.
+            if os.environ.get("YANK_MIRROR_TS_SIM", "0") == "1":
+                from src.research.ts_sim_mirror import (TSSimMirror, MirrorProjectXClient,
+                                                        SimScaler, InvVolScaler)
+                _sim_dir = (Path(__file__).parent.parent.parent / "data" / "ts_sim_mirror")
+                if os.environ.get("SIM_INVVOL", "0") == "1":
+                    # Inverse-vol allocation paper-track: YANK trimmed to 1ct in SIM
+                    # (vs the live combine 2ct) to measure giveback-from-HWM. The
+                    # equity curve is logged for offline analysis. See InvVolScaler.
+                    _scaler = InvVolScaler("YANK", contracts=1, log=logger)
+                    _eq_log = _sim_dir / "yank_invvol_equity.csv"
+                else:
+                    _scaler = SimScaler("YANK", base_contracts=self._contracts,
+                                        state_path=_sim_dir / "yank_scaler.json", log=logger)
+                    _eq_log = None
+                self._ts_sim_mirror = TSSimMirror(self.auth, scaler=_scaler,
+                                                  equity_log_path=_eq_log, log=logger)
+                await self._ts_sim_mirror.start()
+                self._ts_client = MirrorProjectXClient(
+                    self._px_auth, self._account_config, self.client,
+                    projectx_account_id=int(px_acct), ts_mirror=self._ts_sim_mirror)
+                logger.info("TS SIM MIRROR: ENABLED — combine orders also copied to %s (best-effort)",
+                            SIM_ACCOUNT_ID)
+            else:
+                self._ts_client = ProjectXClient(self._px_auth, self._account_config, self.client,
+                                                 projectx_account_id=int(px_acct))
+            logger.info("EXECUTION: ProjectX/TopstepX combine acct %s | %d contracts", px_acct, self._contracts)
+        else:
+            self._on_combine = False
+            self._exec_account = SIM_ACCOUNT_ID
+            self._ts_client = TradeStationClient(self.auth, self._account_config, self.client)
+            logger.info("EXECUTION: TradeStation SIM paper (%s) | %d contracts", SIM_ACCOUNT_ID, self._contracts)
+
+        # Data backend: ProjectX bars if requested (full source or shadow), else TradeStation REST.
+        # Reuses the execution ProjectXAuth when on the combine; constructs one otherwise.
+        if self._data_source == "projectx" or self._data_shadow:
+            self._px_data_contract_id = _to_contract_id(self._symbol)
+            if self._px_auth is None:
+                from src.research.projectx_auth import ProjectXAuth
+                self._px_auth = ProjectXAuth.from_file('.projectx_api_key')
+                await self._px_auth.start_auto_refresh()
+            if self._data_shadow:
+                self._shadow_logger = ShadowParityLogger(
+                    Path(__file__).parent.parent.parent / "logs" / "yank_shadow_parity.csv")
+        logger.info("DATA: %s (signal)%s%s", self._data_source,
+                    " + projectx SHADOW" if self._data_shadow else "",
+                    f" | px_contract={self._px_data_contract_id} live={self._data_px_live}"
+                    if (self._data_source == "projectx" or self._data_shadow) else "")
         self.session_start_time = datetime.now()
 
         # Crash recovery: load persisted state and reconcile with broker (FR38, NFR11, NFR12)
@@ -903,7 +1036,15 @@ class Tier2StreamingTrader:
             and state.get("entry_price") is not None
             and state.get("entry_time")
         ):
-            broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
+            if self._on_combine:
+                # Commingling-safe: the account nets MIM+YANK, so never read net position.
+                # Trust our own persisted trade; classify via our OWN entry order ID.
+                from src.research.tier2_streaming_working import TradeState
+                entry_id = state.get("sim_entry_order_id")
+                entry_open = await self._ts_client.is_order_open(entry_id) if entry_id else None
+                broker_state = TradeState(status="PENDING" if entry_open else "ACTIVE")
+            else:
+                broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
             if broker_state.status == "ACTIVE":
                 self.active_trade = ActiveTrade(
                     bar_index=0,
@@ -921,6 +1062,7 @@ class Tier2StreamingTrader:
                     m15_confirmed=bool(state.get("m15_confirmed", False)),
                     kill_zone_active=bool(state.get("kill_zone_active", False)),
                     vol_regime_pct=float(state.get("vol_regime_pct", 0.0)),
+                    ml_proba=float(state.get("ml_proba", float("nan"))),
                 )
                 logger.info("✅ Crash recovery: resumed active trade from persisted state")
             elif broker_state.status == "PENDING":
@@ -972,6 +1114,12 @@ class Tier2StreamingTrader:
 
     def _check_stale(self, bar: DollarBar) -> bool:
         """Return True if bar timestamp is >5 min old during RTH (sets/clears _data_stale)."""
+        # During the startup backfill the bars are historical by definition, so the
+        # age check would false-positive (and log a scary STALE_DATA halt) on every
+        # restart. Entries are already gated by the is_backfill path; skip here and
+        # let the steady-state check take over once backfill completes.
+        if self._is_backfill:
+            return False
         now_utc = datetime.now(timezone.utc)
         now_et = now_utc.astimezone(ET_TZ)
         if not self._is_rth(now_et):
@@ -995,25 +1143,38 @@ class Tier2StreamingTrader:
         self.running = False
         if self.active_trade and self.dollar_bars:
             await self._close_active_trade(self.dollar_bars[-1], self.dollar_bars[-1].close, "time")
+        if self._ts_sim_mirror is not None:
+            await self._ts_sim_mirror.stop()
         if self.client: await self.client.aclose()
         self._print_final_report()
 
     async def _poll_and_process(self):
         try:
-            token = await self.auth.authenticate()
-            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-            since = self._last_processed_timestamp or (datetime.now(timezone.utc) - timedelta(hours=HISTORY_HOURS))
-            url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            now_utc = datetime.now(timezone.utc)
+            since = self._last_processed_timestamp or (now_utc - timedelta(hours=HISTORY_HOURS))
 
-            response = await self.client.get(url, headers=headers)
-            if response.status_code != 200: return
+            if self._data_source == "projectx":
+                # ProjectX bars (already TS-shaped + 1-min-aligned). Skip poll on fetch error
+                # (self-healing: _last_processed_timestamp only advances on a successful append).
+                try:
+                    bars_data = await fetch_px_ts_shaped(
+                        self.client, self._px_auth, self._px_data_contract_id,
+                        now_utc=now_utc, live=self._data_px_live, since_utc=since)
+                except ProjectXBarFetchError as e:
+                    logger.warning("PX_DATA_ERROR: %s — skipping poll", e)
+                    return
+            else:
+                token = await self.auth.authenticate()
+                headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+                url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+                response = await self.client.get(url, headers=headers)
+                if response.status_code != 200: return
+                bars_data = response.json().get("Bars", [])
 
-            bars_data = response.json().get("Bars", [])
             if not bars_data:
-                logger.warning("DATA_GAP: no bars returned at %s", datetime.now(timezone.utc).isoformat())
+                logger.warning("DATA_GAP: no bars returned at %s", now_utc.isoformat())
                 return
             new_bars = []
-            now_utc = datetime.now(timezone.utc)
             for bar_data in bars_data:
                 bar = self._parse_bar(bar_data)
                 if bar and bar.timestamp <= now_utc and (
@@ -1056,10 +1217,42 @@ class Tier2StreamingTrader:
             if self._is_backfill and new_bars:
                 self._is_backfill = False
                 logger.info(f"✅ Tier 2 Backfill complete ({len(self.dollar_bars)} bars)")
+
+            if self._data_shadow:
+                await self._run_shadow_parity(now_utc)
         except (httpx.TimeoutException, asyncio.TimeoutError):
             logger.warning("API_TIMEOUT: request timed out — skipping bar")
         except Exception as e:
             logger.error(f"❌ Error in poll cycle: {e}", exc_info=True)
+
+    async def _run_shadow_parity(self, now_utc):
+        """Stage-1 shadow: fetch ProjectX bars in parallel and log TS-vs-PX parity to
+        logs/yank_shadow_parity.csv. Observation only — never touches trade state or the
+        TradeStation signal path. Every failure is swallowed (must not affect trading).
+
+        Uses a fixed ~15-min lookback (NOT the incremental poll `since`): a settled
+        minute must still be inside the compared window when it crosses the 2-min
+        settle lag, or it falls through the crack (the incremental window is ~1 bar)."""
+        try:
+            shadow_since = now_utc - timedelta(minutes=15)
+            t0 = _time_mod.perf_counter()
+            error = ""
+            try:
+                px = await fetch_px_ts_shaped(
+                    self.client, self._px_auth, self._px_data_contract_id,
+                    now_utc=now_utc, live=self._data_px_live, since_utc=shadow_since)
+            except ProjectXBarFetchError as e:
+                px, error = [], str(e)
+            fetch_ms = (_time_mod.perf_counter() - t0) * 1000.0
+            px_by_min = bars_by_minute(px)
+            ts_by_min = {
+                b.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"):
+                    (b.open, b.high, b.low, b.close, float(b.volume))
+                for b in self.dollar_bars if b.timestamp >= shadow_since
+            }
+            self._shadow_logger.log_poll(ts_by_min, px_by_min, now_utc, fetch_ms, error)
+        except Exception as e:
+            logger.warning("shadow parity logging failed (non-fatal): %s", e)
 
     def _parse_bar(self, d: dict) -> Optional[DollarBar]:
         try:
@@ -1246,6 +1439,22 @@ class Tier2StreamingTrader:
         t = self.active_trade
         t.bars_held += 1
 
+        # ── Topstep combine: flatten by 15:10 CT, never carry across the close ──
+        # Only the [15:10, 17:00) CT close window — evening/Globex (17:00 CT+) is a new session.
+        bar_ct = bar.timestamp.astimezone(CT_TZ)
+        _ct_min = bar_ct.hour * 60 + bar_ct.minute
+        if TOPSTEP_FLATTEN_MIN <= _ct_min < TOPSTEP_BLOCK_HI:
+            if t.pending_entry:
+                for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
+                    if oid: await self._ts_client.cancel_order(oid)
+                self.active_trade = None
+                self._active_entry_decision = None
+                logger.info("🏁 Topstep 15:10 CT flatten — cancelled unfilled pending entry")
+                return False
+            logger.info("🏁 Topstep 15:10 CT flatten — closing active position at market")
+            await self._close_active_trade(bar, bar.close, "time")
+            return True
+
         # ── Pending limit entry: wait for price to reach FVG midpoint ──────────
         if t.pending_entry:
             filled = (
@@ -1256,6 +1465,12 @@ class Tier2StreamingTrader:
                 t.pending_entry = False
                 t.bars_held = 0  # reset so MAX_HOLD_BARS counts from fill, not signal
                 logger.info(f"✅ Limit entry FILLED at {t.entry_price:.2f}")
+                # ProjectX defers TP/SL until the entry fills — place them now (commingling-safe:
+                # they become this bot's own order IDs). TradeStation already placed them at submit.
+                if self._on_combine and t.sim_tp_order_id is None and self._active_entry_decision is not None:
+                    tp_id, sl_id = await self._ts_client.place_exit_orders(self._active_entry_decision, self._exec_account)
+                    t.sim_tp_order_id, t.sim_sl_order_id = tp_id, sl_id
+                    logger.info("TP/SL placed on fill (ProjectX): tp #%s sl #%s", tp_id, sl_id)
                 # Fall through to TP/SL check — might hit in the same bar
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
@@ -1287,7 +1502,7 @@ class Tier2StreamingTrader:
         if reason == "time":
             if t.sim_tp_order_id: await self._ts_client.cancel_order(t.sim_tp_order_id)
             if t.sim_sl_order_id: await self._ts_client.cancel_order(t.sim_sl_order_id)
-            await self._ts_client.close_position_at_market(t.direction, SIM_ACCOUNT_ID)
+            await self._ts_client.close_position_at_market(t.direction, self._exec_account, self._contracts)
         else:
             # Bracket leg hit (TP or SL) - cancel the other leg
             other_id = t.sim_sl_order_id if reason == "tp" else t.sim_tp_order_id
@@ -1309,25 +1524,87 @@ class Tier2StreamingTrader:
             logger.warning("State persistence failed after trade close (trade record will still be written): %s", e)
         logger.info(f"Trade Closed: {reason.upper()} | P&L: ${pnl:.2f} | Daily P&L: ${self._risk_manager.daily_pnl:.2f}")
         _exit_reason_str = reason.upper() if reason in ("tp", "sl") else "TIME_STOP" if reason == "time" else reason.upper()
-        self._trade_logger.append_trade(TradeRecord(
-            timestamp_entry=t.entry_time,
-            timestamp_exit=bar.timestamp,
-            direction=t.direction,
-            entry_price=t.entry_price,
-            exit_price=price,
-            tp_price=t.tp_price,
-            sl_price=t.sl_price,
-            gap_size=t.gap_size,
-            pnl_usd=pnl,
-            exit_reason=_exit_reason_str,
-            h1_sweep_bars_ago=t.h1_sweep_bars_ago,
-            m15_confirmed=t.m15_confirmed,
-            kill_zone_active=t.kill_zone_active,
-            vol_regime_pct=t.vol_regime_pct,
-            contracts=self._contracts,
-        ))
+        # Backfill replays historical bars on every restart and re-closes already-logged
+        # trades; logging during backfill is what re-appended phantom (recomputed) exits.
+        # Only persist live closes. The TradeLogger idempotency guard is the second line
+        # of defense against any restart re-logging. (NOTE: yank_ml_canary.csv and
+        # equity_curve.csv have the same backfill exposure — follow-up.)
+        if not self._is_backfill:
+            self._trade_logger.append_trade(TradeRecord(
+                timestamp_entry=t.entry_time,
+                timestamp_exit=bar.timestamp,
+                direction=t.direction,
+                entry_price=t.entry_price,
+                exit_price=price,
+                tp_price=t.tp_price,
+                sl_price=t.sl_price,
+                gap_size=t.gap_size,
+                pnl_usd=pnl,
+                exit_reason=_exit_reason_str,
+                h1_sweep_bars_ago=t.h1_sweep_bars_ago,
+                m15_confirmed=t.m15_confirmed,
+                kill_zone_active=t.kill_zone_active,
+                vol_regime_pct=t.vol_regime_pct,
+                contracts=self._contracts,
+            ))
+            # Mirror the realized close into the shared trade DB (trader_id='trader-yank')
+            # so the combine floor monitor's combined-PF halt trigger and the status
+            # tooling see YANK's live combine trades. PnL here is the strategy-modeled
+            # close (entry/exit prices minus commission), matching how MIM-NB logs —
+            # keeps the combined PF apples-to-apples. Defensive: a DB failure must never
+            # disrupt trading. Idempotent via trades.db natural-key UNIQUE index +
+            # INSERT OR IGNORE; guarded by `not self._is_backfill` so restart-replay
+            # never re-logs (the phantom-PnL failure mode from 2026-06-19).
+            try:
+                from src.monitoring.trade_db import TradeDatabase
+                _exit_ts = bar.timestamp if bar.timestamp.tzinfo else bar.timestamp.replace(tzinfo=timezone.utc)
+                TradeDatabase().log_trade(
+                    trader_id='trader-yank',
+                    timestamp=_exit_ts.astimezone(timezone.utc).isoformat(),
+                    pnl=round(pnl, 2),
+                    symbol=self._symbol,
+                    direction='L' if t.direction == 'LONG' else 'S',
+                    entry_price=t.entry_price,
+                    exit_price=price,
+                    exit_reason=_exit_reason_str,
+                    metadata={'contracts': self._contracts, 'bars_held': t.bars_held, 'gap_size': t.gap_size},
+                )
+            except Exception as e:
+                logger.warning("trades.db log failed (trade still in tier2_trade_log.csv): %s", e)
+        self._log_ml_canary(t, _exit_reason_str, pnl)
         self._log_trade_metrics()
         self._write_equity_curve()
+
+    def _log_ml_canary(self, t: "ActiveTrade", exit_reason: str, pnl: float) -> None:
+        """Passive drift canary: pair the entry meta-model P(success) with the realized
+        outcome (logs/yank_ml_canary.csv). Logging only — never gates a trade. Rolled up
+        weekly (rolling AUC/Brier vs the ~0.50 baseline) per the 2026-06-16 party-mode
+        decision: keep the PF<0.90-after-N>=20 P&L guardrail as the actuator; observe here.
+
+        Skipped when the ML model is inactive (pass-through) or no proba was captured
+        (e.g. a trade resumed via crash recovery before this field was persisted)."""
+        if self.ml_filter.model is None or np.isnan(t.ml_proba):
+            return
+        import csv as _csv
+        log_path = Path(__file__).parent.parent.parent / "logs" / "yank_ml_canary.csv"
+        row = {
+            "timestamp_entry": str(t.entry_time),
+            "direction":       t.direction,
+            "ml_proba":        round(float(t.ml_proba), 4),
+            "threshold":       self.ml_filter.threshold,
+            "exit_reason":     exit_reason,
+            "pnl_usd":         round(float(pnl), 2),
+            "win":             int(pnl > 0),
+        }
+        write_header = not log_path.exists()
+        try:
+            with log_path.open("a", newline="") as _f:
+                _w = _csv.DictWriter(_f, fieldnames=list(row.keys()))
+                if write_header:
+                    _w.writeheader()
+                _w.writerow(row)
+        except Exception as _e:
+            logger.warning(f"ML canary log write failed: {_e}")
 
     # _log_trade() removed in Story 4-2 — replaced by TradeLogger.append_trade() (AC#1, AC#2)
     # _check_daily_reset_and_halt() removed in Story 4-3 — replaced by RiskManager.check_and_update() (AC#1)
@@ -1379,6 +1656,11 @@ class Tier2StreamingTrader:
         action: str,
     ) -> None:
         """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
+        # Do NOT log during the startup backfill: those bars are historical and were
+        # re-logged on every restart, ballooning the file (9.2M rows / 631MB observed).
+        # Only live (steady-state) bars should produce a decision trail.
+        if self._is_backfill:
+            return  # backfill bars are historical — see comment above
         try:
             log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
             log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1412,6 +1694,12 @@ class Tier2StreamingTrader:
             return
         bars = self.dollar_bars
         if len(bars) < 20: return  # need 20 bars for ATR and volume features
+
+        # Topstep combine: no new entries 15:08-17:00 CT (positions auto-flatten at 15:10 CT)
+        bar_ct = bar.timestamp.astimezone(CT_TZ)
+        ct_min = bar_ct.hour * 60 + bar_ct.minute
+        if TOPSTEP_BLOCK_LO <= ct_min < TOPSTEP_BLOCK_HI:
+            return
 
         # Tuesday filter: consistently PF<1.0 across all 5 months of backtest data
         if bar_et.weekday() == 1:  # 1 = Tuesday
@@ -1451,7 +1739,7 @@ class Tier2StreamingTrader:
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill, ml_proba=proba)
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
@@ -1473,13 +1761,18 @@ class Tier2StreamingTrader:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
                     self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
-                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill)  # type: ignore[arg-type]
+                    await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill, ml_proba=proba)  # type: ignore[arg-type]
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
                     self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
             else:
                 self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP")
+        else:
+            # No bearish sweep / M15 CHoCH this bar — log the live no-setup decision so
+            # the steady-state trail isn't silent on the dominant case.
+            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
+                                      self._m15_choch_active, False, "SKIP")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""
@@ -1572,7 +1865,8 @@ class Tier2StreamingTrader:
         """Round price to nearest instrument tick. Avoids float artifacts."""
         return round(round(price / self._tick_size) * self._tick_size, 10)
 
-    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool):
+    async def _enter_trade(self, fvg: FVGSignal, bar: DollarBar, idx: int, is_backfill: bool,
+                           ml_proba: float = float("nan")):
         """Resolve entry via strategy_core.make_entry_decision and arm the ActiveTrade.
 
         ``fvg`` is now a ``FVGSignal`` from ``strategy_core.detect_fvg``.
@@ -1602,7 +1896,7 @@ class Tier2StreamingTrader:
             entry_price=ent,
             sl_price=sl,
             tp_price=tp,
-            contracts=entry_dec.contracts,
+            contracts=self._contracts,
         )
         self._active_entry_decision = snapped_dec
 
@@ -1614,7 +1908,7 @@ class Tier2StreamingTrader:
         _kill_zone_active = kill_zone_filter(bar.timestamp, self._strategy_config)
         _vol_regime_pct = self._last_vol_regime_pct
 
-        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, SIM_ACCOUNT_ID)
+        e_id, tp_id, sl_id = await self._ts_client.submit_bracket_order(snapped_dec, self._exec_account)
         self.active_trade = ActiveTrade(
             idx, bar.timestamp, direction_str, ent, tp, sl,
             sim_entry_order_id=e_id, sim_tp_order_id=tp_id, sim_sl_order_id=sl_id,
@@ -1623,6 +1917,7 @@ class Tier2StreamingTrader:
             m15_confirmed=_m15_confirmed,
             kill_zone_active=_kill_zone_active,
             vol_regime_pct=_vol_regime_pct,
+            ml_proba=ml_proba,
         )
         # Persist active-trade state + daily risk for crash recovery (AR14, AR15, NFR12)
         StatePersistence.save_state({
@@ -1639,6 +1934,7 @@ class Tier2StreamingTrader:
             "m15_confirmed": _m15_confirmed,
             "kill_zone_active": _kill_zone_active,
             "vol_regime_pct": _vol_regime_pct,
+            "ml_proba": ml_proba,
             **self._risk_manager.to_state_dict(),
         })
         logger.info(f"🔔 TIER 2 LIMIT PLACED: {direction_str} limit=${ent:.2f} | TP ${tp:.2f} SL ${sl:.2f}")

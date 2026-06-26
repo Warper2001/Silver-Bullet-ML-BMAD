@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily ProjectX shadow-parity check -> Telegram (data-feed migration cutover gate)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/tools/shadow_parity_telegram.sh

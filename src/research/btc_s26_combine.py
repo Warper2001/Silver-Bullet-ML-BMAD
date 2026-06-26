@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import logging
+import os
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -23,12 +24,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(
 ])
 logger = logging.getLogger(__name__)
 
-SIM_ACCOUNT_ID = "SIM2248559M"
+SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/brokerage/orders"
+# Paper-only by default. SIM2797251F is the YANK+MIM combine-MIRROR account;
+# placing MBT (Bitcoin) orders here contaminates the mirror equity curve and
+# makes the SIM dress-rehearsal diverge from the real MNQ combine. The bot still
+# polls, computes signals and logs paper trades to trades.db. Set
+# S26_COMBINE_PLACE_ORDERS=1 to restore live SIM order placement.
+PLACE_ORDERS = os.environ.get("S26_COMBINE_PLACE_ORDERS", "0") == "1"
 BARS_URL = "https://api.tradestation.com/v3/marketdata/barcharts/MBTM26?interval=1&unit=Minute"
 
 class S26CombineTrader:
     def __init__(self):
+        from src.monitoring.trade_db import TradeDatabase
+        self.db = TradeDatabase()
         self.symbol = "MBTM26"
         self.contracts = 5  # 5 MBT contracts = 0.5 BTC
         
@@ -211,6 +220,19 @@ class S26CombineTrader:
                 await self.submit_bracket_order(dir_str, entry_price, tp, sl)
 
     async def submit_bracket_order(self, direction, entry, tp, sl):
+        if not PLACE_ORDERS:
+            logger.info(f"📝 PAPER (no broker order): {direction} entry={entry} tp={tp} sl={sl} qty={self.contracts}")
+            self.db.log_trade(
+                trader_id='trader-s26-combine',
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                pnl=0.0,
+                direction=direction,
+                entry_price=entry,
+                exit_price=0.0,
+                exit_reason="PAPER",
+                metadata={'contracts': self.contracts, 'paper': True, 'tp': tp, 'sl': sl}
+            )
+            return
         entry_action = "BUY" if direction == "L" else "SELL"
         exit_action = "SELL" if direction == "L" else "BUY"
         qty = str(self.contracts)
@@ -257,6 +279,17 @@ class S26CombineTrader:
             else:
                 data = response.json()
                 logger.info(f"✅ COMBINE ORDER SUBMITTED: {data}")
+                # Log to DB
+                self.db.log_trade(
+                    trader_id='trader-s26-combine',
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    pnl=0.0, # Will be updated upon exit/fill
+                    direction=direction,
+                    entry_price=entry,
+                    exit_price=0.0,
+                    exit_reason="PENDING",
+                    metadata={'contracts': self.contracts, 'order_data': str(data)}
+                )
         except Exception as e:
             logger.error(f"Submit error: {e}")
 

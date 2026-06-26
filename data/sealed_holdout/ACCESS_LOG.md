@@ -110,6 +110,8 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-06-09 (CST) | `e1e153f` | study_hcvwap_v3_longonly.py | HCVWAP v3 Long-Only OOS: validate v2 long-side (WR=38.3%, PF=1.87, N=60 in-sample) on MNQ 2026-03-01→2026-05-19. N=10, WR=30.0% (gate 30.2%), PF=0.847, EV=-$3.72/trade. ❌ OOS GATE FAIL. HCVWAP hypothesis exhausted. Full output: data/reports/hcvwap_v3_longonly_oos_20260609.txt |
 | 2026-06-15 17:43 UTC | 138cab1b31d064555ede4c9c07503399a743893f | backtest script | `--preregistration 138cab1b31d064555ede4c9c07503399a743893f --ml-threshold 0.50` | pending |
 | 2026-06-15 18:18 UTC | 138cab1b31d064555ede4c9c07503399a743893f | backtest script | `--preregistration 138cab1b31d064555ede4c9c07503399a743893f --ml-threshold 0.00` | pending |
+| 2026-06-15 20:59 UTC | 138cab1 | backtest script | `--preregistration 138cab1 --ml-threshold 0.50` | pending |
+| 2026-06-17 22:30 UTC | 138cab1 | backtest script | `--ml-threshold 0.50 --preregistration 138cab1` | pending |
 
 ## Init — 2026-05-23T15:02:03Z
 

@@ -72,10 +72,25 @@ TIER2_CONFIG = "SL5.0x_TP6.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25"  # S25 pre-reg S
 ML_MODEL_PATH = Path(__file__).parent.parent.parent / "models/xgboost/tier2_meta_labeling_model.pkl"
 
 # Per-instrument specifications (point value, tick size, default contract count)
+#
+# Micro-contract specs (point_value / tick) below are the CME micro products and
+# were cross-checked against the `notional` column of the 1-min bar files
+# (notional / (volume × price) recovers the FULL-contract multiplier; the micro
+# is the standard 1/5 or 1/10 of full). Used ONLY for exploratory cross-instrument
+# research backtests — these are NOT live-deployed symbols.
 SYMBOL_SPECS: dict[str, dict] = {
     "MNQM26": {"point_value": 2.0,  "tick_size": 0.25, "contracts": 5},
     "MESM26": {"point_value": 5.0,  "tick_size": 0.25, "contracts": 2},
     "M2KM26": {"point_value": 5.0,  "tick_size": 0.10, "contracts": 2},
+    # Exploratory micro specs (full mult from data → micro): see notional check.
+    "SIL":    {"point_value": 1000.0, "tick_size": 0.005,  "contracts": 1},  # Micro Silver (full SI $5000/pt)
+    "MYM":    {"point_value": 0.5,    "tick_size": 1.0,    "contracts": 1},  # Micro Dow (full YM $5/pt)
+    "M2K":    {"point_value": 5.0,    "tick_size": 0.10,   "contracts": 1},  # Micro Russell (full RTY $50/pt)
+    "MHG":    {"point_value": 2500.0, "tick_size": 0.0005, "contracts": 1},  # Micro Copper (full HG $25000/pt)
+    # Fan-out batch 2 (Victor): ES/GC/PL — full mult confirmed from notional column.
+    "MES":    {"point_value": 5.0,    "tick_size": 0.25,   "contracts": 1},  # Micro S&P (full ES $50/pt)
+    "MGC":    {"point_value": 10.0,   "tick_size": 0.10,   "contracts": 1},  # Micro Gold (full GC $100/pt)
+    "PL":     {"point_value": 50.0,   "tick_size": 0.10,   "contracts": 1},  # Platinum full 50oz (no CME micro)
 }
 
 # Account and trade state types (FR14: SIM ↔ live via config; FR10: per-cycle reconciliation)

@@ -157,10 +157,11 @@ class DollarBar(BaseModel):
         if v <= 0:
             raise ValueError("notional_value must be positive")
 
-        # Sanity check: notional should not exceed $10B (200× threshold)
-        # This catches calculation errors or malformed data
-        # Increased limit for multi-timeframe resampling (21/34/55-min bars can aggregate higher volumes)
-        max_reasonable = 10_000_000_000  # $10B
+        # Sanity check: notional ceiling (catches calculation errors / malformed data).
+        # Raised to $50B 2026-06-17: liquid MNQ front-month 1-min bars legitimately reach
+        # ~$10-11B (observed on MNQU26 at the combine cutover); $10B was starving the
+        # validator of real bars. A genuine malformed value is orders of magnitude beyond this.
+        max_reasonable = 50_000_000_000  # $50B
         if v > max_reasonable:
             raise ValueError(
                 f"notional_value ${v:.2f} exceeds reasonable maximum ${max_reasonable:.2f}"

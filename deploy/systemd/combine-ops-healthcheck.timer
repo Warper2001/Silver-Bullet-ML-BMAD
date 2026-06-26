@@ -1,0 +1,11 @@
+[Unit]
+Description=Run combine ops healthcheck every 5 minutes (silent-failure heartbeat while research is parked on S25 data)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

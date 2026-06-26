@@ -1,5 +1,5 @@
 [Unit]
-Description=YANK MNQ Tier2 Paper Trader
+Description=YANK MNQ Tier2 — LIVE on Topstep 50K combine (acct 23884932, 2ct) alongside MIM-NB
 After=network-online.target
 Wants=network-online.target
 
@@ -7,6 +7,17 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+# Phase D cutover 2026-06-17: YANK joins the joint combine (sealed prereg
+# yank-mim-joint-combine-deploy). PROJECTX_ACCOUNT_ID -> ProjectX execution;
+# YANK_CONTRACTS=2 is the vol-balanced size. Removing these reverts to SIM paper.
+Environment=PROJECTX_ACCOUNT_ID=23884932
+Environment=YANK_CONTRACTS=2
+# Active front month. YANK has NO autoroll (unlike MIM-NB) — update manually at the
+# quarterly roll (~2026-09-11 -> MNQZ26) or orders will reject like the 06-16 MIM incident.
+Environment=SYMBOL=MNQU26
+# Stage-1 ProjectX data-feed migration (shadow): fetch+log ProjectX bars in parallel
+# while TradeStation stays the SIGNAL source. Observation only; remove to disable.
+Environment=YANK_DATA_SHADOW=1
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/yank_streaming_working.py
 Restart=on-failure
 RestartSec=30

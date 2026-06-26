@@ -11,7 +11,12 @@ WorkingDirectory=/root/Silver-Bullet-ML-BMAD
 # The bot refuses to start if this is missing.
 # Topstep 50K Trading Combine 50KTC-V2-303705-72867678 (confirmed by Alex 2026-06-11)
 Environment=PROJECTX_ACCOUNT_ID=23884932
-Environment=MIM_NB_SYMBOL=MNQM26
+# Quarterly roll 2026-06-16: MNQM26 (June) rolled off / non-tradeable (expires 06-19);
+# ProjectX active contract is now MNQU26 (Sept, CON.F.US.MNQ.U26). Next roll ~2026-09-11 → MNQZ26.
+Environment=MIM_NB_SYMBOL=MNQU26
+# Stage-1 ProjectX data-feed migration (shadow): fetch+log ProjectX bars in parallel
+# while TradeStation stays the SIGNAL source. Observation only; remove to disable.
+Environment=MIM_NB_DATA_SHADOW=1
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/mim_nb_live.py
 Restart=on-failure
 RestartSec=30

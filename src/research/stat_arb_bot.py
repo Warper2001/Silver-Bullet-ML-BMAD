@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(
 ])
 logger = logging.getLogger(__name__)
 
-SIM_ACCOUNT_ID = "SIM2248559M"
+SIM_ACCOUNT_ID = "SIM2797251F"
 SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/brokerage/orders"
 # Using 5-minute bars, pulling last 150 bars to compute 60-bar rolling metrics
 BARS_URL = "https://api.tradestation.com/v3/marketdata/barcharts/{symbol}?interval=5&unit=Minute&barsback=150"
@@ -54,7 +54,7 @@ class StatArbTrader:
         return None
 
     def _save_state(self):
-        os.makedirs(STATE_FILE.parent, exist_ok=True)
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(STATE_FILE, "w") as f:
             json.dump(self.active_trade, f)
 

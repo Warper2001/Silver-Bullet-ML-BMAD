@@ -123,18 +123,57 @@ def log_tick(st, equity, floor, pf, n, reason):
 
 
 # ---------------------------------------------------------------- halt action
+_HALT_POLL_SEC = 5   # seconds between position checks during soft-halt wait
+_HALT_POLL_MAX = 24  # 24 × 5s = 2 minutes before force-flatten timeout
+
 async def do_halt(px, reason):
     logger.error("🛑 HALT TRIGGERED: %s", reason)
     HALT_FILE.write_text(json.dumps({"reason": reason, "ts": datetime.now(timezone.utc).isoformat()}, indent=2))
     try:
-        await px.cancel_all_pending_orders(str(ACCOUNT_ID))   # intentional full cancel — halting all
         size, _ = await px.net_position(ACCOUNT_ID)
         if size != 0:
-            await px.close_position_at_market("LONG" if size > 0 else "SHORT",
-                                              str(ACCOUNT_ID), contracts=abs(size))
-            logger.error("Flattened net account position (%d) at market", size)
+            # Soft-halt: leave bracket orders intact so the open position stays
+            # protected. Wait for the bot to close its own trade (TP/SL/time-stop).
+            # Cancelling brackets before the position closes leaves a naked position
+            # with no stop — that is the failure mode we are fixing here.
+            logger.error(
+                "SOFT HALT: open position %d ct — waiting up to %ds for natural close "
+                "(brackets intact, services still running). New entries blocked by HALT file.",
+                size, _HALT_POLL_SEC * _HALT_POLL_MAX,
+            )
+            for _ in range(_HALT_POLL_MAX):
+                await asyncio.sleep(_HALT_POLL_SEC)
+                try:
+                    size, _ = await px.net_position(ACCOUNT_ID)
+                except Exception as exc:
+                    logger.warning("position poll error during soft-halt wait: %s", exc)
+                    continue
+                if size == 0:
+                    logger.error("Position closed naturally — proceeding to stop services.")
+                    break
+            else:
+                # 2-minute timeout: force-flatten at market
+                logger.error(
+                    "Position still open after %ds — force-flattening at market.",
+                    _HALT_POLL_SEC * _HALT_POLL_MAX,
+                )
+                try:
+                    await px.cancel_all_pending_orders(str(ACCOUNT_ID))
+                    size, _ = await px.net_position(ACCOUNT_ID)
+                    if size != 0:
+                        await px.close_position_at_market(
+                            "LONG" if size > 0 else "SHORT",
+                            str(ACCOUNT_ID), contracts=abs(size),
+                        )
+                        logger.error("Force-flattened %d ct at market.", size)
+                        await asyncio.sleep(5)
+                except Exception as exc:
+                    logger.error("Force-flatten error: %s", exc)
+        else:
+            # Already flat — cancel any stale pending orders immediately.
+            await px.cancel_all_pending_orders(str(ACCOUNT_ID))
     except Exception as exc:
-        logger.error("HALT flatten error (continuing to stop bots): %s", exc)
+        logger.error("HALT position-check error (stopping services anyway): %s", exc)
     subprocess.run(["systemctl", "stop", "trader-mim-nb", "trader-yank"], check=False)
     logger.error("Stopped trader-mim-nb + trader-yank. HALT-and-REVIEW: human action required.")
 
@@ -159,7 +198,10 @@ async def main():
                 continue
             size, upl = await px.net_position(ACCOUNT_ID)
             equity = bal + upl
-            st["hwm"] = max(st["hwm"], equity)
+            # HWM tracks realized balance only (mirrors Topstep's methodology).
+            # Tracking equity (bal+unrealized) overstates HWM when open positions
+            # are profitable, permanently ratcheting the floor from gains never realized.
+            st["hwm"] = max(st["hwm"], bal)
             st["floor"] = update_floor(st["floor"], st["hwm"])
             pf, n = combined_pf_and_count(DB_PATH, COMBINE_START)
             reason = evaluate_triggers(equity, st["floor"], pf, n)

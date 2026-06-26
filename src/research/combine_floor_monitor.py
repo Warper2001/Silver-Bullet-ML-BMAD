@@ -198,7 +198,10 @@ async def main():
                 continue
             size, upl = await px.net_position(ACCOUNT_ID)
             equity = bal + upl
-            st["hwm"] = max(st["hwm"], equity)
+            # HWM tracks realized balance only (mirrors Topstep's methodology).
+            # Tracking equity (bal+unrealized) overstates HWM when open positions
+            # are profitable, permanently ratcheting the floor from gains never realized.
+            st["hwm"] = max(st["hwm"], bal)
             st["floor"] = update_floor(st["floor"], st["hwm"])
             pf, n = combined_pf_and_count(DB_PATH, COMBINE_START)
             reason = evaluate_triggers(equity, st["floor"], pf, n)

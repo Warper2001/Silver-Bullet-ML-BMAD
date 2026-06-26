@@ -1,0 +1,45 @@
+OOF ceiling probe — SL×TP walk-forward, in-sample only (2025-05-19..2026-02-28)
+Generated 2026-06-26. Sealed holdout (2026-03-01+) NOT touched.
+Grid: SL{2,3,5} × TP{6,8,10,12}. Verdict: NO durable OOF headroom; keep frozen SL2/TP8.
+============================================================
+=== HG SL×TP response surface (FULL in-sample window — this is Ceiling A territory, overfit) ===
+          TP    6.0TP    8.0TP   10.0TP   12.0
+  SL 2.0    $   615  $   630  $   650  $   702  (SL/TP rows; ★=frozen)
+  SL 3.0    $   525  $   466  $   348  $   400
+  SL 5.0    $   305  $   279  $   132  $   185
+
+=== Walk-forward OOF (test folds 1..4, train on prior folds only) ===
+  fold 1: best-on-train = SL2.0/TP12.0  → test net $    192  (n=26)
+  fold 2: best-on-train = SL2.0/TP12.0  → test net $     29  (n=16)
+  fold 3: best-on-train = SL2.0/TP12.0  → test net $    156  (n=11)
+  fold 4: best-on-train = SL2.0/TP12.0  → test net $     65  (n=18)
+
+=== VERDICT (HG, OOF period = folds 1..4, in-sample) ===
+  Walk-forward OOF (honest)      : net $     442  n=71
+  Frozen SL2/TP8 (baseline)      : net $     505  n=71  PF 1.498
+  Ceiling A (best-in-hindsight SL2.0/TP6.0, MIRAGE): net $     520
+  --> durable headroom (OOF − frozen): $     -62
+  --> overfit gap (CeilingA − OOF)    : $     +78
+  READ: no OOF headroom over frozen → tuning the exit shape does NOT durably help; keep frozen.
+  (Small-sample caveat: ~20 trades/fold; treat as a coarse signal, not a precise estimate.)
+
+=== PL SL×TP response surface (FULL in-sample window — this is Ceiling A territory, overfit) ===
+          TP    6.0TP    8.0TP   10.0TP   12.0
+  SL 2.0    $ 4,340  $ 6,265  $ 7,615  $ 4,995  (SL/TP rows; ★=frozen)
+  SL 3.0    $ 2,155  $ 4,400  $ 4,680  $ 3,130
+  SL 5.0    $ 4,535  $ 6,520  $ 7,230  $ 6,040
+
+=== Walk-forward OOF (test folds 1..4, train on prior folds only) ===
+  fold 1: best-on-train = SL5.0/TP12.0  → test net $  2,725  (n=16)
+  fold 2: best-on-train = SL5.0/TP12.0  → test net $ -1,870  (n=20)
+  fold 3: best-on-train = SL2.0/TP8.0  → test net $   -980  (n=26)
+  fold 4: best-on-train = SL5.0/TP12.0  → test net $  6,845  (n=20)
+
+=== VERDICT (PL, OOF period = folds 1..4, in-sample) ===
+  Walk-forward OOF (honest)      : net $   6,720  n=82
+  Frozen SL2/TP8 (baseline)      : net $   9,185  n=86  PF 1.625
+  Ceiling A (best-in-hindsight SL2.0/TP10.0, MIRAGE): net $  10,535
+  --> durable headroom (OOF − frozen): $  -2,465
+  --> overfit gap (CeilingA − OOF)    : $  +3,815
+  READ: no OOF headroom over frozen → tuning the exit shape does NOT durably help; keep frozen.
+  (Small-sample caveat: ~20 trades/fold; treat as a coarse signal, not a precise estimate.)

@@ -24,6 +24,7 @@ Usage:
 import argparse
 import asyncio
 import csv
+import dataclasses
 import fnmatch
 import logging
 import re
@@ -53,6 +54,55 @@ END_DATE   = datetime(2026, 5, 19, 23, 59, 59, tzinfo=timezone.utc)
 CSV_2025 = Path("data/processed/dollar_bars/1_minute/mnq_1min_2025.csv")
 CSV_2026 = Path("data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv")
 REPORTS_DIR = Path("data/reports")
+
+_DB1 = Path("data/processed/dollar_bars/1_minute")
+
+# ── Instrument registry (exploratory cross-instrument research) ──────────────────
+# Each entry maps a CLI --instrument key to a backtest symbol (point_value/tick via
+# SYMBOL_SPECS in tier2_streaming_working) and the 1-min CSV file(s) to load. Each
+# file is (path, file_start, file_end); a global --start/--end further clips both.
+#
+# `mnq` (default) reproduces the original two-file asymmetric load EXACTLY so the
+# refactor stays byte-identical to the pre-existing baseline (regression gate).
+INSTRUMENTS: dict[str, dict] = {
+    "mnq": {
+        "symbol": "MNQM26",
+        "files": [(CSV_2025, START_DATE, None), (CSV_2026, None, END_DATE)],
+        "label": "MNQ (Micro Nasdaq)",
+    },
+    "si": {
+        "symbol": "SIL",
+        "files": [(_DB1 / "si_1min_2025_2026.csv", None, None)],
+        "label": "SI→SIL (Micro Silver)",
+    },
+    "ym": {
+        "symbol": "MYM",
+        "files": [(_DB1 / "ym_1min_2025_2026.csv", None, None)],
+        "label": "YM→MYM (Micro Dow)",
+    },
+    "rty": {
+        "symbol": "M2K",
+        "files": [(_DB1 / "rty_1min_2025_2026.csv", None, None)],
+        "label": "RTY→M2K (Micro Russell)",
+    },
+    "hg": {
+        "symbol": "MHG",
+        "files": [(_DB1 / "hg_1min_2025_2026.csv", None, None)],
+        "label": "HG→MHG (Micro Copper)",
+    },
+}
+
+# Structural-mode config overrides: neutralize dollar-scaled / path-dependent gates
+# that do NOT transfer across instruments, leaving only the SCALE-INVARIANT structural
+# gates (H1 sweep, M15 CHoCH, ATR-ratio gap, vol-regime ATR percentile). Yields a
+# clean GROSS structural fingerprint comparable across instruments (Winston: "test the
+# ratio, not the dollar"). NET survivability is a separate, later gate.
+STRUCTURAL_OVERRIDES: dict = {
+    "max_daily_loss": -1e12,          # disable daily circuit breaker (dollar-scaled, path-dependent)
+    "max_gap_dollars": 1e12,          # disable upper $ gap ceiling (MNQ-calibrated) → ATR-ratio gate governs
+    "commission_per_roundtrip": 0.0,  # gross P&L (costs are a separate net gate)
+    "contracts_per_trade": 1,         # clean per-1-contract economics
+}
 
 # Sealed holdout gate (Program C Phase 0.5)
 HOLDOUT_CUTOFF  = datetime(2026, 3, 1, tzinfo=timezone.utc)
@@ -212,8 +262,18 @@ def sparkline(values: list[float], width: int = 60) -> str:
 
 # ── Core backtest run ──────────────────────────────────────────────────────────
 
-async def run_backtest(bars: list[DollarBar], ml_threshold: float | None = None) -> list:
-    trader = Tier2StreamingTrader()
+async def run_backtest(
+    bars: list[DollarBar],
+    ml_threshold: float | None = None,
+    symbol: str = "MNQM26",
+    config_overrides: dict | None = None,
+) -> list:
+    trader = Tier2StreamingTrader(symbol=symbol)
+
+    # Apply strategy-config overrides (StrategyConfig is frozen → replace + reassign).
+    # Default (None) leaves the loaded config untouched so `mnq` stays byte-identical.
+    if config_overrides:
+        trader._strategy_config = dataclasses.replace(trader._strategy_config, **config_overrides)
 
     # Mock out all broker I/O and state persistence for backtest replay
     mock_client = MagicMock()
@@ -427,21 +487,54 @@ async def main():
         help="Override the ML meta-label filter threshold (default: trader's loaded value). "
              "Use 0.0 to disable the filter, e.g. 0.50 to gate at 0.50.",
     )
+    parser.add_argument(
+        "--instrument",
+        choices=sorted(INSTRUMENTS),
+        default="mnq",
+        help="Instrument to backtest (default: mnq, byte-identical to the original baseline). "
+             "Non-mnq keys are EXPLORATORY cross-instrument research.",
+    )
+    parser.add_argument(
+        "--structural",
+        action="store_true",
+        help="Structural-fingerprint mode: disable dollar-scaled/path-dependent gates "
+             "(daily breaker, $ gap ceiling) and commission for a GROSS, scale-invariant "
+             "cross-instrument comparison. Does NOT apply to a plain `mnq` regression run.",
+    )
+    parser.add_argument("--start", default=None, help="Global start date override (YYYY-MM-DD, UTC).")
+    parser.add_argument("--end", default=None, help="Global end date override (YYYY-MM-DD, UTC).")
     args = parser.parse_args()
 
-    print(f"Loading bars {START_DATE.date()} → {END_DATE.date()} …", flush=True)
+    inst = INSTRUMENTS[args.instrument]
+    symbol = inst["symbol"]
+    config_overrides = dict(STRUCTURAL_OVERRIDES) if args.structural else None
+
+    def _parse_date(s, end=False):
+        if s is None:
+            return None
+        d = datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+        return d.replace(hour=23, minute=59, second=59) if end else d
+    g_start = _parse_date(args.start)
+    g_end = _parse_date(args.end, end=True)
+
+    mode = " [STRUCTURAL]" if args.structural else ""
+    print(f"Loading bars — instrument={args.instrument} ({inst['label']}) symbol={symbol}{mode} …", flush=True)
 
     bars: list[DollarBar] = []
-    bars += load_bars(CSV_2025, start=START_DATE)
-    print(f"  2025 CSV : {len(bars):,} bars  ({bars[0].timestamp.date()} → {bars[-1].timestamp.date()})")
+    for csv_path, f_start, f_end in inst["files"]:
+        if not Path(csv_path).exists():
+            print(f"  ⚠  {csv_path} not found — skipping")
+            continue
+        start = g_start if g_start is not None else f_start
+        end = g_end if g_end is not None else f_end
+        loaded = load_bars(Path(csv_path), start=start, end=end)
+        if loaded:
+            bars += loaded
+            print(f"  {Path(csv_path).name} : {len(loaded):,} bars  "
+                  f"({loaded[0].timestamp.date()} → {loaded[-1].timestamp.date()})")
 
-    if CSV_2026.exists():
-        bars_2026 = load_bars(CSV_2026, end=END_DATE)
-        if bars_2026:
-            bars += bars_2026
-            print(f"  2026 CSV : {len(bars_2026):,} bars  ({bars_2026[0].timestamp.date()} → {bars_2026[-1].timestamp.date()})")
-    else:
-        print(f"  ⚠  {CSV_2026} not found — run download_mnq_2026_ytd.py first")
+    if not bars:
+        _exit_access_denied(f"No bars loaded for instrument={args.instrument}. Check CSV paths / date window.")
 
     bars.sort(key=lambda b: b.timestamp)
     print(f"  Combined : {len(bars):,} bars  ({bars[0].timestamp.date()} → {bars[-1].timestamp.date()})\n")
@@ -464,7 +557,9 @@ async def main():
         append_access_log(args.preregistration, sys.argv)
 
     print("Running backtest …", flush=True)
-    trades = await run_backtest(bars, ml_threshold=args.ml_threshold)
+    trades = await run_backtest(
+        bars, ml_threshold=args.ml_threshold, symbol=symbol, config_overrides=config_overrides
+    )
     print(f"Completed: {len(trades)} trades\n")
 
     report, trade_rows, equity_rows = build_report(trades, START_DATE, END_DATE)

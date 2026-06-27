@@ -666,9 +666,16 @@ logger = logging.getLogger(__name__)
 class MetaLabelingFilter:
     """ML-based secondary filter that approves/rejects Tier 2 setups."""
 
+    # MUST match the deployed model's feature_names_in_ (18 features). A stale subset
+    # here makes sklearn raise at inference; the prior 8-feature list silently
+    # disabled the live filter from 2026-06-17 (see _bmad-output/bug_yank_ml_filter_
+    # silently_disabled_2026-06-27.md). __init__ now asserts this set matches the model.
     FEATURE_COLS = [
-        'fvg_fill_pct', 'sweep_window_vol', 'volume_ratio', 'signal_direction',
-        'h1_trend_slope', 'atr', 'session_displacement', 'session_volume_ratio',
+        'atr', 'gap_size', 'volume_ratio', 'et_hour', 'day_of_week',
+        'signal_direction', 'session_displacement', 'adr_pct_used',
+        'fvg_to_sweep_bars', 'prior_setup_proximity', 'h1_trend_slope',
+        'sin_hour', 'cos_hour', 'session_volume_ratio', 'fvg_fill_pct',
+        'bar_body_ratio', 'sweep_window_vol', 'slope_direction_match',
     ]
 
     def __init__(self, model_path: Path, threshold: float = 0.0):  # 0.0 = disabled; matches StrategyConfig.ml_threshold
@@ -696,6 +703,19 @@ class MetaLabelingFilter:
         else:
             logger.warning(f"ML model not found at {model_path} — falling back to pass-through")
 
+        # Schema guard (outside the load try/except so it is NOT swallowed): refuse to
+        # start if the model's fitted features don't match FEATURE_COLS. A mismatch would
+        # make every inference raise — better to abort loudly at boot than run a silently
+        # disabled filter (the 2026-06-17 incident). Raising here stops the trader.
+        _fitted = getattr(self.model, "feature_names_in_", None)
+        if _fitted is not None and set(_fitted) != set(self.FEATURE_COLS):
+            raise RuntimeError(
+                f"ML schema mismatch: FEATURE_COLS({len(self.FEATURE_COLS)}) != "
+                f"model.feature_names_in_({len(_fitted)}). "
+                f"missing={sorted(set(_fitted) - set(self.FEATURE_COLS))} "
+                f"extra={sorted(set(self.FEATURE_COLS) - set(_fitted))}"
+            )
+
     def _log_decision(self, timestamp, proba: float, decision: str) -> None:
         """Append filter decision to logs/tier2_filter_log.csv."""
         import csv as _csv
@@ -717,7 +737,14 @@ class MetaLabelingFilter:
             logger.warning(f"Filter log write failed: {_e}")
 
     def predict_proba(self, features: dict) -> float:
-        """Return P(success). Returns 1.0 (pass-through) if model unavailable."""
+        """Return P(success).
+
+        - model unavailable (None): 1.0 = intentional pass-through (ML-disabled config).
+        - inference error: 0.0 = FAIL-CLOSED (block the trade). Was 1.0 (fail-open),
+          which silently disabled the filter on a feature-schema mismatch. The startup
+          schema guard should prevent ever reaching this, but if a runtime error does
+          occur we refuse the trade rather than wave it through.
+        """
         if self.model is None:
             return 1.0
         try:
@@ -726,8 +753,8 @@ class MetaLabelingFilter:
             # Model is a Pipeline(StandardScaler + LogisticRegression)
             return float(self.model.predict_proba(df_feat)[0, 1])
         except Exception as e:
-            logger.warning(f"ML inference failed: {e} — returning pass-through")
-            return 1.0
+            logger.error(f"ML inference FAILED — BLOCKING trade (fail-closed): {e}")
+            return 0.0
 
 
 class LRRegimeFilter:

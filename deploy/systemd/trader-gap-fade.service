@@ -1,5 +1,5 @@
 [Unit]
-Description=GAP-1 Panic-Open Gap Fade — internal simulation (data/gap_fade/, data/trades.db)
+Description=GAP-1 Panic-Open Gap Fade — TS SIM paper trading (data/gap_fade/, data/trades.db)
 After=network-online.target
 Wants=network-online.target
 
@@ -7,13 +7,18 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=/root/Silver-Bullet-ML-BMAD
-# GAP-1 is a pure internal-simulation bot — no broker orders are placed.
+# GAP-1 paper trading — TS SIM account SIM2797251F.
+# Internal OHLC simulation runs in parallel as the authoritative OOS P&L record.
 # Prospective OOS test from 2026-06-26; decision at N>=30 + 30 calendar days.
 # Pre-reg seal 32da5d5 — _bmad-output/preregistration_gap_fade_panic_open.md
 #
 # QUARTERLY ROLL: update GAP_FADE_SYMBOL at each futures roll.
 # Next: ~2026-09-11 → MNQZ26
+#
+# TS SIM toggle: set GAP_FADE_TS_SIM=0 to revert to internal-sim-only mode.
 Environment=GAP_FADE_SYMBOL=MNQU26
+Environment=GAP_FADE_TS_SIM=1
+Environment=GAP_FADE_TS_SIM_ACCOUNT=SIM2797251F
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/gap_fade_live.py
 Restart=on-failure
 RestartSec=30

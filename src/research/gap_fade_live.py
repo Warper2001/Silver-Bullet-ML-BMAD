@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gap_fade_live.py — GAP-1 Panic-Open Mean-Reversion Fade — internal simulation
+gap_fade_live.py — GAP-1 Panic-Open Mean-Reversion Fade
 
 Pre-registration: _bmad-output/preregistration_gap_fade_panic_open.md (seal 32da5d5)
 
@@ -14,9 +14,12 @@ Strategy (FROZEN — no parameter changes without a new pre-registration):
   - Exclude Fridays (weekday == 4)
   - 1 MNQ contract, $2/point, max 1 trade/day
 
-INTERNAL SIMULATION ONLY — no broker orders are placed. Fills are simulated
-against bar OHLC using the same logic as backtest_gap_fade.py to faithfully
-measure prospective OOS performance from 2026-06-26 onward.
+Execution modes (set via env var GAP_FADE_TS_SIM):
+  GAP_FADE_TS_SIM=0 (default) — internal simulation only. Fills simulated
+    against bar OHLC. No broker orders placed.
+  GAP_FADE_TS_SIM=1 — TS SIM paper trading. Real orders sent to TradeStation
+    SIM account (SIM2797251F). Internal OHLC simulation runs in parallel as the
+    authoritative OOS P&L record; TS SIM track verifies fill mechanics.
 
 OOS decision rule (per pre-reg, from first live trade):
   N >= 30 AND >= 30 calendar days:
@@ -31,7 +34,7 @@ Usage:
 Logs:
   data/gap_fade/trades.csv    — hash-chained; one row per closed sim trade
   data/gap_fade/decisions.csv — one row per qualifying gap-check (entered or skipped)
-  data/gap_fade/state.json    — crash-recovery: current open sim position
+  data/gap_fade/state.json    — crash-recovery: current open sim position + TS SIM order IDs
   data/trades.db              — canonical cross-bot SQLite (trader_id='trader-gap-fade')
 """
 import argparse
@@ -77,6 +80,10 @@ BARSBACK  = 3000    # ~50h of 1-min bars — covers 2 full prior RTH sessions
 # No auto-roll: update GAP_FADE_SYMBOL in trader-gap-fade.service at each quarterly roll.
 # Next roll: ~2026-09-11 → MNQZ26
 SYMBOL = os.environ.get("GAP_FADE_SYMBOL", "MNQU26")
+
+# TS SIM paper trading (enabled via env var — off by default until Gate-Minus-One)
+TS_SIM_ENABLED  = os.environ.get("GAP_FADE_TS_SIM", "0") == "1"
+TS_SIM_ACCOUNT  = os.environ.get("GAP_FADE_TS_SIM_ACCOUNT", "SIM2797251F")
 
 DATA_DIR = BASE_DIR / "data" / "gap_fade"
 LOG_DIR  = BASE_DIR / "logs"
@@ -124,6 +131,148 @@ class ChainedCsv:
         row["chain"] = self.head
         with open(self.path, "a", newline="") as f:
             csv.DictWriter(f, fieldnames=self.fields, extrasaction="ignore").writerow(row)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TradeStation SIM paper execution client
+# ─────────────────────────────────────────────────────────────────────────────
+class TSSimClient:
+    """Thin TS SIM order client for GAP-1 paper trading.
+
+    Fires a market entry with OSO bracket (TP limit + SL stop) at RTH open.
+    At the 13:00 ET time-stop the caller cancels both bracket legs and closes
+    at market. TP/SL hits are broker-managed (BRK bracket auto-cancels other leg).
+    Never raises — all errors return None/False and are logged as warnings.
+    """
+
+    _ORDERS_URL = "https://sim-api.tradestation.com/v3/orderexecution/orders"
+
+    def __init__(self, auth: TradeStationAuthV3, http: httpx.AsyncClient,
+                 symbol: str, account_id: str):
+        self._auth       = auth
+        self._http       = http
+        self._symbol     = symbol
+        self._account_id = account_id
+
+    async def _headers(self) -> dict:
+        token = await self._auth.authenticate()
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type":  "application/json",
+            "Accept":        "application/json",
+        }
+
+    @staticmethod
+    def _snap(price: float) -> str:
+        """Round to nearest MNQ tick (0.25 points) for order submission."""
+        return str(round(round(price / 0.25) * 0.25, 2))
+
+    async def submit_entry_bracket(
+        self, direction: int, tp_price: float, sl_price: float
+    ) -> tuple:
+        """Market entry + OSO bracket (TP limit + SL stop). direction: +1=long, -1=short.
+        Returns (entry_id, tp_id, sl_id). All None on any failure."""
+        entry_action = "BUY"  if direction == 1 else "SELL"
+        exit_action  = "SELL" if direction == 1 else "BUY"
+        payload = {
+            "AccountID":   self._account_id,
+            "Symbol":      self._symbol,
+            "Quantity":    str(CONTRACTS),
+            "OrderType":   "Market",
+            "TradeAction": entry_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route":       "Intelligent",
+            "OSOs": [{
+                "Type": "BRK",
+                "Orders": [
+                    {
+                        "AccountID":   self._account_id,
+                        "Symbol":      self._symbol,
+                        "Quantity":    str(CONTRACTS),
+                        "OrderType":   "Limit",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "LimitPrice":  self._snap(tp_price),
+                    },
+                    {
+                        "AccountID":   self._account_id,
+                        "Symbol":      self._symbol,
+                        "Quantity":    str(CONTRACTS),
+                        "OrderType":   "StopMarket",
+                        "TradeAction": exit_action,
+                        "TimeInForce": {"Duration": "GTC"},
+                        "StopPrice":   self._snap(sl_price),
+                    },
+                ],
+            }],
+        }
+        try:
+            r = await self._http.post(self._ORDERS_URL, headers=await self._headers(), json=payload)
+            if r.status_code not in (200, 201):
+                logger.warning("TS SIM entry bracket HTTP %s: %s", r.status_code, r.text[:200])
+                return None, None, None
+            orders = r.json().get("Orders", [])
+            entry_id = tp_id = sl_id = None
+            for order in orders:
+                oid = order.get("OrderID")
+                msg = order.get("Message", "")
+                if "Stop Market" in msg:
+                    sl_id = oid
+                elif exit_action.capitalize() in msg and "Limit" in msg:
+                    tp_id = oid
+                else:
+                    # Entry market order or fallback
+                    if entry_id is None: entry_id = oid
+                    elif tp_id is None:  tp_id  = oid
+                    else:                sl_id  = oid
+            logger.info("TS SIM entry | %s 1ct %s | entry #%s TP #%s SL #%s",
+                        entry_action, self._symbol, entry_id, tp_id, sl_id)
+            return entry_id, tp_id, sl_id
+        except Exception as exc:
+            logger.warning("TS SIM entry bracket error: %s", exc)
+            return None, None, None
+
+    async def cancel_order(self, order_id: str) -> bool:
+        """Cancel a single order. Returns True on success or 404 (already gone)."""
+        try:
+            r = await self._http.delete(
+                f"{self._ORDERS_URL}/{order_id}", headers=await self._headers()
+            )
+            return r.status_code in (200, 204, 404)
+        except Exception as exc:
+            logger.warning("TS SIM cancel #%s error: %s", order_id, exc)
+            return False
+
+    async def close_at_market(self, direction: int) -> Optional[str]:
+        """Submit market order to flatten open position. Returns order ID or None."""
+        close_action = "SELL" if direction == 1 else "BUY"
+        payload = {
+            "AccountID":   self._account_id,
+            "Symbol":      self._symbol,
+            "Quantity":    str(CONTRACTS),
+            "OrderType":   "Market",
+            "TradeAction": close_action,
+            "TimeInForce": {"Duration": "DAY"},
+            "Route":       "Intelligent",
+        }
+        try:
+            r = await self._http.post(self._ORDERS_URL, headers=await self._headers(), json=payload)
+            if r.status_code in (200, 201):
+                oid = r.json().get("Orders", [{}])[0].get("OrderID")
+                logger.info("TS SIM time-stop market close #%s | %s", oid, close_action)
+                return oid
+            logger.warning("TS SIM market close HTTP %s: %s", r.status_code, r.text[:200])
+            return None
+        except Exception as exc:
+            logger.warning("TS SIM market close error: %s", exc)
+            return None
+
+    async def cancel_bracket(self, tp_id: Optional[str], sl_id: Optional[str]):
+        """Cancel both bracket legs before the time-stop market close."""
+        for oid in (tp_id, sl_id):
+            if oid:
+                ok = await self.cancel_order(oid)
+                logger.info("TS SIM cancel bracket #%s → %s", oid, "ok" if ok else "failed")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -247,11 +396,12 @@ def _run_replay(csv_path: str) -> None:
 # Main trader class
 # ─────────────────────────────────────────────────────────────────────────────
 class GapFadeTrader:
-    """Internal-simulation gap-fade bot.
+    """GAP-1 gap-fade bot with optional TS SIM paper execution.
 
     Polls TradeStation 1-min bars, detects qualifying overnight gaps at the RTH
-    open, and simulates fills against bar OHLC — no broker orders. Logs completed
-    trades to data/gap_fade/trades.csv (hash-chained) and data/trades.db.
+    open, and simulates fills against bar OHLC (authoritative OOS P&L record).
+    When GAP_FADE_TS_SIM=1, also fires real orders to the TradeStation SIM
+    account to verify fill mechanics.
     """
 
     def __init__(self, symbol: str = SYMBOL):
@@ -259,6 +409,7 @@ class GapFadeTrader:
         self.running = False
         self.auth:   Optional[TradeStationAuthV3] = None
         self.http:   Optional[httpx.AsyncClient]  = None
+        self._ts:    Optional[TSSimClient]         = None   # None when TS SIM disabled
         self._db     = TradeDatabase()
         self._trades_log:    Optional[ChainedCsv] = None
         self._decisions_log: Optional[ChainedCsv] = None
@@ -278,6 +429,11 @@ class GapFadeTrader:
         self._gap_abs:    Optional[float]    = None
         self._last_bar_ts: Optional[datetime] = None  # last bar checked for exit
 
+        # TS SIM order IDs (None when not using TS SIM or not in a trade)
+        self._ts_entry_id: Optional[str] = None
+        self._ts_tp_id:    Optional[str] = None
+        self._ts_sl_id:    Optional[str] = None
+
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def initialize(self):
@@ -285,6 +441,13 @@ class GapFadeTrader:
         await self.auth.authenticate()
         await self.auth.start_auto_refresh()   # critical — tokens expire ~20 min (lesson d4c0c39)
         self.http = httpx.AsyncClient(timeout=30)
+
+        if TS_SIM_ENABLED:
+            self._ts = TSSimClient(self.auth, self.http, self.symbol, TS_SIM_ACCOUNT)
+            logger.info("TS SIM paper trading ENABLED — account %s", TS_SIM_ACCOUNT)
+        else:
+            logger.info("TS SIM disabled (GAP_FADE_TS_SIM=0) — internal simulation only")
+
         self._trades_log = ChainedCsv(
             DATA_DIR / "trades.csv",
             ["date_et", "dir", "gap_pct", "gap_abs_pts",
@@ -312,9 +475,17 @@ class GapFadeTrader:
             self._last_bar_ts      = datetime.fromisoformat(lbt).astimezone(ET) if lbt else None
             self._trade_open       = True
             self._today_setup_done = True   # don't re-detect gap after crash recovery
+            # Restore TS SIM order IDs so time-stop can cancel the bracket
+            self._ts_entry_id = st.get("ts_entry_id")
+            self._ts_tp_id    = st.get("ts_tp_id")
+            self._ts_sl_id    = st.get("ts_sl_id")
+            if self._ts and (self._ts_tp_id or self._ts_sl_id):
+                logger.info("Crash recovery: TS SIM bracket restored — TP #%s SL #%s",
+                            self._ts_tp_id, self._ts_sl_id)
 
+        exec_mode = f"TS SIM {TS_SIM_ACCOUNT}" if TS_SIM_ENABLED else "internal simulation"
         logger.info("=" * 65)
-        logger.info("GAP-1 PANIC-OPEN FADE — internal simulation — %s ×%d ct", self.symbol, CONTRACTS)
+        logger.info("GAP-1 PANIC-OPEN FADE — %s — %s ×%d ct", exec_mode, self.symbol, CONTRACTS)
         logger.info("Pre-reg 32da5d5 | OOS: N≥30+30d | PF>1.20→2ct | PF<1.00→archive")
         logger.info("Logging → data/gap_fade/ + data/trades.db (%s)", TRADER_ID)
         logger.info("=" * 65)
@@ -359,13 +530,14 @@ class GapFadeTrader:
 
     # ── Sim trade lifecycle ───────────────────────────────────────────────────
 
-    def _open_trade(self, direction: int, entry: float, target: float, stop: float,
-                    gap_pct: float, gap_abs: float,
-                    today_et: str, dow: int, entry_bar_et: datetime):
+    async def _open_trade(self, direction: int, entry: float, target: float, stop: float,
+                          gap_pct: float, gap_abs: float,
+                          today_et: str, dow: int, entry_bar_et: datetime):
         dir_str = "long" if direction == 1 else "short"
+        exec_tag = "TS SIM + sim" if self._ts else "sim"
         logger.info(
-            "🟢 SIM ENTRY [%s] | gap=%.1f pts (%.2f%%) | entry=%.2f target=%.2f stop=%.2f | %s",
-            dir_str, gap_abs, gap_pct * 100, entry, target, stop, today_et,
+            "🟢 ENTRY [%s][%s] | gap=%.1f pts (%.2f%%) | entry=%.2f target=%.2f stop=%.2f | %s",
+            dir_str, exec_tag, gap_abs, gap_pct * 100, entry, target, stop, today_et,
         )
         self._trade_open       = True
         self._today_setup_done = True
@@ -376,6 +548,16 @@ class GapFadeTrader:
         self._gap_pct          = gap_pct
         self._gap_abs          = gap_abs
         self._last_bar_ts      = entry_bar_et   # exit checking starts from the NEXT bar
+        self._ts_entry_id      = None
+        self._ts_tp_id         = None
+        self._ts_sl_id         = None
+
+        # Fire TS SIM paper order if enabled
+        if self._ts:
+            e_id, tp_id, sl_id = await self._ts.submit_entry_bracket(direction, target, stop)
+            self._ts_entry_id = e_id
+            self._ts_tp_id    = tp_id
+            self._ts_sl_id    = sl_id
 
         self._decisions_log.append({
             "date_et":     today_et,
@@ -398,17 +580,31 @@ class GapFadeTrader:
             "gap_pct":         gap_pct,
             "gap_abs":         gap_abs,
             "last_bar_ts":     entry_bar_et.isoformat(),
+            "ts_entry_id":     self._ts_entry_id,
+            "ts_tp_id":        self._ts_tp_id,
+            "ts_sl_id":        self._ts_sl_id,
         })
 
-    def _close_trade(self, exit_price: float, reason: str, exit_ts: datetime):
+    async def _close_trade(self, exit_price: float, reason: str, exit_ts: datetime):
         pnl_pts = self._direction * (exit_price - self._entry)
         pnl_usd = pnl_pts * MNQ_PV * CONTRACTS
         dir_str = "L" if self._direction == 1 else "S"
         icon    = "✅" if pnl_usd >= 0 else "🔴"
+        exec_tag = "TS SIM + sim" if self._ts else "sim"
         logger.info(
-            "%s SIM EXIT [%s] | entry=%.2f exit=%.2f | %+.1f pts | %+.2f USD | %s",
-            icon, reason, self._entry, exit_price, pnl_pts, pnl_usd, self._today_et,
+            "%s EXIT [%s][%s] | entry=%.2f exit=%.2f | %+.1f pts | %+.2f USD | %s",
+            icon, reason, exec_tag, self._entry, exit_price, pnl_pts, pnl_usd, self._today_et,
         )
+        # TS SIM broker actions:
+        #   time-stop → cancel bracket legs first, then market-close
+        #   fill/stop  → broker already closed via bracket; BRK type auto-cancels other leg
+        if self._ts:
+            if reason == "time":
+                await self._ts.cancel_bracket(self._ts_tp_id, self._ts_sl_id)
+                await self._ts.close_at_market(self._direction)
+            else:
+                # Broker-managed exit — both legs gone via BRK. Log for awareness only.
+                logger.info("TS SIM: broker-managed %s exit (bracket auto-cancelled)", reason)
         # Canonical cross-bot SQLite (idempotent INSERT OR IGNORE)
         self._db.log_trade(
             trader_id   = TRADER_ID,
@@ -443,14 +639,17 @@ class GapFadeTrader:
             "pnl_usd":     round(pnl_usd, 2),
         })
         # Reset sim trade state
-        self._trade_open  = False
-        self._direction   = None
-        self._entry       = None
-        self._target      = None
-        self._stop        = None
-        self._gap_pct     = None
-        self._gap_abs     = None
-        self._last_bar_ts = None
+        self._trade_open   = False
+        self._direction    = None
+        self._entry        = None
+        self._target       = None
+        self._stop         = None
+        self._gap_pct      = None
+        self._gap_abs      = None
+        self._last_bar_ts  = None
+        self._ts_entry_id  = None
+        self._ts_tp_id     = None
+        self._ts_sl_id     = None
         _clear_state()
 
     def _check_exit_on_bar(self, bar_et: datetime, bar: dict) -> Optional[tuple]:
@@ -471,6 +670,20 @@ class GapFadeTrader:
             if hi >= self._target: return self._target, "fill"
             if lo <= self._stop:   return self._stop,   "stop"
         return None
+
+    # ── Double-entry guard ────────────────────────────────────────────────────
+
+    def _already_decided_today(self, today_et: str) -> bool:
+        """Return True if decisions.csv already has an entry for today.
+        Prevents double-entry after SIGKILL before state.json is written."""
+        try:
+            with open(DATA_DIR / "decisions.csv") as f:
+                for row in csv.DictReader(f):
+                    if row.get("date_et") == today_et:
+                        return True
+        except (FileNotFoundError, Exception):
+            pass
+        return False
 
     # ── Main processing tick ──────────────────────────────────────────────────
 
@@ -510,7 +723,7 @@ class GapFadeTrader:
                     "Session boundary with open sim trade from %s — EOD carryover close at %.2f",
                     self._today_et, prior_sess["close"],
                 )
-                self._close_trade(
+                await self._close_trade(
                     exit_price = prior_sess["close"],
                     reason     = "eod_carryover",
                     exit_ts    = prior_last_et,
@@ -524,6 +737,13 @@ class GapFadeTrader:
 
         # ── Gap detection (once per session) ──────────────────────────────────
         if not self._trade_open and not self._today_setup_done:
+            # Double-entry guard: if we already logged a decision for today
+            # (possible after SIGKILL before state.json write), skip detection.
+            if self._already_decided_today(today_et):
+                logger.info("Gap check skipped — already decided for %s (decisions.csv guard)", today_et)
+                self._today_setup_done = True
+                return
+
             today_bars = today_sess["bars"]
             if not today_bars:
                 return
@@ -544,7 +764,7 @@ class GapFadeTrader:
                 target    = self._prior_rth_close
                 stop      = (rth_open + STOP_MULT * gap_abs) if direction == -1 \
                             else (rth_open - STOP_MULT * gap_abs)
-                self._open_trade(
+                await self._open_trade(
                     direction=direction, entry=rth_open,
                     target=target, stop=stop,
                     gap_pct=gap_pct, gap_abs=gap_abs,
@@ -586,11 +806,14 @@ class GapFadeTrader:
                     "gap_pct":         self._gap_pct,
                     "gap_abs":         self._gap_abs,
                     "last_bar_ts":     bar_et.isoformat(),
+                    "ts_entry_id":     self._ts_entry_id,
+                    "ts_tp_id":        self._ts_tp_id,
+                    "ts_sl_id":        self._ts_sl_id,
                 })
                 result = self._check_exit_on_bar(bar_et, bar)
                 if result:
                     exit_price, reason = result
-                    self._close_trade(exit_price, reason, bar_et)
+                    await self._close_trade(exit_price, reason, bar_et)
                     return   # trade closed this tick
 
             # Still open — log live unrealized P&L

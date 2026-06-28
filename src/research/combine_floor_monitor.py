@@ -2,7 +2,7 @@
 joint Topstep 50K combine (sealed deployment prereg yank-mim-joint-combine-deploy).
 
 Does NOT trade. Polls combined account equity and enforces the DERIVED halt triggers:
-  - distance-to-floor: equity <= trailing_floor + $500  (results_floor_trigger.md)
+  - distance-to-floor: equity <= trailing_floor + $750  (updated 2026-06-28, was $500)
   - combined PF < 0.70 after 30 combined trades         (results_pf_trigger.md)
   - correlation: OBSERVE-ONLY (logged, never triggers)
 
@@ -35,7 +35,7 @@ ACCOUNT_ID = os.environ.get("PROJECTX_ACCOUNT_ID", "")
 START_EQUITY = 50_000.0
 FLOOR_START = 48_000.0
 TRAIL = 2_000.0
-HALT_DISTANCE = 500.0          # DERIVED — results_floor_trigger.md
+HALT_DISTANCE = 750.0          # updated 2026-06-28: max_single_trade_loss × 1.5 = $500 × 1.5
 PF_THRESHOLD = 0.70            # DERIVED — results_pf_trigger.md
 PF_MIN_TRADES = 30
 PASS_TARGET = 53_000.0

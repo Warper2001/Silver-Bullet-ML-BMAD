@@ -127,3 +127,12 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 
 - Protected: ['gc_1min_holdout_20260301_plus.csv', 'hg_1min_holdout_20260301_plus.csv', 'pl_1min_holdout_20260301_plus.csv', 'rty_1min_holdout_20260301_plus.csv', 'si_1min_holdout_20260301_plus.csv', 'ym_1min_holdout_20260301_plus.csv']
 - Already protected: ['es_1min_holdout_20260301_plus.csv', 'mnq_1min_holdout_20260301_plus.csv']
+
+## Access — 2026-07-03 (Option B impulse-aftermath Gate 0 → OOS)
+
+| When | Prereg SHA | Script | Test | Result |
+|---|---|---|---|---|
+| 2026-07-03 | f2b88505dbd7c162e401a5cb9f12f554817480cb | tools/option_b_gate0_scout.py --run-oos --cell 8,follow,60 | Single-shot OOS of IS-selected cell (K8/follow/H60) on 2026-01-01→06-11 via mnq_1min_2026_ytd.csv (window CONTAINS sealed holdout 03-01→05-19; holdout CSV itself not read). Decision rule: PASS PF≥1.10 & N≥15 & ex-top3>0; MARGINAL 1.00–1.10 → PARK; FAIL <1.00 → closed. Gate 0 (IS 2025) passed all 4 sealed criteria first (PF 1.605, null 95th pct 1.569, K-neighborhood 1.318/1.493, ex-top3 +$425). | pending — recorded below after run |
+
+- chmod 444→644 on this log for this entry; restored to 444 after.
+- **RESULT (2026-07-03): ❌ OOS FAIL.** OOS all: N=546, net PF 0.999, EV −$0.06/trade; segments: 01-01→02-28 PF 0.980 (N=475), 03-01→06-11 PF 1.106 (N=71); ex-top-3-days PF 0.893 (−$2,596). Per sealed rule (FAIL < 1.00) Option B impulse-aftermath is CLOSED on this dataset; no re-sweeps. Note: 0.999 is boundary-adjacent to MARGINAL but the rule stands. IS event rate 99/yr exploded to 546/5.4mo in the 2026 war regime — event definition is regime-unstable; 2025's follow-edge did not transfer.

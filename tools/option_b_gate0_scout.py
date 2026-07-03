@@ -107,8 +107,16 @@ def find_events(df: pd.DataFrame, k: float) -> pd.DataFrame:
     return pd.DataFrame(events)
 
 
+def utc_naive(ts) -> np.datetime64:
+    return np.datetime64(pd.Timestamp(ts).tz_convert("UTC").tz_localize(None))
+
+
+def ts_index(df: pd.DataFrame) -> np.ndarray:
+    return df["ts"].dt.tz_convert("UTC").dt.tz_localize(None).to_numpy()
+
+
 def simulate(df: pd.DataFrame, events: pd.DataFrame, side: str, h: int) -> pd.DataFrame:
-    ts_arr = df["ts"].to_numpy()
+    ts_arr = ts_index(df)
     trades = []
     for _, ev in events.iterrows():
         i = ev["i"]
@@ -118,7 +126,7 @@ def simulate(df: pd.DataFrame, events: pd.DataFrame, side: str, h: int) -> pd.Da
         entry_t = df["ts"].iat[entry_i]
         entry_px = df["open"].iat[entry_i]
         target_t = entry_t + timedelta(minutes=h)
-        j = int(np.searchsorted(ts_arr, np.datetime64(target_t)))
+        j = int(np.searchsorted(ts_arr, utc_naive(target_t)))
         if j >= len(df):
             continue
         exit_t = df["ts"].iat[j]
@@ -153,7 +161,7 @@ def stats_row(label: str, tr: pd.DataFrame) -> str:
 def null_test(df: pd.DataFrame, n_trades: int, side_dirs: list[int], h: int,
               eligible_idx: np.ndarray, sel_pf: float) -> float:
     rng = random.Random(RNG_SEED)
-    ts_arr = df["ts"].to_numpy()
+    ts_arr = ts_index(df)
     beats = 0
     pfs = []
     for _ in range(N_NULL):
@@ -165,7 +173,7 @@ def null_test(df: pd.DataFrame, n_trades: int, side_dirs: list[int], h: int,
                 continue
             entry_t = df["ts"].iat[entry_i]
             entry_px = df["open"].iat[entry_i]
-            j = int(np.searchsorted(ts_arr, np.datetime64(entry_t + timedelta(minutes=h))))
+            j = int(np.searchsorted(ts_arr, utc_naive(entry_t + timedelta(minutes=h))))
             if j >= len(df):
                 continue
             exit_t = df["ts"].iat[j]

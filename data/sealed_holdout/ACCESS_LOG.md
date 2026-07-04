@@ -133,6 +133,14 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | When | Prereg SHA | Script | Test | Result |
 |---|---|---|---|---|
 | 2026-07-03 | f2b88505dbd7c162e401a5cb9f12f554817480cb | tools/option_b_gate0_scout.py --run-oos --cell 8,follow,60 | Single-shot OOS of IS-selected cell (K8/follow/H60) on 2026-01-01→06-11 via mnq_1min_2026_ytd.csv (window CONTAINS sealed holdout 03-01→05-19; holdout CSV itself not read). Decision rule: PASS PF≥1.10 & N≥15 & ex-top3>0; MARGINAL 1.00–1.10 → PARK; FAIL <1.00 → closed. Gate 0 (IS 2025) passed all 4 sealed criteria first (PF 1.605, null 95th pct 1.569, K-neighborhood 1.318/1.493, ex-top3 +$425). | pending — recorded below after run |
+| 2026-07-04 18:02 UTC | fbd7afe | backtest script | `--instrument hg --structural --ml-threshold 0.0 --start 2026-03-01 --end 2026-06-12 --preregistration fbd7afe` | ❌ FAIL — see HG Gate-1 RESULT below |
 
 - chmod 444→644 on this log for this entry; restored to 444 after.
 - **RESULT (2026-07-03): ❌ OOS FAIL.** OOS all: N=546, net PF 0.999, EV −$0.06/trade; segments: 01-01→02-28 PF 0.980 (N=475), 03-01→06-11 PF 1.106 (N=71); ex-top-3-days PF 0.893 (−$2,596). Per sealed rule (FAIL < 1.00) Option B impulse-aftermath is CLOSED on this dataset; no re-sweeps. Note: 0.999 is boundary-adjacent to MARGINAL but the rule stands. IS event rate 99/yr exploded to 546/5.4mo in the 2026 war regime — event definition is regime-unstable; 2025's follow-edge did not transfer.
+
+## Access — 2026-07-04 (HG copper Gate-1 one-shot holdout)
+
+- Prereg: `_bmad-output/preregistration_hg_gate1_holdout.md`, sealed commit fbd7afe (full SHA fbd7afe5f3cb9cc41c77cd667ab9718d41c51b86). Access row auto-appended by the backtest script above (18:02 UTC).
+- Step 1 reproduction gate PASSED before access: IS re-run reproduced frozen N=95 / gross PF 1.4386 / +$630.00, exact trade-list match to `backtest_1year_20260625_225218.csv`.
+- Step 2 integrity PASSED: working `hg_1min_2025_2026.csv` rows ≥2026-03-01 (66,368) semantically identical to sealed `hg_1min_holdout_20260301_plus.csv` (OHLCV+volume byte-exact; diffs only timestamp `T`-vs-space separator + float-repr noise in notional column).
+- **RESULT (2026-07-04): ❌ GATE-1 FAIL.** Holdout 2026-03-01→06-12: N=26, GROSS PF 0.563 (−$295), net @ $4.00/RT PF **0.463** (−$399, −$15.35/trade), WR 34.6% (IS 44%), exits 13 time / 12 SL / 1 TP (IS was TP-richer), ex-top-3-days −$563.75, max net DD −$470.50, monthly net Mar +$10 / Apr −$114 / May −$229 / Jun −$66. Sensitivity @ $5.25/RT: PF 0.435. Per sealed rule (FAIL < 1.00, N≥15 valid): **HG closed as a net candidate — "structural edge did not survive the holdout at measured cost."** Not a cost death: gross itself was negative. No re-runs, no subgroup rescue. Trade list: `data/reports/backtest_1year_20260704_180517.csv` (committed).

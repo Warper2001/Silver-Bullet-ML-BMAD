@@ -30,7 +30,7 @@ import json
 import subprocess
 import sys
 import time
-from datetime import datetime, time as dtime
+from datetime import datetime, time as dtime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -95,6 +95,136 @@ def secs_into_window(window):
 
 
 CRIT, WARN, OK = 2, 1, 0
+
+# --- YANK evaluation heartbeat (spec: _bmad-output/spec_yank_evaluation_heartbeat.md) ---
+# The heartbeat proves the strategy loop is EVALUATING bars, not merely that the process
+# is alive — log mtime stays fresh even in a 401-loop (the 06-07 failure class).
+HEARTBEAT_FILE = BASE / "logs" / "yank_heartbeat.json"
+HB_SERVICE = "trader-yank"
+HB_GRACE_SEC = 600        # startup grace before a missing/corrupt file is CRITICAL
+HB_TS_STALE_SEC = 300     # loop-frozen threshold; one lost cycle + one slow one at 60s cadence
+HB_BAR_LAG_SEC = 300      # matches the bot's own _check_stale 300s convention
+HB_POLL_FAILS_CRIT = 3    # network is transient; 3 consecutive = 401-loop / stale token
+
+
+def in_globex_window(now_et: datetime) -> bool:
+    """True inside CME Globex hours: Sun 18:00 ET -> Fri 17:00 ET, minus the 17:00-18:00
+    daily break. Deliberately no holiday calendar — a false page on a half-day costs a
+    human 30 seconds; a holiday module costs maintenance forever."""
+    wd, t = now_et.weekday(), now_et.time()
+    if wd == 5:                       # Saturday
+        return False
+    if wd == 6:                       # Sunday: opens 18:00 ET
+        return t >= dtime(18, 0)
+    if wd == 4:                       # Friday: closes 17:00 ET
+        return t < dtime(17, 0)
+    return not (dtime(17, 0) <= t < dtime(18, 0))   # Mon-Thu daily break
+
+
+def secs_since_globex_reopen(now_et: datetime):
+    """Seconds since the most recent Globex session open (18:00 ET), or None outside the
+    window. Used to grace the bar-lag alarm right after a reopen (first bar isn't instant)."""
+    if not in_globex_window(now_et):
+        return None
+    open_dt = now_et.replace(hour=18, minute=0, second=0, microsecond=0)
+    if now_et.time() < dtime(18, 0):
+        open_dt -= timedelta(days=1)
+    while open_dt.weekday() in (4, 5):   # no 18:00 open on Friday or Saturday
+        open_dt -= timedelta(days=1)
+    return (now_et - open_dt).total_seconds()
+
+
+def service_uptime_secs(svc: str):
+    """Seconds since the systemd unit last entered active state, or None if unknown."""
+    try:
+        r = subprocess.run(
+            ["systemctl", "show", f"{svc}.service", "-p", "ActiveEnterTimestamp", "--value"],
+            capture_output=True, text=True, timeout=10)
+        raw = r.stdout.strip()
+        if not raw:
+            return None
+        # systemd format: "Mon 2026-06-30 06:02:34 UTC"
+        parts = raw.split()
+        dt = datetime.strptime(" ".join(parts[1:3]), "%Y-%m-%d %H:%M:%S")
+        return max(0.0, time.time() - dt.timestamp())
+    except Exception:
+        return None
+
+
+def read_heartbeat(path: Path = HEARTBEAT_FILE):
+    """Parsed heartbeat dict, or None if missing/torn/corrupt (caller decides severity)."""
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return None
+
+
+def _parse_iso(s):
+    try:
+        return datetime.fromisoformat(s)
+    except Exception:
+        return None
+
+
+def evaluate_heartbeat(hb, now_utc: datetime, uptime_secs) -> list:
+    """Pure evaluation of a heartbeat payload -> [(level, message), ...].
+
+    Kept side-effect-free (no filesystem, no clock, no systemctl) so fixture tests can
+    drive every branch offline before this ever judges the real-money bot.
+    """
+    out = []
+    if hb is None:
+        if uptime_secs is not None and uptime_secs < HB_GRACE_SEC:
+            out.append((OK, f"yank heartbeat: absent but service started {uptime_secs:.0f}s ago (grace {HB_GRACE_SEC}s)"))
+        else:
+            out.append((CRIT, "yank heartbeat: missing/unparseable past startup grace — "
+                              "cannot prove the strategy loop is evaluating bars"))
+        return out
+
+    # 1) Loop frozen? ts must tick 24/7 (heartbeat writes in the market-closed branch too).
+    ts = _parse_iso(hb.get("ts") or "")
+    if ts is None:
+        out.append((CRIT, "yank heartbeat: 'ts' missing/unparseable"))
+        return out
+    age = (now_utc - ts).total_seconds()
+    if age > HB_TS_STALE_SEC:
+        out.append((CRIT, f"yank heartbeat: stale {age:.0f}s > {HB_TS_STALE_SEC}s — "
+                          f"event loop frozen/deadlocked (loop_seq {hb.get('loop_seq')})"))
+        return out   # everything else in the payload is equally stale; one alarm is enough
+
+    # 2) Poll failures (401-loop / stale token / PX fetch errors). Transient -> counter.
+    fails = int(hb.get("consec_poll_failures") or 0)
+    if fails >= HB_POLL_FAILS_CRIT:
+        out.append((CRIT, f"yank heartbeat: {fails} consecutive poll failures "
+                          f"(last: {hb.get('poll_error')}) — data feed down / token stale"))
+
+    # 3) Detect errors: sticky (total>0 alarms until restart). A logic fault in
+    #    _detect_and_enter silently skips entry decisions and will not self-heal.
+    detect_total = int(hb.get("detect_errors_total") or 0)
+    if detect_total > 0:
+        out.append((CRIT, f"yank heartbeat: {detect_total} _detect_and_enter exception(s) since start "
+                          f"— entries silently skipped (last: {hb.get('last_exception')})"))
+
+    # 4) Bar lag — only meaningful when the bot believes the market is open, we're inside
+    #    Globex hours, backfill is done, and the session has been open long enough.
+    now_et = now_utc.astimezone(ET)
+    reopen = secs_since_globex_reopen(now_et)
+    if (hb.get("market_open") and not hb.get("is_backfill")
+            and reopen is not None and reopen > HB_BAR_LAG_SEC):
+        last_bar = _parse_iso(hb.get("last_bar_ts") or "")
+        if last_bar is None:
+            out.append((CRIT, "yank heartbeat: market open but no bar processed yet this session"))
+        else:
+            lag = (now_utc - last_bar).total_seconds()
+            if lag > HB_BAR_LAG_SEC:
+                out.append((CRIT, f"yank heartbeat: last bar {lag:.0f}s old > {HB_BAR_LAG_SEC}s "
+                                  f"in Globex hours — data gap / silent stall"))
+
+    if not out:
+        out.append((OK, f"yank heartbeat: fresh ({age:.0f}s), loop_seq {hb.get('loop_seq')}, "
+                        f"{hb.get('bars_evaluated_total')} bars evaluated, "
+                        f"src {hb.get('data_source')}, contract {hb.get('contract')}"))
+    return out
 
 
 def is_active(svc: str) -> bool:
@@ -181,6 +311,15 @@ def main() -> int:
                  f"(possible silent stall / 401-loop)")
         else:
             emit(OK, f"{svc}: active, fresh ({age:.0f}s)")
+
+    # 2b) YANK evaluation heartbeat — proves the strategy loop is evaluating bars.
+    # Only judged while trader-yank is active (the service check above already alarms
+    # on not-active; a stopped service must not double-page as a missing heartbeat).
+    if is_active(HB_SERVICE):
+        for lvl, msg in evaluate_heartbeat(read_heartbeat(),
+                                           datetime.now(timezone.utc),
+                                           service_uptime_secs(HB_SERVICE)):
+            emit(lvl, msg)
 
     # 3) Floor monitor data freshness + distance-to-floor headroom
     row = last_monitor_row()

@@ -43,6 +43,21 @@ Monthly net ($4.00): Mar +$10, Apr −$114, May −$229, Jun −$66. Max net dra
 
 Evidence files (committed): `data/reports/backtest_1year_20260704_180148.csv` (Step 1 reproduction), `data/reports/backtest_1year_20260704_180517.csv` (Step 3 holdout trades).
 
+## Addendum 2026-07-06 — combine-fit confirms the death was signal, not risk
+
+Ran `tools/combine_fit_gate.py` on the frozen N=95 HG trade list at the measured $4.00/RT,
+against the Topstep 50K trailing-MLL math (floor $48K, EOD ratchet, $2K MLL). Micro copper
+(MHG, $2,500/pt) is **drawdown-safe**: worst single SL **−$79**, max DD from HWM **$360**,
+equity never comes within **$1,660** of the trailing floor — **zero bust risk**. It "fails"
+the tool only on the profit-target gate (+$250/yr net at 1 micro ≪ the $3,000 target — too
+small at safe size, not too dangerous). So copper's port died **purely on the OOS holdout
+signal** (net PF 0.463 above), NOT on combine-fit — the exact opposite of the platinum port,
+which passed slippage but is **combine-INcompatible** (1 full 50oz contract busts the $2K MLL;
+`_bmad-output/pl_combine_fit_verdict_20260705.md`). Scaling micro copper toward the $3K target
+(~10 contracts) would reintroduce bust risk (SL→−$750, DD→~$3.6K > $2K MLL) — moot, since one
+does not scale a signal that already failed forward. This is confirmatory; the port remains
+CLOSED on the holdout result. Tool: `tools/combine_fit_gate.py` (commit a42607c, on main).
+
 ## Program state
 
 Live book unchanged: MIM-NB 1ct + YANK 2ct on the real combine, GAP-1 on TS SIM paper (NO-GO until N≥30, ~late Sep), S25 accrual (decision ~Jul 23). Research queue: no active candidate holds a pending holdout slot; next in line per earlier reviews — S26-KZ prospective, S27 IFVG (blocked on S25), and whatever survives the next exploratory sweep.

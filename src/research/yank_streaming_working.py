@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
 from src.research.projectx_bars import fetch_px_ts_shaped, ProjectXBarFetchError, _to_contract_id
+from src.research.yank_heartbeat import HeartbeatWriter
 from src.research.shadow_parity import ShadowParityLogger, bars_by_minute
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
@@ -954,6 +955,10 @@ class Tier2StreamingTrader:
         # Data quality guards (Story 4-5)
         self._data_stale: bool = False
 
+        # Evaluation heartbeat (ops instrumentation only — never gates trading)
+        self._heartbeat = HeartbeatWriter(Path(__file__).parent.parent.parent / "logs/yank_heartbeat.json")
+        self._init_heartbeat_state()
+
         # TradeStationClient — created in initialize() once auth + httpx are ready
         self._account_config: AccountConfig = _default_account_config(symbol)
         self._ts_client: Optional[TradeStationClient] = None
@@ -1110,15 +1115,64 @@ class Tier2StreamingTrader:
                 )
                 StatePersistence.clear_state()
 
+    def _init_heartbeat_state(self):
+        """Counters/fields surfaced in logs/yank_heartbeat.json. Telemetry only."""
+        self._hb_started_at: str = datetime.now(timezone.utc).isoformat()
+        self._hb_loop_seq: int = 0
+        self._hb_bars_new_this_cycle: int = 0
+        self._hb_bars_evaluated_total: int = 0
+        self._hb_poll_http_status: Optional[int] = None   # TS branch only; None on ProjectX
+        self._hb_poll_error: Optional[str] = None
+        self._hb_consec_poll_failures: int = 0
+        self._hb_detect_errors_this_cycle: int = 0
+        self._hb_detect_errors_total: int = 0             # sticky until restart (healthcheck alarms on >0)
+        self._hb_last_exception: Optional[str] = None
+        self._hb_last_exception_ts: Optional[str] = None
+
+    def _write_heartbeat(self, market_open: bool):
+        """Overwrite logs/yank_heartbeat.json with current evaluation state.
+
+        Firewalled twice (here and in HeartbeatWriter.write): instrumentation must be
+        structurally unable to take down the trader. A missing/stale file IS the alarm
+        the healthcheck watches for, so failing silent here fails safe.
+        """
+        try:
+            last_bar = self._last_processed_timestamp
+            self._heartbeat.write({
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "loop_seq": self._hb_loop_seq,
+                "pid": os.getpid(),
+                "started_at": self._hb_started_at,
+                "market_open": market_open,
+                "is_backfill": self._is_backfill,
+                "data_source": self._data_source,
+                "contract": self._symbol,
+                "last_bar_ts": last_bar.isoformat() if last_bar else None,
+                "bars_new_this_cycle": self._hb_bars_new_this_cycle,
+                "bars_evaluated_total": self._hb_bars_evaluated_total,
+                "consec_poll_failures": self._hb_consec_poll_failures,
+                "poll_http_status": self._hb_poll_http_status,
+                "poll_error": self._hb_poll_error,
+                "detect_errors_this_cycle": self._hb_detect_errors_this_cycle,
+                "detect_errors_total": self._hb_detect_errors_total,
+                "last_exception": self._hb_last_exception,
+                "last_exception_ts": self._hb_last_exception_ts,
+            })
+        except Exception:
+            pass
+
     async def start_streaming(self):
         self.running = True
         try:
             while self.running:
-                if not self._is_market_open():
-                    await asyncio.sleep(60)
-                    continue
-                await self._poll_and_process()
-                await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                market_open = self._is_market_open()
+                self._hb_loop_seq += 1
+                if market_open:
+                    await self._poll_and_process()
+                # Heartbeat ticks every iteration — open or closed — so the healthcheck's
+                # ts-staleness check can run 24/7 without weekend false pages.
+                self._write_heartbeat(market_open=market_open)
+                await asyncio.sleep(60 if not market_open else POLL_INTERVAL_SECONDS)
         except Exception as e:
             logger.error(f"❌ Polling error: {e}", exc_info=True)
         finally:
@@ -1177,6 +1231,8 @@ class Tier2StreamingTrader:
 
     async def _poll_and_process(self):
         try:
+            self._hb_bars_new_this_cycle = 0
+            self._hb_detect_errors_this_cycle = 0
             now_utc = datetime.now(timezone.utc)
             since = self._last_processed_timestamp or (now_utc - timedelta(hours=HISTORY_HOURS))
 
@@ -1189,13 +1245,24 @@ class Tier2StreamingTrader:
                         now_utc=now_utc, live=self._data_px_live, since_utc=since)
                 except ProjectXBarFetchError as e:
                     logger.warning("PX_DATA_ERROR: %s — skipping poll", e)
+                    self._hb_poll_error = f"px: {e}"[:200]
+                    self._hb_consec_poll_failures += 1
                     return
+                self._hb_poll_http_status = None   # no single HTTP status on the PX path
+                self._hb_poll_error = None
+                self._hb_consec_poll_failures = 0
             else:
                 token = await self.auth.authenticate()
                 headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
                 url = f"{self._bars_base_url}&firstdate={since.strftime('%Y-%m-%dT%H:%M:%SZ')}"
                 response = await self.client.get(url, headers=headers)
-                if response.status_code != 200: return
+                self._hb_poll_http_status = response.status_code
+                if response.status_code != 200:
+                    self._hb_poll_error = f"HTTP {response.status_code}"
+                    self._hb_consec_poll_failures += 1
+                    return
+                self._hb_poll_error = None
+                self._hb_consec_poll_failures = 0
                 bars_data = response.json().get("Bars", [])
 
             if not bars_data:
@@ -1238,7 +1305,18 @@ class Tier2StreamingTrader:
                     self._update_h1_structure()
                     self._update_m15_choch()
                     await self._advance_active_trade(bar)
-                    await self._detect_and_enter(bar, is_backfill=self._is_backfill)
+                    try:
+                        await self._detect_and_enter(bar, is_backfill=self._is_backfill)
+                    except Exception as e:
+                        # Heartbeat annotation only — re-raise into this method's existing
+                        # catch-all so control flow is unchanged (trader does NOT shut down).
+                        self._hb_detect_errors_this_cycle += 1
+                        self._hb_detect_errors_total += 1
+                        self._hb_last_exception = f"_detect_and_enter: {e!r}"[:300]
+                        self._hb_last_exception_ts = datetime.now(timezone.utc).isoformat()
+                        raise
+                    self._hb_bars_new_this_cycle += 1
+                    self._hb_bars_evaluated_total += 1
                     self._bar_processing_times.append(_time_mod.perf_counter_ns() - _t0)
 
             if self._is_backfill and new_bars:
@@ -1249,8 +1327,13 @@ class Tier2StreamingTrader:
                 await self._run_shadow_parity(now_utc)
         except (httpx.TimeoutException, asyncio.TimeoutError):
             logger.warning("API_TIMEOUT: request timed out — skipping bar")
+            self._hb_poll_error = "timeout"
+            self._hb_consec_poll_failures += 1
         except Exception as e:
             logger.error(f"❌ Error in poll cycle: {e}", exc_info=True)
+            if self._hb_detect_errors_this_cycle == 0:   # keep the detect tag if that's the origin
+                self._hb_last_exception = f"poll_cycle: {e!r}"[:300]
+                self._hb_last_exception_ts = datetime.now(timezone.utc).isoformat()
 
     async def _run_shadow_parity(self, now_utc):
         """Stage-1 shadow: fetch ProjectX bars in parallel and log TS-vs-PX parity to

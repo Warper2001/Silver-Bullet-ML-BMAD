@@ -14,7 +14,7 @@ max_gap_dollars: 60.0
 max_hold_bars: 60
 max_pending_bars: 240
 contracts_per_trade: 5
-max_daily_loss: -750.0
+max_daily_loss: -300.0  # sealed: preregistration_yank_daily_breaker_2ct.md (2ct-derived, 1.25x worst single trade)
 vol_regime_lookback: 120
 vol_regime_threshold: 0.75
 min_gap_atr_ratio: 0.25

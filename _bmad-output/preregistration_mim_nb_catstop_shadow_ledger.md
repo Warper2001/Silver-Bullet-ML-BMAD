@@ -6,9 +6,10 @@
 stays deployed for the duration; any change afterward requires a NEW prereg.
 No sealed holdout data is accessed or spent.
 
-**Status:** DRAFT — DESIGN CHOICE PENDING. Two pre-committed designs are specified
-below (§4). Alex must pick exactly ONE before the seal commit; the unchosen design
-is struck from the sealed version. Becomes SEALED when committed with the choice made.
+**Status:** SEALED 2026-07-07 — Alex chose **Design B (Mary's fixed-N=10 dual
+criterion)**. Design A (SPRT) is struck and may not be revisited for this experiment.
+The event clock starts at the first genuine (broker-verified) cat-stop AFTER this
+commit. Ledger tool: `tools/mim_catstop_shadow_ledger.py`.
 
 ---
 
@@ -71,18 +72,13 @@ the market), so the counterfactual arm is deterministic given recorded bars.
   (06-25≈, 07-02, 07-07), not 4. Externally-closed positions are logged in the shadow
   ledger with `recovered=NA, approximate=true` and excluded from both designs' counts.
 
-## 4. Pre-committed designs — Alex picks ONE at seal time
+## 4. Sealed design — Design B chosen by Alex 2026-07-07
 
-### Design A — Quinn's SPRT (sequential)
+*(Design A — Quinn's SPRT — was struck at seal time per the pick-one rule. Its spec
+is preserved in git history at draft commit cf4975c for provenance; it is not
+available for this experiment.)*
 
-- H₀: recovery rate p ≥ 0.5 (500 worth revisiting) vs H₁: p ≤ 0.2 (250 confirmed).
-- α = 0.10, β = 0.10; standard Wald SPRT boundaries on the running
-  recovered/not-recovered count; hard cap N = 20 events (if no boundary crossed
-  by N=20, verdict = 250 confirmed by default).
-- Verdict "500 worth revisiting" does NOT change config — it authorizes drafting
-  a new reversion prereg with the accumulated ledger as evidence.
-
-### Design B — Mary's fixed-N dual criterion (recommended)
+### Design B — Mary's fixed-N dual criterion (CHOSEN)
 
 - Fixed N = 10 non-approximate events; no interim looks.
 - Revert-to-500 requires BOTH:

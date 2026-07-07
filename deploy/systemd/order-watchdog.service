@@ -1,0 +1,17 @@
+[Unit]
+Description=Account Order Watchdog — alarm on unrecognized orders (Topstep 50K acct 23884932, tripwire for 07-06-type external orders)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python tools/account_order_watchdog.py --loop 300
+Restart=on-failure
+RestartSec=60
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/order_watchdog.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/order_watchdog.log
+
+[Install]
+WantedBy=multi-user.target

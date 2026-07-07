@@ -119,6 +119,15 @@ async def resolve_front_month(http, px_auth, root: str = "MNQ") -> str:
 ENTRY_MARKS = {f"{h:02d}:{m}" for h in range(10, 16) for m in ("00", "30")} - {"16:00"}
 CHECK_MARKS = ENTRY_MARKS | {"16:00"}
 
+# Early-close sessions — sealed-engine parity: the engine skips any session without
+# a 16:00 bar (no marks, no sigma append, prev_close carries over). CME equity-futures
+# early closes for 2026 remainder; extend via MIM_EARLY_CLOSE_EXTRA=YYYY-MM-DD,...
+# (seal: preregistration_mim_nb_ops_hardening.md)
+EARLY_CLOSE_DATES = {"2026-09-07", "2026-11-26", "2026-11-27", "2026-12-24"} | {
+    d.strip() for d in os.environ.get("MIM_EARLY_CLOSE_EXTRA", "").split(",") if d.strip()}
+
+RECONCILE_INTERVAL_S = 30.0  # broker-truth stop-fill check cadence between marks
+
 
 # ----------------------------------------------------------------------
 # Hash-chained append-only CSV logger
@@ -192,6 +201,8 @@ class MimNbLive:
         self.day_deactivated = False
         self.last_bar_ts = None
         self._running = True
+        self._early_close_logged = None   # date already announced as stand-down
+        self._last_reconcile_mono = 0.0   # monotonic ts of last stop-fill reconcile
 
         # Combine balance tracking for buffer-aware risk gates
         self._realized_pnl = 0.0       # cumulative realized P&L across all sessions
@@ -570,6 +581,84 @@ class MimNbLive:
         except Exception as exc:
             logger.warning("fill logging failed for #%s: %s", order_id, exc)
 
+    async def _search_trades(self, hours_back: float = 8.0) -> list:
+        """Our account's broker-side fills in the recent window (truth source)."""
+        headers = await self.px._headers()
+        since = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).isoformat()
+        r = await self.http.post(f"{_BASE_URL}/Trade/search",
+                                 json={"accountId": self.account_id,
+                                       "startTimestamp": since}, headers=headers)
+        if r.status_code != 200:
+            return []
+        return r.json().get("trades", []) or []
+
+    async def _find_fill_for(self, order_id) -> dict | None:
+        for t in await self._search_trades():
+            if t.get("orderId") == order_id:
+                return t
+        return None
+
+    async def _find_closing_fill(self) -> dict | None:
+        """Most recent fill that would close our current position and isn't one of
+        our known orders — evidence of an external close (07-06 pattern)."""
+        closing_side = _SIDE_SELL if self.position == 1 else _SIDE_BUY
+        ours = {self.cat_stop_id}
+        candidates = [t for t in await self._search_trades()
+                      if t.get("side") == closing_side and t.get("size") == CONTRACTS
+                      and t.get("orderId") not in ours
+                      and t.get("profitAndLoss") is not None]  # P&L set = position-closing fill
+        if not candidates:
+            return None
+        return max(candidates, key=lambda t: t.get("creationTimestamp", ""))
+
+    async def _reconcile_stop_fill(self):
+        """Broker-truth reconcile between marks (seal: preregistration_mim_nb_ops_hardening.md).
+        Detects our cat-stop filling — or being externally canceled/closed — within
+        ~RECONCILE_INTERVAL_S instead of at the next 30-min mark, and never books an
+        exit the broker doesn't corroborate. Commingling-safe: inspects only our own
+        order ID and our own fills, never net position."""
+        if self.position == 0 or self.cat_stop_id is None:
+            return
+        open_flag = await self.px.is_order_open(self.cat_stop_id)
+        if open_flag is not False:
+            return  # True = still resting; None = unknown, retry next cycle
+        old_id = self.cat_stop_id
+        now_hm = datetime.now(ET).strftime("%H:%M")
+        stop_px = self.entry_px - CAT_STOP_PTS if self.position == 1 else self.entry_px + CAT_STOP_PTS
+        fill = await self._find_fill_for(old_id)
+        if fill is not None:
+            orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
+                               "event": "FILL", "order_id": old_id, "otype": _TYPE_STOP,
+                               "side": fill.get("side"), "size": fill.get("size"),
+                               "price": fill.get("price"), "outcome": "OK",
+                               "detail": f"fees={fill.get('fees')} pnl={fill.get('profitAndLoss')}"})
+            logger.warning("CAT-STOP FILLED @ %s (broker, order #%s) — booking at stop level "
+                           "%.2f per sealed convention", fill.get("price"), old_id, stop_px)
+            self._record_trade(stop_px, now_hm, "CAT_STOP")
+            await self.px.cancel_orders([old_id])  # mirror hygiene (TS-SIM stop may still rest)
+            self.cat_stop_id = None
+            return
+        close_fill = await self._find_closing_fill()
+        if close_fill is not None:
+            px_real = float(close_fill["price"])
+            logger.critical("EXTERNAL CLOSE: our stop #%s canceled UNFILLED and closing fill "
+                            "@ %.2f exists (order #%s) — booking EXTERNAL_CLOSE at broker "
+                            "truth; safe-mode for the day", old_id, px_real,
+                            close_fill.get("orderId"))
+            self._record_trade(px_real, now_hm, "EXTERNAL_CLOSE")
+            await self.px.cancel_orders([old_id])
+            self.cat_stop_id = None
+            self.day_deactivated = True
+            return
+        logger.critical("CAT-STOP #%s gone (no fill, no closing fill) — position UNPROTECTED, "
+                        "re-placing protective stop @ %.2f", old_id, stop_px)
+        sid = await self._order(_TYPE_STOP,
+                                _SIDE_SELL if self.position == 1 else _SIDE_BUY, stop_px)
+        self.cat_stop_id = sid
+        if sid is None:
+            logger.error("protective stop re-place REJECTED — flattening per seal")
+            await self._flatten("STOP_REPLACE_FAILED")
+
     async def _cancel_cat_stop(self):
         if self.cat_stop_id:
             ok = await self.px.cancel_order(str(self.cat_stop_id))
@@ -696,6 +785,12 @@ class MimNbLive:
                          "received_at": datetime.now(timezone.utc).isoformat()})
         if not ("09:31" <= hm <= "16:00"):
             return
+        if str(et.date()) in EARLY_CLOSE_DATES:
+            if self._early_close_logged != et.date():
+                self._early_close_logged = et.date()
+                logger.warning("EARLY-CLOSE session %s — standing down for engine parity "
+                               "(no marks, no sigma update, prev_close carries over)", et.date())
+            return
         if et.date() != self.day:
             await self._maybe_roll()       # quarterly contract roll, while flat
             self._new_session(et.date())
@@ -820,6 +915,10 @@ class MimNbLive:
                             self.last_bar_ts = ts
                 if self._data_shadow:
                     await self._run_shadow_parity(bars)
+                mono = asyncio.get_event_loop().time()
+                if mono - self._last_reconcile_mono >= RECONCILE_INTERVAL_S:
+                    self._last_reconcile_mono = mono
+                    await self._reconcile_stop_fill()
             except Exception as exc:
                 logger.error("poll loop error: %s", exc)
             # 2s cadence in the first 20s of each minute (catch the completed bar

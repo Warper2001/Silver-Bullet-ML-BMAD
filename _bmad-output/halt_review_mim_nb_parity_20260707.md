@@ -95,3 +95,26 @@ extreme. **The dominant deviation is implementation drift, not market regime.**
    mispriced by $335), and alarm on any account order it didn't place.
 6. PR #3 shadow-ledger draft: 07-06 must be excluded from any cat-stop event ledger;
    noted there before seal.
+
+## Addendum — corrections applied (2026-07-07 evening, Alex's go)
+
+- **Anomaly disposition (Alex):** parked without attribution; escalate to Topstep only
+  on recurrence. Tripwire shipped: `tools/account_order_watchdog.py` (read-only
+  ProjectX Order/search diff vs local records; #3229490103 pre-acknowledged; alerts to
+  `data/combine_joint/order_watchdog_alerts.csv`). Not yet deployed as a service.
+- **Ledger corrected** via `tools/mim_ledger_correction_20260706.py` (dry-run verified,
+  then --apply): trades.csv 07-06 row → EXTERNAL_FLATTEN, entry 30023.00 (real fill —
+  deviates from the mark-model convention of other rows, deliberately broker-true),
+  exit 13:30 @ 29940.50, −$165.00; rows 7–8 re-chained (new head `e9781917c4f1a8c7`),
+  full chain re-verified from GENESIS; backup at `data/mim_nb/trades.csv.bak-20260707`.
+  trades.db id 6343 updated (pnl −165.0, EXTERNAL_FLATTEN, correction note in metadata).
+- **Floor monitor PF corrected:** 0.328 → 0.365 @ N=10 on the next poll.
+- **trader-mim-nb restarted** while flat (chain head + realized P&L reloaded from
+  corrected CSV; startup reconcile FLAT ✓). Restart exposed the recurring `.env`
+  landmine (TRADESTATION_CLIENT_ID/SECRET missing again, same as 2026-06-22) — restored
+  from `exchange_token_simple.py`. Root cause of the recurrence still unowned: nothing
+  prevents .env regressions; consider a boot-time env sanity check.
+- **Watch item:** startup logged `BUFFER WARNING −109.50` from the own-ledger fallback
+  before the first shared-floor read (shared buffer was $854). Verify at the next 10:00
+  ET mark that BUFFER_GATE gates on the shared number.
+- DLL parity-reversion prereg drafted: `preregistration_mim_nb_dll_parity_reversion.md`.

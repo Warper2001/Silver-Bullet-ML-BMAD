@@ -62,8 +62,14 @@ the market), so the counterfactual arm is deterministic given recorded bars.
 - **Ledger:** append one row per event to `data/mim_nb/shadow_catstop.csv`
   (`date,entry_px,side,arm250_pnl,arm500_pnl,recovered,approximate,chain`) —
   written by an offline tool run after each event day, never by the live bot.
-- **Clock starts:** first event AFTER the seal commit. The 3 retrospective
+- **Clock starts:** first event AFTER the seal commit. The retrospective
   events are context only and do NOT count.
+- **Event authenticity (added 2026-07-07):** an event counts ONLY if the broker-side
+  stop order actually filled (verify via ProjectX Trade/search, as in the halt-review).
+  The 2026-07-06 "cat-stop" was an EXTERNAL FLATTEN (order #3229490103; the bot's stop
+  was canceled unfilled) — it is excluded, making the genuine retrospective count 3
+  (06-25≈, 07-02, 07-07), not 4. Externally-closed positions are logged in the shadow
+  ledger with `recovered=NA, approximate=true` and excluded from both designs' counts.
 
 ## 4. Pre-committed designs — Alex picks ONE at seal time
 

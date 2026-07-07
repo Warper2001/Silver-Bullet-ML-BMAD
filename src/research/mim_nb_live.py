@@ -49,7 +49,7 @@ AUTOROLL = os.environ.get("MIM_NB_AUTOROLL", "1") != "0"  # set 0 to pin MIM_NB_
 CONTRACTS = 1
 CAT_STOP_PTS = 250.0   # was 500 — halved to bring max loss to 25% of $2k trailing DD
 LOOKBACK_DAYS = 14
-DLL_GUARD_USD = -500.0  # tracks CAT_STOP: 250pt × $2/pt × 1ct = $500/trade max
+DLL_GUARD_USD = -1000.0  # MC-authorized day cut (seal: preregistration_mim_nb_dll_parity_reversion.md); permits one post-cat-stop re-entry
 PT_VAL = 2.0
 ET = pytz.timezone("America/New_York")
 

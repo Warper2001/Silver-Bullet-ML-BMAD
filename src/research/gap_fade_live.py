@@ -274,6 +274,37 @@ class TSSimClient:
                 ok = await self.cancel_order(oid)
                 logger.info("TS SIM cancel bracket #%s → %s", oid, "ok" if ok else "failed")
 
+    _BROKERAGE_ORDERS = "https://sim-api.tradestation.com/v3/brokerage/accounts"
+
+    async def fetch_orders_status(self, order_ids) -> dict:
+        """Broker-side order status + execution prices, keyed by order ID (str).
+        Realized-capture evidence for the promotion gate — the modeled ledger
+        alone cannot answer 'what did the fills actually cost?'."""
+        ids = ",".join(str(i) for i in order_ids if i)
+        if not ids:
+            return {}
+        try:
+            r = await self._http.get(
+                f"{self._BROKERAGE_ORDERS}/{self._account_id}/orders/{ids}",
+                headers=await self._headers())
+            if r.status_code != 200:
+                logger.warning("TS SIM order-status HTTP %s for [%s]", r.status_code, ids)
+                return {}
+            out = {}
+            for o in r.json().get("Orders", []):
+                leg = (o.get("Legs") or [{}])[0]
+                px = leg.get("ExecutionPrice")
+                out[str(o.get("OrderID"))] = {
+                    "status": o.get("Status"),
+                    "status_desc": o.get("StatusDescription"),
+                    "exec_price": float(px) if px not in (None, "", "0") else None,
+                    "exec_qty": float(leg.get("ExecQuantity") or 0),
+                }
+            return out
+        except Exception as exc:
+            logger.warning("TS SIM order-status fetch failed for [%s]: %s", ids, exc)
+            return {}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Bar helpers
@@ -459,6 +490,15 @@ class GapFadeTrader:
             ["date_et", "dow", "gap_pct", "gap_abs_pts",
              "prior_close", "rth_open", "action", "detail"],
         )
+        # Realized TS SIM fills — promotion-gate blocker #1 (Friday review 2026-07-04):
+        # the trades.csv ledger is bar-modeled; this file records what the broker
+        # actually executed, one row per completed trade.
+        self._fills_log = ChainedCsv(
+            DATA_DIR / "fills.csv",
+            ["date_et", "dir", "outcome", "entry_id", "entry_exec",
+             "exit_role", "exit_id", "exit_exec", "qty",
+             "realized_pnl_usd", "modeled_pnl_usd", "delta_usd"],
+        )
         # Crash recovery: reload open sim position from disk
         st = _load_state()
         if st and st.get("trade_open"):
@@ -598,13 +638,27 @@ class GapFadeTrader:
         # TS SIM broker actions:
         #   time-stop → cancel bracket legs first, then market-close
         #   fill/stop  → broker already closed via bracket; BRK type auto-cancels other leg
+        ts_close_id = None
         if self._ts:
             if reason == "time":
                 await self._ts.cancel_bracket(self._ts_tp_id, self._ts_sl_id)
-                await self._ts.close_at_market(self._direction)
+                ts_close_id = await self._ts.close_at_market(self._direction)
             else:
                 # Broker-managed exit — both legs gone via BRK. Log for awareness only.
                 logger.info("TS SIM: broker-managed %s exit (bracket auto-cancelled)", reason)
+        # Realized-fill capture (async, best-effort): fetch broker exec prices for
+        # the entry and whichever order actually exited, then append fills.csv.
+        if self._ts and self._ts_entry_id:
+            exit_role, exit_id = {
+                "fill": ("tp", self._ts_tp_id),
+                "stop": ("sl", self._ts_sl_id),
+            }.get(reason, ("close", ts_close_id))
+            asyncio.create_task(self._log_realized_fills({
+                "date_et": self._today_et, "dir": dir_str, "outcome": reason,
+                "direction": self._direction, "modeled_pnl": round(pnl_usd, 2),
+                "entry_id": self._ts_entry_id, "exit_role": exit_role,
+                "exit_id": exit_id,
+            }))
         # Canonical cross-bot SQLite (idempotent INSERT OR IGNORE)
         self._db.log_trade(
             trader_id   = TRADER_ID,
@@ -651,6 +705,47 @@ class GapFadeTrader:
         self._ts_tp_id     = None
         self._ts_sl_id     = None
         _clear_state()
+
+    async def _log_realized_fills(self, ctx: dict):
+        """Fetch broker exec prices for a completed trade and append fills.csv.
+        Best-effort: a crash inside the 6s settle window loses the row (log-only
+        evidence, never a trading input). Incomplete fills are recorded with
+        blank exec fields rather than dropped."""
+        await asyncio.sleep(6)   # let SIM executions settle before querying
+        try:
+            st = await self._ts.fetch_orders_status([ctx["entry_id"], ctx["exit_id"]])
+            e = st.get(str(ctx["entry_id"]), {})
+            x = st.get(str(ctx["exit_id"]), {}) if ctx["exit_id"] else {}
+            e_px, x_px = e.get("exec_price"), x.get("exec_price")
+            realized = None
+            if e_px is not None and x_px is not None:
+                realized = round(ctx["direction"] * (x_px - e_px) * MNQ_PV * CONTRACTS, 2)
+            self._fills_log.append({
+                "date_et":          ctx["date_et"],
+                "dir":              ctx["dir"],
+                "outcome":          ctx["outcome"],
+                "entry_id":         ctx["entry_id"],
+                "entry_exec":       e_px if e_px is not None else "",
+                "exit_role":        ctx["exit_role"],
+                "exit_id":          ctx["exit_id"] or "",
+                "exit_exec":        x_px if x_px is not None else "",
+                "qty":              e.get("exec_qty") or CONTRACTS,
+                "realized_pnl_usd": realized if realized is not None else "",
+                "modeled_pnl_usd":  ctx["modeled_pnl"],
+                "delta_usd":        (round(realized - ctx["modeled_pnl"], 2)
+                                     if realized is not None else ""),
+            })
+            if realized is not None:
+                logger.info("REALIZED FILLS [%s]: entry %.2f → %s %.2f | realized $%+.2f "
+                            "vs modeled $%+.2f (Δ $%+.2f)",
+                            ctx["date_et"], e_px, ctx["exit_role"], x_px,
+                            realized, ctx["modeled_pnl"], realized - ctx["modeled_pnl"])
+            else:
+                logger.warning("REALIZED FILLS [%s]: incomplete broker data "
+                               "(entry=%s exit=%s) — row recorded with blanks",
+                               ctx["date_et"], e or "missing", x or "missing")
+        except Exception as exc:
+            logger.warning("realized-fill logging failed for %s: %s", ctx.get("date_et"), exc)
 
     def _check_exit_on_bar(self, bar_et: datetime, bar: dict) -> Optional[tuple]:
         """Return (exit_price, reason) if this bar triggers an exit, else None.

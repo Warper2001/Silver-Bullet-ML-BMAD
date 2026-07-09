@@ -82,6 +82,57 @@ def test_external_close_books_broker_truth_and_safe_mode():
     assert bot.cat_stop_id is None
 
 
+def test_external_close_flattens_ts_sim_mirror():
+    """07-06 stranded-lot fix: an external flatten must also close the SIM mirror
+    (synthetic market order enqueued), since there is no ProjectX order to copy."""
+    bot = make_bot(position=1, entry_px=30012.25)
+    bot.account_id = "1"
+    bot.contract_id = "CON.F.US.MNQ.U26"
+
+    class FakeMirror:
+        def __init__(self):
+            self.submitted = []
+
+        def submit(self, px_oid, payload):
+            self.submitted.append((px_oid, payload))
+    bot._ts_sim_mirror = FakeMirror()
+
+    async def nofill(oid):
+        return None
+
+    async def closing():
+        return {"orderId": 999, "price": 29940.5, "side": 1, "size": 1,
+                "profitAndLoss": -165.0, "creationTimestamp": "2026-07-06T17:30:58Z"}
+    bot._find_fill_for = nofill
+    bot._find_closing_fill = closing
+    bot.day_deactivated = False
+    run(bot._reconcile_stop_fill())
+    assert bot.booked == [(29940.5, "EXTERNAL_CLOSE")]
+    (px_oid, payload), = bot._ts_sim_mirror.submitted
+    assert px_oid == "extclose-111"
+    assert payload["type"] == m._TYPE_MARKET
+    assert payload["side"] == m._SIDE_SELL      # closing a long → sell
+    assert payload["size"] == m.CONTRACTS
+    assert payload["contractId"] == "CON.F.US.MNQ.U26"
+
+
+def test_external_close_no_mirror_noop():
+    """Mirror disabled (_ts_sim_mirror=None) — external close path unchanged."""
+    bot = make_bot(position=1, entry_px=30012.25)
+
+    async def nofill(oid):
+        return None
+
+    async def closing():
+        return {"orderId": 999, "price": 29940.5, "side": 1, "size": 1,
+                "profitAndLoss": -165.0, "creationTimestamp": "2026-07-06T17:30:58Z"}
+    bot._find_fill_for = nofill
+    bot._find_closing_fill = closing
+    run(bot._reconcile_stop_fill())
+    assert bot.booked == [(29940.5, "EXTERNAL_CLOSE")]
+    assert bot.day_deactivated is True
+
+
 def test_vanished_stop_replaces_protection():
     bot = make_bot(position=-1, entry_px=29300.0)
 

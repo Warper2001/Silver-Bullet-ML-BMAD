@@ -65,3 +65,22 @@ early-close gate accompany the code (`tests/unit/test_mim_reconcile.py`).
 
 Base: main @ e0e9db2 lineage (post PR #5/#6/#7). `src/research/mim_nb_live.py`
 pre-change SHA-256: recorded in the code commit diff itself (tamper-evident via git).
+
+## Amendment 1 (2026-07-08) — external-close must also flatten the TS SIM mirror
+
+**Gap found in production:** the 07-06 external flatten closed the live combine
+position, but the SIM mirror copy (buy 1 MNQU26 @ 30024, order #960449894) was never
+closed — no ProjectX order existed for the mirror to copy, and the reconcile branch
+sealed above only books the ledger and cancels the resting stop. The stranded SIM lot
+rode unhedged for two days (discovered 07-08 at +$632 unrealized, by luck).
+
+**Change (paper-side only, no live/signal effect):** in the EXTERNAL_CLOSE branch of
+`_reconcile_stop_fill()`, when the TS SIM mirror is enabled, enqueue a synthetic
+market close (`extclose-<stop_id>`, closing side, `CONTRACTS`) via the mirror's
+fire-and-forget queue. The authoritative ProjectX path is untouched; mirror failure
+modes are unchanged (firewalled worker, never raises into the combine path).
+Booking, safe-mode, and all sealed live behavior identical. Unit tests added
+(`test_external_close_flattens_ts_sim_mirror`, `test_external_close_no_mirror_noop`).
+
+**Operational remediation:** stranded 07-06 lot flattened via
+`tools/ts_sim_flatten_stray.py` (one-shot operator tool, committed with this change).

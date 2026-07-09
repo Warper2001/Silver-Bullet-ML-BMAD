@@ -641,12 +641,21 @@ class MimNbLive:
         close_fill = await self._find_closing_fill()
         if close_fill is not None:
             px_real = float(close_fill["price"])
+            close_side = _SIDE_SELL if self.position == 1 else _SIDE_BUY
             logger.critical("EXTERNAL CLOSE: our stop #%s canceled UNFILLED and closing fill "
                             "@ %.2f exists (order #%s) — booking EXTERNAL_CLOSE at broker "
                             "truth; safe-mode for the day", old_id, px_real,
                             close_fill.get("orderId"))
             self._record_trade(px_real, now_hm, "EXTERNAL_CLOSE")
             await self.px.cancel_orders([old_id])
+            # An external flatten closes only the live side — the TS SIM mirror
+            # has no ProjectX order to copy, so flatten it explicitly (synthetic
+            # payload, fire-and-forget; 07-06 left a stranded SIM lot without this).
+            if self._ts_sim_mirror is not None:
+                self._ts_sim_mirror.submit(
+                    f"extclose-{old_id}",
+                    {"accountId": self.account_id, "contractId": self.contract_id,
+                     "type": _TYPE_MARKET, "side": close_side, "size": CONTRACTS})
             self.cat_stop_id = None
             self.day_deactivated = True
             return

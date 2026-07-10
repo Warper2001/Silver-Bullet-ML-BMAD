@@ -142,6 +142,9 @@ class ThursdayShortTrader:
         self.ts_entry_time = ""
         self._trades_log = None       # ChainedCsv data/thursday_ts/trades.csv
         self._decisions_log = None    # ChainedCsv data/thursday_ts/decisions.csv
+        self._cf_log = None           # ChainedCsv data/thursday_ts/counterfactuals.csv (Amendment 3)
+        self._pending_cf: Optional[list] = None       # early-exit legs awaiting held-to-23:05 mark
+        self._pending_cf_thursday: Optional[str] = None
 
     # ── Integrity helpers ─────────────────────────────────────────────────
 
@@ -208,6 +211,15 @@ class ThursdayShortTrader:
             "action": action, "detail": detail,
         })
 
+    def _write_cf(self, row: dict) -> None:
+        """Amendment 3 counterfactual ledger — knowledge-only, firewalled."""
+        if self._cf_log is None:
+            return
+        try:
+            self._cf_log.append(row)
+        except Exception as e:
+            logger.warning(f"counterfactual log write failed: {e}")
+
     # ── Entry / exit ──────────────────────────────────────────────────────
 
     async def _enter(self, client) -> None:
@@ -264,6 +276,7 @@ class ThursdayShortTrader:
         import time
         logger.info(f"THURSDAY SHORT — EXITING ({reason})")
         exit_t = datetime.now(timezone.utc).strftime("%H:%M")
+        cf_pending = []   # Amendment 3: legs whose held-to-23:05 counterfactual resolves later
         for sym, entry, qty, label in [
             (self.ts_mbt_sym, self.btc_entry, self.ts_n_mbt, "MBT"),
             (self.ts_met_sym, self.eth_entry, self.ts_n_met, "MET"),
@@ -289,8 +302,23 @@ class ThursdayShortTrader:
                         "lr_slope20_bpd": "" if self._lr20 is None else round(self._lr20, 3),
                         "lr_slope40_bpd": "" if self._lr40 is None else round(self._lr40, 3),
                     })
+                cf_row = {
+                    "thursday": self.current_thursday or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    "symbol": sym, "qty": qty, "entry_px": entry,
+                    "stop_trigger_px": round(entry * (1 + STOP_PCT / 100), 2),
+                    "realized_exit_t": exit_t, "realized_exit_px": exit_price,
+                    "realized_reason": reason, "realized_pnl_usd": round(pnl, 2),
+                }
+                if reason == "scheduled_exit":   # held to 23:05 -> counterfactual == realized
+                    self._write_cf(dict(cf_row, cf_2305_px=exit_price,
+                                        cf_pnl_usd=round(pnl, 2), source="live"))
+                else:                            # early exit -> resolve at first poll >= 23:05
+                    cf_pending.append(cf_row)
             except Exception as e:
                 logger.error(f"{label} exit FAILED: {e}")
+        if cf_pending:
+            self._pending_cf = cf_pending
+            self._pending_cf_thursday = cf_pending[0]["thursday"]
         pos = await client.get_open_positions()                     # confirm flat
         t0 = time.time()
         while pos and time.time() - t0 < 25:
@@ -318,6 +346,10 @@ class ThursdayShortTrader:
             self._decisions_log = ChainedCsv(_tdir / "decisions.csv",
                 ["ts_utc", "thursday", "mbt_sym", "met_sym", "mark_btc", "mark_eth",
                  "n_mbt", "n_met", "lr_slope20_bpd", "lr_slope40_bpd", "action", "detail"])
+            self._cf_log = ChainedCsv(_tdir / "counterfactuals.csv",
+                ["thursday", "symbol", "qty", "entry_px", "stop_trigger_px",
+                 "realized_exit_t", "realized_exit_px", "realized_reason",
+                 "realized_pnl_usd", "cf_2305_px", "cf_pnl_usd", "source"])
             orphan = await client.get_open_positions()              # G2 startup reconcile
             if orphan:
                 logger.warning(f"orphan position(s) at startup: {[p.get('Symbol') for p in orphan]} — flattening")
@@ -335,6 +367,23 @@ class ThursdayShortTrader:
                     dow = now.weekday(); hour, minute = now.hour, now.minute
                     today = now.strftime("%Y-%m-%d")
                     day_names = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+
+                    # Amendment 3: resolve early-exit counterfactuals at the first
+                    # poll >= that Thursday 23:05 UTC (knowledge-only, firewalled)
+                    if self._pending_cf and (today > self._pending_cf_thursday
+                            or (today == self._pending_cf_thursday
+                                and (hour, minute) >= (EXIT_HOUR, EXIT_MINUTE))):
+                        try:
+                            for leg in self._pending_cf:
+                                px = await client.last_price(leg["symbol"])
+                                if px is None:
+                                    raise RuntimeError(f"no cf mark for {leg['symbol']}")
+                                cf_pnl = (leg["entry_px"] - px) * leg["qty"] * 0.1
+                                self._write_cf(dict(leg, cf_2305_px=px,
+                                                    cf_pnl_usd=round(cf_pnl, 2), source="live"))
+                            self._pending_cf = None
+                        except Exception as e:  # firewall — cf must never disrupt trading
+                            logger.warning(f"counterfactual resolution failed (retry next poll): {e}")
 
                     if (dow == 3 and hour == ENTRY_HOUR and minute < 5
                             and not self.position_open and self.current_thursday != today):

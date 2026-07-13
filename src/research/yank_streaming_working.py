@@ -354,8 +354,14 @@ class RiskManager:
         """Update daily P&L after a trade closes. Caller saves full state."""
         self._daily_pnl += pnl
 
-    def check_and_update(self, bar_et: datetime, max_daily_loss: float) -> bool:
+    def check_and_update(self, bar_et: datetime, max_daily_loss: float,
+                         is_backfill: bool = False) -> bool:
         """Reset on new calendar day, then check circuit breaker. Returns True if halted."""
+        if is_backfill:
+            # Backfill bars are historical: their day rollovers would clobber the
+            # daily P&L restored at startup (observed 2026-07-13, disarming the
+            # daily breaker's carried loss). Never mutate live risk state here.
+            return False
         today = bar_et.date()
         if self._last_trading_date is not None and self._last_trading_date != today:
             logger.info(
@@ -1065,11 +1071,38 @@ class Tier2StreamingTrader:
         ):
             if self._on_combine:
                 # Commingling-safe: the account nets MIM+YANK, so never read net position.
-                # Trust our own persisted trade; classify via our OWN entry order ID.
+                # Classify via this bot's OWN order IDs only — fill-aware: an entry that
+                # is no longer open is NOT proof the trade is still active; the brackets
+                # may have closed it while we were down (observed 2026-07-13: resumed a
+                # phantom short whose SL had already filled).
                 from src.research.tier2_streaming_working import TradeState
                 entry_id = state.get("sim_entry_order_id")
+                tp_id = state.get("sim_tp_order_id")
+                sl_id = state.get("sim_sl_order_id")
                 entry_open = await self._ts_client.is_order_open(entry_id) if entry_id else None
-                broker_state = TradeState(status="PENDING" if entry_open else "ACTIVE")
+                if entry_open:
+                    broker_state = TradeState(status="PENDING")
+                elif tp_id or sl_id:
+                    tp_open = await self._ts_client.is_order_open(tp_id) if tp_id else False
+                    sl_open = await self._ts_client.is_order_open(sl_id) if sl_id else False
+                    if tp_open is False and sl_open is False:
+                        # Entry filled and both brackets confirmed gone: the trade
+                        # completed (or was externally closed) during downtime.
+                        logger.critical(
+                            "RECOVERY: trade closed during downtime (entry #%s filled, "
+                            "brackets #%s/#%s no longer open) — NOT resuming. Its PnL "
+                            "is not in trades.db; reconcile the ledger manually.",
+                            entry_id, tp_id, sl_id,
+                        )
+                        StatePersistence.clear_state()
+                        return
+                    # At least one bracket still working (or status unknown → assume
+                    # working, the protective choice) → genuinely live trade.
+                    broker_state = TradeState(status="ACTIVE")
+                else:
+                    # Entry filled but exit IDs never persisted (crash inside the
+                    # fill-detect window) — resume and re-arm protection below.
+                    broker_state = TradeState(status="ACTIVE")
             else:
                 broker_state = await self._ts_client.reconcile_state(SIM_ACCOUNT_ID)
             if broker_state.status == "ACTIVE":
@@ -1091,6 +1124,25 @@ class Tier2StreamingTrader:
                     vol_regime_pct=float(state.get("vol_regime_pct", 0.0)),
                     ml_proba=float(state.get("ml_proba", float("nan"))),
                 )
+                # Reconstruct the entry decision so the normal bar-based exit logic
+                # (TP/SL/time-stop) manages the resumed trade — without it the only
+                # exit path was the 15:10 CT flatten's raw market order.
+                self._active_entry_decision = EntryDecision(
+                    direction=Direction.BEARISH if state["direction"] == "SHORT" else Direction.BULLISH,
+                    entry_price=float(state["entry_price"]),
+                    sl_price=float(state["sl_price"]),
+                    tp_price=float(state["tp_price"]),
+                    contracts=self._contracts,
+                )
+                if (self._on_combine and self.active_trade.sim_tp_order_id is None
+                        and self.active_trade.sim_sl_order_id is None):
+                    tp_id2, sl_id2 = await self._ts_client.place_exit_orders(
+                        self._active_entry_decision, self._exec_account)
+                    self.active_trade.sim_tp_order_id = tp_id2
+                    self.active_trade.sim_sl_order_id = sl_id2
+                    logger.warning("RECOVERY: exit IDs missing from state — re-armed "
+                                   "protection: tp #%s sl #%s", tp_id2, sl_id2)
+                    self._persist_active_trade_state()
                 logger.info("✅ Crash recovery: resumed active trade from persisted state")
             elif broker_state.status == "PENDING":
                 # Orphaned pending limit order — cancel entry order and clear state
@@ -1109,6 +1161,36 @@ class Tier2StreamingTrader:
                     "⚠️ RECONCILIATION_WARNING: state shows active trade but broker has no position"
                 )
                 StatePersistence.clear_state()
+
+    def _persist_active_trade_state(self) -> None:
+        """Re-persist the full active-trade state (incl. exit order IDs) + daily risk.
+
+        Called after TP/SL placement so a crash after the entry fill can never leave
+        the on-disk state fill-blind (null exit IDs = the 2026-07-13 phantom resume).
+        """
+        t = self.active_trade
+        if t is None:
+            return
+        try:
+            StatePersistence.save_state({
+                "direction": t.direction,
+                "entry_price": t.entry_price,
+                "tp_price": t.tp_price,
+                "sl_price": t.sl_price,
+                "entry_time": t.entry_time.isoformat(),
+                "sim_entry_order_id": t.sim_entry_order_id,
+                "sim_tp_order_id": t.sim_tp_order_id,
+                "sim_sl_order_id": t.sim_sl_order_id,
+                "gap_size": t.gap_size,
+                "h1_sweep_bars_ago": t.h1_sweep_bars_ago,
+                "m15_confirmed": t.m15_confirmed,
+                "kill_zone_active": t.kill_zone_active,
+                "vol_regime_pct": t.vol_regime_pct,
+                "ml_proba": t.ml_proba,
+                **self._risk_manager.to_state_dict(),
+            })
+        except Exception as e:
+            logger.warning("Active-trade state persist failed: %s", e)
 
     async def start_streaming(self):
         self.running = True
@@ -1463,6 +1545,11 @@ class Tier2StreamingTrader:
 
     async def _advance_active_trade(self, bar: DollarBar) -> bool:
         if not self.active_trade: return False
+        if self._is_backfill:
+            # Backfill bars are historical: advancing a trade resumed at restart on
+            # them inflates bars_held and can fire the 15:10 CT flatten against a
+            # replayed close-window bar (raw market order on the live account).
+            return False
         t = self.active_trade
         t.bars_held += 1
 
@@ -1498,6 +1585,10 @@ class Tier2StreamingTrader:
                     tp_id, sl_id = await self._ts_client.place_exit_orders(self._active_entry_decision, self._exec_account)
                     t.sim_tp_order_id, t.sim_sl_order_id = tp_id, sl_id
                     logger.info("TP/SL placed on fill (ProjectX): tp #%s sl #%s", tp_id, sl_id)
+                    # Persist the exit IDs immediately: state saved only at entry
+                    # placement has them null, which made post-crash reconcile
+                    # fill-blind (resumed a phantom trade on 2026-07-13).
+                    self._persist_active_trade_state()
                 # Fall through to TP/SL check — might hit in the same bar
             elif t.bars_held >= self._strategy_config.max_pending_bars:
                 for oid in [t.sim_entry_order_id, t.sim_tp_order_id, t.sim_sl_order_id]:
@@ -1733,7 +1824,8 @@ class Tier2StreamingTrader:
             return
 
         # Daily circuit breaker: halt if daily loss limit reached
-        if self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss):
+        if self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss,
+                                               is_backfill=is_backfill):
             return
 
         # Seasonality gate: skip months with statistically zero edge (default: none blocked)

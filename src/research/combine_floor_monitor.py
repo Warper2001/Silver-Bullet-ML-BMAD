@@ -35,7 +35,7 @@ ACCOUNT_ID = os.environ.get("PROJECTX_ACCOUNT_ID", "")
 START_EQUITY = 50_000.0
 FLOOR_START = 48_000.0
 TRAIL = 2_000.0
-HALT_DISTANCE = 750.0          # updated 2026-06-28: max_single_trade_loss × 1.5 = $500 × 1.5
+HALT_DISTANCE = 100.0          # updated 2026-07-13: ride-the-buffer halt-review decision (halt_review_20260713_ride_buffer.md); was 750 (2026-06-28)
 PF_THRESHOLD = 0.70            # DERIVED — results_pf_trigger.md
 PF_MIN_TRADES = 30
 PASS_TARGET = 53_000.0

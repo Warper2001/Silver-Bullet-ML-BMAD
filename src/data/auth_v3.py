@@ -8,9 +8,16 @@ refresh functionality without requiring browser interaction.
 import asyncio
 import hashlib
 import logging
+import os
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - fcntl is POSIX-only
+    fcntl = None  # type: ignore[assignment]
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -367,29 +374,7 @@ class TradeStationAuthV3:
                     # Update .env file with new refresh token if it changed
                     if self._refresh_token:
                         try:
-                            # Read current .env file
-                            env_path = Path(".env")
-                            if env_path.exists():
-                                env_content = env_path.read_text()
-
-                                # Update or add refresh token line
-                                lines = env_content.split('\n')
-                                updated_lines = []
-                                refresh_token_found = False
-
-                                for line in lines:
-                                    if line.startswith('TRADESTATION_REFRESH_TOKEN='):
-                                        updated_lines.append(f'TRADESTATION_REFRESH_TOKEN={self._refresh_token}')
-                                        refresh_token_found = True
-                                    else:
-                                        updated_lines.append(line)
-
-                                if not refresh_token_found:
-                                    updated_lines.append(f'TRADESTATION_REFRESH_TOKEN={self._refresh_token}')
-
-                                # Write back to .env
-                                env_path.write_text('\n'.join(updated_lines))
-                                logger.debug("Updated .env file with new refresh token")
+                            self._update_env_refresh_token(self._refresh_token)
                         except Exception as env_error:
                             logger.warning(f"Failed to update .env file: {env_error}")
 
@@ -404,3 +389,65 @@ class TradeStationAuthV3:
                 # Continue the loop despite refresh failures
 
         logger.info("Auto-refresh loop stopped")
+
+    @staticmethod
+    def _update_env_refresh_token(refresh_token: str, env_file: str = ".env") -> None:
+        """Atomically update TRADESTATION_REFRESH_TOKEN in the .env file.
+
+        Multiple live traders share one .env file and each runs its own
+        auto-refresh loop, so this must be safe against concurrent callers.
+        Takes an exclusive file lock around the read-modify-write and writes
+        via temp-file + os.replace so a reader never observes a partially
+        written (or truncated) file. Also refuses to write if the file reads
+        back empty, since that can only mean a concurrent/crashed writer left
+        it mid-truncation — better to skip an update than to persist an empty
+        .env (this is what wiped TRADESTATION_CLIENT_ID/SECRET on 2026-07-27
+        and crash-looped every trader reading this file).
+        """
+        env_path = Path(env_file)
+        if not env_path.exists():
+            return
+
+        lock_path = env_path.parent / f"{env_path.name}.lock"
+        with open(lock_path, "w") as lock_file:
+            if fcntl is not None:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                env_content = env_path.read_text()
+                if not env_content.strip():
+                    raise ValueError(
+                        f"{env_file} read back empty during refresh-token update "
+                        "— refusing to overwrite (likely a concurrent writer)"
+                    )
+
+                lines = env_content.split("\n")
+                updated_lines = []
+                refresh_token_found = False
+
+                for line in lines:
+                    if line.startswith("TRADESTATION_REFRESH_TOKEN="):
+                        updated_lines.append(f"TRADESTATION_REFRESH_TOKEN={refresh_token}")
+                        refresh_token_found = True
+                    else:
+                        updated_lines.append(line)
+
+                if not refresh_token_found:
+                    updated_lines.append(f"TRADESTATION_REFRESH_TOKEN={refresh_token}")
+
+                new_content = "\n".join(updated_lines)
+
+                fd, tmp_path = tempfile.mkstemp(
+                    dir=env_path.parent, prefix=f".{env_path.name}.", suffix=".tmp"
+                )
+                try:
+                    with os.fdopen(fd, "w") as tmp_file:
+                        tmp_file.write(new_content)
+                    os.replace(tmp_path, env_path)
+                except Exception:
+                    Path(tmp_path).unlink(missing_ok=True)
+                    raise
+
+                logger.debug("Updated .env file with new refresh token")
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)

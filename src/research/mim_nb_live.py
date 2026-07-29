@@ -28,6 +28,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
+import numpy as np
 import pytz
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -117,6 +118,12 @@ async def resolve_front_month(http, px_auth, root: str = "MNQ") -> str:
 
 
 ENTRY_MARKS = {f"{h:02d}:{m}" for h in range(10, 16) for m in ("00", "30")} - {"16:00"}
+# Sigma provenance (prereg mim-nb-sigma-provenance): sigma is derived ONLY from the bot's
+# own hash-chained bar record + the frozen warmup series — never from a live API fetch.
+RTH_FIRST = "09:31"
+RTH_LAST = "16:00"
+WARMUP_CSV = BASE_DIR / "data" / "processed" / "dollar_bars" / "1_minute" / "mnq_1min_2026_ytd.csv"
+BARS_RAW_CSV = DATA_DIR / "bars_raw.csv"
 CHECK_MARKS = ENTRY_MARKS | {"16:00"}
 
 # Early-close sessions — sealed-engine parity: the engine skips any session without
@@ -186,7 +193,9 @@ class MimNbLive:
         self.contract_id = _to_contract_id(SYMBOL)
 
         # strategy state
-        self.sigma_hist = {}          # "HH:MM" -> list of |close/open - 1| (deque-like, max 14)
+        self.sigma_hist = {}          # "HH:MM" -> list of |close/open - 1|, oldest->newest, max 14
+        self.sigma_days = []          # ISO dates contributing to sigma_hist, oldest->newest, max 14
+        self.today_saw_close = False  # today's 16:00 bar seen -> day may be folded into sigma_hist
         self.prev_close = None        # prior session close
         self.day = None               # current ET session date
         self.open_d = None            # today's 09:31-bar open
@@ -366,15 +375,66 @@ class MimNbLive:
         sym = await resolve_front_month(self.http, self.px_auth)
         if sym == self.symbol:
             return
-        logger.warning("AUTOROLL: front month %s → %s — reseeding on new contract",
-                       self.symbol, sym)
+        logger.warning("AUTOROLL: front month %s → %s", self.symbol, sym)
+        old_sym, old_prev = self.symbol, self.prev_close
         self._apply_symbol(sym)
-        await self._backfill()              # reseed sigma_hist + prev_close on new contract
-        self.open_d = None                  # backfill is authoritative; skip _new_session re-fold
+        # Sigma is a dimensionless ratio and a roll is not a volatility event, so sigma_hist
+        # is deliberately NOT reseeded (prereg §1 site 4). prev_close IS a price level and
+        # MUST be re-derived, or the gap adjustment compares two different contracts and
+        # injects a synthetic gap the size of the calendar spread (prereg §1.1).
+        new_prev = await self._prev_close_for_symbol(sym)
+        if new_prev is not None:
+            spread = new_prev - old_prev if old_prev is not None else float("nan")
+            logger.warning("ROLL prev_close re-derived: OLD=%s %s -> NEW=%s %.2f (spread %+.2f pt)",
+                           old_sym, f"{old_prev:.2f}" if old_prev is not None else "None",
+                           sym, new_prev, spread)
+            self.prev_close = new_prev
+        else:
+            logger.error("ROLL prev_close re-derivation FAILED for %s — carrying %s forward; "
+                         "next session's gap adjustment is UNTRUSTED", sym, old_prev)
+        self.open_d = None                  # do not re-fold a partial pre-roll day
         self.today_moves = {}
+        self.today_saw_close = False
         orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
                            "event": "ROLL", "order_id": "", "otype": "", "side": "",
                            "size": "", "price": "", "outcome": sym, "detail": "AUTOROLL"})
+
+    async def _prev_close_for_symbol(self, sym):
+        """Close of the most recent COMPLETE RTH session for `sym` (prereg §1.1).
+
+        This is a single-session level lookup, not a distribution rebuild, so it does not
+        reintroduce the provenance defect. Prefers the recorded bar file; falls back to a
+        broker fetch only when the new contract has no local history yet (the normal case
+        at a roll), and logs which source was used."""
+        today_et = datetime.now(ET).date()
+        sessions = self._read_rth_sessions(BARS_RAW_CSV, "ts_utc")
+        for d in sorted(sessions, reverse=True):
+            if d >= today_et:
+                continue
+            bars = sessions[d]
+            if bars[0][0] == RTH_FIRST and any(hm == RTH_LAST for hm, _o, _c in bars):
+                px = next(c for hm, _o, c in reversed(bars) if hm == RTH_LAST)
+                logger.info("ROLL prev_close source=bar-record session=%s", d)
+                return px
+        try:
+            fetched = await self._ts_get_bars(barsback=3000)
+        except Exception as exc:
+            logger.warning("ROLL prev_close fetch failed: %s", exc)
+            return None
+        by_day = {}
+        for b in fetched:
+            et = self._bar_et(b)
+            hm = et.strftime("%H:%M")
+            if RTH_FIRST <= hm <= RTH_LAST:
+                by_day.setdefault(et.date(), []).append((hm, float(b["Close"])))
+        for d in sorted(by_day, reverse=True):
+            if d >= today_et:
+                continue
+            bars = sorted(by_day[d], key=lambda r: r[0])
+            if bars[0][0] == RTH_FIRST and bars[-1][0] == RTH_LAST:
+                logger.info("ROLL prev_close source=broker-fetch session=%s", d)
+                return bars[-1][1]
+        return None
 
     async def _ts_token(self) -> str:
         """Token source of truth is the .access_token file — a sibling bot's
@@ -427,34 +487,86 @@ class MimNbLive:
         return ts.astimezone(ET)
 
     async def _backfill(self):
-        """Seed sigma history from the last >=14 complete RTH sessions."""
-        logger.info("Backfilling bars for sigma seed...")
-        bars = await self._ts_get_bars(barsback=30000)
+        """Restore sigma history from persisted state, or seed it deterministically
+        from the recorded bar files.
+
+        Sigma provenance (prereg mim-nb-sigma-provenance §1, sites 1 and 3): sigma must be
+        a pure function of recorded market data. It is therefore NEVER rebuilt from a live
+        API fetch — that made sigma depend on restart timing (29 reseeds in 7 weeks) and
+        left it unreproducible offline (0 exact matches across 400 logged values)."""
+        st = self._load_persisted_position()
+        if st and st.get("sigma_hist"):
+            self.sigma_hist = {k: [float(x) for x in v] for k, v in st["sigma_hist"].items()}
+            self.sigma_days = [str(d) for d in st.get("sigma_days", [])]
+            if st.get("prev_close") is not None:
+                self.prev_close = float(st["prev_close"])
+            n_ok = sum(1 for v in self.sigma_hist.values() if len(v) >= LOOKBACK_DAYS)
+            logger.info("Sigma restored from state: %d labels, %d at full depth, "
+                        "%d contributing days (%s..%s), prev_close=%s",
+                        len(self.sigma_hist), n_ok, len(self.sigma_days),
+                        self.sigma_days[0] if self.sigma_days else "-",
+                        self.sigma_days[-1] if self.sigma_days else "-", self.prev_close)
+            return
+        self._seed_sigma_from_bars()
+
+    @staticmethod
+    def _read_rth_sessions(path, ts_field):
+        """Read RTH (09:31..16:00 ET) bars from a CSV into {date: [(hm, open, close), ...]}
+        in chronological order. Returns {} when the file is absent."""
         sessions = {}
-        for b in bars:
-            et = self._bar_et(b)
-            hm = et.strftime("%H:%M")
-            if "09:31" <= hm <= "16:00":
-                sessions.setdefault(et.date(), []).append((hm, float(b["Open"]), float(b["Close"])))
-        days = sorted(sessions)
-        complete = [d for d in days if sessions[d][0][0] == "09:31" and sessions[d][-1][0] == "16:00"]
-        seed_days = complete[-(LOOKBACK_DAYS + 1):]
+        if not Path(path).exists():
+            return sessions
+        with open(path, newline="") as fh:
+            for row in csv.DictReader(fh):
+                raw = row.get(ts_field)
+                if not raw:
+                    continue
+                try:
+                    ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    et = ts.astimezone(ET)
+                    hm = et.strftime("%H:%M")
+                    if not (RTH_FIRST <= hm <= RTH_LAST):
+                        continue
+                    sessions.setdefault(et.date(), []).append(
+                        (hm, float(row["open"]), float(row["close"])))
+                except (ValueError, KeyError, TypeError):
+                    continue
+        for d in sessions:
+            sessions[d].sort(key=lambda r: r[0])
+        return sessions
+
+    def _seed_sigma_from_bars(self):
+        """Build sigma_hist from the recorded bar files under the sealed engine's
+        whole-day acceptance rule: a session counts only if it starts at 09:31 AND
+        contains a 16:00 bar; otherwise it contributes nothing (engine `continue`)."""
+        sessions = self._read_rth_sessions(WARMUP_CSV, "timestamp")
+        sessions.update(self._read_rth_sessions(BARS_RAW_CSV, "ts_utc"))  # live record wins
         today_et = datetime.now(ET).date()
-        seed_days = [d for d in seed_days if d < today_et][-LOOKBACK_DAYS - 1:]
-        for d in seed_days[-LOOKBACK_DAYS:]:
+        accepted = [d for d in sorted(sessions)
+                    if d < today_et
+                    and sessions[d][0][0] == RTH_FIRST
+                    and any(hm == RTH_LAST for hm, _o, _c in sessions[d])]
+        seed_days = accepted[-LOOKBACK_DAYS:]
+        self.sigma_hist, self.sigma_days = {}, []
+        for d in seed_days:
             o = sessions[d][0][1]
-            for hm, _, c in sessions[d]:
+            for hm, _o, c in sessions[d]:
                 self.sigma_hist.setdefault(hm, []).append(abs(c / o - 1.0))
                 self.sigma_hist[hm] = self.sigma_hist[hm][-LOOKBACK_DAYS:]
+            self.sigma_days.append(str(d))
         if seed_days:
-            last = seed_days[-1]
-            self.prev_close = sessions[last][-1][2]
+            last = sessions[seed_days[-1]]
+            self.prev_close = next(c for hm, _o, c in reversed(last) if hm == RTH_LAST)
         n_ok = sum(1 for v in self.sigma_hist.values() if len(v) >= LOOKBACK_DAYS)
-        logger.info("Sigma seeded: %d days, %d minute-labels at full depth, prev_close=%.2f",
-                    len(seed_days), n_ok, self.prev_close or float("nan"))
+        logger.info("Sigma seeded from bar record: %d days appended (%s..%s), "
+                    "%d minute-labels at full depth, prev_close=%s",
+                    len(seed_days), seed_days[0] if seed_days else "-",
+                    seed_days[-1] if seed_days else "-", n_ok, self.prev_close)
         if len(seed_days) < LOOKBACK_DAYS:
-            logger.warning("Fewer than %d complete sessions in backfill — entries blocked until depth reached",
-                           LOOKBACK_DAYS)
+            logger.warning("Only %d accepted sessions in the bar record (need %d) — "
+                           "entries blocked until depth is reached", len(seed_days), LOOKBACK_DAYS)
 
     def _load_persisted_position(self):
         """Read MIM-NB's OWN last-known state from its hash-chained state.json.
@@ -770,11 +882,29 @@ class MimNbLive:
     # ------------------------------------------------------------------
     # Bar processing — mirrors the sealed backtest engine
     # ------------------------------------------------------------------
+    def _fold_today_into_sigma(self):
+        """Append today's per-minute moves to sigma history. Idempotent: a session already
+        present in sigma_days is never folded twice (guards restart-mid-16:00 replay)."""
+        if self.open_d is None or not self.today_moves:
+            return
+        if str(self.day) in self.sigma_days:
+            return
+        for hm, mv in self.today_moves.items():
+            self.sigma_hist.setdefault(hm, []).append(mv)
+            self.sigma_hist[hm] = self.sigma_hist[hm][-LOOKBACK_DAYS:]
+        self.sigma_days = (self.sigma_days + [str(self.day)])[-LOOKBACK_DAYS:]
+        logger.info("Sigma folded session %s (%d labels, %d contributing days)",
+                    self.day, len(self.today_moves), len(self.sigma_days))
+
     def _new_session(self, d):
-        if self.day is not None and self.open_d is not None:
-            for hm, mv in self.today_moves.items():
-                self.sigma_hist.setdefault(hm, []).append(mv)
-                self.sigma_hist[hm] = self.sigma_hist[hm][-LOOKBACK_DAYS:]
+        # Fold the finished day into sigma history ONLY if it was a whole accepted session
+        # (09:31 seen AND 16:00 seen), matching the sealed engine's `continue` on partial
+        # days (prereg §1 site 5). A partial day must contribute nothing, or minute labels
+        # drift out of lockstep and each carries a different 14-day window.
+        if (self.day is not None and self.open_d is not None and not self.today_saw_close):
+            logger.warning("SESSION %s incomplete (no %s bar) — NOT folded into sigma "
+                           "history (engine parity)", self.day, RTH_LAST)
+        self.today_saw_close = False
         self.day = d
         self.open_d = None
         self.cum_pv = 0.0
@@ -811,12 +941,38 @@ class MimNbLive:
         self.cum_v += v
         self.today_moves[hm] = abs(c / self.open_d - 1.0)
 
+        if hm == RTH_LAST:
+            # Fold and set prev_close HERE, before any gate can `return`. Two reasons:
+            #  - folding at next-session start loses the final day whenever the process
+            #    restarts overnight (state.json is written at 16:00, before that fold ran);
+            #  - the sealed engine sets `prev_close = closes[-1]` for every accepted day
+            #    regardless of tradeability, so gating it behind the depth check diverges.
+            self.today_saw_close = True
+            self._fold_today_into_sigma()
+            self.prev_close = c
+            self._save_state()
+
         if hm not in CHECK_MARKS:
             return
         sig = self.sigma_hist.get(hm, [])
         if len(sig) < LOOKBACK_DAYS or self.prev_close is None:
+            # Depth starvation used to `return` silently, so suppressed marks were invisible
+            # in decisions.csv (prereg §1 site 6). Make it observable.
+            why = (f"depth={len(sig)}/{LOOKBACK_DAYS}" if len(sig) < LOOKBACK_DAYS
+                   else "prev_close=None")
+            logger.warning("DEPTH_GATE %s: %s — mark not evaluated", hm, why)
+            decisions_log.append({
+                "ts_et": et.isoformat(), "mark": hm,
+                "open_d": f"{self.open_d:.2f}" if self.open_d is not None else "",
+                "prev_close": f"{self.prev_close:.2f}" if self.prev_close is not None else "",
+                "sigma": "", "ub": "", "lb": "",
+                "close": f"{c:.2f}", "vwap": "",
+                "position": self.position, "action": "DEPTH_SKIP", "detail": why})
             return
-        sigma = sum(sig) / len(sig)
+        # Reduction must be byte-identical to the sealed engine's `float(np.mean(sig))`,
+        # or the parity gate G1 fails on floating-point summation order rather than on the
+        # defect under test (prereg §1 site 8).
+        sigma = float(np.mean(np.asarray(sig, dtype=float)))
         gap_dn = max(self.prev_close - self.open_d, 0.0)
         gap_up = max(self.open_d - self.prev_close, 0.0)
         ub = self.open_d * (1 + sigma) + gap_dn
@@ -869,9 +1025,8 @@ class MimNbLive:
                               "close": f"{c:.2f}", "vwap": f"{vwap:.2f}",
                               "position": self.position, "action": action, "detail": detail})
 
-        if hm == "16:00":
-            self.prev_close = c
-            self._save_state()
+        if hm == RTH_LAST:
+            self._save_state()   # persist post-exit state; fold + prev_close already done above
 
     def _save_state(self):
         (DATA_DIR / "state.json").write_text(json.dumps({
@@ -880,6 +1035,11 @@ class MimNbLive:
             "day_pnl": self.day_pnl, "prev_close": self.prev_close,
             "chains": {"bars": bars_log.head, "decisions": decisions_log.head,
                        "orders": orders_log.head, "trades": trades_log.head},
+            # Persisted so a restart RESTORES sigma rather than rebuilding it from a live
+            # API fetch (prereg §1 site 2). Full precision — no rounding — so restart
+            # parity is exact.
+            "sigma_hist": self.sigma_hist,
+            "sigma_days": self.sigma_days,
             "saved_at": datetime.now(timezone.utc).isoformat()}, indent=2))
 
     # ------------------------------------------------------------------

@@ -132,3 +132,68 @@ been implemented correctly and is a bad idea; those are separate findings.
 Sealed on merge to main. The code change ships in the same PR and is deployed immediately
 after, per owner instruction — there is no staged rollout and no observation period
 between seal and deployment.
+
+Sealed as `c69c86d` (prereg) / `647632c` (code), merged in PR #20, deployed 18:01 UTC
+2026-07-29.
+
+---
+
+## 6. Amendment 1 — YANK floor removal (2026-07-29, post-seal)
+
+**Authorization:** Alex, 2026-07-29, after the §1–§5 deployment: *"yank too — no floor on
+either."*
+
+### 6.1 Correction to §4
+
+§4 stated *"YANK... has no internal floor gate of its own."* **That was wrong.** YANK
+carries its own trailing-drawdown tracker, `RiskManager.check_trailing_dd()`
+(`src/research/tier2_streaming_working.py:440`), called on **every bar** from the poll
+loop (line 1348). It maintains a Topstep-style intraday trailing floor
+(`starting_equity 50000 − topstep_trailing_dd_amount 2000`, rising with each equity peak)
+and, on breach, sets `_daily_halted = True` — the same flag the daily circuit breaker
+sets, blocking all further entries that day.
+
+So YANK had **two** floor-derived brakes, not zero: the joint monitor (already disabled in
+§1 site 3) and this internal tracker. The correction is recorded rather than silently
+fixed because §4's disclosure understated what was still protecting the account, and
+anyone reading the seal later must not inherit that error.
+
+### 6.2 Change spec
+
+| # | Site (`src/research/tier2_streaming_working.py`) | Before | After |
+|---|---|---|---|
+| A1 | `check_trailing_dd()` breach branch (~483) | logs `TRAILING_DD_BREACH ... halting`, sets `_daily_halted = True`, persists, returns `True` | **no longer halts.** Logs `TRAILING_DD_BREACH ... NOT halting (floor removal, Amendment 1)` and returns `True` for observability. `_daily_halted` is untouched |
+
+The floor, high-water mark, cushion, and `TRAILING_DD_ALERT` are **all still computed and
+logged** — identical treatment to MIM's buffer under §1 site 1. Observability is retained;
+only the brake is removed.
+
+### 6.3 Retained on YANK
+
+- **Daily circuit breaker** at `StrategyConfig.max_daily_loss` (−$750),
+  `check_and_update()`. This is YANK's analogue of MIM's `DLL_GUARD_USD`, which §1
+  retained by explicit instruction; symmetry is assumed rather than re-asked. **It is now
+  YANK's only automatic brake.**
+- `halt_manually()` — the emergency-stop CLI path (FR22), YANK's manual kill switch.
+- `check_consistency()` (FR18/FR19) — a Topstep *consistency* rule affecting position
+  size, not a floor. Out of scope.
+
+### 6.4 Verification (operational)
+
+- **(V4)** A breach (`equity ≤ trailing floor`) logs `TRAILING_DD_BREACH` and leaves
+  `is_halted` **False**.
+- **(V5)** A daily loss ≤ −$750 still halts via `check_and_update`.
+- **(V6)** `TRAILING_DD_ALERT` still fires in the thin-cushion band.
+
+### 6.5 Disclosure
+
+**Both bots on account 23884932 now run with no floor-derived brake of any kind** —
+neither internal nor external. The account's remaining automatic protections are two
+static daily loss caps (MIM −$1000, YANK −$750) that reset each session and do not
+reference the Topstep MLL. Nothing prevents the combined equity from reaching the MLL, and
+nothing coordinates the two bots' simultaneous exposure.
+
+One existing test is amended by this change: `tests/unit/test_risk_manager.py`
+`test_breach_halts_trading` asserted `rm.is_halted is True` after a breach. Its assertion
+is inverted to `is False` with a reference to this amendment. **The test is not deleted** —
+it now pins the new behaviour, so a silent regression back to halting would still fail.

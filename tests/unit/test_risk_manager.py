@@ -89,8 +89,14 @@ class TestTrailingDDTracker:
             rm.check_trailing_dd(49000.0, bar_et, cfg)  # equity drop
         assert rm.trailing_floor == pytest.approx(48800.0)
 
-    def test_breach_halts_trading(self):
-        """AC#3: equity at or below floor → is_halted True, returns True."""
+    def test_breach_reports_but_does_not_halt(self):
+        """AC#3, AMENDED — prereg mim-nb-risk-mechanics-removal Amendment 1 (V4).
+
+        Owner decision 2026-07-29 ("yank too — no floor on either"): a trailing-floor
+        breach is now REPORTED ONLY. The detection must still work (returns True) but it
+        must NOT halt trading. This test is kept rather than deleted so that a silent
+        regression back to halting fails here.
+        """
         from src.research.tier2_streaming_working import RiskManager, StatePersistence
         rm = RiskManager()
         cfg = _make_account_config()
@@ -98,7 +104,36 @@ class TestTrailingDDTracker:
         with patch.object(StatePersistence, "save_state"):
             rm.check_trailing_dd(50800.0, bar_et, cfg)   # floor now 48800
             breached = rm.check_trailing_dd(48700.0, bar_et, cfg)  # below floor
-        assert breached is True
+        assert breached is True, "breach detection must still work for audit"
+        assert rm.is_halted is False, "floor breach must NOT halt (Amendment 1)"
+
+    def test_breach_logs_not_halting(self, caplog):
+        """V4: the breach log must say it is not halting, so the ledger is not misread."""
+        import logging
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_account_config()
+        bar_et = _et()
+        with patch.object(StatePersistence, "save_state"):
+            with caplog.at_level(logging.WARNING):
+                rm.check_trailing_dd(50800.0, bar_et, cfg)
+                rm.check_trailing_dd(48700.0, bar_et, cfg)
+        assert "TRAILING_DD_BREACH" in caplog.text
+        assert "NOT halting" in caplog.text
+
+    def test_daily_breaker_still_halts_after_floor_removal(self):
+        """V5: the static -$750 daily cap is YANK's ONLY remaining automatic brake."""
+        from src.research.tier2_streaming_working import RiskManager, StatePersistence
+        rm = RiskManager()
+        cfg = _make_account_config()
+        bar_et = _et()
+        with patch.object(StatePersistence, "save_state"):
+            rm.check_trailing_dd(50800.0, bar_et, cfg)
+            rm.check_trailing_dd(48700.0, bar_et, cfg)   # breach — must not halt
+            assert rm.is_halted is False
+            rm.register_close(-800.0)                    # past the -750 cap
+            halted = rm.check_and_update(bar_et, -750.0, cfg)
+        assert halted is True
         assert rm.is_halted is True
 
     def test_no_breach_above_floor(self):

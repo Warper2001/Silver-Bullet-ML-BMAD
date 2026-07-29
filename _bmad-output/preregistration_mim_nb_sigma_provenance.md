@@ -86,6 +86,9 @@ offline by construction.
 
 ## 1. Change spec (the only diff)
 
+> Sites 1–8 and §1.1 were specified before implementation; **sites 9–10 were found while
+> building it** and added pre-seal. §1.2 records that provenance.
+
 **Principle: σ becomes a pure, persisted function of the bot's own hash-chained bar
 record. No network call may ever influence it.**
 
@@ -99,6 +102,8 @@ record. No network call may ever influence it.**
 | 6 | depth gate (~817) | silent `return` | emit a `DEPTH_GATE` warning + a `decisions.csv` row with `action=DEPTH_SKIP` so suppression is observable |
 | 7 | seed log (~453) | logs `len(seed_days)` | logs the count actually appended |
 | 8 | σ reduction (~819) | `sigma = sum(sig) / len(sig)` | `sigma = float(np.mean(np.asarray(sig, dtype=float)))` — **byte-identical to the sealed engine's reduction**, with the window ordered oldest→newest as the engine's `deque` is |
+| 9 | σ fold timing — `_new_session()` → `on_bar()` at the `16:00` bar | today's moves fold in at the **start of the next session** | fold at the **`16:00` bar of the day itself**, before any gate can `return`; idempotent via `sigma_days` — see §1.2 |
+| 10 | `prev_close` assignment (~1028 → ~817) | set **after** the depth gate, so a depth-starved day never updates it | set at the `16:00` bar **before** the depth gate, for **every** accepted day — see §1.2 |
 
 ### 1.1 `prev_close` across a contract roll (amendment 2)
 
@@ -121,6 +126,36 @@ switches contract wholesale rather than splicing one contract's close onto anoth
 This is a *level* lookup on a single named session, not a distribution rebuild, so it does
 not reintroduce the provenance defect §0 describes; it is nonetheless deterministic given
 the bar record and is required to be logged so it can be audited after the fact.
+
+### 1.2 Sites 9 and 10 — added after implementation, before sealing
+
+**Provenance note, recorded deliberately:** sites 1–8 and §1.1 were specified before any
+code was written. **Sites 9 and 10 were discovered while implementing them** and are added
+here *before* this document seals. This is a pre-seal revision of a draft, not an amendment
+to a seal already in force — but it is written down so nobody later reads §1 as a clean
+a-priori specification when two of its ten rows were found by building the thing.
+
+Both are consequences of site 1/3, not independent ideas, and **G1–G3 cannot pass without
+them.**
+
+**Site 9 — the fold must happen at the 16:00 bar.**
+Once σ is *restored* from `state.json` (site 3) rather than rebuilt from an API fetch, the
+old fold point becomes lossy. `state.json` is written at 16:00; the fold ran at the *start
+of the next session*. So an overnight restart resurrects a σ history that is permanently
+missing the final day — and unlike the current code, the repaired code has no API reseed to
+silently heal it. Folding at 16:00, before any `return`, closes this. The fold is made
+idempotent by checking `sigma_days`, so a mid-16:00 restart cannot double-count a session.
+
+**Site 10 — `prev_close` must not sit behind the depth gate.**
+The sealed engine sets `prev_close = closes[-1]` for **every accepted day**, regardless of
+whether that day was tradeable. The live bot only set it if the depth gate passed, so a
+depth-starved session left `prev_close` stale into the next day. Since
+`ub = O*(1+σ) + max(prev_close−O, 0)`, a stale `prev_close` corrupts both bands — **G2
+fails without this**, independently of σ.
+
+**Neither site changes any parameter, threshold, or trading rule.** Both move *when* an
+existing assignment happens. `CAT_STOP_PTS`, `DLL_GUARD_USD`, `CONTRACTS`, `LOOKBACK_DAYS`,
+the band formula, and the check-mark set remain frozen as stated below.
 
 **Frozen and unchanged:** `CAT_STOP_PTS = 250`, `DLL_GUARD_USD = -1000.0`,
 `CONTRACTS = 1`, `LOOKBACK_DAYS = 14`, the band formula
@@ -186,7 +221,7 @@ that achieves G1–G3 and loses money is still a successful repair.
 ## 4. Deployment (after merge + explicit go)
 
 1. Merge this seal to `main` **before** touching `src/research/mim_nb_live.py`.
-2. Apply the eight-site diff in §1, plus the `prev_close` roll rule in §1.1.
+2. Apply the ten-site diff in §1, plus the `prev_close` roll rule in §1.1.
 3. Restart `trader-mim-nb` while flat (outside 10:00–16:00 ET, or with no open position).
 4. Confirm startup logs `Sigma restored from state (N labels)` rather than
    `Backfilling bars for sigma seed...`.

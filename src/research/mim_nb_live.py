@@ -251,11 +251,12 @@ class MimNbLive:
                         "mll_floor=%.2f buffer=%.2f cat_cost=%.2f",
                         self._realized_pnl, running, hwm, mll_floor, buf, cat_cost)
             if buf <= cat_cost:
-                logger.warning("BUFFER WARNING: %.2f ≤ cat-stop cost %.2f — "
-                               "entries will be blocked until buffer recovers",
-                               buf, cat_cost)
+                logger.warning("BUFFER WARNING: %.2f ≤ cat-stop cost %.2f — entries are "
+                               "NOT blocked (floor gating removed, prereg "
+                               "mim-nb-risk-mechanics-removal); a cat-stop from here can "
+                               "breach the MLL", buf, cat_cost)
         except Exception as exc:
-            logger.warning("combine balance init failed: %s — buffer gate disabled", exc)
+            logger.warning("combine balance init failed: %s — buffer is logging-only", exc)
 
     def _shared_floor_buffer(self):
         """Remaining MLL buffer from the floor monitor's authoritative state, using
@@ -870,14 +871,18 @@ class MimNbLive:
                     pnl_pts, pnl_usd, self.day_pnl, buf, reason)
         self.position = 0
         self._save_state()  # persist flat state immediately after close (commingling-safe recovery)
-        # Dynamic DLL: allow losing at most (buffer - cat_stop_cost) today, up to static cap
-        cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS
-        dynamic_dll = -min(abs(DLL_GUARD_USD), max(0.0, buf + cat_cost))
-        if self.day_pnl <= dynamic_dll and not self.day_deactivated:
+        # STATIC DLL only (prereg mim-nb-risk-mechanics-removal §1 site 2). The former
+        # clamp -min(|DLL|, max(0, buf + cat_cost)) was floor-derived: as the buffer fell
+        # the day's allowance shrank toward $0, so any losing day deactivated the bot.
+        # That is a second, subtler floor gate — removing the buffer gate while leaving
+        # this in place would not have unblocked trading. The static -$1000 guard is
+        # retained by owner instruction and is now the ONLY automatic brake.
+        static_dll = -abs(DLL_GUARD_USD)
+        if self.day_pnl <= static_dll and not self.day_deactivated:
             self.day_deactivated = True
-            logger.warning("DLL GUARD: day P&L $%.2f ≤ %.2f (dynamic) buffer=%.2f — "
+            logger.warning("DLL GUARD: day P&L $%.2f ≤ %.2f (static) buffer=%.2f — "
                            "entries disabled until next session",
-                           self.day_pnl, dynamic_dll, buf)
+                           self.day_pnl, static_dll, buf)
 
     # ------------------------------------------------------------------
     # Bar processing — mirrors the sealed backtest engine
@@ -1002,12 +1007,20 @@ class MimNbLive:
                 await self._exit(c, hm, "STOP")
                 action = "BAND_STOP_EXIT"
             if not self.day_deactivated and hm in ENTRY_MARKS:
+                # Floor gating REMOVED by owner decision (prereg
+                # mim-nb-risk-mechanics-removal §1 site 1). The buffer gate blocked four
+                # consecutive qualifying signals over 07-24..07-29 because the shared MLL
+                # buffer ($499.12) was 88 cents short of the cat-stop cost ($500.00).
+                # The buffer is still computed and logged at every entry mark so the run
+                # stays auditable — but nothing gates on it. Entries can now run the
+                # account into the Topstep MLL; that outcome is accepted, see prereg §4.
                 buf = self._remaining_mll_buffer()
                 cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS
                 if buf <= cat_cost:
-                    logger.warning("BUFFER_GATE %s: buffer=%.2f ≤ cat_cost=%.2f [%s] — entry blocked",
+                    logger.warning("BUFFER_INFO %s: buffer=%.2f ≤ cat_cost=%.2f [%s] — "
+                                   "entry ALLOWED (floor gating removed)",
                                    hm, buf, cat_cost, self._buffer_source)
-                elif c > ub and self.position != 1:
+                if c > ub and self.position != 1:
                     if self.position == -1:
                         await self._exit(c, hm, "REVERSAL")
                     if await self._enter(1, c, hm):

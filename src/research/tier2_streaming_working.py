@@ -445,8 +445,11 @@ class RiskManager:
     ) -> bool:
         """Update intraday trailing floor and check for breach (FR17).
 
-        Returns True (and halts) if current_equity is at or below the trailing floor.
-        In EOD mode the floor is initialized on the first call but never updated intrabar.
+        Returns True if current_equity is at or below the trailing floor. As of prereg
+        mim-nb-risk-mechanics-removal Amendment 1 a breach is REPORTED ONLY — it no
+        longer halts trading, and the return value is consumed for logging/audit rather
+        than as a gate. In EOD mode the floor is initialized on the first call but never
+        updated intrabar.
         """
         dd_amount = account_config.topstep_trailing_dd_amount
         today = bar_et.date()
@@ -479,14 +482,23 @@ class RiskManager:
                 current_equity, cushion, self._trailing_floor,
             )
 
-        # Breach check
+        # Breach check — reports, does NOT halt.
+        #
+        # Floor-derived braking was removed by owner decision (prereg
+        # mim-nb-risk-mechanics-removal Amendment 1 section 6.2): "yank too — no floor on
+        # either." The floor, high-water mark, cushion and alerts above are all still
+        # computed so the run stays auditable; only the brake is gone. `_daily_halted` is
+        # deliberately NOT set here — YANK's sole remaining automatic brake is the static
+        # daily circuit breaker in check_and_update() (max_daily_loss, -$750).
+        #
+        # Consequence, stated plainly: equity can now fall through the Topstep trailing
+        # MLL and the account can be lost. That is the intended effect, not an oversight.
         if current_equity <= self._trailing_floor:  # type: ignore[operator]
             logger.warning(
-                "TRAILING_DD_BREACH: current equity $%.2f is at or below floor $%.2f — halting",
+                "TRAILING_DD_BREACH: current equity $%.2f is at or below floor $%.2f — "
+                "NOT halting (floor removal, Amendment 1)",
                 current_equity, self._trailing_floor,
             )
-            self._daily_halted = True
-            self._persist()
             return True
 
         return False

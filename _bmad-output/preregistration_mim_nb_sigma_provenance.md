@@ -377,3 +377,113 @@ Additionally pinned by unit test:
   session; after `on_bar` returns, `sigma_hist` and `prev_close` **include** it.
 - **(A-G5)** A depth-gated 16:00 bar still folds and still rolls `prev_close`.
 - **(A-G6)** Processing the same 16:00 bar twice does not double-fold.
+
+---
+
+## 9. Amendment 2 — `_catch_up_today` open anchor (2026-07-31)
+
+**Authorization:** Alex, 2026-07-31, on being shown that G1/G2 still failed after
+Amendment 1: *"fix that too."*
+
+**Status of the parent seal:** unchanged. Like Amendment 1, this does not relax G1–G3.
+
+### 9.1 The defect — the repair missed a second network path
+
+§0 established that σ must be a pure function of recorded market data, and §1 site 1
+removed the API fetch from the **seed** path. `_catch_up_today()` was not touched, and it
+contains the same class of leak:
+
+```python
+bars = await self._ts_get_bars(barsback=1500)      # live TradeStation fetch
+...
+if self.open_d is None:
+    self.open_d = o                                 # anchor from the FETCH
+self.today_moves[hm] = abs(c / self.open_d - 1.0)   # feeds sigma at the 16:00 fold
+```
+
+Every per-minute move for the day is measured against `open_d`, and `today_moves` is what
+`_fold_today_into_sigma()` appends to σ history. So after any mid-session restart, the
+day's σ contribution is anchored on a number that came from an API call at restart time
+rather than from the bot's own hash-chained bar record.
+
+### 9.2 Evidence — the bot disagrees with its own bar file
+
+Measured on the three most recent sessions. The two days with two different `open_d`
+values are exactly the two days MIM-NB was restarted mid-session:
+
+| Session | `open_d` used by the bot | 09:31 open in its own `bars_raw.csv` | restarted? |
+|---|---|---|---|
+| 2026-07-29 | 27915.25 **and** 27914.75 | 27915.25 | yes (twice) |
+| 2026-07-30 | 27874.75 | 27874.75 — **exact** | no |
+| 2026-07-31 | 28576.00 **and** 28576.25 | 28576.00 | yes |
+
+The clean day is the day with no restart. This is the §0 defect exactly: *σ depends on
+when the process last restarted and what the API returned at that moment.*
+
+### 9.3 Residual parity error attributable to this
+
+After Amendment 1 fixed the ordering, the 2026-07-31 16:00 mark reconciled to:
+
+| | live | engine | Δ |
+|---|---|---|---|
+| `prev_close` | 28229.50 | 28229.50 | **0.00** |
+| σ | 0.007645 | 0.007647 | −0.000002 |
+| UB | 28794.72 | 28794.51 | +0.21 pt |
+| LB | 28011.03 | 28010.99 | +0.04 pt |
+
+`prev_close` is exact — Amendment 1 did its job. The remaining σ delta of 2e-6 and the
+0.21 pt band error are what this amendment addresses. G1 requires <1e-9 and G2 <0.01 pt,
+so **both still fail until the open anchor is deterministic.**
+
+*(Engine figures come from a reconstruction script, not `tools/mim_parity_replay.py`, so
+treat the 2e-6 as indicative. The §9.2 table does not depend on it — it is the bot's own
+log against the bot's own bar file.)*
+
+### 9.4 Change spec
+
+| # | Site (`src/research/mim_nb_live.py`) | Before | After |
+|---|---|---|---|
+| B1 | `_catch_up_today()` bar source (~625) | `await self._ts_get_bars(barsback=1500)` | reads today's RTH rows from `bars_raw.csv` via a new `_read_recorded_day()`. **No network call remains in this method.** |
+| B2 | `last_bar_ts` (~651) | last fetched bar's timestamp | last **recorded** bar's timestamp, so the poll loop resumes exactly where the record ends |
+| B3 | missing-record path | `if not todays: return` (silent) | explicit `CATCHUP_NO_RECORD` warning naming the date, then stand down |
+
+A dedicated reader is added rather than extending `_read_rth_sessions()`, because that
+helper is on the sealed seed path (site 1) and its tuple shape is depended on by
+`_prev_close_for_symbol()`; widening it to carry volume would put the seed at risk to save
+a few lines.
+
+### 9.5 Behavioural change — disclosed, not incidental
+
+**If the bot has no recorded 09:31 bar for today, it now stands down for the session.**
+
+Previously, a process that was down all morning would rebuild the whole day from the API
+at restart and resume trading. It will now decline the day, because it cannot reconstruct
+that day from its own record.
+
+This is a real reduction in trading availability in one scenario — cold start after
+missing the open — and it is accepted deliberately: reconstructing a session from a
+network fetch is the defect this prereg exists to eliminate, and a day rebuilt that way
+would both trade on non-reproducible bands and poison σ for the following 14 sessions.
+The bot already stood down when the fetched data lacked an 09:31 bar; this extends the
+same rule to its own record.
+
+The alternative considered and rejected: fetch as a fallback but exclude such days from
+the σ fold. That keeps the trading day but leaves entry bands anchored on a
+non-reproducible `open_d`, i.e. it fixes G1 while leaving decisions irreproducible. Half a
+guarantee is worse than a clear rule.
+
+### 9.6 Acceptance
+
+Unchanged — **G1, G2, G3 as written in §2.** Additionally pinned by unit test:
+
+- **(B-G1)** `_catch_up_today()` issues **no** network call; `open_d` equals the 09:31
+  open in `bars_raw.csv` exactly.
+- **(B-G2)** With no recorded rows for today, the bot stands down: `open_d` stays `None`,
+  `today_moves` stays empty, and `CATCHUP_NO_RECORD` is logged.
+- **(B-G3)** A record whose first RTH row is not 09:31 stands down, as before.
+- **(B-G4)** `last_bar_ts` after catch-up equals the last recorded bar's timestamp.
+
+**Not claimed:** that G1/G2 pass after this change. Two restart-contaminated sessions
+(07-29, 07-31) are inside the current 14-day σ window and will keep it off parity until
+they age out around **2026-08-20**. This amendment stops new contamination; it does not
+retroactively clean the window.

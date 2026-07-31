@@ -163,3 +163,7 @@ data/historical/
 .projectx_api_key
 .grid_cache/
 .env.telegram
+
+# Runtime state — never commit
+.env.lock
+data/trades.db

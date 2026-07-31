@@ -1,0 +1,3 @@
+[ WARN] sil-quote-capture: NOT active
+[CRIT!] combine-floor-monitor: NOT active
+[CRIT!] distance-to-floor $ <= $ TRIGGER (equity $ floor $)

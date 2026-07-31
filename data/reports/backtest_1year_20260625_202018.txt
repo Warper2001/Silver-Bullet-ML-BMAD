@@ -1,0 +1,35 @@
+===========================================================================
+TIER 2 MNQ 1-YEAR VALIDATION BACKTEST
+  Period : 2025-05-19 → 2026-05-19
+  Config : MAX_PENDING_BARS=240  MAX_HOLD_BARS=60
+  Data   : mnq_1min_2025.csv (≥ May 19 2025) + mnq_1min_2026_ytd.csv
+===========================================================================
+
+FULL-YEAR SUMMARY
+--------------------------------------------------
+  Total trades : 4
+  Win rate     : 0.0%  (0W / 4L)
+  Profit factor: 0.000
+  Net P&L      : $-330.00
+  Max drawdown : $330.00
+  Sharpe       : -33.066  (per-trade, √252 annualized)
+  Sortino      : -33.066
+  Avg win      : $+0.00   Avg loss: $-82.50
+  Win/loss $   : 0.00x
+  Exits        : sl=3  time=1
+
+MONTHLY BREAKDOWN
+     MONTH  TRADES   WIN%      PF     NET_PNL     MAX_DD   SHARPE
+  -----------------------------------------------------------------
+   2025-06       4   0.0%   0.000  $     -330  $     330  -33.066 ← best
+
+WEEKLY BREAKDOWN
+      WEEK  TRADES   WIN%      PF     NET_PNL     MAX_DD   SHARPE
+  -----------------------------------------------------------------
+  2025-W24       4   0.0%   0.000  $     -330  $     330  -33.066
+
+EQUITY CURVE  ($-110 → $-330)
+  ████████████████████▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+                                                                 $-330
+
+===========================================================================

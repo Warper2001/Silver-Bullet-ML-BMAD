@@ -1,0 +1,12 @@
+# combine ops status @ 2026-07-31T19:04:19Z (exit 2)
+=== Combine ops healthcheck: CRITICAL ===
+[  OK ] no HALT flag
+[  OK ] trader-yank: active, fresh (30s)
+[  OK ] trader-mim-nb: active, fresh (2s)
+[CRIT!] combine-floor-monitor: NOT active
+[  OK ] trader-btc-carry: active, fresh (28s)
+[  OK ] trader-s26-combine: active, fresh (55s)
+[  OK ] trader-s26: active, fresh (28s)
+[  OK ] trader-s27: active, fresh (57s)
+[ WARN] sil-quote-capture: NOT active
+[CRIT!] distance-to-floor $499 <= $500 TRIGGER (equity $47,971, floor $47,472)

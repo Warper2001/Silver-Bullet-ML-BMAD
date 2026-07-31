@@ -1,0 +1,9 @@
+thursday,symbol,dir,entry_t,entry_px,exit_t,exit_px,qty,ret_bps,pnl_usd,reason,lr_slope20_bpd,lr_slope40_bpd,chain
+2026-07-02,MBTN26,short,00:04,60045.0,13:24,62095.0,1,-341.41,-205.0,stop_loss,-60.296,-67.825,9a046b529b6db2db
+2026-07-02,METN26,short,00:04,1605.0,13:24,1686.5,37,-507.79,-301.55,stop_loss,-60.296,-67.825,71dc2ae5f0ed1248
+2026-07-09,MBTN26,short,00:00,62420.0,23:05,63390.0,1,-155.4,-97.0,scheduled_exit,-0.646,-25.594,2e389f8d6626d7b7
+2026-07-09,METN26,short,00:00,1747.5,23:05,1750.5,36,-17.17,-10.8,scheduled_exit,-0.646,-25.594,cade3d1e8b4fa75f
+2026-07-16,MBTN26,short,00:04,64930.0,23:05,64030.0,1,138.61,90.0,scheduled_exit,42.934,-0.805,df34d79087dc1ba1
+2026-07-16,METN26,short,00:04,1924.5,23:05,1869.5,34,285.79,187.0,scheduled_exit,42.934,-0.805,eb6abc146daa4ad5
+2026-07-23,MBTN26,short,00:03,66125.0,23:05,65240.0,1,133.84,88.5,scheduled_exit,22.653,5.518,817aa76f9d1b6106
+2026-07-23,METN26,short,00:03,1934.0,23:05,1882.5,34,266.29,175.1,scheduled_exit,22.653,5.518,58a092a9488e4c3b

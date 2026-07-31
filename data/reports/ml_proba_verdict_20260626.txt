@@ -1,0 +1,24 @@
+==================================================================
+ ml_proba ordinal-hypothesis verdict — 2026-06-26T14:00:02Z
+ prereg: _bmad-output/preregistration_ml_proba_ordinal.md (seal 110a533)
+ rule: PENDING <30; interim early-stop N>=15 if rho<=0;
+       PASS at N>=30 iff rho>0 one-sided p<0.05 AND top-tercile E$>bottom
+==================================================================
+
+----- trader-s26 (PRIMARY) -----
+== ml_proba ordinal hypothesis — trader-s26 ==
+prospective cutoff (entry date >= ): 2026-06-20   [prospective = entry timestamp strictly after the seal; use --cutoff (>=).]
+N prospective trades: 15
+ml_proba range 0.635-0.874  WR 27%  E$/trade -35.9  sumPnL -539.0
+Spearman rho=-0.050  two-sided p=0.860  one-sided p(rho>0)=0.570
+bottom-tercile E$=+4.7 (n=5)   top-tercile E$=-26.0 (n=5)
+  [descriptive] ml_proba>=0.63   n=15 E$=  -35.9
+
+-- VERDICT --
+EARLY-STOP FAIL — at interim look (N>=15) rho<=0; no ordinal information.
+
+----- trader-yank (secondary) -----
+== ml_proba ordinal hypothesis — trader-yank ==
+prospective cutoff (entry date >= ): 2026-06-20   [prospective = entry timestamp strictly after the seal; use --cutoff (>=).]
+N prospective trades: 0
+No prospective trades yet. PENDING.

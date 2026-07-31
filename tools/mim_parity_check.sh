@@ -47,3 +47,52 @@ cd "$BASE" || exit 1
 
 echo "parity report written: $OUT"
 tail -25 "$OUT"
+
+# ---------------------------------------------------------------------------
+# Telegram push — the verdict, not the whole report.
+#
+# Same contract as tools/combine_ops_alert.sh: credentials live in .env.telegram
+# (gitignored), and the push is a silent no-op when they are absent, so this script
+# stays runnable on a machine without them. Report-only — it never touches the bot.
+# ---------------------------------------------------------------------------
+[ -f "$BASE/.env.telegram" ] && . "$BASE/.env.telegram"
+
+notify_telegram() {
+  [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || {
+    echo "telegram: no credentials — report-only run"; return 0; }
+  # Check the API's own ok flag, not just curl's exit status: Telegram answers a bad
+  # chat_id or revoked token with HTTP 400 and {"ok":false}, which curl reports as
+  # success. A push that silently never arrives is worse than no push.
+  local resp
+  resp=$(curl -s --max-time 15 \
+    --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+    --data-urlencode "text=$1" \
+    --data "disable_web_page_preview=true" \
+    "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage")
+  case "$resp" in
+    *'"ok":true'*) echo "telegram: verdict pushed" ;;
+    *) echo "WARN: telegram send failed (report is still at $OUT): ${resp:0:200}" >&2 ;;
+  esac
+}
+
+trim() { sed 's/^ *//;s/ *$//'; }
+VERDICT=$(grep -E 'VERDICT:' "$OUT" | head -1 | trim)
+MARKS=$(grep -E 'marks compared:' "$OUT" | head -1 | trim)
+WSIGMA=$(grep -F 'worst |dsigma|' "$OUT" | head -1 | trim)
+WBAND=$(grep -F 'worst |dband|' "$OUT" | head -1 | trim)
+M1600=$(grep -E '^[[:space:]]+16:00[[:space:]]' "$OUT" | head -1 | trim)
+NOTE=""
+grep -q 'A FAIL before then is expected' "$OUT" && \
+  NOTE=$'\nexpected FAIL: 07-29/07-31 contaminated sessions sit in the window until ~2026-08-20'
+
+MSG="MIM-NB parity — ${DAY}
+${VERDICT:-VERDICT: (not produced)}
+${MARKS:-marks compared: n/a}
+${WSIGMA:-worst |dsigma|: n/a}
+${WBAND:-worst |dband|: n/a}
+16:00 mark: ${M1600:-not evaluated}${NOTE}
+report: logs/parity/parity_${DAY}.txt"
+
+notify_telegram "$MSG"
+echo "--- telegram payload ---"
+echo "$MSG"

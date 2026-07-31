@@ -616,31 +616,71 @@ class MimNbLive:
             logger.warning("Startup reconcile: cat-stop status UNKNOWN (id=%s) — resuming holding; "
                            "next check-mark verifies", cat_id)
 
+    @staticmethod
+    def _read_recorded_day(path, day_et):
+        """Today's RTH rows from the bot's OWN hash-chained bar record, chronological.
+
+        Returns [(hm, open, close, volume, ts_utc), ...]. A dedicated reader rather than a
+        widening of `_read_rth_sessions()`: that helper is on the sealed seed path (§1
+        site 1) and `_prev_close_for_symbol()` depends on its tuple shape, so growing it to
+        carry volume would put the seed at risk to save a few lines.
+        """
+        rows = []
+        if not Path(path).exists():
+            return rows
+        with open(path, newline="") as fh:
+            for row in csv.DictReader(fh):
+                raw = row.get("ts_utc")
+                if not raw:
+                    continue
+                try:
+                    ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    et = ts.astimezone(ET)
+                    if et.date() != day_et:
+                        continue
+                    hm = et.strftime("%H:%M")
+                    if not (RTH_FIRST <= hm <= RTH_LAST):
+                        continue
+                    rows.append((hm, float(row["open"]), float(row["close"]),
+                                 float(row.get("volume") or 0), raw))
+                except (ValueError, KeyError, TypeError):
+                    continue
+        rows.sort(key=lambda r: r[0])
+        return rows
+
     async def _catch_up_today(self):
         """If started/restarted mid-session, rebuild today's intraday state
         (open anchor, VWAP, sigma moves) from completed bars WITHOUT acting on
-        missed checks — missed signals are skipped, never back-traded."""
+        missed checks — missed signals are skipped, never back-traded.
+
+        The bars come from `bars_raw.csv`, the bot's own hash-chained record — NEVER from
+        a live fetch (prereg sigma-provenance Amendment 2 §9.4). `open_d` anchors every
+        entry in `today_moves`, and `today_moves` is what the 16:00 fold appends to σ
+        history, so sourcing it from an API call made σ depend on restart timing: the bot
+        used open_d 27914.75 on 07-29 and 28576.25 on 07-31 while its own record held
+        27915.25 and 28576.00. The one session with no restart matched exactly.
+
+        Consequence, disclosed in §9.5: with no recorded 09:31 bar for today the bot
+        stands down for the session rather than reconstructing it from the network.
+        """
         now_et = datetime.now(ET)
-        if not ("09:31" <= now_et.strftime("%H:%M") <= "16:00"):
+        if not (RTH_FIRST <= now_et.strftime("%H:%M") <= RTH_LAST):
             return
-        bars = await self._ts_get_bars(barsback=1500)
-        todays = [b for b in bars
-                  if self._bar_et(b).date() == now_et.date()
-                  and "09:31" <= self._bar_et(b).strftime("%H:%M") <= "16:00"]
+        todays = self._read_recorded_day(BARS_RAW_CSV, now_et.date())
         if not todays:
+            logger.warning("CATCHUP_NO_RECORD %s: no recorded RTH bars for today — standing "
+                           "down this session (bands and sigma must derive from our own "
+                           "record, never a fetch)", now_et.date())
             return
-        first_hm = self._bar_et(todays[0]).strftime("%H:%M")
-        if first_hm != "09:31":
-            logger.warning("Catch-up: today's 09:31 bar unavailable (first=%s) — standing down today",
-                           first_hm)
+        if todays[0][0] != RTH_FIRST:
+            logger.warning("Catch-up: today's %s bar not in the record (first=%s) — "
+                           "standing down today", RTH_FIRST, todays[0][0])
             return
         self._new_session(now_et.date())
         skipped_checks = 0
-        for b in todays:
-            et = self._bar_et(b)
-            hm = et.strftime("%H:%M")
-            o, c = float(b["Open"]), float(b["Close"])
-            v = float(b.get("TotalVolume", 0) or 0)
+        for hm, o, c, v, ts_utc in todays:
             if self.open_d is None:
                 self.open_d = o
             self.cum_pv += c * v
@@ -648,10 +688,10 @@ class MimNbLive:
             self.today_moves[hm] = abs(c / self.open_d - 1.0)
             if hm in CHECK_MARKS:
                 skipped_checks += 1
-            self.last_bar_ts = b["TimeStamp"]
-        logger.warning("Catch-up complete: open_d=%.2f, %d bars rebuilt, %d check marks "
-                       "MISSED (not back-traded, per seal fill model). Live from next check.",
-                       self.open_d, len(todays), skipped_checks)
+            self.last_bar_ts = ts_utc
+        logger.warning("Catch-up complete: open_d=%.2f (from bar record), %d bars rebuilt, "
+                       "%d check marks MISSED (not back-traded, per seal fill model). "
+                       "Live from next check.", self.open_d, len(todays), skipped_checks)
 
     # ------------------------------------------------------------------
     # Order helpers (market / stop via ProjectX)

@@ -62,12 +62,29 @@ async def test_resume_holding_when_cat_stop_live(bot):
 
 @pytest.mark.asyncio
 async def test_offline_cat_stop_fill_is_booked(bot):
+    # Derive the stop distance from the sealed constant rather than hardcoding it. This
+    # assertion read `30000.0 - 500.0` and silently went stale when the catstop-250 seal
+    # halved CAT_STOP_PTS, failing on a correct system.
+    from src.research.mim_nb_live import CAT_STOP_PTS
     state = {"position": 1, "entry_px": 30000.0, "entry_t": "13:30", "cat_stop_id": 222, "day": "2026-06-17"}
     booked = await _run(bot, state, open_flag=False)         # cat-stop gone -> filled offline
     assert booked and booked[0][1] == "CAT_STOP_OFFLINE"
-    assert booked[0][0] == 30000.0 - 500.0                   # LONG stop = entry - 500pt
+    assert booked[0][0] == 30000.0 - CAT_STOP_PTS            # LONG stop = entry - cat-stop
     assert bot.cat_stop_id is None
     assert bot.px.cancelled == [222]                          # only OUR cat-stop id
+
+
+@pytest.mark.asyncio
+async def test_offline_cat_stop_fill_is_booked_short(bot):
+    """Mirror of the LONG case — the SHORT half of the same stop_px expression was
+    never covered, so a sign error there would have gone unnoticed."""
+    from src.research.mim_nb_live import CAT_STOP_PTS
+    state = {"position": -1, "entry_px": 30000.0, "entry_t": "13:30", "cat_stop_id": 444, "day": "2026-06-17"}
+    booked = await _run(bot, state, open_flag=False)
+    assert booked and booked[0][1] == "CAT_STOP_OFFLINE"
+    assert booked[0][0] == 30000.0 + CAT_STOP_PTS            # SHORT stop = entry + cat-stop
+    assert bot.cat_stop_id is None
+    assert bot.px.cancelled == [444]
 
 
 @pytest.mark.asyncio

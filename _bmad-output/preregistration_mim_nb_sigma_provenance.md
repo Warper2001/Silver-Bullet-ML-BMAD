@@ -275,3 +275,105 @@ unwritten.
 - Any conclusion about whether MIM-NB's edge is real. That question remains
   **unanswerable** until G1–G3 pass and a fresh prospective N accrues under a separate,
   dated decision rule.
+
+---
+
+## 8. Amendment 1 — 16:00 close-out ordering (2026-07-31)
+
+**Authorization:** Alex, 2026-07-31: *"fix the prev_close ordering."*
+
+**Status of the parent seal:** unchanged. This amendment does not relax G1–G3; it repairs
+the implementation so the gates are meetable. **Sites 1–10 and §1.1 stand as written.**
+
+### 8.1 The defect — sites 9 and 10 were placed too early
+
+§1 sites 9 and 10 moved the σ fold and the `prev_close` assignment to the `16:00` bar,
+ahead of the depth gate, so that neither could be skipped by an early `return`. They were
+placed ahead of the **entire mark evaluation**, not merely ahead of the gate. The 16:00
+mark therefore evaluates against state that already includes the day being evaluated:
+
+```python
+if hm == RTH_LAST:
+    self._fold_today_into_sigma()   # today's move now in sigma_hist[...]
+    self.prev_close = c             # prev_close now = TODAY's close
+    self._save_state()
+if hm not in CHECK_MARKS: return
+sig    = self.sigma_hist.get(hm, [])          # <- contains today
+sigma  = float(np.mean(...))
+gap_dn = max(self.prev_close - self.open_d, 0.0)   # <- today's close
+```
+
+The sealed engine (`study_mim_nb_catstop.py`) does the opposite. Its per-mark loop runs
+first; only afterwards, at the end of the day iteration, does it fold and roll:
+
+```python
+for i, hm in enumerate(hms):          # <- all of day d's marks, incl. 16:00
+    hist[hm].append(abs(closes[i] / O - 1.0))
+prev_close = closes[-1]               # line 118 — AFTER the marks
+```
+
+So the engine evaluates every mark of day *d* — **including 16:00** — using σ history and
+`prev_close` from days strictly before *d*.
+
+**Both quantities are affected, not just `prev_close`.** The original EOD writeup named
+only `prev_close`; the σ fold has the identical ordering error and is corrected here too.
+
+### 8.2 Measured divergence (live sessions, `tools/` reconstruction)
+
+| | 2026-07-29 16:00 | 2026-07-30 16:00 |
+|---|---|---|
+| σ live vs engine | 0.007214 vs 0.006214 (**+0.001000**) | 0.007645 vs 0.007216 (**+0.000429**) |
+| `prev_close` live vs engine | 27336.50 vs 27919.50 (**−583.00**) | 28229.50 vs 27336.50 (**+893.00**) |
+| UB error | +23.16 pt | +366.72 pt |
+| **LB error** | **−606.66 pt** | **+526.28 pt** |
+
+G2 requires <0.01 pt at every mark. **A parity replay fails at every 16:00 mark until this
+is fixed.**
+
+### 8.3 Blast radius — ledger only, no trade was changed
+
+At `hm == "16:00"` the code takes the EOD-flatten branch exclusively; cat-stop detection,
+band-stop exits and entries are all in the `else`. The bands computed at 16:00 are
+**recorded and never acted upon**. Both affected sessions logged `EOD_EXIT`.
+
+Consequently this defect has **not changed any entry, exit, or P&L**. What it has done is
+write incorrect `sigma`, `prev_close`, `ub` and `lb` into `decisions.csv` — a hash-chained
+audit record — at every 16:00 row, and hold the repair short of its own acceptance gate.
+**No P&L is restated. No trade is re-labelled.**
+
+One second-order effect is possible and is disclosed rather than dismissed: folding before
+the depth gate raises a label's depth by one, so a label sitting at 13/14 could pass the
+gate at the 16:00 mark where the engine would have emitted `DEPTH_SKIP`. This changes only
+whether a `DEPTH_SKIP` row is written at 16:00, never a trade.
+
+The values carried **forward** were always correct: `prev_close` becomes today's close and
+the fold appends today's moves — both right for the following session. Only the 16:00 row's
+own evaluation was wrong.
+
+### 8.4 Change spec
+
+| # | Site (`src/research/mim_nb_live.py`) | Before | After |
+|---|---|---|---|
+| A1 | `on_bar()` pre-mark block (~950) | fold + `prev_close` + save run **before** the mark is evaluated | block **removed** |
+| A2 | new `_close_out_session(c)` | — | performs `today_saw_close = True`, `_fold_today_into_sigma()`, `prev_close = c`, `_save_state()`. Idempotent: the fold is already guarded by `sigma_days`, and `prev_close = c` is assignment of the same value |
+| A3 | depth-gate `return` path (~975) | returns before any close-out | calls `_close_out_session(c)` **before** returning when `hm == RTH_LAST` — preserves site 9/10's requirement that a depth-starved day still folds and still rolls `prev_close` |
+| A4 | end of `on_bar()` (~1041) | `if hm == RTH_LAST: self._save_state()` | `if hm == RTH_LAST: self._close_out_session(c)` |
+
+**Invariants preserved from the parent seal:** the fold still happens at the 16:00 bar of
+the day itself (site 9 — an overnight restart still cannot lose the final day, because
+close-out runs before `_save_state` persists); `prev_close` is still set for **every**
+accepted day regardless of the depth gate (site 10); the fold is still idempotent via
+`sigma_days`; the σ reduction is still `float(np.mean(...))` (site 8).
+
+**Frozen and unchanged:** every parameter, threshold and trading rule, including those
+listed in §1 and the risk mechanics of `preregistration_mim_nb_risk_mechanics_removal.md`.
+
+### 8.5 Acceptance
+
+Unchanged — **G1, G2, G3 as written in §2.** This amendment exists so they can be met.
+Additionally pinned by unit test:
+
+- **(A-G4)** At the 16:00 mark, σ and `prev_close` used for the bands exclude the current
+  session; after `on_bar` returns, `sigma_hist` and `prev_close` **include** it.
+- **(A-G5)** A depth-gated 16:00 bar still folds and still rolls `prev_close`.
+- **(A-G6)** Processing the same 16:00 bar twice does not double-fold.

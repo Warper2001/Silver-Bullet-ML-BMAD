@@ -901,6 +901,27 @@ class MimNbLive:
         logger.info("Sigma folded session %s (%d labels, %d contributing days)",
                     self.day, len(self.today_moves), len(self.sigma_days))
 
+    def _close_out_session(self, c):
+        """End-of-session bookkeeping for an accepted day: fold today's moves into sigma
+        history, roll prev_close forward, persist.
+
+        MUST run AFTER the 16:00 mark has been evaluated (prereg sigma-provenance
+        Amendment 1 §8.4). The sealed engine folds and rolls at the END of its day
+        iteration (`study_mim_nb_catstop.py:118`), so every mark of day d — including
+        16:00 — is evaluated against days strictly before d. Running this earlier let the
+        16:00 mark see its own session, putting the bands out by hundreds of points.
+
+        MUST also run on the depth-gate early-return path, or a depth-starved day would
+        contribute nothing and leave prev_close stale (parent seal sites 9 and 10).
+
+        Idempotent: the fold is guarded by `sigma_days`, and `prev_close = c` re-assigns
+        the same value, so replaying the 16:00 bar after a restart is harmless.
+        """
+        self.today_saw_close = True
+        self._fold_today_into_sigma()
+        self.prev_close = c
+        self._save_state()
+
     def _new_session(self, d):
         # Fold the finished day into sigma history ONLY if it was a whole accepted session
         # (09:31 seen AND 16:00 seen), matching the sealed engine's `continue` on partial
@@ -946,17 +967,6 @@ class MimNbLive:
         self.cum_v += v
         self.today_moves[hm] = abs(c / self.open_d - 1.0)
 
-        if hm == RTH_LAST:
-            # Fold and set prev_close HERE, before any gate can `return`. Two reasons:
-            #  - folding at next-session start loses the final day whenever the process
-            #    restarts overnight (state.json is written at 16:00, before that fold ran);
-            #  - the sealed engine sets `prev_close = closes[-1]` for every accepted day
-            #    regardless of tradeability, so gating it behind the depth check diverges.
-            self.today_saw_close = True
-            self._fold_today_into_sigma()
-            self.prev_close = c
-            self._save_state()
-
         if hm not in CHECK_MARKS:
             return
         sig = self.sigma_hist.get(hm, [])
@@ -973,6 +983,11 @@ class MimNbLive:
                 "sigma": "", "ub": "", "lb": "",
                 "close": f"{c:.2f}", "vwap": "",
                 "position": self.position, "action": "DEPTH_SKIP", "detail": why})
+            if hm == RTH_LAST:
+                # A depth-starved day must still contribute to sigma history and must
+                # still roll prev_close (parent seal sites 9 and 10) — the engine's
+                # day-acceptance rule does not care whether a day was tradeable.
+                self._close_out_session(c)
             return
         # Reduction must be byte-identical to the sealed engine's `float(np.mean(sig))`,
         # or the parity gate G1 fails on floating-point summation order rather than on the
@@ -1039,7 +1054,10 @@ class MimNbLive:
                               "position": self.position, "action": action, "detail": detail})
 
         if hm == RTH_LAST:
-            self._save_state()   # persist post-exit state; fold + prev_close already done above
+            # Close out ONLY now — after the 16:00 mark has been evaluated and logged, so
+            # its bands used days strictly before today (Amendment 1 §8.4). This also
+            # persists post-exit state, replacing the bare _save_state() that was here.
+            self._close_out_session(c)
 
     def _save_state(self):
         (DATA_DIR / "state.json").write_text(json.dumps({

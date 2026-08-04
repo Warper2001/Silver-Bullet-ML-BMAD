@@ -40,6 +40,18 @@ PF_THRESHOLD = 0.70            # DERIVED — results_pf_trigger.md
 PF_MIN_TRADES = 30
 PASS_TARGET = 53_000.0
 POLL_SEC = int(os.environ.get("MONITOR_POLL_SEC", "30"))
+# Report-only is the DEFAULT, and halting is now the opt-in.
+#
+# Alex removed floor-derived braking from both bots on 2026-07-29 (prereg
+# mim-nb-risk-mechanics-removal §1 site 3 + Amendment 1) and this service was stopped and
+# disabled. That also blinded the account readout — nothing tracked the high-water mark,
+# so once the balance made new highs on 08-04 the recorded floor was stale and the
+# reported cushion overstated. This mode restores the tracking WITHOUT restoring the brake.
+#
+# The default is inverted deliberately: with halting opt-out, any stray `systemctl start`
+# of the old unit would re-arm a kill path the owner explicitly removed. With halting
+# opt-in, the worst a stray start can do is log.
+REPORT_ONLY = os.environ.get("FLOOR_MONITOR_REPORT_ONLY", "1") != "0"
 TRADER_IDS = ("trader-mim-nb", "trader-yank")
 COMBINE_START = os.environ.get("COMBINE_START", "2026-06-17T00:00:00+00:00")
 
@@ -182,8 +194,17 @@ async def do_halt(px, reason):
 async def main():
     if not ACCOUNT_ID:
         raise SystemExit("PROJECTX_ACCOUNT_ID not set — refusing to start")
-    logger.info("Combine floor monitor — acct %s | halt at floor+$%.0f, PF<%.2f@%d | poll %ds",
-                ACCOUNT_ID, HALT_DISTANCE, PF_THRESHOLD, PF_MIN_TRADES, POLL_SEC)
+    if REPORT_ONLY:
+        logger.warning("Combine floor monitor — acct %s | *** REPORT-ONLY: WILL NOT HALT "
+                       "OR FLATTEN *** | tracks HWM/floor, publishes %s, logs triggers | "
+                       "poll %ds", ACCOUNT_ID, STATE_FILE.name, POLL_SEC)
+        logger.warning("REPORT-ONLY: neither bot has an automatic floor brake. Manual kill "
+                       "switches remain: touch %s (MIM) / emergency-stop CLI (YANK).",
+                       HALT_FILE)
+    else:
+        logger.info("Combine floor monitor — acct %s | ARMED: halt at floor+$%.0f, "
+                    "PF<%.2f@%d | poll %ds",
+                    ACCOUNT_ID, HALT_DISTANCE, PF_THRESHOLD, PF_MIN_TRADES, POLL_SEC)
     auth = ProjectXAuth.from_file(".projectx_api_key")
     http = httpx.AsyncClient(timeout=30)
     cfg = type("_Cfg", (), {"symbol": "MNQU26", "contracts": 1})()
@@ -216,7 +237,12 @@ async def main():
             if equity >= PASS_TARGET:
                 logger.info("✅ PASS target reached: equity $%.0f >= $%.0f — confirm consistency rule, halt entries",
                             equity, PASS_TARGET)
-            if reason and not HALT_FILE.exists():
+            if reason and REPORT_ONLY:
+                # Log loudly, change nothing. No HALT file is written — MIM-NB SystemExits
+                # at startup if one exists, so writing it here would be a kill path
+                # smuggled in through a "report-only" mode.
+                logger.warning("TRIGGER (report-only, NOT halting): %s", reason)
+            elif reason and not HALT_FILE.exists():
                 await do_halt(px, reason)
         except Exception as exc:
             logger.error("monitor loop error: %s", exc)

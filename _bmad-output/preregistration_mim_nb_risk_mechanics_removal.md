@@ -197,3 +197,64 @@ One existing test is amended by this change: `tests/unit/test_risk_manager.py`
 `test_breach_halts_trading` asserted `rm.is_halted is True` after a breach. Its assertion
 is inverted to `is False` with a reference to this amendment. **The test is not deleted** —
 it now pins the new behaviour, so a silent regression back to halting would still fail.
+
+---
+
+## 7. Amendment 2 — floor monitor restored in REPORT-ONLY mode (2026-08-04)
+
+**Authorization:** Alex, 2026-08-04: *"restore the HWM tracking in report-only mode."*
+
+**This restores no brake.** §1 site 3 stopped and disabled `combine-floor-monitor`, and
+§6 removed YANK's internal trailing-DD halt. Both stay removed. Neither bot regains an
+automatic floor brake.
+
+### 7.1 What went wrong with observability
+
+§1 retained the buffer computation as "observability only", but the *authoritative* source
+of that number was the monitor itself: it alone tracked the account high-water mark, and
+`tools/combine_ops_healthcheck.py:191` reads equity/floor from the `floor_state.json` the
+monitor writes. Disabling the service froze that file at 18:01 UTC on 2026-07-29.
+
+While the account drifted sideways this was harmless. It stopped being harmless on
+**2026-08-04**, when the balance reached **$50,217.86** — **$745.74 above the last recorded
+HWM of $49,472.12**. The Topstep trailing floor had ratcheted up and nothing was tracking
+it, so every cushion figure produced from the frozen file **overstated the real room**.
+A risk number that is stale in the optimistic direction is worse than no number.
+
+### 7.2 Change spec
+
+| # | Site | Before | After |
+|---|---|---|---|
+| C1 | `combine_floor_monitor.py` config | — | `REPORT_ONLY = os.environ.get("FLOOR_MONITOR_REPORT_ONLY", "1") != "0"` |
+| C2 | main loop trigger branch | `if reason and not HALT_FILE.exists(): await do_halt(...)` | when `REPORT_ONLY`, log `TRIGGER (report-only, NOT halting)` and do nothing else; the armed path is unchanged behind the opt-in |
+| C3 | startup banner | single ARMED line | REPORT-ONLY runs print a `*** WILL NOT HALT OR FLATTEN ***` warning naming the surviving manual kill switches |
+| C4 | `combine-floor-monitor.service` | disabled | re-enabled with `Environment=FLOOR_MONITOR_REPORT_ONLY=1` |
+
+**The default is inverted deliberately.** Halting is now **opt-in**. With opt-out, any
+stray `systemctl start` of the old unit would silently re-arm a kill path the owner
+explicitly removed; with opt-in, the worst a stray start can do is log.
+
+**Report-only never writes the `HALT` file.** MIM-NB `SystemExit`s at startup when that
+file exists, so writing it from a "report-only" mode would be a kill path smuggled in
+under a safe-sounding name. Pinned by test.
+
+### 7.3 Effect on the bots — none
+
+Nothing gates on the shared floor any more: §1 removed MIM's `BUFFER_GATE`, and the DLL
+clamp is static. Restoring `floor_state.json` only changes which number MIM *prints*
+(`[shared]` instead of `[own-ledger]`), and the shared figure is the more accurate of the
+two — the own-ledger path double-counts the day's P&L, adding `day_pnl` on top of a
+`_realized_pnl` that already includes it. **Display only. No entry, exit or size changes.**
+
+`combine_ops_healthcheck.py` regains a live equity readout and its distance-to-floor
+alert, which remains an alert and never an action.
+
+### 7.4 Verification
+
+- **(C-G1)** `REPORT_ONLY` defaults to true; only an explicit `0` arms halting.
+- **(C-G2)** On the report-only path the loop neither calls `do_halt` nor references
+  `HALT_FILE`.
+- **(C-G3)** `do_halt` still exists and is still reachable when armed — a mode switch, not
+  a deletion of the kill path.
+- **(C-G4)** HWM/floor accounting and trigger *detection* are identical in both modes;
+  report-only silences the action, not the detection.

@@ -1,0 +1,10 @@
+[Unit]
+Description=MIM-NB parity check — per-session G1/G2 gates + whole-era replay (report only, never trades)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/tools/mim_parity_check.sh
+TimeoutStartSec=900

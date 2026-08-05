@@ -1,0 +1,33 @@
+[Unit]
+Description=MIM-NB Live Combine Bot (Topstep 50K, MNQ 1ct, sealed 6957daa/7939eed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+# REQUIRED: set to the Topstep 50K combine account before starting.
+# The bot refuses to start if this is missing.
+# Topstep 50K Trading Combine 50KTC-V2-303705-72867678 (confirmed by Alex 2026-06-11)
+Environment=PROJECTX_ACCOUNT_ID=23884932
+# Quarterly roll 2026-06-16: MNQM26 (June) rolled off / non-tradeable (expires 06-19);
+# ProjectX active contract is now MNQU26 (Sept, CON.F.US.MNQ.U26). Next roll ~2026-09-11 → MNQZ26.
+Environment=MIM_NB_SYMBOL=MNQU26
+# Stage-1 ProjectX data-feed migration (shadow): fetch+log ProjectX bars in parallel
+# while TradeStation stays the SIGNAL source. Observation only; remove to disable.
+Environment=MIM_NB_DATA_SHADOW=1
+# Best-effort TradeStation SIM order mirror (2026-06-18). Copies every combine order
+# to TS SIM (acct SIM2797251F) on an isolated worker task — CANNOT delay/block/crash
+# the authoritative ProjectX path. Remove to disable. See src/research/ts_sim_mirror.py.
+Environment=MIM_MIRROR_TS_SIM=1
+Environment=SIM_INVVOL=1
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/mim_nb_live.py
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/mim_nb_live.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/mim_nb_live.log
+
+[Install]
+WantedBy=multi-user.target

@@ -18,6 +18,11 @@ Environment=SYMBOL=MNQU26
 # Stage-1 ProjectX data-feed migration (shadow): fetch+log ProjectX bars in parallel
 # while TradeStation stays the SIGNAL source. Observation only; remove to disable.
 Environment=YANK_DATA_SHADOW=1
+# Best-effort TradeStation SIM order mirror (2026-06-18). Copies every combine order
+# to TS SIM (acct SIM2797251F) on an isolated worker task — CANNOT delay/block/crash
+# the authoritative ProjectX path. Remove to disable. See src/research/ts_sim_mirror.py.
+Environment=YANK_MIRROR_TS_SIM=1
+Environment=SIM_INVVOL=1
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/yank_streaming_working.py
 Restart=on-failure
 RestartSec=30

@@ -1,0 +1,18 @@
+[Unit]
+Description=Combine Floor Monitor — REPORT-ONLY (tracks HWM/floor for acct 23884932; does NOT halt or flatten)
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+Environment=PROJECTX_ACCOUNT_ID=23884932
+# Report-only per prereg mim-nb-risk-mechanics-removal Amendment 2 (2026-08-04).
+# Set to 0 ONLY to deliberately re-arm halting — that reverses an explicit owner decision.
+Environment=FLOOR_MONITOR_REPORT_ONLY=1
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/combine_floor_monitor.py
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

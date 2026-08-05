@@ -258,3 +258,79 @@ alert, which remains an alert and never an action.
   a deletion of the kill path.
 - **(C-G4)** HWM/floor accounting and trigger *detection* are identical in both modes;
   report-only silences the action, not the detection.
+
+---
+
+## 8. Amendment 3 — correction: Amendment 1 edited a file YANK does not run (2026-08-05)
+
+**Found while vendoring the systemd units into `deploy/systemd/`.**
+
+### 8.1 The error
+
+Amendment 1 (§6) removed the trailing-floor halt from
+`src/research/tier2_streaming_working.py`, shipped it as PR #21, deployed it, and
+restarted YANK. **YANK does not run that file.**
+
+```
+$ tr '\0' '\n' < /proc/$(systemctl show trader-yank -p MainPID --value)/cmdline
+/root/Silver-Bullet-ML-BMAD/.venv/bin/python
+src/research/yank_streaming_working.py
+```
+
+`yank_streaming_working.py` and `tier2_streaming_working.py` are **separate, diverged
+files**. The change therefore had **no effect on the live system**. It passed review,
+merged, deployed and restarted cleanly — and did nothing.
+
+**Root cause:** `CLAUDE.md` states that the deployed system is
+`tier2_streaming_working.py`. That is true of the S25 lineage but false for the
+`trader-yank` service. The unit's `ExecStart` was never checked against the file being
+edited.
+
+### 8.2 Correction to Amendment 1 §6.1 — §4 was right after all
+
+§6.1 asserted that §4's claim *"YANK has no internal floor gate of its own"* was **wrong**,
+on the strength of `check_trailing_dd()` in `tier2_streaming_working.py`.
+
+**That correction was itself incorrect, and is hereby withdrawn.** The deployed
+`yank_streaming_working.py` contains **no trailing-floor code at all**:
+
+```
+$ grep -c "check_trailing_dd\|trailing_floor\|TRAILING_DD" src/research/yank_streaming_working.py
+0
+```
+
+**The original §4 statement was accurate for the deployed bot.** A true statement was
+"corrected" into a false one, and the false one sat inside a sealed risk document for six
+days. Recorded here rather than edited in place, so the error is auditable.
+
+### 8.3 Net risk posture — unchanged, and as the owner intended
+
+The outcome Alex asked for on 2026-07-29 (*"yank too — no floor on either"*) **is in force**
+— not because Amendment 1 achieved it, but because the deployed YANK never had a
+floor brake to remove.
+
+YANK's automatic brakes, as actually deployed:
+
+| Brake | Status |
+|---|---|
+| Trailing-floor halt | **does not exist** in `yank_streaming_working.py` |
+| Daily circuit breaker (`max_daily_loss`, −$750) | **active** — `check_and_update()`, the only automatic brake |
+| `halt_manually()` (emergency-stop CLI) | available, manual |
+| `combine-floor-monitor` | report-only since Amendment 2 — never halts |
+
+**No live behaviour changes as a result of this amendment.** It corrects the record only.
+The Amendment 1 code change remains merged in `tier2_streaming_working.py`, where it is
+harmless and where it will be correct if that file is ever deployed.
+
+### 8.4 Consequence for prior reporting
+
+Every statement made between 2026-07-29 and 2026-08-04 to the effect that *"Amendment 1
+removed YANK's floor brake"* was wrong about the mechanism. The **conclusion** — that YANK
+runs with no floor brake — was and is correct. Reports that cited PR #21 as the cause
+should cite the deployed bot's architecture instead.
+
+### 8.5 Preventive
+
+`deploy/systemd/README.md` now documents which file each bot actually runs and how to
+verify it from `/proc/<pid>/cmdline`. **Check `ExecStart` before editing a bot, not the
+docs.**

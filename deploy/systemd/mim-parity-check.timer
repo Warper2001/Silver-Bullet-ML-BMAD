@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the MIM-NB parity check Monday 2026-08-03 at 10:15 ET, after the open
+
+[Timer]
+OnCalendar=2026-08-03 14:15:00 UTC
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

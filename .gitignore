@@ -181,3 +181,12 @@ data/gap_fade/*
 !data/gap_fade/fills_backfill_report.csv
 data/combine_joint/*
 data/ts_sim_mirror/*
+
+# Exception to the data/processed/* rule above, recorded because it is deliberate.
+# The frozen warmup series below is FORCE-ADDED and therefore tracked despite that rule
+# (gitignore governs untracked files only). It is not bot output — it is a frozen input
+# the sigma seed depends on for the pre-live era, and the corroboration on 2026-08-06
+# established that the venue cannot substitute for it: TradeStation revises its own
+# 1-minute history (145/390 bars differ on a session we can check). Losing or altering
+# this file makes sigma's pre-2026-06-11 history unreconstructible.
+#   data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv   (tracked, see above)

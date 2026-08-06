@@ -1,12 +1,12 @@
-# combine ops status @ 2026-08-04T22:51:52Z (exit 1)
+# combine ops status @ 2026-08-06T20:07:04Z (exit 1)
 === Combine ops healthcheck: WARNINGS ===
 [  OK ] no HALT flag
 [  OK ] trader-yank: active, fresh (15s)
-[  OK ] trader-mim-nb: active, fresh (10s)
-[  OK ] combine-floor-monitor: active, fresh (23s)
-[  OK ] trader-btc-carry: active, fresh (13s)
-[  OK ] trader-s26-combine: active, fresh (14s)
-[  OK ] trader-s26: active, fresh (35s)
-[  OK ] trader-s27: active, fresh (14s)
+[  OK ] trader-mim-nb: active, fresh (0s)
+[  OK ] combine-floor-monitor: active, fresh (3s)
+[  OK ] trader-btc-carry: active, fresh (20s)
+[  OK ] trader-s26-combine: active, fresh (43s)
+[  OK ] trader-s26: active, fresh (10s)
+[  OK ] trader-s27: active, fresh (35s)
 [ WARN] sil-quote-capture: NOT active
 [  OK ] distance-to-floor $2,000 (equity $50,218, floor $48,218, combined_pf 1.016, n_trades 21)

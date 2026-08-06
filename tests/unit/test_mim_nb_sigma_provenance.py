@@ -15,6 +15,18 @@ from src.research import mim_nb_live as M
 from src.research.mim_nb_live import MimNbLive, LOOKBACK_DAYS
 
 
+@pytest.fixture(autouse=True)
+def _tiny_sessions(monkeypatch):
+    """These tests exercise ORDERING and DETERMINISM with miniature sessions.
+
+    Amendment 3 made a session count only when it carries FULL_SESSION_BARS (390) distinct
+    RTH minutes. Rather than inflate every fixture to 390 rows — which would test nothing
+    extra here — scale the constant to the fixtures. Completeness itself is covered by
+    tests/unit/test_mim_nb_fail_closed_sessions.py.
+    """
+    monkeypatch.setattr(M, "FULL_SESSION_BARS", 6)
+
+
 def _bare():
     """A MimNbLive with only the sigma-related state initialised."""
     o = object.__new__(MimNbLive)
@@ -184,7 +196,7 @@ class TestFold:
     def test_fold_is_idempotent(self):
         o = _bare()
         o.day, o.open_d = date(2026, 7, 21), 20000.0
-        o.today_moves = {"10:00": 0.002, "16:00": 0.004}
+        o.today_moves = {f"m{i}": 0.002 for i in range(5)} | {"10:00": 0.002}
         o._fold_today_into_sigma()
         o._fold_today_into_sigma()
         o._fold_today_into_sigma()
@@ -196,7 +208,7 @@ class TestFold:
         o.open_d = 20000.0
         for i in range(1, LOOKBACK_DAYS + 6):
             o.day = date(2026, 6, i)
-            o.today_moves = {"10:00": i / 1000.0}
+            o.today_moves = {f"m{j}": 0.0 for j in range(5)} | {"10:00": i / 1000.0}
             o._fold_today_into_sigma()
         assert len(o.sigma_hist["10:00"]) == LOOKBACK_DAYS
         assert len(o.sigma_days) == LOOKBACK_DAYS
@@ -206,6 +218,6 @@ class TestFold:
     def test_no_fold_without_open(self):
         o = _bare()
         o.day, o.open_d = date(2026, 7, 21), None
-        o.today_moves = {"10:00": 0.002}
+        o.today_moves = {f"m{i}": 0.0 for i in range(5)} | {"10:00": 0.002}
         o._fold_today_into_sigma()
         assert o.sigma_hist == {} and o.sigma_days == []

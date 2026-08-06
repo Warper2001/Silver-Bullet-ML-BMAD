@@ -122,6 +122,10 @@ ENTRY_MARKS = {f"{h:02d}:{m}" for h in range(10, 16) for m in ("00", "30")} - {"
 # own hash-chained bar record + the frozen warmup series — never from a live API fetch.
 RTH_FIRST = "09:31"
 RTH_LAST = "16:00"
+# A whole RTH session is 09:31..16:00 inclusive. Used as a COMPLETENESS gate, not a
+# convenience constant: a session with fewer distinct minutes is refused outright rather
+# than contributed partially (prereg Amendment 3 §10.3).
+FULL_SESSION_BARS = 390
 WARMUP_CSV = BASE_DIR / "data" / "processed" / "dollar_bars" / "1_minute" / "mnq_1min_2026_ytd.csv"
 BARS_RAW_CSV = DATA_DIR / "bars_raw.csv"
 CHECK_MARKS = ENTRY_MARKS | {"16:00"}
@@ -545,10 +549,27 @@ class MimNbLive:
         sessions = self._read_rth_sessions(WARMUP_CSV, "timestamp")
         sessions.update(self._read_rth_sessions(BARS_RAW_CSV, "ts_utc"))  # live record wins
         today_et = datetime.now(ET).date()
-        accepted = [d for d in sorted(sessions)
-                    if d < today_et
-                    and sessions[d][0][0] == RTH_FIRST
-                    and any(hm == RTH_LAST for hm, _o, _c in sessions[d])]
+        # FAIL CLOSED (prereg Amendment 3 §10.3). The old rule — first bar 09:31 and a
+        # 16:00 bar present — admits a session with an arbitrarily large hole in the
+        # middle. 2026-07-13 (169 bars) passed it and poisoned the window for 14 sessions.
+        # A session now counts only if it is WHOLE: 390 distinct RTH minute labels.
+        # Duplicates are collapsed by label first — 2026-07-31 carried 27 duplicate
+        # minutes after a file was reverted and re-appended, which a raw length check
+        # would have read as a longer-than-complete session.
+        accepted = []
+        for d in sorted(sessions):
+            if d >= today_et:
+                continue
+            labels = {hm for hm, _o, _c in sessions[d]}
+            if len(sessions[d]) != len(labels):
+                logger.warning("SEED: session %s has %d rows for %d distinct minutes "
+                               "(duplicates collapsed)", d, len(sessions[d]), len(labels))
+            if len(labels) != FULL_SESSION_BARS:
+                logger.warning("SEED REJECT %s: %d/%d distinct RTH minutes — incomplete "
+                               "session contributes nothing (fail-closed)",
+                               d, len(labels), FULL_SESSION_BARS)
+                continue
+            accepted.append(d)
         seed_days = accepted[-LOOKBACK_DAYS:]
         self.sigma_hist, self.sigma_days = {}, []
         for d in seed_days:
@@ -933,6 +954,15 @@ class MimNbLive:
         if self.open_d is None or not self.today_moves:
             return
         if str(self.day) in self.sigma_days:
+            return
+        # FAIL CLOSED on the live path too (prereg Amendment 3 §10.3 site D3). Seeing the
+        # 09:31 and 16:00 bars does not mean the session was whole — an outage or a
+        # restart mid-day leaves a hole, and folding it silently skews every affected
+        # minute label for the next 14 sessions.
+        if len(self.today_moves) != FULL_SESSION_BARS:
+            logger.warning("FOLD REJECT %s: %d/%d RTH minutes captured — session NOT "
+                           "folded into sigma history (fail-closed)",
+                           self.day, len(self.today_moves), FULL_SESSION_BARS)
             return
         for hm, mv in self.today_moves.items():
             self.sigma_hist.setdefault(hm, []).append(mv)

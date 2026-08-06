@@ -16,6 +16,13 @@ from src.research import mim_nb_live as M
 from src.research.mim_nb_live import MimNbLive, LOOKBACK_DAYS, RTH_LAST
 
 
+@pytest.fixture(autouse=True)
+def _tiny_sessions(monkeypatch):
+    """Scale the Amendment 3 completeness constant to these miniature fixtures — the
+    subject here is close-out ORDERING, not session completeness."""
+    monkeypatch.setattr(M, "FULL_SESSION_BARS", 2)
+
+
 def _bot(sigma_hist=None, sigma_days=None, prev_close=1000.0, day="2026-07-31"):
     o = object.__new__(MimNbLive)
     o.sigma_hist = sigma_hist if sigma_hist is not None else {}
@@ -67,7 +74,7 @@ class TestCloseOutOrdering:
         hist = {RTH_LAST: [0.001] * LOOKBACK_DAYS}
         bot = _bot(sigma_hist=hist, sigma_days=[f"d{i}" for i in range(LOOKBACK_DAYS)],
                    prev_close=999.0)
-        bot.today_moves = {RTH_LAST: 0.5}
+        bot.today_moves = {"10:00": 0.1, RTH_LAST: 0.5}
 
         # what the mark reads (evaluation happens first)
         sig_at_mark = list(bot.sigma_hist[RTH_LAST])
@@ -94,7 +101,7 @@ class TestDepthGatedDayStillCloses:
     def test_depth_starved_day_still_contributes(self):
         """Even with no usable sigma window, the day must fold and roll."""
         bot = _bot(sigma_hist={RTH_LAST: [0.001] * 3}, prev_close=999.0)
-        bot.today_moves = {RTH_LAST: 0.007}
+        bot.today_moves = {"10:00": 0.1, RTH_LAST: 0.007}
         bot._close_out_session(1111.0)
         assert bot.sigma_days == ["2026-07-31"]
         assert bot.prev_close == 1111.0
@@ -105,7 +112,7 @@ class TestIdempotence:
 
     def test_double_closeout_folds_once(self):
         bot = _bot(prev_close=999.0)
-        bot.today_moves = {RTH_LAST: 0.006}
+        bot.today_moves = {"10:00": 0.1, RTH_LAST: 0.006}
         bot._close_out_session(1234.5)
         bot._close_out_session(1234.5)
         assert bot.sigma_days == ["2026-07-31"]
@@ -115,7 +122,7 @@ class TestIdempotence:
     def test_window_never_exceeds_lookback(self):
         bot = _bot(sigma_hist={RTH_LAST: [0.001] * LOOKBACK_DAYS},
                    sigma_days=[f"d{i}" for i in range(LOOKBACK_DAYS)])
-        bot.today_moves = {RTH_LAST: 0.009}
+        bot.today_moves = {"10:00": 0.1, RTH_LAST: 0.009}
         bot._close_out_session(1000.0)
         assert len(bot.sigma_hist[RTH_LAST]) == LOOKBACK_DAYS
         assert len(bot.sigma_days) == LOOKBACK_DAYS

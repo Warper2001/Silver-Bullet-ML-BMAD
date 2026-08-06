@@ -167,3 +167,17 @@ data/historical/
 # Runtime state — never commit
 .env.lock
 data/trades.db
+
+# --- Live append-only bot output -------------------------------------------------
+# These files are written continuously by running bots. Tracking them meant a branch
+# switch reverted them to their last commit, discarding everything appended since —
+# which truncated MIM-NB's hash-chained audit trail on 2026-08-06 and destroyed two
+# sessions outright (prereg sigma-provenance Amendment 3 §10.5). A file cannot be both
+# a git-versioned artifact and a live append target. Same treatment as data/trades.db.
+# Frozen one-off artifacts in these directories stay tracked via the negations.
+data/mim_nb/*
+!data/mim_nb/trades.csv.bak-*
+data/gap_fade/*
+!data/gap_fade/fills_backfill_report.csv
+data/combine_joint/*
+data/ts_sim_mirror/*

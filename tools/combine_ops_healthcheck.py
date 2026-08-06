@@ -30,7 +30,8 @@ import json
 import subprocess
 import sys
 import time
-from datetime import datetime, time as dtime
+import re
+from datetime import datetime, time as dtime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -114,6 +115,61 @@ def file_age(relpath: str):
     return time.time() - p.stat().st_mtime
 
 
+# --- "active but achieving nothing" -----------------------------------------------
+# Every check above answers "is the process alive?". None of them answer "is it doing
+# anything?". trader-s26-combine polled the EXPIRED contract MBTN26 from 2026-07-30,
+# taking ~3,400 HTTP 404s a day with zero trades, while systemd reported active and its
+# log stayed fresh — because writing 404s to a log IS freshness. Nothing flagged it for a
+# week. These markers are the bot's own distress signals; a service emitting them
+# repeatedly is running, not working. Generic on purpose: the same blind spot applies to
+# every bot here, not just the one that hit it.
+UNPRODUCTIVE_MARKERS = re.compile(
+    r"STALE_DATA|AUTOROLL FAILED|contract may be expired|HTTP 4\d\d from", re.I)
+UNPRODUCTIVE_WINDOW_S = 3600
+UNPRODUCTIVE_MIN_HITS = 10      # a handful of 4xx is normal API noise; sustained is not
+UNPRODUCTIVE_TAIL_BYTES = 512 * 1024   # bounded read — these logs reach tens of MB
+_LOG_TS = re.compile(r"^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})")
+
+
+def recent_unproductive_hits(relpath: str):
+    """Count distress markers logged in the last UNPRODUCTIVE_WINDOW_S seconds.
+
+    Returns None when the log is missing/unreadable (the freshness check already covers
+    that case, and double-reporting one fault as two findings trains people to skim).
+    """
+    p = BASE / relpath
+    if not p.exists():
+        return None
+    try:
+        with p.open("rb") as fh:
+            fh.seek(0, 2)
+            start = max(0, fh.tell() - UNPRODUCTIVE_TAIL_BYTES)
+            fh.seek(start)
+            tail = fh.read().decode("utf-8", "replace").splitlines()
+        # Only the first line of a MID-FILE read can be a fragment. Dropping it
+        # unconditionally would silently discard a real line from any log smaller than
+        # the tail window.
+        if start > 0 and tail:
+            tail = tail[1:]
+    except OSError:
+        return None
+    cutoff = datetime.now() - timedelta(seconds=UNPRODUCTIVE_WINDOW_S)
+    hits = 0
+    for line in tail:
+        if not UNPRODUCTIVE_MARKERS.search(line):
+            continue
+        m = _LOG_TS.match(line)
+        if not m:
+            continue
+        try:
+            ts = datetime.strptime(m.group(1).replace("T", " "), "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+        if ts >= cutoff:
+            hits += 1
+    return hits
+
+
 def last_monitor_row():
     if not MONITOR_CSV.exists():
         return None
@@ -180,7 +236,15 @@ def main() -> int:
                  f"{svc}: active but {fresh_rel} stale {age:.0f}s > {thresh}s "
                  f"(possible silent stall / 401-loop)")
         else:
-            emit(OK, f"{svc}: active, fresh ({age:.0f}s)")
+            # Alive and writing — but is it working? A log full of 404s is "fresh".
+            hits = recent_unproductive_hits(f"logs/{log}")
+            if hits is not None and hits >= UNPRODUCTIVE_MIN_HITS:
+                emit(WARN,
+                     f"{svc}: active and fresh but NOT WORKING — {hits} distress markers "
+                     f"in the last {UNPRODUCTIVE_WINDOW_S // 60}m "
+                     f"(stale contract / repeated API errors); check logs/{log}")
+            else:
+                emit(OK, f"{svc}: active, fresh ({age:.0f}s)")
 
     # 3) Floor monitor data freshness + distance-to-floor headroom
     row = last_monitor_row()

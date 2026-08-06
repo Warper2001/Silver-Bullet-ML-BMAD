@@ -32,11 +32,28 @@ SIM_ORDERS_URL = "https://sim-api.tradestation.com/v3/brokerage/orders"
 # polls, computes signals and logs paper trades to trades.db. Set
 # S26_COMBINE_PLACE_ORDERS=1 to restore live SIM order placement.
 PLACE_ORDERS = os.environ.get("S26_COMBINE_PLACE_ORDERS", "0") == "1"
-# MBT (Micro Bitcoin) rolls monthly on CME and this symbol is not auto-rolled
-# (unlike MIM-NB's ProjectX-side roll) — override via env var at each roll.
-# MBTM26 (June) expired ~2026-06-26 and 404'd silently for a month before
-# this default was corrected to the July contract.
-DEFAULT_SYMBOL = os.environ.get("S26_COMBINE_SYMBOL", "MBTN26")
+# MBT (Micro Bitcoin) rolls MONTHLY on CME. This used to be a hand-set env var, and it
+# went stale twice: MBTM26 (June) 404'd silently for a month, then MBTN26 (July) did the
+# same from 2026-07-30 — ~3,400 failed polls a day while systemd still reported the
+# service "active (running)". Correcting the constant fixes one roll and guarantees the
+# next one breaks, so the symbol is now resolved by probing the broker.
+#
+# S26_COMBINE_SYMBOL still pins a contract (escape hatch, mirrors MIM_NB_SYMBOL) and
+# disables auto-roll; S26_COMBINE_AUTOROLL=0 disables it while keeping the seed.
+SYMBOL_OVERRIDE = os.environ.get("S26_COMBINE_SYMBOL") or None
+AUTOROLL = os.environ.get("S26_COMBINE_AUTOROLL", "1") != "0"
+FALLBACK_SYMBOL = "MBTN26"     # seed only — used if probing cannot reach the API at all
+DEFAULT_SYMBOL = SYMBOL_OVERRIDE or FALLBACK_SYMBOL
+# CME month codes, Jan..Dec. MBT lists monthly, so the front month is normally the
+# current month until it expires, then the next.
+MONTH_CODES = "FGHJKMNQUVXZ"
+ROLL_LOOKAHEAD_MONTHS = 4      # probe current month + next 3
+PROBE_WINDOW_H = 24            # a live contract prints continuously; 24h is unambiguous
+# Minimum bars in the probe window to accept a contract. Guards against rolling onto a
+# barely-quoted far month: measured 2026-08-06, MBTQ26 (front) printed 1197 bars/24h,
+# MBTU26 120, MBTV26 only 8. Front-month-first ordering already prefers the liquid one;
+# this is the backstop for when the nearer months are genuinely dead.
+MIN_PROBE_BARS = 10
 # Consecutive empty/failed polls before escalating to a loud CRITICAL log —
 # a dead/expired contract 404s forever otherwise with only a WARNING per poll,
 # which is easy to miss for a service that stays "active (running)".
@@ -65,6 +82,9 @@ class S26CombineTrader:
         self.active_trade = None  # paper position being tracked bar-by-bar (see _manage_active_paper_trade)
         self.consecutive_empty_polls = 0
         self._stale_alert_fired = False
+        # Set by _note_empty_poll (sync) and consumed by poll_and_process (async), which
+        # is the only place that may await a roll.
+        self._roll_pending = False
 
         self.running = False
         self.auth = None
@@ -88,6 +108,9 @@ class S26CombineTrader:
             return
             
         self.running = True
+        # Resolve the front month BEFORE the first poll, so a restart after an expiry
+        # self-heals instead of 404-ing until someone notices.
+        await self._resolve_front_month("startup")
         logger.info(f"Polling {self.symbol} market data from TradeStation SIM...")
         
         try:
@@ -102,6 +125,13 @@ class S26CombineTrader:
 
     async def poll_and_process(self):
         try:
+            if self._roll_pending:
+                # STALE_DATA escalated on a previous (sync) poll — try to self-heal here,
+                # where awaiting is allowed. Cleared either way so a failed roll retries
+                # only after another full STALE_DATA_ALERT_POLLS run of empty polls,
+                # rather than probing the broker every 60s forever.
+                self._roll_pending = False
+                await self._resolve_front_month("stale data")
             token = await self.auth.authenticate()
             headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
             since = self.last_ts or (datetime.now(timezone.utc) - timedelta(hours=10))
@@ -149,6 +179,84 @@ class S26CombineTrader:
         except Exception as e:
             logger.error(f"Polling error: {e}")
 
+    @staticmethod
+    def _candidate_symbols(now_utc=None):
+        """Front-month-first MBT candidates: current month, then the next few."""
+        now_utc = now_utc or datetime.now(timezone.utc)
+        out, y, m = [], now_utc.year, now_utc.month
+        for _ in range(ROLL_LOOKAHEAD_MONTHS):
+            out.append(f"MBT{MONTH_CODES[m - 1]}{y % 100:02d}")
+            m += 1
+            if m > 12:
+                m, y = 1, y + 1
+        return out
+
+    async def _probe_symbol(self, sym: str, headers) -> int:
+        """Bars printed by `sym` in the last PROBE_WINDOW_H hours; 0 if dead.
+
+        Must use `firstdate`, NOT `barsback`. `barsback=1` happily returns the final bar a
+        contract ever printed, so an EXPIRED contract answers HTTP 200 with a bar and
+        looks alive — measured on 2026-08-06, MBTN26 (expired) returned 200/1 bar to
+        `barsback=1` while the bot's own `firstdate` poll was 404-ing. A probe that cannot
+        distinguish a dead contract from a live one would have made this auto-roll a
+        no-op, which is the exact failure it exists to prevent.
+        """
+        since = (datetime.now(timezone.utc)
+                 - timedelta(hours=PROBE_WINDOW_H)).strftime('%Y-%m-%dT%H:%M:%SZ')
+        try:
+            r = await self.http.get(
+                f"https://api.tradestation.com/v3/marketdata/barcharts/{sym}"
+                f"?interval=1&unit=Minute&firstdate={since}", headers=headers)
+            if r.status_code != 200:
+                return 0
+            return len(r.json().get("Bars", []))
+        except Exception as exc:
+            logger.warning("roll probe failed for %s: %s", sym, exc)
+            return 0
+
+    async def _resolve_front_month(self, reason: str) -> bool:
+        """Point `self.symbol` at the live front month, by asking the SAME API the bot
+        polls. Returns True if the symbol changed.
+
+        Probing the broker rather than computing an expiry date deliberately: a date rule
+        has to encode CME's calendar and holidays and is itself something that can rot
+        silently. "Does this contract return bars?" is the question we actually care
+        about, and it is answered by the venue.
+        """
+        if SYMBOL_OVERRIDE:
+            logger.info("roll skipped (%s): S26_COMBINE_SYMBOL pins %s", reason, SYMBOL_OVERRIDE)
+            return False
+        if not AUTOROLL:
+            logger.info("roll skipped (%s): S26_COMBINE_AUTOROLL=0", reason)
+            return False
+        try:
+            token = await self.auth.authenticate()
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+        except Exception as exc:
+            logger.error("roll aborted (%s): auth failed: %s — keeping %s",
+                         reason, exc, self.symbol)
+            return False
+
+        for sym in self._candidate_symbols():
+            n_bars = await self._probe_symbol(sym, headers)
+            if n_bars >= MIN_PROBE_BARS:
+                logger.info("roll probe: %s printed %d bars in %dh", sym, n_bars, PROBE_WINDOW_H)
+                if sym == self.symbol:
+                    logger.info("roll check (%s): %s is still live", reason, sym)
+                    return False
+                logger.warning("AUTOROLL: %s → %s (%s)", self.symbol, sym, reason)
+                self.symbol = sym
+                self.bars, self.last_ts = [], None   # never splice two contracts' bars
+                self.consecutive_empty_polls = 0
+                self._stale_alert_fired = False
+                return True
+
+        logger.critical(
+            "AUTOROLL FAILED (%s): none of %s returned bars — keeping %s. The bot is "
+            "NOT trading until this resolves.", reason,
+            ",".join(self._candidate_symbols()), self.symbol)
+        return False
+
     def _note_empty_poll(self) -> None:
         """Track consecutive polls that returned no bars and escalate loudly.
 
@@ -161,10 +269,10 @@ class S26CombineTrader:
             self._stale_alert_fired = True
             logger.critical(
                 "STALE_DATA: no bars for %s in %d consecutive polls (~%d min) — "
-                "contract may be expired/wrong. Set S26_COMBINE_SYMBOL to the "
-                "current front-month MBT contract.",
+                "contract may be expired/wrong. Attempting auto-roll.",
                 self.symbol, self.consecutive_empty_polls, self.consecutive_empty_polls,
             )
+            self._roll_pending = True
 
     async def process_logic(self):
         df = pd.DataFrame(self.bars).set_index('timestamp')

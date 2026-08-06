@@ -487,3 +487,85 @@ Unchanged — **G1, G2, G3 as written in §2.** Additionally pinned by unit test
 (07-29, 07-31) are inside the current 14-day σ window and will keep it off parity until
 they age out around **2026-08-20**. This amendment stops new contamination; it does not
 retroactively clean the window.
+
+---
+
+## 10. Amendment 3 — corroboration verdict + fail-closed seeding (2026-08-06)
+
+**Authorization:** Alex, 2026-08-06: *"proven — do the corroboration and make the seed fail
+closed."*
+
+### 10.1 What happened to the record
+
+`bars_raw.csv` and `shadow_parity.csv` are git-**tracked** and simultaneously
+live-appended. Branch switches during routine repo work reverted them to their last
+commit, discarding rows written since. Operational cause, not a bot defect.
+
+Accurate damage (an earlier report overstated it — 08-01/08-02 are Saturday/Sunday and
+were never sessions):
+
+| session | RTH bars in `bars_raw` | |
+|---|---|---|
+| 2026-08-05 | **0 / 390** | lost entirely |
+| 2026-08-06 | **0 / 390** | lost entirely |
+| 2026-07-31 | **417 / 390** | 27 **duplicate** minutes from re-append overlap |
+| 2026-07-29 | 388 / 390 | 2 short |
+
+`decisions.csv` lost all rows for 08-05 and 08-06 and carries one chain break in 465 rows.
+`shadow_parity.csv` — the independent ProjectX live capture — lost the **same** two
+sessions. `trades.db`, `state.json` and `logs/` are untracked and intact.
+
+### 10.2 Corroboration verdict — and why broker replay cannot substitute
+
+The attempt to rebuild σ from broker history **failed, and the failure is the finding.**
+
+For 2026-08-04, where the bot's own record survives complete, **145 of 390 bars differ**
+between what the bot captured live and what TradeStation serves for that same session
+today. The broker revises its 1-minute history after the fact.
+
+**Therefore historical σ is not reconstructible from the venue.** The bot's own live
+capture is the only faithful record of what it saw — which is precisely why §1 site 1 made
+`bars_raw.csv` the source of truth. Backfilling 08-05/08-06 from the broker would have
+produced a *plausible, internally consistent, and false* record: exactly the outcome the
+"repair, don't rewrite" instinct was protecting against, for a reason not previously
+identified.
+
+**Verdict:** 12 of the 14 sessions in the live σ window remain corroborable from surviving
+live records. **2 (08-05, 08-06) are permanently uncorroborable** — both live captures
+destroyed, venue replay unfaithful. No further work changes this. Those sessions age out
+of the 14-day window on/around **2026-08-25**, after which σ is fully corroborable again.
+The holes are left in place and recorded rather than filled.
+
+### 10.3 Change spec — fail closed
+
+The seed's day-acceptance rule (first bar `09:31` and a `16:00` bar present) admits a
+session with an arbitrarily large hole in the middle. 2026-07-13 (169 bars) passed it. So
+did every truncated session above.
+
+| # | Site (`src/research/mim_nb_live.py`) | Before | After |
+|---|---|---|---|
+| D1 | `_seed_sigma_from_bars()` acceptance | `first == 09:31 and any(16:00)` | additionally requires a **complete** session: exactly `FULL_SESSION_BARS` (390) distinct RTH minute labels |
+| D2 | session read | list append — duplicate minutes inflate the count | keyed by minute label so duplicates collapse; a session that had duplicates is logged |
+| D3 | `_fold_today_into_sigma()` | folds when `09:31` and `16:00` were seen | same completeness rule — a partial live session contributes **nothing** |
+| D4 | insufficient depth | seeds anyway, entries blocked by the depth gate | logs each rejected session with its bar count so the reason is visible |
+
+**Fail closed means the bot stands down rather than trading on a σ window built from a
+session it cannot fully reconstruct.** Accepted cost, explicitly: Alex, 2026-08-06.
+
+### 10.4 Acceptance
+
+- **(D-G1)** A session with < 390 distinct RTH minutes is rejected by the seed and by the
+  fold, whatever its first/last bar.
+- **(D-G2)** A session with duplicate minutes collapses to distinct labels; 390 distinct
+  is accepted, fewer is rejected.
+- **(D-G3)** Rejections are logged individually with the session date and bar count.
+- **(D-G4)** A complete session is still accepted — the rule must not reject good days.
+
+**Not claimed:** that G1/G2 now pass. The two uncorroborable sessions remain inside the
+window until ~2026-08-25.
+
+### 10.5 Root cause left open
+
+The files being both git-tracked and live-appended is the cause and is **not** fixed here.
+Until it is, this recurs. Recommended: untrack the live append-only files under
+`data/mim_nb/`, as `trades.db` already is, and snapshot them by another route.

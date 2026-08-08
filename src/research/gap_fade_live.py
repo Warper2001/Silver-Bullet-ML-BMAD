@@ -770,14 +770,33 @@ class GapFadeTrader:
 
     def _already_decided_today(self, today_et: str) -> bool:
         """Return True if decisions.csv already has an entry for today.
-        Prevents double-entry after SIGKILL before state.json is written."""
+
+        Prevents double-entry after SIGKILL before state.json is written. This is
+        the ONLY thing standing between a restart and a second live order for the
+        same session — the 2026-06-25 duplicate (two chained appends across a
+        23:54:55 stop / 23:56:26 restart) happened on the bot's first day, before
+        this guard existed (added 7c9bc0a, 2026-06-27).
+
+        FAILS CLOSED (2026-08-08). A missing file is the genuine first-run case and
+        is the only condition that may answer "not decided". Any OTHER read error
+        means the guard cannot do its job, and the safe answer to "may I place an
+        order?" when the evidence is unreadable is no: a false skip costs one missed
+        trade, a false entry costs an unintended position. Previously this returned
+        False on every exception, so a transient read error silently re-enabled the
+        exact defect the guard exists to prevent.
+        """
+        path = DATA_DIR / "decisions.csv"
+        if not path.exists():
+            return False          # genuine first run — nothing has been decided yet
         try:
-            with open(DATA_DIR / "decisions.csv") as f:
+            with open(path) as f:
                 for row in csv.DictReader(f):
                     if row.get("date_et") == today_et:
                         return True
-        except (FileNotFoundError, Exception):
-            pass
+        except Exception as exc:
+            logger.error("double-entry guard could not read %s (%s) — treating the "
+                         "session as ALREADY DECIDED and standing down", path.name, exc)
+            return True           # fail closed
         return False
 
     # ── Main processing tick ──────────────────────────────────────────────────

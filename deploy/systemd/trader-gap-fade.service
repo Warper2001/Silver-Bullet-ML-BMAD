@@ -2,6 +2,15 @@
 Description=GAP-1 Panic-Open Gap Fade — TS SIM paper trading (data/gap_fade/, data/trades.db)
 After=network-online.target
 Wants=network-online.target
+# Tolerate a ~10-minute broker outage (20 tries x RestartSec=30s) before giving up.
+# These two directives MUST live in [Unit] — systemd silently ignores
+# StartLimitIntervalSec in [Service] and leaves the 10s default in place, which is
+# how the first attempt at this fix looked applied and was not (verified with
+# `systemctl show -p StartLimitIntervalUSec`).
+# Giving up is now visible: trader-gap-fade is registered in
+# tools/combine_ops_healthcheck.py, which reports a unit that is not active.
+StartLimitIntervalSec=600
+StartLimitBurst=20
 
 [Service]
 Type=simple
@@ -20,7 +29,16 @@ Environment=GAP_FADE_SYMBOL=MNQU26
 Environment=GAP_FADE_TS_SIM=1
 Environment=GAP_FADE_TS_SIM_ACCOUNT=SIM2797251F
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/gap_fade_live.py
-Restart=on-failure
+# Restart=always, not on-failure (changed 2026-08-08).
+# The bot's "10 consecutive tick failures — stopping" path shut down GRACEFULLY and
+# exited 0, so systemd recorded Result=success and on-failure correctly declined to
+# restart it. A TradeStation auth outage (HTTP 503) killed it at 12:58:52 UTC and it
+# stayed dead for nine hours. YANK absorbed 1,581 of the same 503s, MIM-NB 13,782 —
+# neither self-terminates. The polite exit is what defeated the restart policy.
+# gap_fade_live.py now also exits 1 on that path (belt); always is the braces, and
+# covers any other clean-exit route nobody has enumerated. An explicit
+# `systemctl stop` still stops — systemd never restarts after an operator stop.
+Restart=always
 RestartSec=30
 StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/gap_fade_live.log
 StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/gap_fade_live.log

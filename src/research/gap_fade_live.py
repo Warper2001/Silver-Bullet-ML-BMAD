@@ -945,8 +945,19 @@ class GapFadeTrader:
     # ── Run loop ──────────────────────────────────────────────────────────────
 
     async def run(self):
+        """Poll loop. Returns True on an orderly stop, False if it gave up on errors.
+
+        The distinction matters to systemd, not to us: this loop used to shut down
+        *gracefully* after 10 consecutive tick failures and the process then exited
+        0, so `Restart=on-failure` read "success" and correctly declined to restart.
+        On 2026-08-08 a TradeStation auth outage (HTTP 503) killed the bot at
+        12:58:52 UTC and it stayed dead for nine hours. YANK took 1,581 of the same
+        503s and MIM-NB 13,782; neither has a self-terminate path. Good manners are
+        what kept this one down.
+        """
         self.running = True
         consecutive_failures = 0
+        clean_exit = True
         logger.info("Poll loop starting — 60s during RTH, 300s outside")
         while self.running:
             try:
@@ -958,8 +969,10 @@ class GapFadeTrader:
                 consecutive_failures += 1
                 logger.error("Tick error #%d: %s", consecutive_failures, e, exc_info=True)
                 if consecutive_failures >= 10:
-                    logger.error("10 consecutive tick failures — stopping")
+                    logger.error("10 consecutive tick failures — stopping (exit 1 so "
+                                 "the restart policy sees a failure, not a success)")
                     self.running = False
+                    clean_exit = False
                     break
 
             now_et = datetime.now(ET)
@@ -970,11 +983,20 @@ class GapFadeTrader:
             )
             await asyncio.sleep(60 if (in_active_window or self._trade_open) else 300)
 
+        return clean_exit
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
-async def _main_async():
+async def _main_async() -> int:
+    """Return a process exit code: 0 = orderly stop, 1 = gave up / fatal.
+
+    A trading process that dies must exit non-zero. Both paths below previously
+    returned success — the tick-failure give-up AND a fatal exception — which is
+    what let the 2026-08-08 auth outage leave this bot dead for nine hours under
+    `Restart=on-failure`.
+    """
     trader = GapFadeTrader(symbol=SYMBOL)
     await trader.initialize()
     loop = asyncio.get_running_loop()
@@ -985,11 +1007,13 @@ async def _main_async():
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, _stop)
     try:
-        await trader.run()
+        clean = await trader.run()
     except Exception as e:
         logger.error("Fatal: %s", e, exc_info=True)
+        clean = False
     finally:
         await trader.stop()
+    return 0 if clean else 1
 
 
 def main():
@@ -1007,7 +1031,7 @@ def main():
     if args.replay:
         _run_replay(args.replay)
     else:
-        asyncio.run(_main_async())
+        sys.exit(asyncio.run(_main_async()))
 
 
 if __name__ == "__main__":

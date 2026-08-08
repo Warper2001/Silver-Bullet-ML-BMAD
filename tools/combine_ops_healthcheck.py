@@ -14,6 +14,9 @@ Checks, by dollar consequence on the combine:
     - HALT flag present (data/combine_joint/HALT) -> monitor already halted; human needed
     - floor monitor is actually polling (monitor.csv fresh) — a dead monitor = no circuit breaker
     - distance-to-floor headroom (early warning well before the $500 derived trigger)
+  WARN (running but not working):
+    - structural silence: confirmed H1 sweep + M15 CHoCH but zero FVG (the 2026-08-07
+      YANK failure class — every other check green while the gap gates were unsatisfiable)
   INFO (paper / non-combine bots):
     - btc-carry, s26-combine, s26, s27, sil-quote-capture active + logs fresh
 
@@ -170,6 +173,81 @@ def recent_unproductive_hits(relpath: str):
     return hits
 
 
+# --- "achieving nothing, quietly" (structural silence) -----------------------------
+# The markers above catch a bot that is LOUD about failing (404s, stale contracts).
+# They cannot catch a bot that fails SILENTLY. Found 2026-08-07: YANK went 17 days with
+# zero trades while systemd was active, its log fresh, its token refreshing, and its
+# upstream stages logging healthy structure — because detect_fvg's two gap gates had
+# become mutually unsatisfiable (0.25 x H1_ATR > $60/$2 = 30pts whenever H1 ATR > 120,
+# which was the MEDIAN hour in 2026-06 and 2026-07). Every existing check was green.
+#
+# The signature of this failure class is a funnel that confirms upstream and then never
+# produces downstream. tier2_bar_decisions.csv records exactly that, per bar, so the
+# check reads the funnel rather than guessing from prose. See tools/fvg_feasibility.py
+# for the arithmetic behind WHY the window closes.
+SILENCE_LOG = "logs/tier2_bar_decisions.csv"
+SILENCE_SVC = "trader-yank"
+SILENCE_WINDOW_DAYS = 5          # ~1 trading week of sessions
+SILENCE_MIN_CONFIRMED = 200      # bars of confirmed structure before silence means anything
+SILENCE_TAIL_BYTES = 8 * 1024 * 1024   # bounded read — this file reaches >1 GB
+
+
+def _csv_bool(v: str) -> bool:
+    return str(v).strip().lower() in ("true", "1", "yes")
+
+
+def structural_silence(relpath: str = SILENCE_LOG):
+    """Look for confirmed upstream structure with zero downstream signal.
+
+    Returns ``(confirmed_bars, fvg_bars, sweep_bars)`` over the last
+    SILENCE_WINDOW_DAYS, or None when the funnel log is missing/unreadable/empty.
+
+    ``confirmed`` = H1 sweep active AND M15 CHoCH confirmed on the same bar: the point
+    past which the only remaining gate is the FVG gap test. If that count is healthy
+    and ``fvg`` is zero, the bot is not waiting on the market — it cannot fire.
+    """
+    p = BASE / relpath
+    if not p.exists():
+        return None
+    try:
+        with p.open("rb") as fh:
+            fh.seek(0, 2)
+            start = max(0, fh.tell() - SILENCE_TAIL_BYTES)
+            fh.seek(start)
+            tail = fh.read().decode("utf-8", "replace").splitlines()
+        # Mid-file reads start on a fragment; a read from byte 0 starts on the header.
+        if tail:
+            tail = tail[1:]
+    except OSError:
+        return None
+
+    cutoff = datetime.now(ET) - timedelta(days=SILENCE_WINDOW_DAYS)
+    confirmed = fvg = sweep = 0
+    seen = False
+    # bar_timestamp,h1_sweep_active,kill_zone_active,vol_regime_blocked,m15_confirmed,
+    # fvg_detected,action
+    for row in csv.reader(tail):
+        if len(row) < 6:
+            continue
+        try:
+            ts = datetime.fromisoformat(row[0])
+        except ValueError:
+            continue
+        if ts.tzinfo is None:
+            continue
+        if ts < cutoff:
+            continue
+        seen = True
+        h1, m15, has_fvg = _csv_bool(row[1]), _csv_bool(row[4]), _csv_bool(row[5])
+        if h1:
+            sweep += 1
+        if h1 and m15:
+            confirmed += 1
+        if has_fvg:
+            fvg += 1
+    return (confirmed, fvg, sweep) if seen else None
+
+
 def last_monitor_row():
     if not MONITOR_CSV.exists():
         return None
@@ -246,7 +324,28 @@ def main() -> int:
             else:
                 emit(OK, f"{svc}: active, fresh ({age:.0f}s)")
 
-    # 3) Floor monitor data freshness + distance-to-floor headroom
+    # 3) Structural silence — active, fresh, error-free, and unable to fire.
+    sil = structural_silence()
+    if sil is None:
+        emit(WARN, f"{SILENCE_SVC}: {SILENCE_LOG} missing/empty — cannot check for "
+                   f"structural silence (the 2026-08-07 failure class)")
+    else:
+        confirmed, fvg, sweep = sil
+        win = f"last {SILENCE_WINDOW_DAYS}d"
+        if confirmed >= SILENCE_MIN_CONFIRMED and fvg == 0:
+            emit(WARN,
+                 f"{SILENCE_SVC}: STRUCTURALLY SILENT — {confirmed} bars with H1 sweep + "
+                 f"M15 CHoCH confirmed and ZERO FVG detected ({win}). The bot is not "
+                 f"waiting on the market; check whether the gap gates can be satisfied: "
+                 f".venv/bin/python tools/fvg_feasibility.py")
+        elif confirmed < SILENCE_MIN_CONFIRMED:
+            emit(OK, f"{SILENCE_SVC}: only {confirmed} confirmed-structure bars ({win}, "
+                     f"sweep={sweep}) — below the {SILENCE_MIN_CONFIRMED} needed to judge silence")
+        else:
+            emit(OK, f"{SILENCE_SVC}: funnel productive — {confirmed} confirmed-structure "
+                     f"bars, {fvg} FVG detected ({win})")
+
+    # 4) Floor monitor data freshness + distance-to-floor headroom
     row = last_monitor_row()
     if row is None:
         emit(CRIT, "monitor.csv missing/empty — floor circuit breaker has no data")

@@ -1,12 +1,64 @@
 # Build Spec: GAP-1 gap-fade → TradeStation live account
 
-**Status:** SPEC ONLY — no code written, no deployment authorized
-**Date:** 2026-08-07
+**Status:** SPEC ONLY — no code written, no deployment authorized. **See Amendment 1 first.**
+**Date:** 2026-08-07 · **Amended:** 2026-08-09
 **Author:** party-mode round-table (Victor / Amelia / Winston / Mary), at Alex's direction
 **Strategy seal:** `_bmad-output/preregistration_gap_fade_panic_open.md` (32da5d5)
 **Related:** `_bmad-output/gap1_friday_review_20260704.md` (promotion NO-GO, two blockers)
 
 ---
+
+> ## ⚠ AMENDMENT 1 (2026-08-09) — THE CENTRAL CONCLUSION OF THIS SPEC WAS WRONG
+>
+> **Read this before §2, §5, §6 or §8b.** The original text is left intact below rather
+> than edited, so the record shows what was believed and why it failed — same rule the
+> room applied to the audit trail in `ruling_v9_record_of_truth.md`.
+>
+> **The error.** §2 argues correctly that a $2,000 trailing MLL destroys GAP-1's edge
+> (PF 1.359 → 1.102 at a $2,000/ct risk cap) and that the seal forbids a cap anyway. It
+> then concludes *"the fix is the venue — a funded TradeStation account."*
+>
+> **GAP-1 was never behind an MLL.** It runs on TradeStation SIM, which has no MLL, no
+> trailing ratchet and no consistency rule. The $2,000 limit is a **Topstep** rule, and
+> the 2026-07-04 blocker was a blocker on *promoting GAP-1 to the combine*. The sound
+> conclusion is the narrow one:
+>
+> > **Do not promote GAP-1 to the combine.**
+>
+> That is free, requires no new account, and is already the status quo. The spec let
+> *"the combine is the wrong venue"* slide into *"therefore fund a live account"*. Those
+> are different claims and only the first is supported.
+>
+> **What a funded account uniquely buys:** real fills, real P&L, and knowing how the
+> owner behaves in a real drawdown. Nothing else — and §5's own fill data undercuts the
+> first (realized − modeled: mean −$3.38, max $65, against a per-trade sd of $545).
+> It buys **no** statistical speed; size cancels in `t = (mean/sd)·√N`.
+>
+> **Superseding recommendation:** do not fund anything. Stay on TS SIM. Request a
+> **second SIM futures account** from TradeStation support (free) and point GAP-1 at it
+> with the §3 parameterization, which is worth building either way. Revisit live money
+> after N=30 (~September) with a deployment pre-registration in hand.
+>
+> **Sizing, if it is ever funded.** §5's $10,000 was derived as "worst single stop +
+> 3× observed maxDD" — a heuristic, not a derivation. A 20,000-path bootstrap over 130
+> trades at 1 contract gives the real distribution: **p50 −$3,950 · p90 −$6,752 ·
+> p95 −$7,858 · p99 −$10,353**. The observed −$1,560 was a lucky 18 trades; the *median*
+> year is 2.5× worse than anything yet seen. $10,000 remains the right number, now for a
+> real reason — it covers p95. Under-funding recreates the ruin barrier the spec set out
+> to escape.
+>
+> **§8b (account isolation) is downgraded from a blocker.** `_log_realized_fills`
+> resolves fills by the order IDs it submitted, so shared-account traffic cannot corrupt
+> GAP-1's ongoing record. Only the retroactive *backfill* — which scraped by date — was
+> contaminated. Sharing `SIM2797251F` is a historical reporting defect, not an ongoing
+> correctness one. A second SIM account is an improvement, not a prerequisite.
+>
+> **Friction, recorded:** there is currently exactly one SIM futures account
+> (`SIM2797251F`); it is hardcoded in eight modules and written to by four services
+> (`trader-yank`, `trader-mim-nb`, `trader-gap-fade`, `trader-thursday-short`). Symbol
+> isolation cannot substitute — GAP-1, YANK's mirror and MIM's mirror all trade MNQ.
+> TradeStation documents funding/resetting simulated accounts but not provisioning an
+> additional futures SIM account; that is a support request.
 
 ## 0. What this is, and what it is not
 
@@ -102,6 +154,10 @@ A funded TradeStation account has no MLL, no trailing ratchet and no consistency
 the validated trade population survives intact. That — not convenience — is the case for
 this build.
 
+> **⚠ SUPERSEDED BY AMENDMENT 1.** The first two sentences stand. The third does not:
+> GAP-1 already runs on TS SIM, which has no MLL either, so the conclusion supports
+> *"do not promote GAP-1 to the combine"* — **not** *"fund a live account"*.
+
 ---
 
 ## 3. Architecture delta
@@ -135,12 +191,12 @@ successfully calls `api.tradestation.com` for bars (`TS_BARS_BASE`, line 100) *a
 
 | Phase | Work | Est. |
 |---|---|---|
-| **0** | **V1 auth check** — confirm the token places an order on the live host. Blocks everything | 0.5 d |
+| **0** | ~~V1 auth check~~ — **done 2026-08-08, PASS (§8a)**. Under Amendment 1 the target is a *second SIM* account, so the live-host check is banked, not needed | done |
 | **1** | Close the fill-logging gap: 6 of 18 trades have no `fills.csv` row. Find why (time-stop path? partial? cancel race?) and make a fill record mandatory per trade | 1–2 d |
 | **2** | Host/account parameterization (§3 items 1–5) + fail-closed `GAP_FADE_LIVE` gate | 1 d |
 | **3** | Tests: fail-closed default, host selection, account isolation, live-flag absent ⇒ SIM. Repo bar: unit tests beside the module | 1.5 d |
 | **4** | Contract auto-roll — port the MIM-NB `activeContract` pattern. **Hard-dated: the manual roll is due ~2026-09-11 (MNQU26 → MNQZ26)** and a stale symbol on a live account is the 2026-06-16 incident with real money attached | 1.5 d |
-| **5** | **Gate-Minus-One** — one broker-confirmed round trip on the live account before any analysis counts | 1 session |
+| **5** | **Gate-Minus-One** — one broker-confirmed round trip on the *target* account (second SIM under Amendment 1; live only after a deployment prereg) | 1 session |
 | **6** | Deployment prereg + seal (§6) | 0.5 d |
 
 **≈6 working days.** Not the ~3 weeks the YANK/MIM port would cost, because the read side
@@ -152,6 +208,11 @@ lands *before* the earliest possible deployment date.
 ---
 
 ## 5. Capital
+
+> **⚠ AMENDED.** The $10,000 below was a heuristic. The bootstrapped 1-year drawdown at
+> 1 contract is p50 −$3,950 / p90 −$6,752 / p95 −$7,858 / p99 −$10,353; $10,000 covers
+> p95. And per Amendment 1, **nothing should be funded yet** — this section applies only
+> if and when a deployment pre-registration authorizes live money.
 
 | Item | Amount |
 |---|---|
@@ -229,7 +290,13 @@ Order-entry capability on the live host is therefore established by existing his
 planned order probe is unnecessary and is dropped from Phase 0. Funding also already meets
 §5's $10,000 recommendation.
 
-### 8b. NEW BLOCKER — the funded account is not isolated
+### 8b. ~~NEW BLOCKER~~ — DOWNGRADED (Amendment 1): the funded account is not isolated
+
+> **⚠ No longer a blocker, and no longer the reason to act.** `_log_realized_fills`
+> resolves by submitted order ID, so GAP-1's ongoing record is already isolated; only the
+> date-scraping backfill was contaminated. V7 stands as a real constraint **on live
+> deployment**, which Amendment 1 defers. The cheap remedy is a second SIM account, not a
+> funded one. The original analysis follows unchanged.
 
 `210MWN27` is **not an empty account waiting for a bot.** It carries an active discretionary
 trading history:
@@ -321,7 +388,7 @@ natural key (commit `da78f5a`), not a git-tracked flat file.
 | | Item |
 |---|---|
 | ~~**V1**~~ | ~~Live host may require an order-entry scope the current token lacks~~ — **CLOSED PASS, §8a** |
-| **V7** | **The funded live account is not isolated (§8b). Blocks Phase 2.** |
+| **V7** | The funded live account is not isolated (§8b). **Downgraded (Amendment 1)** — blocks live deployment, which is deferred; not Phase 2. Remedy: a second SIM futures account. |
 | **V8** | **2026-06-25 was logged twice by the bot itself (§8c). Unexplained. Blocks Phase 2.** |
 | **V9** | **The hash-chained CSVs are not durable and lost a live trade (§8c). Pick the record of truth before deployment.** |
 | ~~**V2**~~ | ~~Six of 18 trades have no realized-fill record~~ — **CLOSED, §8c**: five, all predating the logger; logger is ID-based and correct; the five are unrecoverable by ruling |

@@ -15,6 +15,7 @@ Run:   .venv/bin/python -m pytest tools/test_gap_fade_double_entry_guard.py -v
 """
 from __future__ import annotations
 
+import asyncio  # noqa: F401  (used via gf.asyncio in the run-loop tests)
 import csv
 import importlib
 import sys
@@ -123,3 +124,97 @@ def test_a_directory_where_the_file_should_be_fails_CLOSED(guard):
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+# ── exit-code semantics (2026-08-08) ────────────────────────────────────────────
+# The bot died at 12:58:52 UTC in a TradeStation 503 outage, shut down gracefully,
+# and exited 0 — so `Restart=on-failure` read success and left it dead nine hours.
+# A trading process that gives up must SAY it gave up.
+
+@pytest.fixture()
+def nosleep(monkeypatch):
+    async def instant(_):
+        return None
+    monkeypatch.setattr(gf.asyncio, "sleep", instant)
+
+
+def _bare_trader(process_tick):
+    t = gf.GapFadeTrader.__new__(gf.GapFadeTrader)
+    t.running = False
+    t._trade_open = False
+    t._process_tick = process_tick
+    return t
+
+
+@pytest.mark.asyncio
+async def test_run_returns_False_after_ten_tick_failures(nosleep):
+    """The 2026-08-08 shape: sustained tick errors must report failure."""
+    calls = {"n": 0}
+
+    async def always_fails():
+        calls["n"] += 1
+        raise RuntimeError("Token refresh failed after 3 attempts")
+
+    assert await _bare_trader(always_fails).run() is False
+    assert calls["n"] == 10, "must give up at exactly 10, not sooner or later"
+
+
+@pytest.mark.asyncio
+async def test_run_returns_True_on_orderly_stop(nosleep):
+    """An operator stop is not a failure and must not trigger a restart loop."""
+    t = _bare_trader(None)
+
+    async def stops_itself():
+        t.running = False
+
+    t._process_tick = stops_itself
+    assert await t.run() is True
+
+
+@pytest.mark.asyncio
+async def test_run_recovers_when_failures_are_not_consecutive(nosleep):
+    """9 failures then a success must reset the counter — a 503 burst is survivable."""
+    seq = {"i": 0}
+
+    async def flaky():
+        seq["i"] += 1
+        if seq["i"] <= 9:
+            raise RuntimeError("HTTP 503")
+        t.running = False
+
+    t = _bare_trader(flaky)
+    assert await t.run() is True
+
+
+@pytest.mark.asyncio
+async def test_main_async_maps_give_up_to_exit_1(monkeypatch, nosleep):
+    """The end-to-end contract systemd actually reads."""
+    async def noop(*a, **k):
+        return None
+
+    monkeypatch.setattr(gf.GapFadeTrader, "initialize", noop)
+    monkeypatch.setattr(gf.GapFadeTrader, "stop", noop)
+    monkeypatch.setattr(gf.GapFadeTrader, "run", lambda self: _ret(False))
+    assert await gf._main_async() == 1
+
+    monkeypatch.setattr(gf.GapFadeTrader, "run", lambda self: _ret(True))
+    assert await gf._main_async() == 0
+
+
+@pytest.mark.asyncio
+async def test_main_async_maps_fatal_exception_to_exit_1(monkeypatch):
+    """The other path that used to return success."""
+    async def noop(*a, **k):
+        return None
+
+    async def boom(self):
+        raise RuntimeError("fatal")
+
+    monkeypatch.setattr(gf.GapFadeTrader, "initialize", noop)
+    monkeypatch.setattr(gf.GapFadeTrader, "stop", noop)
+    monkeypatch.setattr(gf.GapFadeTrader, "run", boom)
+    assert await gf._main_async() == 1
+
+
+async def _ret(v):
+    return v

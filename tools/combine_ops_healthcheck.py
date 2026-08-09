@@ -65,6 +65,13 @@ SERVICES = {
     "trader-s26-combine":    (False, "btc_s26_combine.log",        900, None, None),
     "trader-s26":            (False, "s26_soft_fvg_streaming.log",  900, None, None),
     "trader-s27":            (False, "s27_squeeze_streaming.log",   900, None, None),
+    # Added 2026-08-08. GAP-1 was the ONLY bot absent from this dict, and on
+    # 2026-08-08 it died at 12:58:52 UTC in a TradeStation auth outage and stayed
+    # dead nine hours with nothing alerting — while being the bot specced for a
+    # funded account. Threshold 420s: it polls 60s inside RTH but 300s outside, so
+    # anything tighter cries wolf every evening.
+    # FLIP TO CRITICAL when it moves to a funded account (buildspec §6).
+    "trader-gap-fade":       (False, "gap_fade_live.log",           420, None, None),
     # SIL capture only runs 09:25-16:00 ET Mon-Fri (capture_sil_quotes.py); idle otherwise.
     # Its log only prints a heartbeat every 1200 rows (~53 min), so check the CSV it flushes
     # every 5s poll instead — kills false flapping AND catches a real 401-loop stall in minutes.

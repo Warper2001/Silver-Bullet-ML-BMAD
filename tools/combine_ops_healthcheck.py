@@ -385,15 +385,16 @@ def main() -> int:
             [sys.executable, str(BASE / "tools/verify_chain.py"), "--reconcile"],
             capture_output=True, text=True, timeout=30, cwd=BASE)
         if vc.returncode == 0:
-            emit(OK, "gap-fade ledger: chains verify, complete vs trades.db")
+            n_ok = sum(1 for ln in vc.stdout.splitlines() if ln.startswith("[  OK  ]"))
+            emit(OK, f"bot ledgers: {n_ok} chains verify, gap-fade complete vs trades.db")
         else:
             findings = [ln.strip() for ln in vc.stdout.splitlines()
                         if ln.startswith("[BROKEN]") or "INCOMPLETE" in ln
                         or "DUPLICATED" in ln]
-            emit(WARN, "gap-fade ledger: " + ("; ".join(findings) or "verify_chain failed") +
+            emit(WARN, "bot ledgers: " + ("; ".join(findings) or "verify_chain failed") +
                        " — run .venv/bin/python tools/verify_chain.py --reconcile")
     except Exception as e:
-        emit(WARN, f"gap-fade ledger: verify_chain.py did not run ({e})")
+        emit(WARN, f"bot ledgers: verify_chain.py did not run ({e})")
 
     header = {OK: "ALL OK", WARN: "WARNINGS", CRIT: "CRITICAL"}[worst]
     if not (args.quiet and worst == OK):

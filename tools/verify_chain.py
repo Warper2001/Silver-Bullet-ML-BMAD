@@ -58,6 +58,12 @@ DEFAULT_FILES = [
     "data/gap_fade/trades.csv",
     "data/gap_fade/decisions.csv",
     "data/gap_fade/fills.csv",
+    # Added 2026-08-13 with the thursday_short hardening. The service has been inactive
+    # since 2026-07-27, but an unchecked chain is how the gap-fade loss went unnoticed
+    # for six days — these are cheap to walk and the bot will be restarted eventually.
+    "data/thursday_ts/trades.csv",
+    "data/thursday_ts/decisions.csv",
+    "data/thursday_ts/counterfactuals.csv",
 ]
 
 # relpath -> (trader_id, date column) for the completeness cross-check

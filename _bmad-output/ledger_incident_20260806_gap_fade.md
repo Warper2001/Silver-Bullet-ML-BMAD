@@ -132,16 +132,37 @@ replays 2026-08-06 exactly and asserts the chain survives.
 
 ## 7. Still exposed
 
-`ChainedCsv` exists in three copies. Only gap-fade's is hardened.
+`ChainedCsv` exists in three copies.
 
 | Copy | Status |
 |---|---|
-| `src/research/gap_fade_live.py` | fixed |
+| `src/research/gap_fade_live.py` | fixed 2026-08-12 (single `key_field`) |
+| `thursday_short.py` | fixed 2026-08-13 (composite `key_fields`, required) |
 | `src/research/mim_nb_live.py` | **carries the defect** — frozen mid-Track-A by preregistration §7; needs its own change window |
-| `thursday_short.py` | **carries the defect** — untouched for scope only |
 
-Both are untracked now, so the git trigger is gone for them too; what remains is that any
-*other* external writer would corrupt their chains rather than merely truncate them.
+MIM-NB's ledgers are untracked now, so the git trigger is gone there too; what remains is
+that any *other* external writer would corrupt its chain rather than merely truncate it.
+
+### The dedupe key is not portable between copies
+
+gap-fade takes a single `key_field` (`date_et`) because its ledgers really are
+one-row-per-session. thursday_short cannot: it writes **two legs per Thursday** (MBT and
+MET), so a first-column guard on `thursday` would silently refuse every second leg — a
+safety feature that deletes half the evidence. Its key is therefore
+`("thursday", "symbol")`, and `decisions.csv` opts out entirely with `key_fields=None`,
+because `current_thursday` is only set after a *successful* entry, so `SKIPPED_NOT_FLAT` /
+`NO_MARKS` / `REJECTED` can each legitimately fire again on the next poll.
+
+`key_fields` has no default in thursday_short's copy: every construction site must state
+its key or `None` on purpose. `test_live_ledger_keys_are_actually_unique` checks the
+chosen keys against the real files, not just synthetic rows.
+
+The three copies have now drifted in signature. Consolidating them into one module is
+worth doing and is blocked only by MIM-NB's change window.
+
+`tools/verify_chain.py` now walks the three `data/thursday_ts/` ledgers as well, even
+though that service has been inactive since 2026-07-27 — an unchecked chain is how this
+incident stayed invisible for six days.
 
 ## 8. Verification
 

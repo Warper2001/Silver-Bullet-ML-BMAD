@@ -28,7 +28,8 @@ done
 | `combine-floor-monitor.service` | `FLOOR_MONITOR_REPORT_ONLY=1` | Tracks HWM/floor and publishes `floor_state.json`, but **never halts or flattens**. Per prereg `mim-nb-risk-mechanics-removal` Amendment 2 (2026-08-04). Setting `0` re-arms a kill path the owner explicitly removed — do not do it casually. The code defaults to report-only, so this line is belt-and-braces, not the only guard. |
 | `trader-mim-nb.service` | `MIM_NB_AUTOROLL=1` (default) | Front month follows the broker's `activeContract` flag. `0` pins `MIM_NB_SYMBOL` for a manual roll. |
 | `trader-mim-nb.service` / `trader-yank.service` | `SIM_INVVOL=1`, `*_MIRROR_TS_SIM=1` | Mirror live combine orders to the TradeStation SIM account for the scaling rehearsal. Isolation-by-construction; never affects the primary order. |
-| `trader-yank.service` | `YANK_CONTRACTS=2` | YANK trades 2ct against MIM-NB's 1ct on the **same** combine account (23884932). |
+| `trader-yank.service` | `YANK_CONTRACTS=2` | YANK trades 2ct against MIM-NB's 1ct on the **same** combine account (26556101 since the 2026-08-13 reset; 23884932 before it). |
+| all three combine units | `PROJECTX_ACCOUNT_ID` | The only value that changes on a combine reset. `floor_state.json` is bound to it — swapping the id makes the monitor archive the old state and re-genesis the floor at $50,000/$48,000. Do not hand-edit the state file. |
 | `mim-parity-check.timer` | `OnCalendar=` | One-shot parity gate check. `Persistent=true` so a reboot does not skip a fire. |
 
 ## Which file each bot actually runs

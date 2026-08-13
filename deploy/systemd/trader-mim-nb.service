@@ -10,7 +10,8 @@ WorkingDirectory=/root/Silver-Bullet-ML-BMAD
 # REQUIRED: set to the Topstep 50K combine account before starting.
 # The bot refuses to start if this is missing.
 # Topstep 50K Trading Combine 50KTC-V2-303705-72867678 (confirmed by Alex 2026-06-11)
-Environment=PROJECTX_ACCOUNT_ID=23884932
+# 2026-08-13 combine reset: 23884932 retired (MLL breach 07-06) -> 26556101.
+Environment=PROJECTX_ACCOUNT_ID=26556101
 # Quarterly roll 2026-06-16: MNQM26 (June) rolled off / non-tradeable (expires 06-19);
 # ProjectX active contract is now MNQU26 (Sept, CON.F.US.MNQ.U26). Next roll ~2026-09-11 → MNQZ26.
 Environment=MIM_NB_SYMBOL=MNQU26

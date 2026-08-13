@@ -1,5 +1,5 @@
 [Unit]
-Description=Account Order Watchdog — alarm on unrecognized orders (Topstep 50K acct 26556101, tripwire for 07-06-type external orders)
+Description=Account Order Watchdog — alarm on unrecognized orders (Topstep 50K combine, tripwire for 07-06-type external orders)
 After=network-online.target
 Wants=network-online.target
 
@@ -7,6 +7,9 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+# Must match the combine account in trader-yank / trader-mim-nb / combine-floor-monitor.
+# 2026-08-13 reset: 23884932 (retired, MLL breach 07-06) -> 26556101.
+Environment=PROJECTX_ACCOUNT_ID=26556101
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python tools/account_order_watchdog.py --loop 300
 Restart=on-failure
 RestartSec=60

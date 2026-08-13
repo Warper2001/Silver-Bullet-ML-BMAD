@@ -21,6 +21,7 @@ Not deployed as a service yet — deployment pending Alex's go.
 import argparse
 import asyncio
 import csv
+import os
 import re
 import sys
 import time
@@ -34,7 +35,12 @@ sys.path.insert(0, str(ROOT))
 
 from src.research.projectx_auth import ProjectXAuth  # noqa: E402
 
-ACCOUNT_ID = 23884932
+# Follows the combine account like every other unit. Hardcoding this meant the
+# 2026-08-13 reset would have left the tripwire watching retired acct 23884932 —
+# still polling, still reporting clean, watching nothing. That is the same failure
+# shape as the floor monitor's (prereg combine-restart-floor-hwm), so it gets the
+# same fix: one env var, shared with the services it guards.
+ACCOUNT_ID = int(os.environ.get("PROJECTX_ACCOUNT_ID", "26556101"))
 MIM_ORDERS_CSV = ROOT / "data/mim_nb/orders.csv"
 BOT_LOGS = [ROOT / "logs/mim_nb_live.log", ROOT / "logs/yank_streaming_working.log"]
 ALERTS_CSV = ROOT / "data/combine_joint/order_watchdog_alerts.csv"

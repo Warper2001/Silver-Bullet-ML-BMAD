@@ -143,3 +143,37 @@ claim fails loudly if it is wrong.
 - Evidence series: `data/combine_joint/monitor.csv` (untracked live output; the
   regression test pins the specific values above rather than the file)
 - Superseded reasoning: commit `317f3ff` (2026-06-26)
+
+---
+
+## Amendment 1 (2026-08-13, same day, pre-deployment) — the $1,668 was two faults, not one
+
+Writing the regression test falsified a number in §0/§1 of this seal, which said the
+denominator change *"lowered the tracked floor by $1,668."* That conflates two separate
+faults in commit `317f3ff`, and the seal is corrected here rather than rewritten.
+
+`update_floor()` is clamped below by `FLOOR_START` ($48,000):
+
+```python
+return min(START_EQUITY, max(prev_floor, hwm_equity - TRAIL))
+```
+
+So no sequence of realized balances can produce the $47,287.50 floor that actually ran
+in production. Decomposed:
+
+| Fault | Floor | Cost |
+|---|---|---|
+| Correct (equity HWM) | $48,955.56 | — |
+| Denominator bug alone (balance HWM, clamped at FLOOR_START) | $48,000.00 | **$955.56** |
+| Production, after `317f3ff` hand-wrote `floor_state.json` | $47,287.50 | **+$712.50** |
+
+The second row is the code defect this seal fixes. The third is a **manual state
+reset that drove the floor $712.50 below the account's own opening MLL** — a value the
+ratchet is structurally incapable of reaching. That is a distinct failure, and it is the
+direct justification for §2's account binding: hand-editing `floor_state.json` was
+already an established practice on this system, and the binding replaces it with a
+mechanism.
+
+Both faults are real and both are corrected. No change to the sealed code, the §6
+prediction, or the deployment runbook. Pinned by
+`test_production_floor_was_below_anything_the_code_can_produce`.

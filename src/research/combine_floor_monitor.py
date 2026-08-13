@@ -2,7 +2,7 @@
 joint Topstep 50K combine (sealed deployment prereg yank-mim-joint-combine-deploy).
 
 Does NOT trade. Polls combined account equity and enforces the DERIVED halt triggers:
-  - distance-to-floor: equity <= trailing_floor + $750  (updated 2026-06-28, was $500)
+  - distance-to-floor: equity <= trailing_floor + $100  (updated 2026-07-13, was $750)
   - combined PF < 0.70 after 30 combined trades         (results_pf_trigger.md)
   - correlation: OBSERVE-ONLY (logged, never triggers)
 
@@ -11,6 +11,10 @@ stops both trader services, and drops a HALT flag. Equity = ProjectX account
 balance + open-position MtM; the trailing floor is tracked locally mirroring
 Topstep's ratchet (the hard floor is enforced by Topstep itself — this is the
 early-warning layer).
+
+The floor state is bound to the account that produced it (see load_state): a
+trailing floor is meaningless on a different account, and inheriting one across
+a combine reset is how the 2026-07-06 breach stayed invisible.
 """
 import asyncio
 import csv
@@ -106,13 +110,52 @@ def combined_pf_and_count(db_path, since_iso):
 
 
 # ---------------------------------------------------------------- state + log
+def genesis_state(combine_start: str) -> dict:
+    """A fresh combine: floor at the account's starting limit, PF window opens now."""
+    return {"account_id": str(ACCOUNT_ID), "combine_start": combine_start,
+            "hwm": START_EQUITY, "floor": FLOOR_START, "chain": "GENESIS"}
+
+
 def load_state() -> dict:
-    if STATE_FILE.exists():
+    """Load the floor state, bound to the account it was built for.
+
+    A trailing floor only means something on the account that produced it. Reusing
+    one across a combine reset starts the new account with the dead one's numbers —
+    so an account change re-genesises rather than inherits. Sealed prereg
+    combine-restart-floor-hwm §2.
+    """
+    if not STATE_FILE.exists():
+        return genesis_state(datetime.now(timezone.utc).isoformat())
+    try:
+        st = json.loads(STATE_FILE.read_text())
+    except Exception:
+        logger.warning("floor_state unreadable — genesis for acct %s", ACCOUNT_ID)
+        return genesis_state(datetime.now(timezone.utc).isoformat())
+
+    bound = st.get("account_id")
+    if bound is None:
+        # Legacy file, written before the binding existed. Adopt in place: whatever
+        # floor it carries was built for the account running right now. Keeping the
+        # env COMBINE_START here means the running monitor's PF window does not move.
+        st["account_id"] = str(ACCOUNT_ID)
+        st.setdefault("combine_start", COMBINE_START)
+        logger.info("floor_state adopted by acct %s (legacy, unbound) — hwm $%.2f floor $%.2f",
+                    ACCOUNT_ID, st.get("hwm", START_EQUITY), st.get("floor", FLOOR_START))
+        return st
+
+    if str(bound) != str(ACCOUNT_ID):
+        archive = STATE_FILE.with_name(f"{STATE_FILE.name}.acct-{bound}")
         try:
-            return json.loads(STATE_FILE.read_text())
-        except Exception:
-            pass
-    return {"hwm": START_EQUITY, "floor": FLOOR_START, "chain": "GENESIS"}
+            STATE_FILE.replace(archive)
+        except Exception as exc:
+            logger.warning("could not archive prior floor_state: %s", exc)
+        fresh = genesis_state(datetime.now(timezone.utc).isoformat())
+        logger.warning("ACCOUNT CHANGED %s -> %s — floor state re-genesised "
+                       "(hwm $%.2f, floor $%.2f, combine_start %s); prior state archived to %s",
+                       bound, ACCOUNT_ID, fresh["hwm"], fresh["floor"],
+                       fresh["combine_start"], archive.name)
+        return fresh
+    return st
 
 
 def save_state(st: dict):
@@ -210,6 +253,9 @@ async def main():
     cfg = type("_Cfg", (), {"symbol": "MNQU26", "contracts": 1})()
     px = ProjectXClient(auth, cfg, http, projectx_account_id=int(ACCOUNT_ID))
     st = load_state()
+    logger.info("floor state: acct %s | hwm $%.2f | floor $%.2f | PF window from %s",
+                st.get("account_id"), st.get("hwm", START_EQUITY),
+                st.get("floor", FLOOR_START), st.get("combine_start", COMBINE_START))
     while True:
         try:
             bal = await px.account_balance(ACCOUNT_ID)
@@ -219,12 +265,20 @@ async def main():
                 continue
             size, upl = await px.net_position(ACCOUNT_ID)
             equity = bal + upl
-            # HWM tracks realized balance only (mirrors Topstep's methodology).
-            # Tracking equity (bal+unrealized) overstates HWM when open positions
-            # are profitable, permanently ratcheting the floor from gains never realized.
-            st["hwm"] = max(st["hwm"], bal)
+            # HWM tracks EQUITY (balance + open MtM), because that is what Topstep's
+            # trailing MLL ratchets on. 317f3ff (2026-06-26) switched this to realized
+            # balance on the belief that it "mirrors Topstep's methodology"; it does not.
+            # That cost $955.56 of floor here, and the hand-written floor_state reset
+            # shipped alongside it cost $712.50 more — which is why acct 23884932
+            # breached on 2026-07-06 with this monitor still reporting $1,339 of room.
+            #
+            # Yes, this ratchets the floor on unrealized gains that may never be realized.
+            # That is Topstep's rule, not a modelling choice. The ratchet and the breach
+            # test below must use one denomination — splitting them is the actual bug.
+            # Sealed prereg combine-restart-floor-hwm §1.
+            st["hwm"] = max(st["hwm"], equity)
             st["floor"] = update_floor(st["floor"], st["hwm"])
-            pf, n = combined_pf_and_count(DB_PATH, COMBINE_START)
+            pf, n = combined_pf_and_count(DB_PATH, st.get("combine_start", COMBINE_START))
             reason = evaluate_triggers(equity, st["floor"], pf, n)
             log_tick(st, equity, st["floor"], pf, n, reason)
             # Publish the real combined balance/equity so trader buffer gates can

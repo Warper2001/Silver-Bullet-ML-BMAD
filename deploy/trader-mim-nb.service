@@ -1,5 +1,8 @@
+# ⚠️ SUPERSEDED — DO NOT EDIT, DO NOT INSTALL.
+# The live unit is deploy/systemd/trader-mim-nb.service (vendored into /etc, 305ddfc).
+# This is the Phase D original (76814e9), kept for the record only.
 [Unit]
-Description=MIM-NB Live Combine Bot (Topstep 50K, MNQ 1ct, sealed 6957daa/7939eed)
+Description=[SUPERSEDED, see deploy/systemd/] MIM-NB Live Combine Bot (Topstep 50K, MNQ 1ct, sealed 6957daa/7939eed)
 After=network-online.target
 Wants=network-online.target
 

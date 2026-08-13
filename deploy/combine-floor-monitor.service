@@ -1,5 +1,11 @@
+# ⚠️ SUPERSEDED — DO NOT EDIT, DO NOT INSTALL.
+# The live unit is deploy/systemd/combine-floor-monitor.service, which is what is
+# actually vendored into /etc (commit 305ddfc). This file is the Phase D original
+# (76814e9) and has drifted: it carries a COMBINE_START default and StandardOutput
+# lines that the installed unit does not, and lacks FLOOR_MONITOR_REPORT_ONLY.
+# Kept only so the Phase D record stays readable. Editing it changes nothing.
 [Unit]
-Description=Combine Floor Monitor (YANK+MIM-NB joint, Topstep 50K acct 23884932)
+Description=[SUPERSEDED, see deploy/systemd/] Combine Floor Monitor (YANK+MIM-NB joint, Topstep 50K acct 23884932)
 After=network-online.target trader-mim-nb.service
 Wants=network-online.target
 

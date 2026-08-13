@@ -1,12 +1,20 @@
 [Unit]
-Description=Combine Floor Monitor — REPORT-ONLY (tracks HWM/floor for acct 23884932; does NOT halt or flatten)
+Description=Combine Floor Monitor — REPORT-ONLY (tracks HWM/floor for acct 26556101; does NOT halt or flatten)
 After=network-online.target
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/root/Silver-Bullet-ML-BMAD
-Environment=PROJECTX_ACCOUNT_ID=23884932
+# 2026-08-13: combine reset. 23884932 breached the MLL on 07-06 and is retired
+# (canTrade=false); 26556101 is the fresh $50,000 account.
+#
+# This id is the ONLY thing that changes on a reset. floor_state.json is bound to
+# it: change the id and the monitor archives the prior state to
+# floor_state.json.acct-<old> and re-genesises at $50,000 / $48,000
+# (prereg combine-restart-floor-hwm §2). Never hand-edit or delete the state file —
+# a hand-written floor is what put the last account $712.50 below its own opening MLL.
+Environment=PROJECTX_ACCOUNT_ID=26556101
 # Report-only per prereg mim-nb-risk-mechanics-removal Amendment 2 (2026-08-04).
 # Set to 0 ONLY to deliberately re-arm halting — that reverses an explicit owner decision.
 Environment=FLOOR_MONITOR_REPORT_ONLY=1

@@ -1685,6 +1685,7 @@ class Tier2StreamingTrader:
                     entry_price=t.entry_price,
                     exit_price=price,
                     exit_reason=_exit_reason_str,
+                    ml_proba=None if np.isnan(t.ml_proba) else round(float(t.ml_proba), 4),
                     metadata={'contracts': self._contracts, 'bars_held': t.bars_held, 'gap_size': t.gap_size},
                 )
             except Exception as e:

@@ -274,3 +274,37 @@ untouched by this diff, same as the gap-ceiling and ml_proba changes this sessio
 
 **Not deployed. Not merged to main as of this amendment** — code lives on branch
 `fix/backtest-engine-m15-tz-and-gap-ceiling-backtest` (PR #47).
+
+---
+
+## Amendment 2 — post-hoc temporal stability check weakens the §5 pass (2026-08-19)
+
+Not part of §5 (not pre-committed, run after the pass, on request — disclosed as such).
+Split the derivation window at 2025-08-01 and re-ran the identical §5 bidirectional
+config on each half:
+
+| | Bullish N | Bullish PF | Bullish Net | Bearish PF (context) |
+|---|---|---|---|---|
+| H1 (2025-01..2025-07) | 10 | **0.894** | **−$261.25** | 0.950 |
+| H2 (2025-08..2026-02) | 13 | **1.805** | **+$2,828.00** | 1.198 |
+
+**§5's pooled PASS (N=23, PF=1.430) is entirely carried by H2.** H1 alone is a net
+loser. This is not a G4 violation (G4 checks single-month concentration, ≤40%; no
+month here exceeds that) — it is a coarser two-regime split G4 was never built to
+catch, and it materially weakens confidence in the H1 confirmation recorded above.
+Bearish softened similarly across the same split (0.950 -> 1.198) but never flips
+sign, which is the harder failure mode bullish shows here.
+
+**This does not overturn §5's formal result** (the pre-committed gate still passed
+on its own terms) **but it is real, disclosed evidence against treating that pass as
+sufficient justification to proceed to live wiring.** Recorded per the same standing
+rule that governs everything else in this document: findings get disclosed, not
+buried, regardless of which direction they cut.
+
+**Also disclosed:** the pre-holdout derivation window (2025-01-01..2026-02-28) has
+now been mined for three separate hypotheses this session (the gap-ceiling ratio,
+the Epic 2 battery reproduction, and this bidirectional test). Each was individually
+pre-committed and clean, but repeated reuse of the same window across hypotheses
+raises the session-wide false-positive risk beyond what any single test's own bar
+implies. Not correctable after the fact — recorded as a limitation on how much
+weight the whole thread should carry, not just this one result.

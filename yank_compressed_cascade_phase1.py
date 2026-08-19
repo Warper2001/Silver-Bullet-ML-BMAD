@@ -119,6 +119,7 @@ class CascadeResult:
     pnls: list[float]
     n_trades: int
     n_candidate_bars: int  # bars where a real FVG scan or coin flip was attempted
+    trades: list[dict] | None = None  # entry_ts/exit_ts/direction/pnl/exit_reason, real runs only
 
 
 @dataclass
@@ -231,14 +232,17 @@ def _run_cascade(
     rng = np.random.default_rng(random_seed) if random_seed is not None else None
 
     active: EntryDecision | None = None
+    active_entry_ts: pd.Timestamp | None = None
     pending = False
     pending_bars = 0
     bars_held = 0
     daily_pnl = 0.0
     daily_halted = False
     last_date = None
+    record = rng is None  # only the real run needs per-trade records
 
     pnls: list[float] = []
+    trades: list[dict] = []
     n_trades = 0
     n_candidate_bars = 0
 
@@ -263,6 +267,8 @@ def _run_cascade(
                         pnls.append(pnl)
                         n_trades += 1
                         daily_pnl += pnl
+                        if record:
+                            trades.append(_trade_record(active, active_entry_ts, bar_ts, exit_dec, pnl))
                         active = None
                     continue
                 elif pending_bars >= config.max_pending_bars:
@@ -280,6 +286,8 @@ def _run_cascade(
                     pnls.append(pnl)
                     n_trades += 1
                     daily_pnl += pnl
+                    if record:
+                        trades.append(_trade_record(active, active_entry_ts, bar_ts, exit_dec, pnl))
                     active = None
                     bars_held = 0
                 else:
@@ -347,10 +355,11 @@ def _run_cascade(
             continue
 
         active = entry
+        active_entry_ts = bar_ts
         pending = True
         pending_bars = 0
 
-    return CascadeResult(pnls=pnls, n_trades=n_trades, n_candidate_bars=n_candidate_bars)
+    return CascadeResult(pnls=pnls, n_trades=n_trades, n_candidate_bars=n_candidate_bars, trades=trades if record else None)
 
 
 def _trade_pnl(active: EntryDecision, exit_dec, config: StrategyConfig) -> float:
@@ -361,6 +370,18 @@ def _trade_pnl(active: EntryDecision, exit_dec, config: StrategyConfig) -> float
     else:
         points = exit_dec.exit_price - active.entry_price
     return round(points * POINT_VALUE_USD * active.contracts - config.commission_per_roundtrip, 2)
+
+
+def _trade_record(active: EntryDecision, entry_ts: pd.Timestamp, exit_ts: pd.Timestamp, exit_dec, pnl: float) -> dict:
+    return {
+        "entry_ts": entry_ts.isoformat(),
+        "exit_ts": exit_ts.isoformat(),
+        "direction": active.direction.value,
+        "entry_price": active.entry_price,
+        "exit_price": exit_dec.exit_price,
+        "exit_reason": exit_dec.reason.value,
+        "pnl": pnl,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ from src.research.strategy_core import (
     detect_fvg,
     detect_liquidity_sweep,
     detect_m15_choch,
+    detect_m15_choch_bullish,
     kill_zone_filter,
     make_entry_decision,
     resample_to_h1,
@@ -661,8 +662,11 @@ class BacktestEngine:
         last_h1_ts: pd.Timestamp | None = None
 
         # ── M15 CHoCH state (stateful latch — matches live _update_m15_choch) ──
+        # tz-aware sentinel: full_m15.index is tz-aware (bars are America/New_York
+        # after _load_bars), so a naive pd.Timestamp.min here raises on the first
+        # comparison whenever config.m15_confirmation=True is exercised.
         m15_choch_active: bool = False
-        m15_last_bar_ts: pd.Timestamp = pd.Timestamp.min
+        m15_last_bar_ts: pd.Timestamp = pd.Timestamp("1900-01-01", tz=bars.index.tz)
         _prev_sweep_dir: str | None = None
 
         for i in range(n):
@@ -715,14 +719,19 @@ class BacktestEngine:
                 _new_sweep_dir = sweep_cached.direction.value if sweep_cached is not None else None
                 if _new_sweep_dir != _prev_sweep_dir:
                     m15_choch_active = False
-                    m15_last_bar_ts = pd.Timestamp.min
+                    m15_last_bar_ts = pd.Timestamp("1900-01-01", tz=bars.index.tz)
                 _prev_sweep_dir = _new_sweep_dir
 
             # ── M15 CHoCH scan (per-bar, mirrors live _update_m15_choch) ──────
+            # Bidirectional (prereg preregistration_yank_bidirectional_m15_choch.md §4.2):
+            # dispatches to the bearish or bullish CHoCH formula by sweep direction. Before
+            # this fix the block only fired for BEARISH sweeps, so bullish entries were
+            # structurally unreachable whenever m15_confirmation=True, regardless of
+            # bearish_only (found 2026-08-19).
             if (
                 config.m15_confirmation
                 and sweep_cached is not None
-                and sweep_cached.direction == Direction.BEARISH
+                and sweep_cached.direction in (Direction.BEARISH, Direction.BULLISH)
                 and not m15_choch_active
             ):
                 _m15_idx = int(full_m15.index.searchsorted(bar_ts))
@@ -731,7 +740,9 @@ class BacktestEngine:
                     _last_m15_ts = _m15_completed.index[-1]
                     if _last_m15_ts > m15_last_bar_ts:
                         m15_last_bar_ts = _last_m15_ts
-                        if detect_m15_choch(_m15_completed):
+                        _choch_fn = (detect_m15_choch if sweep_cached.direction == Direction.BEARISH
+                                    else detect_m15_choch_bullish)
+                        if _choch_fn(_m15_completed):
                             m15_choch_active = True
 
             # ── Step 1: Advance active trade ─────────────────────────────

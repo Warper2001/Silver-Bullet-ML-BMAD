@@ -308,3 +308,43 @@ pre-committed and clean, but repeated reuse of the same window across hypotheses
 raises the session-wide false-positive risk beyond what any single test's own bar
 implies. Not correctable after the fact — recorded as a limitation on how much
 weight the whole thread should carry, not just this one result.
+
+---
+
+## Amendment 3 — bullish shadow watcher built and deployed (2026-08-19)
+
+Response to Amendment 2's finding: rather than re-slicing the same 14-month window
+looking for a supportive cut (the iteration-loop trap this project has a name for),
+the room recommended accumulating genuinely new, never-touched data prospectively.
+This amendment builds that path.
+
+**What was built, in `yank_streaming_working.py`:** a read-only bullish shadow
+watcher — `_update_shadow_bullish_m15_choch`, `_detect_shadow_bullish_entry`,
+`_advance_shadow_trade` — running inside the live process (same precedent as
+`YANK_DATA_SHADOW`), on fully separate state (`self._shadow_*`), calling the
+actual `detect_m15_choch_bullish` validated in Amendment 1 rather than
+reimplementing it a third time. Logs hypothetical bullish trades to
+`logs/yank_shadow_bullish_trades.csv` (via a second `TradeLogger` instance, same
+idempotency guard as the real log) — a completely separate file from the real
+trade log.
+
+**Why this is NOT "wiring the bullish gate into the live bot" in the sense §7
+reserves for its own future seal:** `bearish_only` is untouched (stays `True`),
+the real trading path (`_detect_and_enter`, `_enter_trade`, `active_trade`) is
+untouched, and the shadow path is self-audited to never call `_ts_client`,
+`StatePersistence`, or any order-placing method — confirmed by `grep` over the
+new code before deployment, not just by design intent. No real capital is at
+risk under any code path this amendment adds. §7's deployment/live-wiring
+restriction stands for the actual strategy; this is instrumentation, not that.
+
+**Tests:** `tests/unit/test_yank_shadow_bullish_watcher.py` (6 new) — confirms
+the shadow path never touches `_ts_client` (a test double raises `AssertionError`
+on any call), a synthetic bullish FVG arms/fills/closes a shadow trade correctly
+and logs it, and backfill bars never arm or advance a shadow trade (same
+discipline as the real path, guarding against the restart-replay double-log
+defect class this project has hit repeatedly). Full sweep: 186 passed.
+
+**Deployed** to `trader-yank.service` 2026-08-19 — see deploy log below for
+restart verification. Data accumulates from this timestamp forward; nothing
+before it exists, by design — this is meant to be genuinely unseen data, not a
+backfilled approximation of it.

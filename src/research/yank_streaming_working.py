@@ -50,6 +50,7 @@ from src.research.strategy_core import (
     check_exit,
     detect_fvg,
     detect_liquidity_sweep,
+    detect_m15_choch_bullish,
     kill_zone_filter,
     make_entry_decision,
     resample_to_h1,
@@ -968,6 +969,20 @@ class Tier2StreamingTrader:
         self._m15_choch_active: bool = False
         self._m15_last_bar_ts: datetime = _epoch
 
+        # Bullish shadow watcher (2026-08-19) — read-only, never trades. Built after
+        # preregistration_yank_bidirectional_m15_choch.md's Amendment 2: the §5
+        # backtest pass didn't survive a temporal split (H1 net loser, H2 strongly
+        # positive), so this observes real forward bullish signals — using the same
+        # validated detect_m15_choch_bullish gate — before any live-wiring decision.
+        # Entirely separate state from the real (bearish) path above; never calls
+        # _enter_trade or any order-placing method.
+        self._shadow_bullish_m15_choch_active: bool = False
+        self._shadow_m15_last_bar_ts: datetime = _epoch
+        self._shadow_trade: Optional[dict] = None
+        self._shadow_logger = TradeLogger(
+            log_path=Path(__file__).parent.parent.parent / "logs" / "yank_shadow_bullish_trades.csv"
+        )
+
         # strategy_core integration (Story 1.5)
         self._cached_sweep: Optional[SweepSignal] = None        # most recent sweep from detect_liquidity_sweep
         self._active_entry_decision: Optional[EntryDecision] = None  # EntryDecision for active trade (check_exit)
@@ -1342,8 +1357,11 @@ class Tier2StreamingTrader:
                     _t0 = _time_mod.perf_counter_ns()
                     self._update_h1_structure()
                     self._update_m15_choch()
+                    self._update_shadow_bullish_m15_choch()
                     await self._advance_active_trade(bar)
+                    self._advance_shadow_trade(bar)
                     await self._detect_and_enter(bar, is_backfill=self._is_backfill)
+                    self._detect_shadow_bullish_entry(bar, is_backfill=self._is_backfill)
                     self._bar_processing_times.append(_time_mod.perf_counter_ns() - _t0)
 
             if self._is_backfill and new_bars:
@@ -1459,6 +1477,7 @@ class Tier2StreamingTrader:
         # Sweep detection via strategy_core pure scan (replaces stateful 6-hour expiry machine)
         min_rows = self._strategy_config.h1_sweep_lookback + 5
         prev_bearish_active = self.h1_bearish_sweep_active
+        prev_bullish_active = self.h1_bullish_sweep_active
         if len(h1_completed) >= min_rows:
             try:
                 self._cached_sweep = detect_liquidity_sweep(h1_completed, self._strategy_config)
@@ -1488,6 +1507,20 @@ class Tier2StreamingTrader:
             logger.info("H1 bearish sweep expired (no sweep in last 6 H1 bars)")
             self._m15_choch_active = False
             self._m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
+
+        # Shadow watcher: reset the bullish latch on bullish sweep transitions,
+        # mirroring the bearish reset above exactly. Read-only — see __init__.
+        if new_bullish and not prev_bullish_active:
+            logger.info(
+                f"👻 H1 BULLISH SWEEP active (bars_ago={self._cached_sweep.bars_ago}, "
+                f"price={self._cached_sweep.sweep_price:.2f}) [shadow]"
+            )
+            self._shadow_bullish_m15_choch_active = False
+            self._shadow_m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
+        elif not new_bullish and prev_bullish_active:
+            logger.info("H1 bullish sweep expired (no sweep in last 6 H1 bars) [shadow]")
+            self._shadow_bullish_m15_choch_active = False
+            self._shadow_m15_last_bar_ts = datetime.min.replace(tzinfo=timezone.utc)
 
         self.h1_bearish_sweep_active = new_bearish
         self.h1_bullish_sweep_active = new_bullish
@@ -1565,6 +1598,139 @@ class Tier2StreamingTrader:
                 f"🔑 M15 CHoCH confirmed: close={last_close:.2f} < "
                 f"swing_low={swing_low:.2f} − 0.3×ATR({m15_atr:.2f}={swing_low - CHOCH_ATR_MULT*m15_atr:.2f})"
             )
+
+    def _update_shadow_bullish_m15_choch(self) -> None:
+        """Shadow-only bullish M15 CHoCH scan — read-only, never gates real trading.
+
+        Mirrors ``_update_m15_choch`` exactly (same M15 resample, same completed-bar
+        exclusion, same latch-once-per-new-bar pattern) but for the bullish
+        direction, via ``strategy_core.detect_m15_choch_bullish`` — calling the
+        actual validated function rather than reimplementing it a third time, so
+        this can never silently drift from what §5 tested. Uses fully separate
+        state (``self._shadow_*``) from the real bearish path above.
+        """
+        if not self.h1_bullish_sweep_active or self._shadow_bullish_m15_choch_active:
+            return
+        if len(self.dollar_bars) < 30:
+            return
+
+        recent = self.dollar_bars[-3000:]
+        df = pd.DataFrame([vars(b) for b in recent])
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        m15 = (
+            df.set_index("timestamp")
+            .resample("15min")
+            .agg({"open": "first", "high": "max", "low": "min", "close": "last"})
+            .dropna()
+            .reset_index()
+        )
+
+        completed = m15.iloc[:-1]
+        n = len(completed)
+        if n < 7:
+            return
+
+        last_m15_ts = completed.iloc[-1]["timestamp"].to_pydatetime()
+        if last_m15_ts.tzinfo is None:
+            last_m15_ts = last_m15_ts.replace(tzinfo=timezone.utc)
+        if last_m15_ts <= self._shadow_m15_last_bar_ts:
+            return
+        self._shadow_m15_last_bar_ts = last_m15_ts
+
+        if detect_m15_choch_bullish(completed.set_index("timestamp")):
+            self._shadow_bullish_m15_choch_active = True
+            logger.info("👻 SHADOW M15 CHoCH (bullish) confirmed")
+
+    def _detect_shadow_bullish_entry(self, bar: DollarBar, is_backfill: bool) -> None:
+        """Shadow-only bullish entry detection. Logs a hypothetical trade to
+        logs/yank_shadow_bullish_trades.csv when armed; places no order, touches
+        no TradeStation/ProjectX client, mutates no real trading state.
+
+        Backfill-gated exactly like ``_enter_trade`` (returns immediately) — the
+        restart-replay double-log defect this project has hit repeatedly (MIM-NB,
+        gap-fade, YANK's own real trade log) applies identically here.
+        """
+        if is_backfill or self._shadow_trade is not None:
+            return
+        if not (self.h1_bullish_sweep_active and self._shadow_bullish_m15_choch_active):
+            return
+        cached_sweep = self._cached_sweep
+        if cached_sweep is None or cached_sweep.direction != Direction.BULLISH:
+            return
+
+        m1_df = _dollar_bars_to_df(self.dollar_bars[-20:])
+        try:
+            fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
+        except ValueError:
+            fvg_signal = None
+        if not (fvg_signal and fvg_signal.direction == Direction.BULLISH):
+            return
+
+        entry_dec = make_entry_decision(cached_sweep, fvg_signal, self._strategy_config)
+        if entry_dec is None:
+            return
+
+        self._shadow_trade = {
+            "entry_time": bar.timestamp,
+            "entry_price": entry_dec.entry_price,
+            "tp_price": entry_dec.tp_price,
+            "sl_price": entry_dec.sl_price,
+            "gap_size": fvg_signal.gap_size,
+            "h1_sweep_bars_ago": cached_sweep.bars_ago,
+            "pending": True,
+            "bars_held": 0,
+            "entry_decision": entry_dec,
+        }
+        logger.info(
+            f"👻 SHADOW bullish entry armed: limit={entry_dec.entry_price:.2f} "
+            f"TP={entry_dec.tp_price:.2f} SL={entry_dec.sl_price:.2f}"
+        )
+
+    def _advance_shadow_trade(self, bar: DollarBar) -> None:
+        """Advance the shadow bullish position: pending-fill check, then TP/SL/
+        time-stop via the same ``check_exit`` strategy_core uses for the real
+        path. Read-only — appends to the shadow CSV on close, never places or
+        cancels an order."""
+        if self._shadow_trade is None or self._is_backfill:
+            return
+        t = self._shadow_trade
+        t["bars_held"] += 1
+
+        if t["pending"]:
+            filled = bar.low <= t["entry_price"]  # LONG limit: price must trade down to entry
+            if filled:
+                t["pending"] = False
+                t["bars_held"] = 0
+                logger.info(f"👻 SHADOW bullish limit FILLED at {t['entry_price']:.2f}")
+            elif t["bars_held"] >= self._strategy_config.max_pending_bars:
+                logger.info(
+                    f"👻 SHADOW bullish limit expired ({self._strategy_config.max_pending_bars} bars, not filled)"
+                )
+                self._shadow_trade = None
+            return
+
+        bar_series = pd.Series({"high": bar.high, "low": bar.low, "close": bar.close})
+        exit_dec = check_exit(bar_series, t["entry_decision"], t["bars_held"], self._strategy_config)
+        if exit_dec is None:
+            return
+
+        reason_map = {
+            ExitReason.TP: "TP", ExitReason.SL: "SL",
+            ExitReason.TIME_STOP: "TIME_STOP", ExitReason.MANUAL: "TIME_STOP",
+        }
+        pnl = ((exit_dec.exit_price - t["entry_price"]) * self._point_value * self._contracts
+              - self._strategy_config.commission_per_roundtrip)
+        self._shadow_logger.append_trade(TradeRecord(
+            timestamp_entry=t["entry_time"], timestamp_exit=bar.timestamp, direction="LONG",
+            entry_price=t["entry_price"], exit_price=exit_dec.exit_price,
+            tp_price=t["tp_price"], sl_price=t["sl_price"], gap_size=t["gap_size"],
+            pnl_usd=pnl, exit_reason=reason_map[exit_dec.reason],
+            h1_sweep_bars_ago=t["h1_sweep_bars_ago"], m15_confirmed=True,
+            kill_zone_active=kill_zone_filter(bar.timestamp, self._strategy_config),
+            vol_regime_pct=self._last_vol_regime_pct, contracts=self._contracts,
+        ))
+        logger.info(f"👻 SHADOW bullish CLOSED: {reason_map[exit_dec.reason]} pnl=${pnl:+.2f}")
+        self._shadow_trade = None
 
     async def _advance_active_trade(self, bar: DollarBar) -> bool:
         if not self.active_trade: return False

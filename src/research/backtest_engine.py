@@ -661,8 +661,11 @@ class BacktestEngine:
         last_h1_ts: pd.Timestamp | None = None
 
         # ── M15 CHoCH state (stateful latch — matches live _update_m15_choch) ──
+        # tz-aware sentinel: full_m15.index is tz-aware (bars are America/New_York
+        # after _load_bars), so a naive pd.Timestamp.min here raises on the first
+        # comparison whenever config.m15_confirmation=True is exercised.
         m15_choch_active: bool = False
-        m15_last_bar_ts: pd.Timestamp = pd.Timestamp.min
+        m15_last_bar_ts: pd.Timestamp = pd.Timestamp("1900-01-01", tz=bars.index.tz)
         _prev_sweep_dir: str | None = None
 
         for i in range(n):
@@ -715,7 +718,7 @@ class BacktestEngine:
                 _new_sweep_dir = sweep_cached.direction.value if sweep_cached is not None else None
                 if _new_sweep_dir != _prev_sweep_dir:
                     m15_choch_active = False
-                    m15_last_bar_ts = pd.Timestamp.min
+                    m15_last_bar_ts = pd.Timestamp("1900-01-01", tz=bars.index.tz)
                 _prev_sweep_dir = _new_sweep_dir
 
             # ── M15 CHoCH scan (per-bar, mirrors live _update_m15_choch) ──────

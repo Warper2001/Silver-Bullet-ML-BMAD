@@ -310,6 +310,61 @@ class TestDetectFVG:
         with pytest.raises(ValueError):
             detect_fvg(bars, StrategyConfig(), atr=0.0)
 
+    def test_max_gap_atr_ratio_defaults_off_old_behaviour_preserved(self):
+        """Ship-A regression: max_gap_atr_ratio=0.0 (the dataclass default) must
+        reproduce the $-ceiling behaviour bit-for-bit — every OTHER bot sharing
+        StrategyConfig/detect_fvg (s26, s26-combine) never sets this field."""
+        bars = _make_bearish_fvg_bars(gap=40.0)  # 40pts * $2 = $80 > $60
+        config = StrategyConfig(atr_threshold=0.0, min_gap_atr_ratio=0.0,
+                                max_gap_dollars=60.0)
+        assert config.max_gap_atr_ratio == 0.0
+        assert detect_fvg(bars, config, atr=1000.0) is None  # huge ATR, old ceiling still bites
+
+    def test_new_ceiling_rejects_gap_above_atr_ratio(self):
+        """gap_pts > max_gap_atr_ratio * atr must reject, even when the old
+        $-ceiling would have allowed it."""
+        bars = _make_bearish_fvg_bars(gap=40.0)  # would pass a $9999 dollar ceiling
+        config = StrategyConfig(atr_threshold=0.0, min_gap_atr_ratio=0.0,
+                                max_gap_dollars=9999.0, max_gap_atr_ratio=0.426)
+        result = detect_fvg(bars, config, atr=50.0)  # 0.426*50=21.3 < 40
+        assert result is None
+
+    def test_new_ceiling_accepts_within_atr_ratio(self):
+        bars = _make_bearish_fvg_bars(gap=8.0)
+        config = StrategyConfig(atr_threshold=0.0, min_gap_atr_ratio=0.0,
+                                max_gap_dollars=9999.0, max_gap_atr_ratio=0.426)
+        result = detect_fvg(bars, config, atr=50.0)  # 0.426*50=21.3 > 8
+        assert result is not None
+        assert result.gap_size == pytest.approx(8.0)
+
+    def test_new_ceiling_falls_back_to_dollar_ceiling_when_atr_zero(self):
+        """§4.2: 'otherwise the max_gap_dollars branch is used verbatim' — atr=0.0
+        (early-startup / insufficient H1 history) must not silently disable the
+        ceiling altogether."""
+        bars = _make_bearish_fvg_bars(gap=40.0)  # 40pts*$2=$80 > $60
+        config = StrategyConfig(atr_threshold=0.0, min_gap_atr_ratio=0.0,
+                                max_gap_dollars=60.0, max_gap_atr_ratio=0.426)
+        assert detect_fvg(bars, config, atr=0.0) is None
+
+    def test_new_ceiling_removes_the_empty_window_structurally(self):
+        """The whole point of the fix: max_gap_atr_ratio(0.426) > min_gap_atr_ratio
+        (0.25) means floor <= ceiling for EVERY atr > 0 — no H1 ATR can close the
+        feasible window, unlike the old $60/0.25 combination (empty above 120pts).
+
+        At atr=300 (far above the old 120pt bound): old floor=0.25*300=75 > old
+        cap=30pts (window empty, nothing could ever pass). New cap=0.426*300=127.8,
+        so [75, 127.8] is non-empty — a gap of 100 falls inside it and must be
+        accepted, where the old config would reject EVERY gap size at this ATR."""
+        bars = _make_bearish_fvg_bars(gap=100.0)
+        old_config = StrategyConfig(atr_threshold=0.0, min_gap_atr_ratio=0.25,
+                                    max_gap_dollars=60.0)
+        new_config = StrategyConfig(atr_threshold=0.0, min_gap_atr_ratio=0.25,
+                                    max_gap_dollars=60.0, max_gap_atr_ratio=0.426)
+        assert detect_fvg(bars, old_config, atr=300.0) is None
+        result = detect_fvg(bars, new_config, atr=300.0)
+        assert result is not None
+        assert result.gap_size == pytest.approx(100.0)
+
 
 # ---------------------------------------------------------------------------
 # volatility_regime_filter

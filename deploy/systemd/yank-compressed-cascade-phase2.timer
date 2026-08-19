@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the YANK compressed-cascade Phase 2 tracker daily (candidate fires well under 1x/day; daily is ample)
+
+[Timer]
+OnCalendar=*-*-* 06:00:00 UTC
+OnBootSec=10min
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -194,3 +194,36 @@ exactly how S12 and S13 tested StrategyConfig() defaults, not a live-config snap
 gap-ratio gate is computed from the sweep-leg's resampled bars, exactly as baseline computes
 H1 ATR from H1 bars — this is a mechanical consequence of swapping the resample source, not a
 new parameter choice.
+
+---
+
+## Amendment 2 (2026-08-19, Alex-directed deviation from §4 — appended, §1-6 above left intact)
+
+Phase 2 (prospective OOS, §4) started the same day it was authorized (systemd timer, see
+`deploy/systemd/yank-compressed-cascade-phase2.*`). Alex then asked to substitute a
+backtest against the sealed 2026-03-01→05-19 holdout instead, citing the multi-month
+prospective timeline as too slow. **§4 explicitly ruled this out** ("No historical holdout
+file is reused... reusing it here for a different, untested hypothesis is exactly the kind
+of restrict-to-favorable-subset-adjacent move this project's own retro rules out"). This
+amendment records that Alex overrode that clause, the caveat disclosed before running, and
+the result.
+
+**Disclosed before running:** `data/sealed_holdout/ACCESS_LOG.md` shows the MNQ holdout has
+been accessed 32 times prior to this one, including 7 runs under the S25 live-deployment
+prereg and 4 direct `ml_threshold` sweeps for YANK itself. This is **not** the pristine
+one-shot OOS read other candidates on this file got (HG copper, stat-arb, HCVWAP each got
+exactly one look) — it is a screening read on a heavily-used dataset. Reported as such, not
+as a substitute for real Phase 2.
+
+**Result (logged in full in `data/sealed_holdout/ACCESS_LOG.md`, 2026-08-19 entry):**
+N=61 trades, **PF=0.7797**, WR=41.0%, total −$3,389.00 — below Phase 1's own null median
+(0.912), not just below the p90 pass bar (1.218). The in-sample edge (PF 1.397, 100th
+percentile of null) did not transfer to 2026 data.
+
+**What this does and doesn't decide:** Per the seal's own stopping rule (§5: "no re-running
+with adjusted parameters, no selection of favorable subsets"), this result is recorded
+as-is — no re-tuning, no subgroup rescue attempted. It is a real negative signal on a
+dataset weak enough to not be dispositive on its own. The prospective Phase 2 clock (§4)
+was **not stopped** by this amendment and continues to run via the systemd timer regardless
+of this result — see `_bmad-output/yank_compressed_cascade_holdout_screening_verdict.md`
+for the full writeup and what happens next.

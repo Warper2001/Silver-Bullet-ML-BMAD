@@ -24,6 +24,12 @@ Environment=YANK_DATA_SHADOW=1
 # the authoritative ProjectX path. Remove to disable. See src/research/ts_sim_mirror.py.
 Environment=YANK_MIRROR_TS_SIM=1
 Environment=SIM_INVVOL=1
+# Gap-ceiling denomination fix (2026-08-19, prereg Amendment 1, PR #44/#45). §5 gate
+# PASSED (G1 99.116%, G2 0/7014, G3 0.0% shift, G4 0.0% empty) and Alex authorized
+# deployment. YANK-only: strategy_config.yaml is shared with s26/s26-combine, so this
+# is NOT set there — see yank_streaming_working.py::_build_strategy_config. Removing
+# this reverts to the old $60 absolute ceiling (empty whenever H1 ATR > 120pt).
+Environment=YANK_MAX_GAP_ATR_RATIO=0.426
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/yank_streaming_working.py
 Restart=on-failure
 RestartSec=30

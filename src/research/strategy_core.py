@@ -85,6 +85,9 @@ class StrategyConfig:
     entry_pct: float = 0.5
     atr_threshold: float = 0.5
     max_gap_dollars: float = 60.0  # dollar ceiling for FVG gap size (added Story 1.2)
+    max_gap_atr_ratio: float = 0.0  # ATR-relative ceiling; 0.0 = disabled, use max_gap_dollars verbatim
+    # (gap-ceiling denomination fix, prereg §4 — off by default so every other bot
+    # sharing StrategyConfig/detect_fvg is bit-identical unless it opts in)
     max_hold_bars: int = 60
     max_pending_bars: int = 240
     contracts_per_trade: int = 5
@@ -335,7 +338,10 @@ def detect_fvg(
     Three filters (matching the live system exactly):
 
     1. ``gap_size >= config.atr_threshold * _atr(bars)`` (1-min ATR gate).
-    2. ``gap_size * POINT_VALUE_USD <= config.max_gap_dollars`` (dollar ceiling).
+    2. Ceiling: ``gap_size <= config.max_gap_atr_ratio * atr`` when
+       ``config.max_gap_atr_ratio > 0 and atr > 0``; otherwise
+       ``gap_size * POINT_VALUE_USD <= config.max_gap_dollars`` (dollar ceiling,
+       verbatim — the default, since ``max_gap_atr_ratio`` defaults to 0.0).
     3. ``gap_size >= config.min_gap_atr_ratio * atr`` when ``atr > 0``
        (H1 ATR ratio gate).
 
@@ -384,7 +390,10 @@ def detect_fvg(
     gap_pts = top - bot
     if gap_pts < config.atr_threshold * calc_atr(bars):
         return None
-    if gap_pts * POINT_VALUE_USD > config.max_gap_dollars:
+    if config.max_gap_atr_ratio > 0 and atr > 0:
+        if gap_pts > config.max_gap_atr_ratio * atr:
+            return None
+    elif gap_pts * POINT_VALUE_USD > config.max_gap_dollars:
         return None
     if atr > 0 and gap_pts < config.min_gap_atr_ratio * atr:
         return None

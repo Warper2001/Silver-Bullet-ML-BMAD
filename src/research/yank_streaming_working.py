@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 import time as _time_mod
+import dataclasses
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -191,6 +192,12 @@ def _build_strategy_config() -> StrategyConfig:
     1. STRATEGY_CONFIG_PATH env var (explicit override)
     2. strategy_config.yaml at repo root (default YAML)
     3. StrategyConfig() dataclass defaults
+
+    ``strategy_config.yaml`` is SHARED with s26/s26-combine (same default-YAML
+    resolution order, verified 2026-08-19) — a YAML-level ``max_gap_atr_ratio``
+    would silently re-denominate their gap ceiling too, which the gap-ceiling
+    prereg (PR #37/#44) never authorized. So the gap-ceiling fix is applied here,
+    YANK-only, via an env var the shared YAML never sees.
     """
     from src.research.config_loader import load_strategy_config
 
@@ -199,16 +206,32 @@ def _build_strategy_config() -> StrategyConfig:
         path = Path(yaml_path_env)
         if path.exists():
             logger.info(f"Loading strategy config from env STRATEGY_CONFIG_PATH: {path}")
-            return load_strategy_config(path)
-        logger.warning(f"STRATEGY_CONFIG_PATH={yaml_path_env!r} not found; falling through")
+            cfg = load_strategy_config(path)
+        else:
+            logger.warning(f"STRATEGY_CONFIG_PATH={yaml_path_env!r} not found; falling through")
+            cfg = None
+    else:
+        cfg = None
 
-    default_yaml = Path(__file__).parent.parent.parent / "strategy_config.yaml"
-    if default_yaml.exists():
-        logger.info(f"Loading strategy config from {default_yaml}")
-        return load_strategy_config(default_yaml)
+    if cfg is None:
+        default_yaml = Path(__file__).parent.parent.parent / "strategy_config.yaml"
+        if default_yaml.exists():
+            logger.info(f"Loading strategy config from {default_yaml}")
+            cfg = load_strategy_config(default_yaml)
+        else:
+            logger.info("Using StrategyConfig() dataclass defaults")
+            cfg = StrategyConfig()
 
-    logger.info("Using StrategyConfig() dataclass defaults")
-    return StrategyConfig()
+    gap_atr_ratio_env = os.environ.get("YANK_MAX_GAP_ATR_RATIO")
+    if gap_atr_ratio_env:
+        # frozen dataclass: replace(), not attribute assignment
+        cfg = dataclasses.replace(cfg, max_gap_atr_ratio=float(gap_atr_ratio_env))
+        logger.info(
+            f"YANK_MAX_GAP_ATR_RATIO override: max_gap_atr_ratio={cfg.max_gap_atr_ratio} "
+            f"(gap-ceiling denomination fix, prereg §5 gate PASS 2026-08-18, PR #44 — "
+            f"YANK-only, does not touch strategy_config.yaml)"
+        )
+    return cfg
 
 
 class StatePersistence:

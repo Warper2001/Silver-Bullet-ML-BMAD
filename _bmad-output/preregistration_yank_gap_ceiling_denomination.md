@@ -266,4 +266,73 @@ config canonical     SHA-256 b4d0e6e3e73343c9ce0577451b3e9e33ee13f06089925fce0f8
 Live YANK config at seal: `SL2.0x_TP8.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25`,
 `ml_threshold=0.50`, `max_gap_dollars=60.0`, `min_gap_atr_ratio=0.25`, 2 contracts, MNQU26.
 
+---
+
+## Amendment 1 — §5 executed, H1 confirmed, Response A deployed (2026-08-19)
+
+**§5 acceptance gate run 2026-08-18**, by `tools/yank_gap_ceiling_g5_gate.py` (PR #44),
+never previously executed. Scanned every raw 3-bar FVG shape over the exact derivation
+window specified in §3 (2025-01-01..2026-02-28, 318,387 1-min bars, 64,996 candidates):
+
+| Gate | Result | Bar | Verdict |
+|---|---|---|---|
+| G1 (candidate agreement, non-binding sub-period, H1_ATR<=120) | 99.116% (n=56,568) | >=97% | PASS |
+| G2 (empty-window H1 bars under new ceiling, whole window) | 0 / 7,014 | ==0 | PASS |
+| G3 (median accepted gap shift, non-binding sub-period) | 19.0pt -> 19.0pt, 0.0% | <=10% | PASS |
+| G4 (fvg_feasibility level=0, last 30d live bars, new config) | 0.0% empty (506 H1 bars) | required | PASS |
+
+All four pass. Per §5, **H1 is confirmed** — the two thresholds were a denomination
+mismatch, not independent design intents. This authorizes the code change (§4) and
+nothing else, per §5's own text; it is not evidence about profitability (no backtest
+of the new regime's P&L was run — Alex explicitly declined that descriptive-only,
+in-sample analysis on 2026-08-19, preferring to decide on the gate result + §6 cost
+alone rather than risk a number that could be misread as validated).
+
+**Alex authorized deployment 2026-08-19** ("ship A"), after §6's costs were restated in
+full: evaluation clock resets to zero, the sealed 2026 holdout is spent with no second
+holdout, Gate-Minus-One applies.
+
+### Implementation deviation from §4 (disclosed, not silent)
+
+§4.1 specified `StrategyConfig` should gain `max_gap_atr_ratio: float = 0.426` (default
+ON) and §4.3 specified `strategy_config.yaml` gains the same key. Implementation found
+a hazard §4 did not anticipate: **`strategy_config.yaml` is shared** — `s26_soft_fvg` and
+`s26-combine` resolve the identical default-YAML path (`STRATEGY_CONFIG_PATH` env var,
+else repo-root `strategy_config.yaml`, else dataclass defaults) via the same
+`detect_fvg`/`StrategyConfig` code YANK uses. A YAML-level `max_gap_atr_ratio` would have
+silently re-denominated their gap ceiling too — never authorized by this seal (scope is
+YANK-only throughout; §7 forbids touching MIM-NB, says nothing that would extend scope
+to s26/s26-combine either).
+
+Shipped instead, functionally equivalent for YANK, zero blast radius for the other bots:
+
+1. `StrategyConfig.max_gap_atr_ratio` defaults to **0.0** (disabled), not 0.426 — matches
+   the file's existing "0.0 = off" convention (`ml_threshold`) and every other bot's
+   `StrategyConfig()` stays bit-identical without needing to know this field exists.
+2. `detect_fvg` (`strategy_core.py`): unchanged logic otherwise — `if max_gap_atr_ratio>0
+   and atr>0: ceiling = max_gap_atr_ratio*atr; else: ceiling = max_gap_dollars` (verbatim
+   §4.2 semantics).
+3. `strategy_config.yaml` **not touched**. Ratio is set via a YANK-only env var
+   (`YANK_MAX_GAP_ATR_RATIO=0.426`), read once in `yank_streaming_working.py::
+   _build_strategy_config`, applied via `dataclasses.replace()` after the shared YAML
+   loads — layered on top, not baked into the shared file.
+
+One knob, YANK-scoped, still true to §4's "nothing else" — the mechanism moved, the
+diff's effect on YANK did not.
+
+**Tests:** `tests/unit/test_strategy_core_detection.py` (+6: default-off preserves old
+$-ceiling bit-for-bit; new ceiling rejects/accepts on ATR; atr=0.0 falls back to
+dollar ceiling verbatim; empty-window structurally unreachable under the new ceiling at
+an ATR the old ceiling could never satisfy) and
+`tests/unit/test_yank_gap_ceiling_config_override.py` (+3: env-var wiring, additive-only,
+other fields untouched). 44/44 relevant tests pass; full detect_fvg/strategy_core/s26
+sweep clean (236 passed, 5 pre-existing unrelated failures in `src/detection/` — a
+different module, confirmed untouched by this diff).
+
+**Deployed:** `trader-yank.service`, env `YANK_MAX_GAP_ATR_RATIO=0.426` added to the unit,
+restarted 2026-08-19. Per §6: YANK's evaluation clock is reset from this deploy timestamp
+forward. Trades before this point (all 1,846 of them) may not be pooled with trades after.
+Gate-Minus-One is in effect — the first broker-confirmed round trip on this code counts
+before any further analysis of it is trusted.
+
 **Commit this document before writing a line of code against it.**

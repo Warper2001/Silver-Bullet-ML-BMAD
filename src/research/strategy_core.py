@@ -878,6 +878,48 @@ def detect_m15_choch(m15_completed: pd.DataFrame) -> bool:
     return last_close < swing_low - 0.3 * m15_atr
 
 
+def detect_m15_choch_bullish(m15_completed: pd.DataFrame) -> bool:
+    """True if the last bar closes above the most recent M15 swing high by ≥ 0.3 × ATR.
+
+    Structural mirror of ``detect_m15_choch`` (prereg
+    preregistration_yank_bidirectional_m15_choch.md §3/§4.1) — same SWING_R,
+    same ATR window, same 0.3 multiplier, no new constants. Added because
+    ``detect_m15_choch`` implements the bearish direction only, which silently
+    made bullish entries unreachable whenever m15_confirmation=True regardless
+    of bearish_only (found 2026-08-19).
+
+    Returns False when fewer than 7 bars are available or no swing high is found.
+    """
+    n = len(m15_completed)
+    if n < 7:
+        return False
+
+    period = min(20, n - 1)
+    trs = []
+    for i in range(n - period, n):
+        h  = float(m15_completed.iloc[i]["high"])
+        lo = float(m15_completed.iloc[i]["low"])
+        pc = float(m15_completed.iloc[i - 1]["close"])
+        trs.append(max(h - lo, abs(h - pc), abs(lo - pc)))
+    m15_atr = sum(trs) / len(trs) if trs else 0.0
+    if m15_atr <= 0:
+        return False
+
+    SWING_R = 2
+    highs = m15_completed["high"].values.astype(float)
+    swing_high: float | None = None
+    for i in range(n - 1 - SWING_R, SWING_R - 1, -1):
+        hi = highs[i]
+        if all(highs[i + k] <= hi for k in range(-SWING_R, SWING_R + 1) if k != 0):
+            swing_high = hi
+            break
+    if swing_high is None:
+        return False
+
+    last_close = float(m15_completed.iloc[-1]["close"])
+    return last_close > swing_high + 0.3 * m15_atr
+
+
 # ---------------------------------------------------------------------------
 # Metric functions (Story 1.3)
 # ---------------------------------------------------------------------------

@@ -228,3 +228,49 @@ Live YANK config at seal: `SL2.0x_TP8.0x_Midpoint_H1_M15CHoCH_M1FVG_g0.25/0.426`
 `detect_m15_choch_bullish` does not exist in the codebase as of this seal.
 
 **Commit this document before writing a line of code against it.**
+
+---
+
+## Amendment 1 — §5 executed, H1 confirmed (2026-08-19)
+
+**Implemented exactly as specified in §4**, no deviation: `detect_m15_choch_bullish`
+added to `strategy_core.py` as a pure structural mirror (same `SWING_R=2`, same ATR
+window, same `0.3` multiplier — zero new constants), `BacktestEngine`'s M15 scan block
+now dispatches by sweep direction instead of hardcoding bearish. Bearish-only behaviour
+is unit-tested to be byte-identical to before (`tests/unit/test_m15_choch_bidirectional.py`,
+7 tests). Scope held to `BacktestEngine` only, per §4/§7 — no live-bot file touched.
+
+**§5 run** (`tools/yank_bidir_m15_choch_g5_gate.py`), config `bearish_only=False,
+m15_confirmation=True` — the real gate, not §0.1's M15-absent exploratory config — on
+the same derivation window:
+
+| Gate | Result | Bar | Verdict |
+|---|---|---|---|
+| G1 (bullish N) | 23 | >= 15 | PASS |
+| G2 (bullish PF) | 1.430 (net +$2,566.75) | > 1.3 | PASS |
+| G3 (bearish PF vs. baseline) | 1.088 vs 1.053, diff 3.32% | <= 10% | PASS |
+| G4 (no month > 40% of bullish N) | worst month 2026-01, 17.4% | <= 40% | PASS |
+
+**All four pass. H1 confirmed.** Notably, the real working gate (N=23, PF 1.430) beats
+the confounded §0.1 look (N=35, PF 1.286, M15 gate absent) on PF — filtering with an
+actual bullish CHoCH check produces a *smaller, higher-quality* population, not just
+fewer trades. Bullish trades span 12 of 14 months (worst concentration 17.4%), and the
+bearish side moved only 3.32% off its pre-change baseline — the wiring did not disturb
+existing behaviour, addressing the one failure mode §5 existed specifically to catch.
+
+**What this does and does not authorize, restated from §6/§7:** this is new-strategy
+territory with no prior evaluation clock to reset — a pass moves `detect_m15_choch`
+from "bearish-only, one direction structurally unreachable" to "bidirectional, both
+tested" **inside `BacktestEngine` only**. It does **not** authorize wiring this into
+`yank_streaming_working.py`, does **not** authorize setting `bearish_only=False` on the
+live bot, and does **not** authorize any combine deployment. Those each need their own
+future seal, per §7, unchanged by this pass.
+
+**Tests:** `tests/unit/test_m15_choch_bidirectional.py` (new, 7 tests: pure-function
+symmetry checks + a `BacktestEngine`-level wiring guard confirming `bearish_only=True`
+still produces bearish-only output). Full detect_fvg/config-override/backtest-engine/m15
+sweep: 245 passed, 5 pre-existing unrelated failures in `src/detection/` (confirmed
+untouched by this diff, same as the gap-ceiling and ml_proba changes this session).
+
+**Not deployed. Not merged to main as of this amendment** — code lives on branch
+`fix/backtest-engine-m15-tz-and-gap-ceiling-backtest` (PR #47).

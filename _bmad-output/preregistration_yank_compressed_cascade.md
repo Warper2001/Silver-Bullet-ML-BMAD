@@ -160,3 +160,37 @@ resolution — not just more trades from looser gates.
 *(To be filled in by dev agent after `git commit` of this file)*
 
 Commit SHA: `__FILL_AFTER_COMMIT__`
+
+---
+
+## Amendment 1 (2026-08-19, build-time correction — appended, §1 above left intact)
+
+Implementation surfaced a mislabeling in §1's baseline table. "Live YANK (S25)" was sourced
+from CLAUDE.md's *Tier2StreamingTrader* description (`sl_multiplier=5.0, tp_multiplier=6.0,
+max_daily_loss=-750.0`) — but **`strategy_config.yaml` (YANK's actual live config) is
+`sl_multiplier=2.0, tp_multiplier=8.0, max_daily_loss=-300.0`** (2ct-derived, see
+`preregistration_yank_daily_breaker_2ct.md`), and `max_gap_atr_ratio=0.426` (the gap-ceiling
+fix) lives **only** in `deploy/systemd/trader-yank.service`'s `YANK_MAX_GAP_ATR_RATIO` env
+var — it is absent from `strategy_config.yaml` entirely (defaults to `0.0`/disabled in the
+shared `StrategyConfig`). Tier2 and YANK are not bit-identical configs; conflating them
+(exactly the risk Grumbal named in the party-mode round-table) would have silently
+reintroduced the pre-fix dollar-ceiling gate into this experiment's "baseline."
+
+**Correction, not a re-derivation:** Phase 1 (below) uses neither table verbatim. It follows
+S12/S13's own precedent of testing against a **clean Program-C baseline StrategyConfig**
+(`bearish_only=True, m15_confirmation=True, h1_sweep_lookback=6, tuesday_exclusion=True,
+min_gap_atr_ratio=0.25, max_gap_atr_ratio=0.426` — the post-fix ceiling, since the point of
+this experiment is isolating timeframe, not re-litigating the ceiling fix), **not** a literal
+replica of live YANK's current drifted config. `ml_threshold` stays at the shared default
+(`0.0`, disabled) and kill-zone/daily-breaker sizing are intentionally not exercised — those
+are live-YANK production wrinkles orthogonal to the timeframe question, and reproducing them
+faithfully would require the ML feature/inference pipeline, out of scope here. This mirrors
+exactly how S12 and S13 tested StrategyConfig() defaults, not a live-config snapshot.
+
+**Implementation:** `yank_compressed_cascade_phase1.py` (repo root). New, isolated
+`resample_to_timeframe(bars, rule)` — does not modify `resample_to_h1` / `resample_to_m15` in
+`strategy_core.py`. Structure-leg boundary detection generalized via `bar_ts.floor(rule)`
+(replacing `BacktestEngine.run()`'s hardcoded hourly truncation). ATR feeding `detect_fvg`'s
+gap-ratio gate is computed from the sweep-leg's resampled bars, exactly as baseline computes
+H1 ATR from H1 bars — this is a mechanical consequence of swapping the resample source, not a
+new parameter choice.

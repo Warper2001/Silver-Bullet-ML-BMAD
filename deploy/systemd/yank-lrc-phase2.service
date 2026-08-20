@@ -1,0 +1,11 @@
+[Unit]
+Description=LRC strategy Phase 2 prospective tracker (research only — no orders placed)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python /root/Silver-Bullet-ML-BMAD/yank_lrc_phase2_tracker.py --shadow-log /root/Silver-Bullet-ML-BMAD/logs/yank_shadow_parity.csv
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/yank_lrc_phase2.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/yank_lrc_phase2.log

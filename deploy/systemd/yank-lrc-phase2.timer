@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the LRC strategy Phase 2 tracker daily (candidate fires ~0.13x/day; daily is ample)
+
+[Timer]
+OnCalendar=*-*-* 06:15:00 UTC
+OnBootSec=15min
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

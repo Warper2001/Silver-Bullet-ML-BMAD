@@ -1,0 +1,29 @@
+LRC strategy — random-null test (S12 methodology), 2026 data, dev-phase exploratory (not sealed)
+
+Candidates tested: the two configs that kept winning across three widened grid
+searches (v1/v2/v3, see lrc_grid_search_20260819*.csv).
+
+--- lookback=100, 15min, slope-only, SL5/TP8, gap_ratio=0.35 ---
+real_pf=1.8546309330925124  real_n_trades=39  real_n_candidate_bars=7326  p_enter=0.005324
+n_null_sims_with_trades=100  null_median=0.8194  null_p90=1.4312  pct_rank=97.0
+VERDICT: PATTERNS SURVIVE
+
+--- lookback=150, 15min, slope-only, SL5/TP8, gap_ratio=0.35 ---
+real_pf=1.8107238424279375  real_n_trades=30  real_n_candidate_bars=7354  p_enter=0.004079
+n_null_sims_with_trades=100  null_median=0.8737  null_p90=1.3214  pct_rank=96.0
+VERDICT: PATTERNS SURVIVE
+
+Both real PFs reproduce the grid search's reported numbers exactly (N and PF match),
+confirming no drift between the grid driver and this null-test driver.
+
+Decision rule (verbatim from yank_compressed_cascade_phase1.py's Phase 1, reused):
+  PF < null median  -> PIVOT
+  PF > null p90      -> PATTERNS SURVIVE
+  else                -> AMBIGUOUS = TREATED AS FAIL
+
+Not pre-registered, not sealed, not OOS-validated -- this is exploratory dev-phase
+work per Alex's explicit direction (2026-08-19: "new strategy... skip the OOS
+gate"). Both configs drawn from the same 2026 in-sample data the grid was built
+on -- the null test controls for "is this better than random given the same
+gates," not for "will this generalize forward." Recommend pre-registering
+before any further optimization, ML training, or promotion toward paper/live.

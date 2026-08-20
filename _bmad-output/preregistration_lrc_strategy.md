@@ -167,3 +167,35 @@ by default.
 *(To be filled in by dev agent after `git commit` of this file)*
 
 Commit SHA: `__FILL_AFTER_COMMIT__`
+
+---
+
+## Amendment 1 (2026-08-20 — §4.1's option (c), appended, §0-5 above left intact)
+
+Alex asked whether running 2025 as a check would help, per §4.1 option (c). It does, with
+one honesty caveat stated up front: **2025 is genuinely blind for the regression-channel
+gate and this SL/TP/gap combo** (the grid search never touched 2025), but **not** a virgin
+test of the base M15/M5 cascade underneath it, which was already validated on 2025 in the
+compressed-cascade's own Phase 1. This is a partial-independence check, not a full one.
+
+**Result** (`.venv/bin/python`, same `strategy_lrc.py` functions, `mnq_1min_2025.csv`):
+
+| Config | 2026 (selection data) | 2025 (partially independent) |
+|---|---|---|
+| lookback=100 (primary) | N=39, PF=1.855 | N=30, PF=1.606, WR=50.0%, +$3,313.75 |
+| lookback=150 (sibling) | N=30, PF=1.811 | N=34, PF=1.833, WR=52.9%, +$4,930.25 |
+
+Both configs stayed solidly profitable on 2025. **lookback=150 in particular produced
+almost the identical PF on both years (1.811 vs 1.833)** — a meaningfully different result
+from the raw compressed cascade, whose PF inverted from 1.397 (in-sample) to 0.78 (2026
+holdout) under the same kind of check. This is evidence the regression-channel regime gate
+is doing real work, not just relocating the same overfitting to a new set of knobs.
+
+**Not a substitute for §4's prospective Phase 2** — 2025 is prior-year data with partial
+overlap in what's already been validated, not a fresh forward read, and the base cascade's
+prior 2025 exposure means this can't fully clear the multiple-comparisons concern in §0.1.
+But it materially raises confidence relative to §0 alone, and is grounds to revisit which
+config is "primary": `lookback=150`'s cross-year stability (bigger 2025 N, near-identical
+PF) arguably makes it at least co-primary with `lookback=100`, not merely a documented
+sibling. Left as an open call for Alex rather than silently promoted — a designation change
+this material belongs in a decision, not an amendment's prose.

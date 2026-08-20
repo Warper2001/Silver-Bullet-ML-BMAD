@@ -199,3 +199,38 @@ config is "primary": `lookback=150`'s cross-year stability (bigger 2025 N, near-
 PF) arguably makes it at least co-primary with `lookback=100`, not merely a documented
 sibling. Left as an open call for Alex rather than silently promoted — a designation change
 this material belongs in a decision, not an amendment's prose.
+
+---
+
+## Amendment 2 (2026-08-20 — Alex's decision: lookback=150 promoted to primary)
+
+Alex's ruling: **`lookback=150` is now the primary candidate.** `lookback=100` becomes the
+documented alternate (mirrors §1's original treatment of `lookback=150`, reversed). §1's
+table is not edited — this amendment is the record of the change, per the append-only
+convention used throughout this doc and this project's other sealed docs.
+
+**Primary candidate (superseding §1):**
+
+| Parameter | Value |
+|---|---|
+| `regression_lookback` | **150** |
+| `regression_timeframe` | 15min |
+| `gate_mode` | slope |
+| `sl_multiplier` | 5.0 |
+| `tp_multiplier` | 8.0 |
+| `min_gap_atr_ratio` | 0.35 |
+
+**Two numbers in §4 change with the primary and are superseded here, not there:**
+
+- **Phase 2 threshold:** reuse `lookback=150`'s own null p90, **1.321** (not 1.431, which was
+  `lookback=100`'s). Same "derive don't assert" rule §4 already committed to — just pointed
+  at the new primary's own null test result (§0), not a fresh number.
+- **§4.1 cost disclosure, corrected:** `lookback=150` fired 30 times over the ~231-day 2026
+  dataset (≈0.130 trades/day) — slightly *fewer* than `lookback=100`'s 39, not more. N=30
+  fresh prospective trades at this rate is **≈231 days, roughly 7.7 months** — marginally
+  slower than the 6-month estimate §4.1 gave for `lookback=100`. Promoting the more
+  cross-year-stable config costs a slightly longer prospective clock; disclosed plainly
+  rather than left as a stale, now-wrong number.
+
+Everything else in §1-5 (base cascade, frozen `StrategyConfig` fields, stopping rule,
+out-of-scope items) is unchanged.

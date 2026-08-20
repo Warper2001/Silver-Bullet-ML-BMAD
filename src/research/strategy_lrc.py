@@ -207,10 +207,25 @@ class LRCResult:
     n_candidate_bars: int
 
 
-def run_lrc_cascade(bars: pd.DataFrame, base_config: StrategyConfig, gates: BaseGates, reg: RegressionFeatures, lrc: LRCConfig) -> LRCResult:
+def run_lrc_cascade(
+    bars: pd.DataFrame,
+    base_config: StrategyConfig,
+    gates: BaseGates,
+    reg: RegressionFeatures,
+    lrc: LRCConfig,
+    *,
+    random_seed: int | None = None,
+    p_enter: float = 0.0,
+) -> LRCResult:
     """base_config carries bearish_only/tuesday_exclusion/vol_regime/etc (fixed
-    across the grid); lrc carries the swept knobs (SL/TP/gap-ratio/regression)."""
+    across the grid); lrc carries the swept knobs (SL/TP/gap-ratio/regression).
+
+    If random_seed is None, runs the real FVG-based strategy. Otherwise runs a
+    direction-matched random-entry control sharing every structure/regime gate
+    (S12 methodology, same design as yank_compressed_cascade_phase1.py's
+    Phase-1 null test)."""
     n = len(bars)
+    rng = np.random.default_rng(random_seed) if random_seed is not None else None
     config = StrategyConfig(
         sl_multiplier=lrc.sl_multiplier,
         tp_multiplier=lrc.tp_multiplier,
@@ -317,12 +332,22 @@ def run_lrc_cascade(bars: pd.DataFrame, base_config: StrategyConfig, gates: Base
         if i < 2:
             continue
         m1_buf = bars.iloc[max(0, i - 19) : i + 1]
-        try:
-            fvg = detect_fvg(m1_buf, config, gates.sweep_atr[i])
-        except ValueError:
-            continue
-        if fvg is None:
-            continue
+
+        if rng is not None:
+            if rng.random() >= p_enter:
+                continue
+            gap = config.atr_threshold * calc_atr(m1_buf)
+            if gap <= 0:
+                continue
+            entry_price = float(bar["close"])
+            fvg = FVGSignal(direction=sweep_direction, gap_size=gap, entry_price=entry_price, high=entry_price, low=entry_price)
+        else:
+            try:
+                fvg = detect_fvg(m1_buf, config, gates.sweep_atr[i])
+            except ValueError:
+                continue
+            if fvg is None:
+                continue
 
         kz = kill_zone_filter(bar_ts, config)
         if config.enable_kill_zone_filter and not kz:

@@ -58,16 +58,37 @@ BASE_CONFIG = StrategyConfig(
     tuesday_exclusion=True,
 )
 
-# v2 grid -- 648 cells. min_gap_atr_ratio widened from a pinned single value to a real sweep.
+# v3 grid -- widened around v2's two winning clusters (lookback=20/5min and
+# lookback=100/15min, both slope-only, both at the high end of SL/TP/gap
+# tested so far). band_k is a no-op under gate_mode="slope" (see v1/v2
+# results) so it's excluded from the slope combos entirely rather than
+# wastefully repeated -- see _iter_combos.
 GRID = {
-    "regression_lookback": [20, 50, 100],
+    "regression_lookback": [10, 20, 100, 150],
     "band_k": [1.5, 2.0, 2.5],
     "regression_timeframe": ["15min", "5min"],
     "gate_mode": ["slope", "position", "combined"],
-    "sl_multiplier": [3.0, 5.0],
-    "tp_multiplier": [6.0, 8.0],
-    "min_gap_atr_ratio": [0.15, 0.25, 0.35],
+    "sl_multiplier": [3.0, 5.0, 7.0],
+    "tp_multiplier": [6.0, 8.0, 10.0],
+    "min_gap_atr_ratio": [0.25, 0.35, 0.45],
 }
+
+
+def _iter_combos(grid: dict) -> list[dict]:
+    """band_k only matters for gate_mode in {position, combined} -- skip the
+    redundant repetition for slope (would otherwise 3x every slope cell for
+    zero new information, as v1/v2 both showed)."""
+    fixed_keys = ["regression_lookback", "regression_timeframe", "sl_multiplier", "tp_multiplier", "min_gap_atr_ratio"]
+    fixed_vals = [grid[k] for k in fixed_keys]
+    combos = []
+    for fixed_combo in itertools.product(*fixed_vals):
+        base = dict(zip(fixed_keys, fixed_combo))
+        # slope: band_k irrelevant, one placeholder row
+        combos.append({**base, "gate_mode": "slope", "band_k": grid["band_k"][0]})
+        for gate_mode in ("position", "combined"):
+            for bk in grid["band_k"]:
+                combos.append({**base, "gate_mode": gate_mode, "band_k": bk})
+    return combos
 
 
 def load_2026_bars() -> pd.DataFrame:
@@ -85,21 +106,19 @@ def main() -> None:
 
     t0 = time.time()
     bars = load_2026_bars()
-    print(f"bars: {len(bars)}  {bars.index[0]} -> {bars.index[-1]}  (loaded {time.time()-t0:.1f}s)")
+    print(f"bars: {len(bars)}  {bars.index[0]} -> {bars.index[-1]}  (loaded {time.time()-t0:.1f}s)", flush=True)
 
     t0 = time.time()
     gates = precompute_base_gates(bars, BASE_CONFIG)
-    print(f"base gates precomputed {time.time()-t0:.1f}s")
+    print(f"base gates precomputed {time.time()-t0:.1f}s", flush=True)
 
     reg_cache: dict[tuple[int, str], object] = {}
-    combos = list(itertools.product(*GRID.values()))
-    keys = list(GRID.keys())
-    print(f"grid size: {len(combos)}")
+    combos = _iter_combos(GRID)
+    print(f"grid size: {len(combos)}", flush=True)
 
     rows = []
     t_start = time.time()
-    for n_done, combo in enumerate(combos):
-        params = dict(zip(keys, combo))
+    for n_done, params in enumerate(combos):
         reg_key = (params["regression_lookback"], params["regression_timeframe"])
         if reg_key not in reg_cache:
             reg_cache[reg_key] = precompute_regression_features(bars, *reg_key)
@@ -123,7 +142,7 @@ def main() -> None:
             elapsed = time.time() - t_start
             rate = (n_done + 1) / elapsed
             eta = (len(combos) - n_done - 1) / rate if rate > 0 else float("nan")
-            print(f"[{n_done+1}/{len(combos)}] elapsed={elapsed:.0f}s eta={eta:.0f}s last_pf={pf:.3f} n_trades={result.n_trades}")
+            print(f"[{n_done+1}/{len(combos)}] elapsed={elapsed:.0f}s eta={eta:.0f}s last_pf={pf:.3f} n_trades={result.n_trades}", flush=True)
 
     df = pd.DataFrame(rows).sort_values("pf", ascending=False)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

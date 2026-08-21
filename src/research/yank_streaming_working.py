@@ -41,6 +41,7 @@ from src.research.strategy_core import (
     ExitDecision,
     ExitReason,
     FVGSignal,
+    POINT_VALUE_USD,
     StrategyConfig,
     SweepSignal,
     calc_atr,
@@ -2058,6 +2059,26 @@ class Tier2StreamingTrader:
                 fvg_signal = detect_fvg(m1_df, self._strategy_config, self._h1_atr)
             except ValueError:
                 fvg_signal = None
+            if logger.isEnabledFor(logging.DEBUG):
+                # Diagnostic only (2026-08-21, Alex request) — recomputes the raw 3-bar
+                # bearish gap purely for visibility; detect_fvg() in strategy_core.py stays
+                # untouched (AR1 purity contract forbids logging there).
+                _c1, _c2, _c3 = m1_df.iloc[-3], m1_df.iloc[-2], m1_df.iloc[-1]
+                _is_bearish_3bar = bool(_c1["low"] > _c3["high"] and _c2["close"] < _c2["open"])
+                _raw_gap = (_c1["low"] - _c3["high"]) if _is_bearish_3bar else 0.0
+                _cfg = self._strategy_config
+                _min_gap = _cfg.min_gap_atr_ratio * self._h1_atr if self._h1_atr > 0 else 0.0
+                _ceiling = (_cfg.max_gap_atr_ratio * self._h1_atr
+                            if _cfg.max_gap_atr_ratio > 0 and self._h1_atr > 0
+                            else _cfg.max_gap_dollars / POINT_VALUE_USD)
+                _floor_1m = _cfg.atr_threshold * calc_atr(m1_df)
+                logger.debug(
+                    f"🔍 Bearish 3-bar gap: pattern={'YES' if _is_bearish_3bar else 'no'} "
+                    f"raw_gap={_raw_gap:.2f}pts | need >= {max(_min_gap, _floor_1m):.2f} "
+                    f"(min_gap_atr_ratio={_cfg.min_gap_atr_ratio}×H1ATR={self._h1_atr:.2f}={_min_gap:.2f}, "
+                    f"1m_floor={_floor_1m:.2f}) and <= {_ceiling:.2f} (ceiling) "
+                    f"| qualified={'YES' if fvg_signal else 'NO'}"
+                )
             _fvg_hit = bool(fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None)
             if _fvg_hit:
                 fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}  # type: ignore[union-attr]

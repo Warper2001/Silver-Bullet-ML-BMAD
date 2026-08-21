@@ -17,6 +17,9 @@ Checks, by dollar consequence on the combine:
   WARN (running but not working):
     - structural silence: confirmed H1 sweep + M15 CHoCH but zero FVG (the 2026-08-07
       YANK failure class — every other check green while the gap gates were unsatisfiable)
+    - ledger integrity: gap-fade's hash-chained audit trail is broken or incomplete
+      (the 2026-08-06 failure class — a git checkout reverted the live ledgers and
+      destroyed two sessions; nobody noticed for six days because nothing checked)
   INFO (paper / non-combine bots):
     - btc-carry, s26-combine, s26, s27, sil-quote-capture active + logs fresh
 
@@ -373,6 +376,25 @@ def main() -> int:
                          f"combined_pf {pf}, n_trades {n})")
         except Exception as e:
             emit(WARN, f"monitor.csv last row unparseable: {e}")
+
+    # 5) Ledger integrity — the 2026-08-06 failure class.
+    # Delegated to tools/verify_chain.py so the chain logic has one owner. Registered,
+    # documented scars are suppressed there; anything reaching us is new.
+    try:
+        vc = subprocess.run(
+            [sys.executable, str(BASE / "tools/verify_chain.py"), "--reconcile"],
+            capture_output=True, text=True, timeout=30, cwd=BASE)
+        if vc.returncode == 0:
+            n_ok = sum(1 for ln in vc.stdout.splitlines() if ln.startswith("[  OK  ]"))
+            emit(OK, f"bot ledgers: {n_ok} chains verify, gap-fade complete vs trades.db")
+        else:
+            findings = [ln.strip() for ln in vc.stdout.splitlines()
+                        if ln.startswith("[BROKEN]") or "INCOMPLETE" in ln
+                        or "DUPLICATED" in ln]
+            emit(WARN, "bot ledgers: " + ("; ".join(findings) or "verify_chain failed") +
+                       " — run .venv/bin/python tools/verify_chain.py --reconcile")
+    except Exception as e:
+        emit(WARN, f"bot ledgers: verify_chain.py did not run ({e})")
 
     header = {OK: "ALL OK", WARN: "WARNINGS", CRIT: "CRITICAL"}[worst]
     if not (args.quiet and worst == OK):

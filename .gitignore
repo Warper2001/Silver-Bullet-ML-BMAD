@@ -179,6 +179,11 @@ data/mim_nb/*
 !data/mim_nb/trades.csv.bak-*
 data/gap_fade/*
 !data/gap_fade/fills_backfill_report.csv
+# Frozen provenance record for the 2026-08-06 loss, written once by
+# tools/gap_fade_ledger_repair.py. Like fills_backfill_report.csv it is a one-shot
+# artifact, not a live append target, so tracking it is safe and it belongs with the
+# incident write-up it documents.
+!data/gap_fade/ledger_repair_20260812.csv
 data/combine_joint/*
 data/ts_sim_mirror/*
 

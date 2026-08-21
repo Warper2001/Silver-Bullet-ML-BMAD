@@ -106,31 +106,89 @@ DOW_NAMES    = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 # Hash-chained append-only CSV (same pattern as mim_nb_live / thursday_short)
 # ─────────────────────────────────────────────────────────────────────────────
 class ChainedCsv:
-    """Tamper-evident append-only CSV with SHA-256 hash chaining."""
+    """Tamper-evident append-only CSV with SHA-256 hash chaining.
 
-    def __init__(self, path: Path, fields: list):
-        self.path   = path
-        self.fields = list(fields) + ["chain"]
-        self.head   = "GENESIS"
-        if path.exists():
-            try:
-                with open(path) as f:
-                    for row in csv.DictReader(f):
-                        self.head = row.get("chain", self.head)
-            except Exception:
-                logger.warning("chain reload failed for %s — restarting chain", path.name)
-        else:
+    Two hardenings were added on 2026-08-12 after the 2026-08-06 ledger loss
+    (see _bmad-output/ledger_incident_20260806_gap_fade.md). Both exist because
+    an in-memory `head` is a claim about a file that another process can change:
+
+    1. `head` is re-read from disk immediately before every append, instead of
+       being carried in memory for the life of the process. On 2026-08-06 a git
+       branch checkout reverted these files (they were tracked at the time) to
+       their last commit. The bot kept appending against a head the file no
+       longer contained, so on top of losing two sessions it also corrupted the
+       chain from that row onward — `decisions.csv` still fails at row 30. With
+       a disk-sourced head the chain stays valid across any external truncation;
+       the loss becomes a completeness question, which `tools/verify_chain.py
+       --reconcile` can actually answer. A silent self-heal would be worse than
+       the bug, so a head that moved under us is logged at ERROR.
+
+    2. Appends are rejected when `key_field` already appears in the file. These
+       ledgers are one-row-per-session by construction, and the 2026-06-25
+       duplicate (two chained appends across a restart, before the double-entry
+       guard existed) is permanent — a row cannot be withdrawn from an
+       append-only chain, so it still inflates trades.csv by $1,390.50 today.
+       Same INSERT-OR-IGNORE semantics as the trades.db natural-key fix.
+
+    Not applied to the sibling copies in mim_nb_live.py or thursday_short.py.
+    MIM-NB is frozen mid-Track-A by preregistration §7; thursday_short is
+    untouched only for scope. Both carry this defect.
+    """
+
+    def __init__(self, path: Path, fields: list, key_field: str | None = None):
+        self.path      = path
+        self.fields    = list(fields) + ["chain"]
+        self.key_field = key_field or self.fields[0]
+        if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "w", newline="") as f:
                 csv.DictWriter(f, fieldnames=self.fields).writeheader()
 
-    def append(self, row: dict):
-        payload   = "|".join(str(row.get(k, "")) for k in self.fields if k != "chain")
-        self.head = hashlib.sha256((self.head + "|" + payload).encode()).hexdigest()[:16]
-        row       = dict(row)
-        row["chain"] = self.head
+    def _read_tail(self) -> tuple:
+        """Return (head, keys) as they exist on disk right now.
+
+        Falls back to ("GENESIS", set()) only when the file is unreadable — the
+        caller logs that, because it means this append starts a fresh chain.
+        """
+        head, keys = "GENESIS", set()
+        try:
+            with open(self.path) as f:
+                for row in csv.DictReader(f):
+                    head = row.get("chain") or head
+                    k = row.get(self.key_field)
+                    if k:
+                        keys.add(k)
+        except Exception as exc:
+            logger.error("chain reload failed for %s (%s) — this append will start a "
+                         "NEW chain; the prior rows are no longer linked to it",
+                         self.path.name, exc)
+        return head, keys
+
+    def append(self, row: dict) -> bool:
+        """Append one row. Returns False (and writes nothing) on a duplicate key."""
+        head, keys = self._read_tail()
+        key = str(row.get(self.key_field, ""))
+        if key and key in keys:
+            logger.error("REFUSING duplicate append to %s: %s=%s already present. "
+                         "Nothing written. This is the 2026-06-25 defect class.",
+                         self.path.name, self.key_field, key)
+            return False
+
+        prior = getattr(self, "_head", None)
+        if prior is not None and prior != head:
+            logger.error("chain head for %s moved under us (in-memory %s, on-disk %s) — "
+                         "the file was modified by another writer. Chaining onto the "
+                         "on-disk head; run tools/verify_chain.py --reconcile to find "
+                         "out what was lost.", self.path.name, prior, head)
+
+        payload = "|".join(str(row.get(k, "")) for k in self.fields if k != "chain")
+        head    = hashlib.sha256((head + "|" + payload).encode()).hexdigest()[:16]
+        row     = dict(row)
+        row["chain"] = head
         with open(self.path, "a", newline="") as f:
             csv.DictWriter(f, fieldnames=self.fields, extrasaction="ignore").writerow(row)
+        self._head = head
+        return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────

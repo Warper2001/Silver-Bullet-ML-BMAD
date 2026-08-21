@@ -91,30 +91,90 @@ def fetch_btc_lr_slopes():
 
 
 class ChainedCsv:
-    """Tamper-evident hash-chained CSV (local copy of the MIM-NB pattern)."""
+    """Tamper-evident hash-chained CSV (local copy of the MIM-NB pattern).
 
-    def __init__(self, path, fields):
+    Hardened 2026-08-13 against the failure that destroyed two gap-fade sessions on
+    2026-08-06 (_bmad-output/ledger_incident_20260806_gap_fade.md). These ledgers were
+    git-tracked then too; a branch checkout reverted them mid-session, and because the
+    chain head lived in memory the running bot kept appending against a head the file no
+    longer contained — corrupting the chain on top of truncating it. gap-fade's
+    decisions.csv still fails at row 30 and always will.
+
+    So `head` is re-read from disk immediately before every append. An outside writer can
+    now only cost us rows, not the chain, and lost rows are a completeness question that
+    `tools/verify_chain.py` can answer. A head that moved under us is logged at ERROR —
+    a silent self-heal would be worse than the bug.
+
+    `key_fields` is REQUIRED and has no default, because the right key differs per file
+    here and a guessed one is dangerous in both directions:
+
+      trades.csv, counterfactuals.csv -> ("thursday", "symbol")
+          Two legs (MBT + MET) per Thursday, so `thursday` alone is NOT unique and a
+          first-column guard would silently refuse every second leg.
+      decisions.csv -> None (no dedupe)
+          Repeat decisions within one Thursday are legitimate: `current_thursday` is only
+          set after a *successful* entry, so SKIPPED_NOT_FLAT / NO_MARKS / REJECTED can
+          each fire again on the next poll. Refusing those would delete real evidence.
+
+    (gap-fade's copy in src/research/gap_fade_live.py takes a single `key_field` because
+    its ledgers really are one-row-per-session. The three copies of this class have now
+    drifted in signature; consolidating them into one module is worth doing, but touching
+    mim_nb_live.py needs its own change window — it is frozen mid-Track-A by prereg §7.)
+    """
+
+    def __init__(self, path, fields, key_fields):
         self.path = path
         self.fields = list(fields) + ["chain"]
-        self.head = "GENESIS"
-        if path.exists():
-            try:
-                with open(path) as f:
-                    for row in csv.DictReader(f):
-                        self.head = row.get("chain", self.head)
-            except Exception:
-                logger.warning("chain reload failed for %s — restarting chain", path.name)
-        else:
+        self.key_fields = tuple(key_fields) if key_fields else None
+        if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "w", newline="") as f:
                 csv.DictWriter(f, fieldnames=self.fields).writeheader()
 
+    def _key(self, row):
+        if not self.key_fields:
+            return None
+        return tuple(str(row.get(k, "")) for k in self.key_fields)
+
+    def _read_tail(self):
+        """Return (head, keys) as they exist on disk right now."""
+        head, keys = "GENESIS", set()
+        try:
+            with open(self.path) as f:
+                for row in csv.DictReader(f):
+                    head = row.get("chain") or head
+                    k = self._key(row)
+                    if k is not None:
+                        keys.add(k)
+        except Exception as exc:
+            logger.error("chain reload failed for %s (%s) — this append will start a NEW "
+                         "chain; the prior rows are no longer linked to it",
+                         self.path.name, exc)
+        return head, keys
+
     def append(self, row):
+        """Append one row. Returns False (and writes nothing) on a duplicate key."""
+        head, keys = self._read_tail()
+        key = self._key(row)
+        if key is not None and key in keys:
+            logger.error("REFUSING duplicate append to %s: %s=%s already present. Nothing "
+                         "written.", self.path.name, self.key_fields, key)
+            return False
+
+        prior = getattr(self, "_head", None)
+        if prior is not None and prior != head:
+            logger.error("chain head for %s moved under us (in-memory %s, on-disk %s) — the "
+                         "file was modified by another writer. Chaining onto the on-disk "
+                         "head; run tools/verify_chain.py to see what was lost.",
+                         self.path.name, prior, head)
+
         payload = "|".join(str(row.get(k, "")) for k in self.fields if k != "chain")
-        self.head = hashlib.sha256((self.head + "|" + payload).encode()).hexdigest()[:16]
-        row = dict(row); row["chain"] = self.head
+        head = hashlib.sha256((head + "|" + payload).encode()).hexdigest()[:16]
+        row = dict(row); row["chain"] = head
         with open(self.path, "a", newline="") as f:
             csv.DictWriter(f, fieldnames=self.fields, extrasaction="ignore").writerow(row)
+        self._head = head
+        return True
 
 
 class ThursdayShortTrader:
@@ -340,16 +400,22 @@ class ThursdayShortTrader:
         async with httpx.AsyncClient(timeout=30) as http:
             client = TradeStationThursdayClient(auth, TS_SIM_ACCOUNT, http)
             _tdir = ALARM_FILE.parent
+            # key_fields: see ChainedCsv — two legs per Thursday, so the dedupe key must
+            # be (thursday, symbol); decisions.csv opts out because repeat decisions
+            # within one Thursday are legitimate.
             self._trades_log = ChainedCsv(_tdir / "trades.csv",
                 ["thursday", "symbol", "dir", "entry_t", "entry_px", "exit_t", "exit_px",
-                 "qty", "ret_bps", "pnl_usd", "reason", "lr_slope20_bpd", "lr_slope40_bpd"])
+                 "qty", "ret_bps", "pnl_usd", "reason", "lr_slope20_bpd", "lr_slope40_bpd"],
+                key_fields=("thursday", "symbol"))
             self._decisions_log = ChainedCsv(_tdir / "decisions.csv",
                 ["ts_utc", "thursday", "mbt_sym", "met_sym", "mark_btc", "mark_eth",
-                 "n_mbt", "n_met", "lr_slope20_bpd", "lr_slope40_bpd", "action", "detail"])
+                 "n_mbt", "n_met", "lr_slope20_bpd", "lr_slope40_bpd", "action", "detail"],
+                key_fields=None)
             self._cf_log = ChainedCsv(_tdir / "counterfactuals.csv",
                 ["thursday", "symbol", "qty", "entry_px", "stop_trigger_px",
                  "realized_exit_t", "realized_exit_px", "realized_reason",
-                 "realized_pnl_usd", "cf_2305_px", "cf_pnl_usd", "source"])
+                 "realized_pnl_usd", "cf_2305_px", "cf_pnl_usd", "source"],
+                key_fields=("thursday", "symbol"))
             orphan = await client.get_open_positions()              # G2 startup reconcile
             if orphan:
                 logger.warning(f"orphan position(s) at startup: {[p.get('Symbol') for p in orphan]} — flattening")

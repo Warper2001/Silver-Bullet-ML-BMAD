@@ -85,6 +85,9 @@ class StrategyConfig:
     entry_pct: float = 0.5
     atr_threshold: float = 0.5
     max_gap_dollars: float = 60.0  # dollar ceiling for FVG gap size (added Story 1.2)
+    max_gap_atr_ratio: float = 0.0  # ATR-relative ceiling; 0.0 = disabled, use max_gap_dollars verbatim
+    # (gap-ceiling denomination fix, prereg §4 — off by default so every other bot
+    # sharing StrategyConfig/detect_fvg is bit-identical unless it opts in)
     max_hold_bars: int = 60
     max_pending_bars: int = 240
     contracts_per_trade: int = 5
@@ -335,7 +338,10 @@ def detect_fvg(
     Three filters (matching the live system exactly):
 
     1. ``gap_size >= config.atr_threshold * _atr(bars)`` (1-min ATR gate).
-    2. ``gap_size * POINT_VALUE_USD <= config.max_gap_dollars`` (dollar ceiling).
+    2. Ceiling: ``gap_size <= config.max_gap_atr_ratio * atr`` when
+       ``config.max_gap_atr_ratio > 0 and atr > 0``; otherwise
+       ``gap_size * POINT_VALUE_USD <= config.max_gap_dollars`` (dollar ceiling,
+       verbatim — the default, since ``max_gap_atr_ratio`` defaults to 0.0).
     3. ``gap_size >= config.min_gap_atr_ratio * atr`` when ``atr > 0``
        (H1 ATR ratio gate).
 
@@ -384,7 +390,10 @@ def detect_fvg(
     gap_pts = top - bot
     if gap_pts < config.atr_threshold * calc_atr(bars):
         return None
-    if gap_pts * POINT_VALUE_USD > config.max_gap_dollars:
+    if config.max_gap_atr_ratio > 0 and atr > 0:
+        if gap_pts > config.max_gap_atr_ratio * atr:
+            return None
+    elif gap_pts * POINT_VALUE_USD > config.max_gap_dollars:
         return None
     if atr > 0 and gap_pts < config.min_gap_atr_ratio * atr:
         return None
@@ -867,6 +876,48 @@ def detect_m15_choch(m15_completed: pd.DataFrame) -> bool:
 
     last_close = float(m15_completed.iloc[-1]["close"])
     return last_close < swing_low - 0.3 * m15_atr
+
+
+def detect_m15_choch_bullish(m15_completed: pd.DataFrame) -> bool:
+    """True if the last bar closes above the most recent M15 swing high by ≥ 0.3 × ATR.
+
+    Structural mirror of ``detect_m15_choch`` (prereg
+    preregistration_yank_bidirectional_m15_choch.md §3/§4.1) — same SWING_R,
+    same ATR window, same 0.3 multiplier, no new constants. Added because
+    ``detect_m15_choch`` implements the bearish direction only, which silently
+    made bullish entries unreachable whenever m15_confirmation=True regardless
+    of bearish_only (found 2026-08-19).
+
+    Returns False when fewer than 7 bars are available or no swing high is found.
+    """
+    n = len(m15_completed)
+    if n < 7:
+        return False
+
+    period = min(20, n - 1)
+    trs = []
+    for i in range(n - period, n):
+        h  = float(m15_completed.iloc[i]["high"])
+        lo = float(m15_completed.iloc[i]["low"])
+        pc = float(m15_completed.iloc[i - 1]["close"])
+        trs.append(max(h - lo, abs(h - pc), abs(lo - pc)))
+    m15_atr = sum(trs) / len(trs) if trs else 0.0
+    if m15_atr <= 0:
+        return False
+
+    SWING_R = 2
+    highs = m15_completed["high"].values.astype(float)
+    swing_high: float | None = None
+    for i in range(n - 1 - SWING_R, SWING_R - 1, -1):
+        hi = highs[i]
+        if all(highs[i + k] <= hi for k in range(-SWING_R, SWING_R + 1) if k != 0):
+            swing_high = hi
+            break
+    if swing_high is None:
+        return False
+
+    last_close = float(m15_completed.iloc[-1]["close"])
+    return last_close > swing_high + 0.3 * m15_atr
 
 
 # ---------------------------------------------------------------------------

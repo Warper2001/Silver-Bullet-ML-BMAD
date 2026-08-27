@@ -1,0 +1,36 @@
+======================================================================================
+S26-EXIT — ATR floor, paired exit experiment   |   seal be099b9
+======================================================================================
+  frozen entries: 165   Arm A: ATR20   Arm B: max(ATR20, ATR60)
+  floor was BINDING (ATR60 > ATR20) on 73/165 entries (44.2%)
+
+arm            net      mean      PF      WR   exits
+A          3089.80     18.73   1.381   45.5%   TP=58 SL=83 TIME=24
+B          3536.07     21.43   1.421   47.3%   TP=58 SL=79 TIME=28
+
+======================================================================================
+PRIMARY — two-sided Wilcoxon signed-rank on paired differences (B − A)
+======================================================================================
+  pairs: 165   non-zero differences: 69
+  mean(d)   = +2.70
+  median(d) = +0.00
+  Wilcoxon W = 1195.0   p = 0.94042
+
+======================================================================================
+VERDICT (seal §6)
+======================================================================================
+  p = 0.94042 > 0.05
+
+  >>> NO DIFFERENCE <<<  The floor does not change outcomes.
+  Pre-committed: record, close the thread, no second variant (§7.1).
+
+--------------------------------------------------------------------------------------
+SECONDARY — mechanism check (never decision-bearing, §6)
+  SL exits:  A=83  ->  B=79   (-4)
+  TP exits:  A=58  ->  B=58   (+0)
+  TIME:      A=24  ->  B=28   (+4)
+  Arm A SL mean/median ratio: 1.363
+  Arm B SL mean/median ratio: 1.407
+
+  Absolute PF/net of either arm may NOT be quoted as profitability (§7.5).
+  Live trader-s26 unmodified. trades.db opened read-only.

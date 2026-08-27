@@ -167,3 +167,86 @@ size mattered more than the bot's own viability.
 | `s26_soft_fvg_streaming.py` SHA-256 (first 16) | `2399e760e02bf9ed` |
 | Frozen entries | 165 (`trader-s26`, timestamp ≥ 2026-06-01) |
 | Arm A regression | 165/165 reasons, 159/165 P&L exact, $4.00 net drift |
+
+---
+
+# Amendment 1 — Result (2026-08-27)
+
+Append-only. Original sealed text unedited.
+
+Script: `study_s26_exit_atr_floor.py` | Report: `data/reports/s26_exit_atr_floor_20260827_221517.txt`
+Run under seal `be099b9`.
+
+## A1.1 Verdict — NO DIFFERENCE
+
+**Wilcoxon signed-rank, two-sided, on 165 paired differences: p = 0.94042.**
+
+| arm | net | mean/trade | PF | WR | TP | SL | TIME |
+|---|---|---|---|---|---|---|---|
+| A (ATR20) | 3,089.80 | 18.73 | 1.381 | 45.5% | 58 | 83 | 24 |
+| B (floor) | 3,536.07 | 21.43 | 1.421 | 47.3% | 58 | 79 | 28 |
+
+mean(d) = **+2.70**, median(d) = **+0.00**, non-zero differences **69 of 165**.
+
+Per §6 the pre-committed action is: **record, close the thread, no second variant on
+this data** (§7.1). The ATR floor does not change outcomes.
+
+The floor was **not inert** — it bound (ATR60 > ATR20) on **73 of 165 entries (44.2%)**.
+It had ample opportunity to matter and did not.
+
+## A1.2 The reason this design was worth building
+
+Arm B's aggregate net is **+$446.27 better than Arm A — a 14.4% improvement** — and its
+PF is higher (1.421 vs 1.381) and its win rate is higher (47.3% vs 45.5%).
+
+**Every one of those numbers is noise.** The median paired difference is exactly zero and
+p = 0.94.
+
+Had this been run as an unpaired before/after comparison — the way the original naive
+version of this experiment would have been run — the honest-looking conclusion would have
+been *"the ATR floor improves s26 by 14%."* The paired design is the only thing standing
+between that sentence and the record. Recorded here as the clearest demonstration this
+project has produced of why aggregate P&L comparisons on the same strategy are untrustworthy.
+
+## A1.3 The mechanism did not move either
+
+The §6 secondary check is more damaging to the hypothesis than the primary:
+
+| | Arm A | Arm B | Δ |
+|---|---|---|---|
+| SL exits | 83 | 79 | **−4** |
+| TP exits | 58 | 58 | 0 |
+| TIME exits | 24 | 28 | +4 |
+| SL mean/median ratio | 1.363 | **1.407** | **worse** |
+
+Binding on 44.2% of entries, the floor converted **four** stop-outs into time-stops and
+left the TP count untouched. And the SL fat-tail ratio — the very statistic that motivated
+the diagnosis (August 1.95 vs 1.25/1.31) — got **slightly worse**, not better.
+
+**Interpretation, pre-committed as a null:** the August blow-throughs were not caused by
+ATR20 being small *relative to ATR60*. On the days that mattered, both estimates were
+small: the market expanded beyond what **any** recent-history volatility estimate could
+anticipate. That is a regime event, not a calibration error — consistent with this
+session's finding that s26's August damage was six trades on 2026-08-20/21 during a
+violent rally.
+
+The §1 diagnosis correctly identified *where* the loss occurred. It was **wrong about
+why**. Stop width was not the defect.
+
+## A1.4 What this does and does not close
+
+**Closes:** the ATR-floor hypothesis for s26. No second variant is run on these 165
+trades (§7.1), and no live change is made (§7.6). `trader-s26` continues unmodified.
+
+**Does not close:** the exit-layer thesis for the sibling bots. gap-fade's defect is a
+**time-stop** (6/6 `fill` exits positive vs 18 `time` exits at −$2,977) and MIM-NB's is a
+**categorical guard** (100% of losses). Those are different mechanisms and neither was
+tested here.
+
+But the honest reading is that the thesis is **weaker than it looked**. s26 was chosen as
+the test bed precisely because it was the only sample large enough to give a well-powered
+answer, and the well-powered answer is **no**. The sibling evidence remains N=24 and N=20
+with no paired test — which is where this session found it.
+
+**Not triggered:** §8. The fee gate is untouched and s26 remains an instrument that cannot
+clear its own costs (2.985 bps gross vs 4–10 bps round-trip).

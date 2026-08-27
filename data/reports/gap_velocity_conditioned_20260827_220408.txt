@@ -1,0 +1,56 @@
+============================================================================================
+GAP-V — Velocity-Conditioned Gap-Down Response  |  sealed e5b40f6, Amendment 1 5f08c5d
+============================================================================================
+VELOCITY_SPLIT      : 0.9421%   (< LOW / >= HIGH)
+backtest_gap_fade   : sha256 404240bea5f0a877
+Friction            : $3.00 RT   Contracts: 1   PV: $2.0
+Frozen              : gap>=0.5%, stop 2.0x, time-stop 13:00 ET, Fri excluded, min 300 prior bars
+
+Derivation cross-check (2025, N=34): median = 0.9421%  OK
+
+mnq_1min_2023_sepnov.csv: 8 qualifying gap-down trades
+   2023-09-07  gap 1.268%   time      76.00
+   2023-09-21  gap 1.140%   time     -60.50
+   2023-09-26  gap 0.735%   time    -105.50
+   2023-10-03  gap 0.699%   time    -220.50
+   2023-10-09  gap 0.658%   time      79.00
+   2023-10-17  gap 1.091%   time     263.50
+   2023-10-18  gap 0.725%   time     -79.00
+   2023-10-25  gap 0.769%   time    -373.00
+
+mnq_1min_2024_sepnov.csv: 10 qualifying gap-down trades
+   2024-09-04  gap 0.667%   fill     253.50
+   2024-09-05  gap 0.550%   fill     208.50
+   2024-09-16  gap 0.552%   time     -97.00
+   2024-10-03  gap 0.601%   fill     237.50
+   2024-10-07  gap 0.521%   time       1.50
+   2024-10-10  gap 0.567%   fill     229.00
+   2024-10-22  gap 0.585%   fill     237.00
+   2024-10-23  gap 0.557%   time    -380.00
+   2024-10-31  gap 0.736%   stop    -607.00
+   2024-11-19  gap 0.532%   fill     216.50
+
+============================================================================================
+PRIMARY METRIC — Δ = mean(LOW) − mean(HIGH)
+============================================================================================
+subgroup      N       net$     mean$      PF      WR
+LOW          15    -399.50    -26.63   0.785   53.3%
+HIGH          3     279.00     93.00   5.612   66.7%
+
+============================================================================================
+VERDICT (seal §7 decision rule)
+============================================================================================
+  N_low=15, N_high=3; floor is 12 per subgroup.
+
+  >>> INSUFFICIENT_SAMPLE <<<
+  Pre-committed action: record, no verdict. Do NOT widen the window,
+  lower the gap threshold, or pool in live trades (§7, §8.4, §8.7).
+
+  [descriptive only, NOT a verdict] Δ = -119.63/trade
+
+--------------------------------------------------------------------------------------------
+SECONDARY (reported, never decision-bearing) — per file
+  mnq_1min_2023_sepnov.csv     N=  8 net=  -420.00 mean=  -52.50
+  mnq_1min_2024_sepnov.csv     N= 10 net=   299.50 mean=   29.95
+
+GAP-1 unmodified by this study. data/trades.db never read.

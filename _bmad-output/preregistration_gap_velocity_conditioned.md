@@ -293,3 +293,78 @@ sealed backtest script cannot currently be run from the repo root.**
 Not fixed here — this seal ships no code, and GAP-1 is not modified (§4). Recorded as a
 defect for separate action. The study script patches that single line in memory and
 asserts the remainder of the source is byte-identical before executing it.
+
+---
+
+# Amendment 2 — Result (2026-08-27)
+
+Append-only. Original sealed text and Amendment 1 unedited.
+
+Script: `study_gap_velocity_conditioned.py`
+Report: `data/reports/gap_velocity_conditioned_20260827_220408.txt`
+Run under seal e5b40f6 + Amendment 1 5f08c5d. VELOCITY_SPLIT = 0.9421%,
+re-derived by the script and confirmed OK against Amendment 1.
+
+## A2.1 Verdict — INSUFFICIENT_SAMPLE
+
+| subgroup | N | net | mean/trade | PF | WR |
+|---|---|---|---|---|---|
+| LOW (gap < 0.9421%) | 15 | −$399.50 | −$26.63 | 0.785 | 53.3% |
+| HIGH (gap ≥ 0.9421%) | **3** | +$279.00 | +$93.00 | 5.612 | 66.7% |
+
+**N_high = 3 against a §7 floor of 12. Verdict: INSUFFICIENT_SAMPLE.**
+
+Per §7 the pre-committed action is: **record, no verdict.** The window is not widened,
+the 0.5% threshold is not lowered, and the 24 live GAP-1 trades are not pooled in
+(§8.3, §8.4, §8.7). No claim about H1 is made or implied.
+
+The descriptive difference (Δ = −$119.63/trade, i.e. HIGH outperforming LOW, the
+*opposite* sign to H1) is recorded for completeness and **is not a result**: it rests on
+three observations. It must not be cited, and in particular must not be read as evidence
+against the external mechanism.
+
+Total qualifying trades: **18**. Amendment 1 predicted ≈17 before the run.
+
+## A2.2 Why it is underpowered — a design defect in §5, not just a short window
+
+Amendment 1 attributed the expected shortfall to calendar length. That was **incomplete**.
+The deeper cause is a distributional shift between the derivation era and the test era:
+
+| era | N | median gap | mean gap | ≥ 0.9421% | share |
+|---|---|---|---|---|---|
+| 2025 (derivation) | 34 | 0.942% | 1.292% | 17 | 50.0% |
+| 2023 Sep–Nov (test) | 8 | 0.752% | 0.886% | 3 | 37.5% |
+| 2024 Sep–Nov (test) | 10 | 0.562% | 0.587% | **0** | **0.0%** |
+| **pooled test** | **18** | **0.663%** | **0.720%** | **3** | **16.7%** |
+
+**The 2025-derived median sits at the 83rd percentile of the test era.** 2024 Sep–Nov
+contains *no* qualifying gap-down above it at all.
+
+§5 chose to derive the split on already-spent data to keep the test window clean. That
+reasoning was sound on contamination and **wrong on stationarity**: it assumed the gap
+magnitude distribution is stable across eras. It is not. 2025 contained a tariff-driven
+volatility regime (including a 6% single-day Nasdaq drop in April); Sep–Nov 2023 and 2024
+were comparatively calm. A median-split derived in a violent year cannot partition a calm
+one near its middle — by construction it lands in the tail.
+
+This is a **generalizable methodological finding for this project**: a threshold derived
+on era A and applied to era B inherits era A's volatility regime. Any future seal using
+this pattern should either derive the split *within* the test era (accepting the
+contamination and disclosing it), or use a **distribution-relative** rule — e.g. "the
+median of the test era's own qualifying gaps" — rather than an absolute percentage.
+
+Recorded, not acted upon. Re-deriving the split now, having seen these outcomes, is
+exactly what §8.1 and §8.2 forbid.
+
+## A2.3 Status
+
+GAP-V is **not** closed and **not** advanced — it is a recorded failure of statistical
+power. GAP-1 remains unmodified: no parameter, config, service or clock was touched, and
+`data/trades.db` was never read by the study.
+
+Open routes, none selected here:
+1. **Prospective accrual** — ~7–8 months to N=30 gap-down longs at GAP-1's live rate.
+2. **Acquire unseen data with comparable volatility** — the source paper notes Databento
+   MNQ history at ~$42/quarter; pre-2021 data would also supply the volatility range
+   2023/24 Sep–Nov lacks.
+3. **Leave as recorded** — a null of power, not of effect, closing nothing.

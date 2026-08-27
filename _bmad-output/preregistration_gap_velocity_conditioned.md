@@ -227,7 +227,7 @@ Purely prospective testing was considered and rejected as the primary route: GAP
 | `backtest_gap_fade.py` SHA-256 (first 16) | `404240bea5f0a877` |
 | `mnq_1min_2025.csv` SHA-256 (first 16) | `3f20ec70885cdee6` |
 | GAP-1 live trades at seal | N=24 (12 long / 12 short), 2026-06-25 → 2026-08-27 |
-| VELOCITY_SPLIT | **__COMPUTE_AND_APPEND_BEFORE_TEST_RUN__** |
+| VELOCITY_SPLIT | **0.9421%** — set by Amendment 1, 2026-08-27 |
 
 VELOCITY_SPLIT is computed from 2025 per §5 and appended as **Amendment 1** *before* any
 test-window run. The test script must refuse to execute while the placeholder is present.
@@ -243,3 +243,53 @@ To be written as `study_gap_velocity_conditioned.py`. It must:
 - never read `data/trades.db`;
 - emit N, mean, PF and Δ per subgroup plus the per-year split, to
   `data/reports/gap_velocity_conditioned_<timestamp>.txt`.
+
+---
+
+# Amendment 1 — VELOCITY_SPLIT fixed (2026-08-27)
+
+Appended **before** any test-window run, per §11. Original text above is unedited.
+
+## A1.1 Derived value
+
+Computed per §5 on `mnq_1min_2025.csv` (SHA-256 `3f20ec70885cdee6`) under GAP-1's
+frozen qualification rules, loaded directly from `backtest_gap_fade.py`
+(SHA-256 `404240bea5f0a877`, matching §11) so the rules cannot drift from the engine.
+
+| Item | Value |
+|---|---|
+| 2025 sessions with a valid prior RTH close | 207 |
+| Qualifying gap-DOWN sessions (≥0.5%, non-Friday) | **34** |
+| min / p25 / max gap_pct | 0.5130% / 0.6495% / 4.3689% |
+| **VELOCITY_SPLIT (median)** | **0.9421%** |
+
+Assignment: `gap_pct < 0.9421%` → **LOW** velocity; `gap_pct ≥ 0.9421%` → **HIGH**.
+This value is now frozen and may not be adjusted (§8.1).
+
+## A1.2 Correction to the §10 sample-size estimate — disclosed before running
+
+§10 estimated "on the order of 30 gap-down sessions" in the pooled test window. That
+estimate was **too optimistic** and is corrected here, before any outcome is seen.
+
+The 2025 rate is 34 qualifying gap-downs over ~250 trading days = **0.136/day**. The
+pooled 2023+2024 test window is ~126 trading days, implying **≈17 gap-down trades**,
+or roughly **8–9 per subgroup**.
+
+That is **below the N≥12 per-subgroup floor in §7.** On the derivation-era rate alone,
+this test is expected to return **INSUFFICIENT_SAMPLE** before it is run.
+
+Recorded rather than acted upon. Per §8.4 and §8.7 the window will **not** be widened and
+the 0.5% threshold will **not** be lowered to manufacture sample. The test is run as
+sealed, and INSUFFICIENT_SAMPLE — if returned — is the honest result, not a failure to
+be engineered around.
+
+## A1.3 Incidental defect found while loading GAP-1's logic
+
+`backtest_gap_fade.py:44` resolves its repo root as
+`Path(__file__).resolve().parents[3]`, which raises `IndexError` when the file sits at
+the repository root. It only resolves inside `.claude/worktrees/<name>/`. **GAP-1's own
+sealed backtest script cannot currently be run from the repo root.**
+
+Not fixed here — this seal ships no code, and GAP-1 is not modified (§4). Recorded as a
+defect for separate action. The study script patches that single line in memory and
+asserts the remainder of the source is byte-identical before executing it.

@@ -368,3 +368,75 @@ Open routes, none selected here:
    MNQ history at ~$42/quarter; pre-2021 data would also supply the volatility range
    2023/24 Sep–Nov lacks.
 3. **Leave as recorded** — a null of power, not of effect, closing nothing.
+
+---
+
+# Amendment 3 — Prospective phase opened (2026-08-27)
+
+Append-only. Original sealed text, Amendment 1 and Amendment 2 unedited.
+
+Route 1 of the three offered in §A2.3 was selected: **prospective accrual**.
+
+## A3.1 Window
+
+| Item | Value |
+|---|---|
+| Window opens | **2026-08-27T22:05:19+00:00** — the Amendment 2 commit (`1baf5cf`) |
+| Rationale for that instant | It is the moment *all* retrospective outcomes had been seen. Nothing observed before it may enter the ledger. |
+| Population | GAP-1 **LONG** trades only (= gap-down fades), unchanged frozen rules |
+| Ledger | `data/gap_velocity/prospective_trades.csv`, natural key = entry timestamp |
+| Target | **N = 24** (12 per subgroup at the §7 floor, under a median split) |
+| Projected duration | GAP-1's live rate is 0.190 longs/cal-day → **≈126 days ≈ 4.1 months** |
+| Tracker | `gap_velocity_prospective_tracker.py` |
+| Schedule | `gap-velocity-prospective.timer`, daily 06:30 UTC, `Persistent=yes` |
+
+Note the projection is **4.1 months**, not the 7–8 months quoted when the routes were
+offered. That earlier figure targeted N=30; N=24 is the actual §7 requirement (12 per
+subgroup) and is what the tracker targets.
+
+## A3.2 The tracker reports no statistics, deliberately
+
+The tracker records date, `gap_pct`, exit reason and P&L, and reports **only** the sample
+count and progress to target. It reports **no** subgroup means, **no** profit factor and
+**no** verdict.
+
+This is a direct consequence of §A2.2. Watching subgroup performance accrue is precisely
+how a decision rule comes to be chosen to fit the data it will later be tested against —
+the failure mode recorded in this project's memory as the iteration-loop pattern. The
+ledger accrues facts; the rules live in a seal.
+
+On reaching target the tracker prints a refusal-to-analyse notice rather than a result.
+
+## A3.3 OPEN REQUIREMENT — a successor seal is needed before N = 24
+
+**The prospective phase currently has no committed decision rule, and this is deliberate.**
+
+VELOCITY_SPLIT = 0.9421% is **not** carried forward. §A2.2 established that an absolute
+percentage derived in one volatility regime lands in the tail of another; applying it to
+2026–2027 forward data would repeat that defect exactly. §8.1 equally forbids re-deriving
+it now that outcomes have been seen. Neither option is available, so **neither is taken**.
+
+Before the ledger reaches N = 24, a successor pre-registration must fix:
+
+1. **The classification rule** — per §A2.2 this should be **distribution-relative**
+   (e.g. the median of the prospective window's own qualifying gaps), not an absolute
+   percentage inherited from another era.
+2. **The decision rule** — metric, test, α, and pre-committed actions for every branch,
+   including a genuine "do nothing" outcome.
+3. **The subgroup floor**, and whether N = 24 remains correct under the chosen rule.
+
+Until that seal exists the ledger is an **unanalysable** accrual. If target is reached
+with no successor seal committed, the correct action is to write the seal first and leave
+the file unopened — not to analyse it and seal afterwards.
+
+## A3.4 Verification at open
+
+- `gap-velocity-prospective.timer`: `enabled`, `active`; `NextElapseUSecRealtime =
+  2026-08-28 06:30:00 UTC`; `Persistent=yes` — confirmed via `systemctl show`, not by
+  reading the unit file (per the 2026-08-08 `StartLimitIntervalSec` lesson).
+- First run: `Result=success`, `ExecMainStatus=0`, ledger created at **0/24** — the
+  correct starting state, not a result.
+- Idempotency: three consecutive runs, ledger unchanged at 0 rows (header only).
+- `trades.db` opened **read-only** (`mode=ro`). No orders placed.
+- GAP-1 unmodified: `trader-gap-fade` active, `gap_fade_live.py` SHA-256 still
+  `d5715ba2285827d6`, matching §11.

@@ -96,3 +96,99 @@ strategy carries **no overnight or weekend exposure** — it is venue-compatible
 | git HEAD at seal | `b7c838f` |
 | Source | JFE 142 (2021) 377–403, doi via Elsevier; local extract retained |
 | Expected N | ~311 qualifying sessions (counted from data before the run; no outcome inspected) |
+
+---
+
+# Amendment 1 — Result (2026-08-28)
+
+Append-only. Original sealed text unedited.
+Script: `study_intraday_momentum_mnq.py` | Report: `data/reports/intraday_momentum_mnq_20260828_150839.txt`
+Ledger: `data/reports/intraday_momentum_mnq_trades.csv`. Run under seal `e865655`.
+
+## A1.1 Verdict — FAILS COST SCREEN (as pre-committed)
+
+N = 303 sessions, 2025-01-03 → 2026-06-11.
+
+| | total | mean/trade | t | win rate | PF |
+|---|---|---|---|---|---|
+| GROSS (no costs) | −$2,739.00 | **−$9.04** | −1.280 | 48.5% | 0.817 |
+| **NET @ $3.00 RT (primary)** | −$3,648.00 | **−$12.04** | −1.704 | 47.5% | 0.764 |
+| NET @ $2.00 RT (secondary) | −$3,345.00 | −$11.04 | −1.563 | 47.9% | 0.782 |
+
+Mean net at primary friction is ≤ 0, so per §4 the verdict is **FAILS COST SCREEN**.
+Recorded; thread closed; no variant search (§5).
+
+## A1.2 But this is NOT a cost failure — and my own seal framed it wrongly
+
+**Gross is already negative (−$9.04/trade).** Friction never got the chance to matter.
+The seal was written as a *cost screen* on the assumption the effect would be present and
+the question would be whether $3.00 ate it. That assumption was wrong: on MNQ over this
+window there is no gross effect for costs to consume.
+
+The paper's own predictive regression confirms it:
+
+```
+r_LH = a + b*r_ROD :   beta = +0.00069   t(beta) = +0.063   R^2 = 0.00001
+```
+
+The **sign is as JFE predicts (β > 0)** but the magnitude is indistinguishable from zero.
+R² of 0.00001 is not a weak relationship; it is no relationship.
+
+Note also that gross t = −1.280 — **the negative result is itself not significant.**
+This is a null, not a reversal. Nothing here supports "intraday momentum is inverted on MNQ".
+
+## A1.3 THE QUALIFIER THAT GOVERNS THIS RESULT: the test was underpowered by construction
+
+At N = 303 with per-trade sd = $122.97, the smallest mean detectable at t = 2.0 is
+**$14.13/trade**.
+
+The JFE effect, translated to per-trade terms at this instrument's volatility:
+
+| JFE annualised Sharpe | per-trade Sharpe | implied mean/trade | detectable here? |
+|---|---|---|---|
+| 0.87 (bottom of range) | 0.0548 | $6.74 | **NO** |
+| 1.30 (mid) | 0.0819 | $10.07 | **NO** |
+| 1.73 (top of range) | 0.1090 | $13.40 | **NO** |
+
+**The entire claimed Sharpe range sits below this test's detection threshold.** Even if the
+JFE effect were fully present and undecayed on MNQ, this test would most likely have
+returned a null.
+
+Sessions required at t = 2.0: **596 (~2.4 years)** for the mid of the range; 1,332
+(~5.3 years) for the bottom; 337 (~1.3 years) for the top.
+
+**Therefore this result does NOT refute Baltussen et al.** It says only: at N = 303 on MNQ,
+no economically usable edge is visible and the point estimate is negative. Anyone citing
+this amendment as "the JFE intraday-momentum effect was tested and failed" would be
+misrepresenting it.
+
+## A1.4 What can and cannot be separated
+
+§6 disclosed that a failure could not separate decay-since-2020 from MNQ friction. The
+gross figure resolves one of those: **friction is not the mechanism of failure.** It does
+not separate the remaining three — decay since 2020, MNQ-specific absence, and insufficient
+power — and A1.3 makes **insufficient power the leading explanation**, not a footnote.
+
+## A1.5 Cross-cutting methodological finding
+
+This is the **second** underpowered test in two days. GAP-V (2026-08-27) returned
+INSUFFICIENT_SAMPLE and announced it, because a per-subgroup floor was pre-committed in its
+seal. MIM-X had no such floor: it ran, produced a clean-looking verdict with a t-statistic,
+and was never capable of detecting the effect it was testing.
+
+**Rule for future seals in this project: compute the minimum detectable effect size at the
+planned N BEFORE sealing, and state it in the seal alongside the decision rule.** A verdict
+threshold without a power statement can manufacture a confident null. This seal should have
+carried that calculation in §6 and did not.
+
+## A1.6 Status
+
+MIM-X on MNQ is **closed as an underpowered null**, not as a refutation. Nothing deployed,
+no live system touched, no parameter changed anywhere.
+
+The honest residual: the strongest externally-validated candidate this research produced
+remains untested at adequate power on this instrument, and reaching adequate power needs
+~2.4 years of MNQ sessions — or a longer historical window than the two local CSVs provide.
+TradeStation serves MNQ minute bars well beyond this window (verified 2026-08-27, ≥4.3
+years including expired contracts), so **a properly powered version of this test is
+available without new data purchase** and would need its own seal.

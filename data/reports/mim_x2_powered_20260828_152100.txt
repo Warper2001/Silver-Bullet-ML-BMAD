@@ -1,0 +1,43 @@
+======================================================================================
+MIM-X2 — Market Intraday Momentum on MNQ, powered   |   seal b890967
+======================================================================================
+  JFE 142 (2021) rule, unmodified. 1 MNQ @ $2.0/pt, 15:30->15:59 ET.
+  N = 1390 sessions   2020-12-21 -> 2026-08-27   contracts = 23
+  SEALED POWER: min detectable @t=2 = $5.31/trade; 80% power = $7.44; JFE range $5.43-$10.80
+
+  GROSS (no costs)
+    total = $  -2,929.00   mean = $  -2.11/trade   sd = $ 99.10
+    t = -0.793   WR =  48.5%   PF = 0.9403
+
+  NET @ $3.00 RT  [PRIMARY]
+    total = $  -7,099.00   mean = $  -5.11/trade   sd = $ 99.10
+    t = -1.921   WR =  47.5%   PF = 0.8614
+
+  NET @ $2.00 RT  [secondary]
+    total = $  -5,709.00   mean = $  -4.11/trade   sd = $ 99.10
+    t = -1.545   WR =  47.8%   PF = 0.8869
+
+======================================================================================
+VERDICT (seal §5) — primary is mean NET at $3.00 RT
+======================================================================================
+  mean net = $-5.11/trade   t = -1.921   N = 1390
+
+  >>> FAILS <<<  Effect absent or negative on MNQ at deployable cost.
+  Pre-committed: record, close, no variant search (§6).
+
+--------------------------------------------------------------------------------------
+SECONDARY (reported, never decision-bearing, §5)
+  r_LH = a + b*r_ROD :  beta = -0.00278   t(beta) = -0.499   R^2 = 0.000179
+  (JFE predicts beta > 0)
+  gross edge = $-2.11/trade = -0.357 bps   vs 0.51 bps friction -> ratio -0.70x (bar 3x)
+
+  Per-year (NOT decision-bearing, §5):
+    2020: N=   7  mean=$ -10.29  total=$      -72
+    2021: N= 247  mean=$   0.74  total=$      184
+    2022: N= 246  mean=$   6.96  total=$    1,713
+    2023: N= 244  mean=$  -4.79  total=$   -1,168
+    2024: N= 245  mean=$ -11.91  total=$   -2,918
+    2025: N= 241  mean=$ -18.17  total=$   -4,379
+    2026: N= 160  mean=$  -2.87  total=$     -458
+
+  ledger -> data/reports/mim_x2_trades.csv

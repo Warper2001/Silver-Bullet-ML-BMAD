@@ -129,3 +129,102 @@ principle.
 | Bar file | `data/mim_x/mnq_1min_by_contract.csv`, 2,028,965 bars, 23 contracts |
 | Session file | `data/mim_x/sessions.csv`, N=1,392 |
 | Source | Baltussen, Da, Lammers & Martens, JFE 142 (2021) 377–403 |
+
+---
+
+# Amendment 1 — Result (2026-08-28)
+
+Append-only. Original sealed text unedited.
+Script: `study_mim_x2_powered.py` | Report: `data/reports/mim_x2_powered_20260828_152100.txt`
+Ledger: `data/reports/mim_x2_trades.csv`. Run under seal `b890967`.
+
+## A1.1 Verdict — FAILS
+
+N = 1,390 qualifying sessions (2 of the sealed 1,392 had `r_ROD` exactly 0 and were
+skipped per §3), 2020-12-21 → 2026-08-27, 23 contracts.
+
+| | total | mean/trade | t | WR | PF |
+|---|---|---|---|---|---|
+| GROSS (no costs) | −$2,929 | **−$2.11** | −0.793 | 48.5% | 0.9403 |
+| **NET @ $3.00 RT (primary)** | −$7,099 | **−$5.11** | −1.921 | 47.5% | 0.8614 |
+| NET @ $2.00 RT (secondary) | −$5,709 | −$4.11 | −1.545 | 47.8% | 0.8869 |
+
+Mean net at primary friction ≤ 0 → **FAILS** per §5. Recorded; closed; no variant search;
+and per §6.7 **no third attempt at larger N**.
+
+## A1.2 This time the null is informative — which is the whole point of the redo
+
+The sealed §4 power statement, fixed before the run: minimum detectable effect at t=2.0
+was **$5.31/trade**, 80%-power threshold **$7.44**, against a JFE-implied range of
+**$5.43–$10.80**.
+
+Observed **gross** edge: **−$2.11/trade**.
+
+The mid ($8.11) and top ($10.80) of the JFE range were detectable at >80% and >95% power
+respectively. Neither appeared. **Therefore: market intraday momentum of the claimed
+mid-to-upper magnitude is absent on MNQ over 2020-12 → 2026-08.**
+
+That is a genuine finding, and it is exactly what MIM-X could not deliver. The contrast is
+the lesson: same rule, same instrument, same specification — N=303 produced a
+verdict that meant nothing, N=1,390 produced one that means something.
+
+**Scope it honestly.** §4 declared the bottom of the range ($5.43) only ~50% powered, so a
+*weak* version of the effect is **not excluded**. The correct statement is "no effect of the
+claimed mid-to-upper magnitude", not "no effect".
+
+## A1.3 It remains a null, not a reversal — and the β sign is unstable across samples
+
+Gross t = **−0.793**. The negative is **not significant**. Nothing here supports "intraday
+momentum is inverted on MNQ".
+
+The paper's own regression:
+
+| | MIM-X (N=303) | MIM-X2 (N=1,390) |
+|---|---|---|
+| β | **+0.00069** | **−0.00278** |
+| t(β) | +0.063 | −0.499 |
+| R² | 0.00001 | 0.000179 |
+
+**The sign flipped between samples and neither estimate is significant.** That instability is
+itself evidence that β is estimating noise rather than a small true effect. Note also that
+the net point estimate moved *toward* zero as N grew (−$12.04 → −$5.11), which is the
+behaviour expected when the truth is approximately zero and the small-sample figure was
+noise.
+
+## A1.4 Per-year — reported, NOT decision-bearing (§5)
+
+| year | N | mean net | total |
+|---|---|---|---|
+| 2020 | 7 | −$10.29 | −$72 |
+| 2021 | 247 | +$0.74 | +$184 |
+| 2022 | 246 | **+$6.96** | +$1,713 |
+| 2023 | 244 | −$4.79 | −$1,168 |
+| 2024 | 245 | −$11.91 | −$2,918 |
+| 2025 | 241 | **−$18.17** | −$4,379 |
+| 2026 | 160 | −$2.87 | −$458 |
+
+There is a visible monotone-ish deterioration from 2022 to 2025. **It is not a finding and
+must not be quoted as one.** §5 pre-committed this table as non-decision-bearing precisely
+to prevent that, and each year carries only ~245 sessions — a per-year detectable effect of
+~$12.65 at t=2, so most individual years are themselves underpowered. Any decay claim would
+require its own seal and its own power statement.
+
+## A1.5 What can and cannot be concluded
+
+**Can:** on MNQ, over a window entirely outside the paper's sample, the JFE intraday-momentum
+effect does not appear at the mid-to-upper end of its claimed magnitude, and does not survive
+$3.00 round-trip friction at 1 contract.
+
+**Cannot:** (a) refute Baltussen et al. — their claim is cross-market over 60+ futures and
+1974–2020, and a single-instrument out-of-sample null does not overturn it; (b) exclude a
+weak (~Sharpe 0.87) version, which was only ~50% powered here; (c) separate "decayed since
+2020" from "never present in MNQ specifically" — §7 disclosed this in advance and the result
+does not resolve it.
+
+## A1.6 Status
+
+Closed. No live system touched, no parameter changed, nothing deployed. The 2M-bar
+contract-stitched MNQ history acquired for this test (`data/mim_x/mnq_1min_by_contract.csv`,
+2020-12 → 2026-08, with `upvol`/`downvol` columns retained) is a durable asset and is
+reusable for any future test at this horizon — notably the bar-level signed-order-flow axis,
+which is the remaining live candidate from the research run.

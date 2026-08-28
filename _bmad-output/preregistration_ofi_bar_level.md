@@ -128,3 +128,102 @@ authorise deployment, sizing, or any change to a live system.
 | Usable bars / decile size | 2,028,942 / ~202,894 |
 | Primary horizon | h = 10 bars |
 | Economic bar | 1.53 bps per leg (3 × 0.51) |
+
+---
+
+# Amendment 1 — Result (2026-08-28)
+
+Append-only. Original sealed text unedited.
+Script: `study_ofi_bar_level.py` | Report: `data/reports/ofi_bar_level_20260828_153726.txt`
+Run under seal `fedaf84`.
+
+## A1.1 Verdict — FAILS
+
+N = 2,028,735 bars with a forward 10-bar return, 23 contracts.
+
+| leg | edge | required |
+|---|---|---|
+| LONG (top OFI decile mean) | **−0.0252 bps** | ≥ 1.53 bps |
+| SHORT (−1 × bottom OFI decile mean) | **−0.0653 bps** | ≥ 1.53 bps |
+
+**Both legs are negative.** Neither clears even 1× friction (0.51 bps), let alone 3×.
+Verdict per §5: **FAILS**. Recorded; closed.
+
+Decile means of forward 10-bar return (bps), decile 0 → 9:
+`0.0653, 0.0497, 0.0746, 0.0325, 0.0667, 0.0380, 0.0343, 0.0387, 0.0055, −0.0252`
+
+There is a **rough downward trend** across deciles — high buying pressure is followed by
+slightly *lower* forward returns. So to the extent any signal exists it is **mildly
+contrarian, not momentum**. It is non-monotone, and the whole range spans **0.10 bps**
+against 0.51 bps of friction. Not actionable in either direction.
+
+## A1.2 §2 called this exactly, and that is the transferable result
+
+The seal predicted, before the run, that at N≈2M the test would be "~93× more statistically
+sensitive than economically relevant" and "WILL return overwhelming t-statistics for effects
+worth nothing."
+
+Observed:
+
+```
+r_fwd(10) = a + b*OFI :  beta = -0.1045 bps per unit OFI   t = -2.8   R^2 = 0.000004
+```
+
+**t = −2.8 is conventionally "significant". R² = 0.000004 means OFI explains four parts per
+million of forward-return variance.** A one-standard-deviation OFI move (0.2203) implies
+**−0.0230 bps** — about one twenty-second of the friction cost.
+
+Had this document gated on p-values, it would have concluded that signed order flow
+"significantly predicts" MNQ returns. §6.7 forbade that in advance. **This is the cleanest
+demonstration in the whole program of why an economic threshold must be pre-committed
+separately from a statistical one.**
+
+## A1.3 No horizon rescues it
+
+All secondary horizons were computed and all fail (§6.2 forbids promoting any of them):
+
+| h (bars) | long leg | short leg | spread |
+|---|---|---|---|
+| 1 | −0.0214 | −0.0286 | −0.0499 |
+| 5 | −0.0286 | −0.0580 | −0.0866 |
+| **10 (primary)** | **−0.0252** | **−0.0653** | **−0.0905** |
+| 30 | +0.0026 | −0.0630 | −0.0605 |
+| 60 | −0.0006 | −0.1439 | −0.1445 |
+
+Every spread is negative and every leg is at least 7× below friction. The failure is not a
+horizon-selection artifact.
+
+## A1.4 The null is conservative — and correcting for it does not close the gap
+
+§8 disclosed that imperfect trade classification attenuates any true effect toward zero.
+Correcting for it explicitly, using the research's reported accuracy range:
+
+| classification accuracy | attenuation factor (2p−1) | implied true effect | still short of friction by |
+|---|---|---|---|
+| 0.728 (worst study) | 0.456 | ≤ 0.1432 bps | **3.6×** |
+| 0.844 (mid) | 0.688 | ≤ 0.0949 bps | **5.4×** |
+| 0.926 (futures best) | 0.852 | ≤ 0.0766 bps | **6.7×** |
+
+Even under the **most generous** attenuation correction, the effect remains **3.6× short of
+1× friction** and ~11× short of the 3× bar. The gap is not a measurement problem.
+
+## A1.5 What this closes, and what it does not
+
+**Closes:** bar-aggregated signed order flow as a standalone directional signal on MNQ, at
+every horizon tested, over 2020-12 → 2026-08. This was the last live candidate from the
+research run, and — unlike MIM-X — the sample is large enough that the null is decisive
+rather than uninformative.
+
+**Does not close:** (a) the book-level OFI literature, which measures a different quantity
+(§8) at sub-second resolution and is not tested here; (b) OFI as a *conditioning* variable
+on some other signal, which is a different hypothesis needing its own seal; (c) any
+instrument other than MNQ.
+
+**Does not support:** the mildly contrarian sign. §6.3 forbids the single-direction rescue,
+both legs failed, and a 0.10 bps decile range is inside the noise of anything tradeable.
+
+## A1.6 Status
+
+Closed. Nothing deployed, no live system touched, no parameter changed. The bar file
+retains its `upvol`/`downvol` columns and remains available for any future hypothesis —
+but this seal answers the direct-directional question in the negative.

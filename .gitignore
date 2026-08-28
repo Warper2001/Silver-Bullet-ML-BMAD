@@ -187,6 +187,29 @@ data/gap_fade/*
 data/combine_joint/*
 data/ts_sim_mirror/*
 
+# Same rule, newer research trackers. These ledgers are written by daily systemd
+# timers (yank-lrc-phase2, gap-velocity-prospective) and are DERIVED artifacts —
+# each tracker rebuilds its ledger from trades.db / the shadow-parity log using an
+# idempotent natural key, so nothing is lost by not versioning them.
+data/lrc_strategy/*
+data/gap_velocity/*
+
+# --- Large fetched market-data caches ------------------------------------------
+# Not bot output and not append targets — these are bulk vendor history pulled for a
+# specific sealed study, and they are re-fetchable from the vendor at any time. They
+# are excluded on SIZE alone: mnq_1min_by_contract.csv is ~141 MB, which does not
+# belong in a research repo that is cloned routinely.
+#   data/mim_x/      — 2,028,965 MNQ 1-min bars, 23 quarterly contracts, 2020-12→2026-08,
+#                      with UpVolume/DownVolume retained. Fetched for MIM-X2 (seal b890967)
+#                      and reused by OFI-1 (seal fedaf84). Regenerate with the fetch
+#                      described in preregistration_mim_x2_powered.md §2.
+#   data/s26_replay/ — Kraken PF_XBTUSD 1-min bars 2026-05-25→2026-08-28, fetched for
+#                      S26-EXIT (seal be099b9 §5). Kraken does NOT revise its 1-minute
+#                      history (verified: 165/165 live entry prices reproduced exactly),
+#                      so unlike the TradeStation warmup series this IS re-fetchable.
+data/mim_x/*
+data/s26_replay/*
+
 # Exception to the data/processed/* rule above, recorded because it is deliberate.
 # The frozen warmup series below is FORCE-ADDED and therefore tracked despite that rule
 # (gitignore governs untracked files only). It is not bot output — it is a frozen input

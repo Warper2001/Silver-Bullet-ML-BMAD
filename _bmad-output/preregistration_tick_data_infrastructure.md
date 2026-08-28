@@ -213,3 +213,79 @@ git commit -m "pre-register TICK-INFRA: MNQ tick data + queue-aware fill simulat
 ```
 
 Then, in order: (1) purchase the §1 data; (2) build the §2 simulator; (3) run the §3 parity gate and append an amendment with the result and the frozen simulator SHA; (4) only on a parity PASS, run H1 per Part III and append its result amendment.
+
+---
+
+# Amendment 1 — Cost estimate (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. This amendment records what a spend is expected to look like **before** any data is bought. It changes **no** sealed spec — the §1 fallback path and the §4 kill criterion already bound the downside. Compiled from a web lookup on 2026-08-28; the data-price figures are estimates, flagged as such, because Databento does not publish its historical rate card openly.
+
+## A1.1 Databento data cost — 3 years of MNQ (2023-01-01 → 2026), front-month quarterlies
+
+| Purchase | Estimate | Range | Confidence |
+|---|---|---|---|
+| **`mbo` (the §1 primary schema)** | **~$3,000–3,600** | $1,900 – $5,000 | low |
+| `mbp-1` + `trades` (the §1 fallback) | ~$800 | $550 – $1,450 | low |
+| `ohlcv-1m` only (context, not a substitute) | ~$0 | — | covered by the $125 credit |
+| New-account credit | **−$125** | one per team, expires 6 months after signup [S1][S3] | confirmed |
+| Subscription required for pay-as-you-go historical | **none** [S2] | the $179–199/mo CME "Standard" plan is optional, live-data-oriented, and is **not** a prerequisite for buying historical MBO à la carte [S1][S2] | confirmed |
+
+**Arithmetic (mbo):** `(GB/year × 3) × $/GB − $125`.
+- Low: 120 GB × $17 ≈ $1,915
+- Point: 195 GB × $19 ≈ $3,580 (less ~15–20% if volume tiers apply → ~$2,900–3,100)
+- High: 270 GB × $19 ≈ $5,005
+
+**Dominant uncertainty: the data-volume estimate.** No published or forum-reported GB figure for MNQ (or ES/NQ) MBO was found. The chain is: one hard anchor — a `trades` request for `ESH4`, 2024-02-12→17, "costs $2.17" [S3] → ES `trades` ≈ 25–30 MB/session compressed → ES `mbo` ≈ 15–25× that (every add/modify/cancel, not just fills) ≈ 0.4–0.7 GB/session → MNQ ≈ 30–60% of ES ≈ 0.15–0.35 GB/session → ~40–90 GB/year → ~120–270 GB over 3 years. Each link is unverified and could be ~2× off; they compound. The $/GB rate (~$19 for GLBX `mbo`) is also an unsourced estimate, ±~30%.
+
+**The $42/quarter figure in the upstream research report (`research.md` §1, and echoed in §1 of this seal) is not reliable for `mbo`** — that is `ohlcv`-tier pricing. `mbo` is one to two orders of magnitude more.
+
+## A1.2 The free way to replace this estimate with a firm number
+
+Create a free Databento account and call, at no charge, before any purchase:
+
+```python
+metadata.get_cost(dataset="GLBX.MDP3", schema="mbo",
+                  symbols=[<front-month list>], stype_in="raw_symbol",
+                  start="2023-01-01", end="2026-03-01")
+```
+
+This returns the exact dollar cost of the development-window pull. Repeat for the `2026-03-01 → present` holdout and for the `mbp-1`+`trades` fallback. **Do this first.** If the real `mbo` figure lands above a budget the user sets, §1's fallback (mbo for 2024-02-28+holdout, mbp-1+trades for 2023) is the pre-committed response, recorded as a power reduction per §9 — not a silent change.
+
+## A1.3 Compute and storage — the binding constraint on the current machine
+
+Measured on the box this project runs on, 2026-08-28: **64 GB free disk, 7 GB RAM, 2 CPU cores.**
+
+- **3 years of MNQ `mbo` (~120–270 GB) does not fit on disk** and cannot be loaded in memory. Even the `mbp-1`+`trades` fallback (~20–50 GB) is tight against 64 GB alongside the existing repo.
+- A full pass of the H1 108-cell grid (Part III §5.3) over 3 years of tick data, with MBO book reconstruction, on 2 cores, is a **multi-day to multi-week** job per sweep. The project's memory already notes CPU is slow and heavy tasks take 1+ hour; a tick-grid sweep is orders beyond that.
+
+Two pre-committed responses, either acceptable, chosen at build time and recorded in the Part II parity amendment:
+
+1. **Stream-process on this box** — never hold a full contract in memory; the simulator and the grid both consume the `mbo` file as a forward iterator. Feasible for the simulator and the parity gate; slow but workable for the grid. Extra cost: ~$0, plus wall-clock measured in days per sweep.
+2. **Rent a cloud box for the build + study window** — ~500 GB disk, 16–32 GB RAM, 8–16 cores, for the 1–2 months R3 is active. Roughly **$200–800** total at commodity VM rates. Data is downloaded once to that box.
+
+Storage of the raw vendor files (§1) is included in whichever of the above is chosen; on own disk it is a non-cost, in the cloud it is part of the VM.
+
+## A1.4 Build effort
+
+Not a dollar cost, but the largest cost of R3: the §2 queue-aware simulator — `mbo` order-book reconstruction, back-of-queue position model, latency model, marketable-order fill engine, the §2.3 stress overlay, and the §3 parity harness against `trades.db` — is roughly **1–3 weeks of focused engineering**. Whether measured in the user's time or in assisted-development sessions, this dominates.
+
+## A1.5 All-in expectation
+
+| Path | Data | Compute/storage | Total out-of-pocket (excl. effort) |
+|---|---|---|---|
+| `mbo`, stream on this box | ~$3,000–3,600 | ~$0 (slow) | **~$3,000–3,600** |
+| `mbo`, cloud box for the study | ~$3,000–3,600 | ~$200–800 | **~$3,200–4,400** |
+| `mbp-1`+`trades` fallback, cloud box | ~$800 | ~$200–800 | **~$1,000–1,600** |
+
+Plus 1–3 weeks to build the simulator. If it fails the §3 parity gate within the §4 window (15 working days), the spend stops there — data plus a few weeks, nothing else.
+
+**Not included** (downstream of a PASS, not part of R3): a live CME data plan (~$179–199/mo) would be needed only if an H1 PASS led to a successor prospective test or deployment. This seal authorises neither (§8).
+
+## A1.6 Sources
+
+- **[S1]** Databento — Pricing page, `databento.com/pricing`, retrieved 2026-08-28: $125 historical-data credit per team, expires 6 months after signup; usage-based historical requires no subscription (pay-as-you-go); plan prices Standard $199/mo, Plus $1,750/mo, Unlimited $4,500/mo; Standard bundles only ~1 yr L1 / ~1 mo L2–L3 history.
+- **[S2]** Databento Blog — "Introducing new CME pricing plans", `databento.com/blog/introducing-new-cme-pricing-plans`, dated 2025-04-16, retrieved 2026-08-28: usage-based *live* CME data discontinued 2025-04-16; "pay-as-you-go pricing for historical data will remain one of Databento's core features"; Standard plan $179/month.
+- **[S3]** Databento Blog — "How to request historical market data using Python", `databento.com/blog/api-demo-python`, retrieved 2026-08-28: GLBX.MDP3 `trades` for `ESH4`, 2024-02-12→2024-02-17, "costs $2.17"; $125 historical credit per team.
+- **[S4]** Databento Docs — "Metered pricing" and "Historical.metadata.list_unit_prices", `databento.com/docs/api-reference-historical/basics/metered-pricing`, retrieved 2026-08-28: historical responses metered by compressed bytes delivered; per-dataset/per-schema unit prices returned only via the (free) `metadata.list_unit_prices` / `metadata.get_cost` API; no numeric rate card on the public page.
+- **[S5]** Databento — GLBX.MDP3 dataset page, `databento.com/datasets/GLBX.MDP3`, retrieved 2026-08-28: schema list (mbo, mbp-1, mbp-10, trades, ohlcv-*); $125 credit; no per-GB rates shown.
+- Machine spec (§A1.3): measured locally 2026-08-28 — `df -h`, `free -g`, `nproc`.

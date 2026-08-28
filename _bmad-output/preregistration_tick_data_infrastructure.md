@@ -529,3 +529,57 @@ Step-by-step purchase and download instructions: `_bmad-output/tick_infra_tranch
 ## A5.5 Source
 
 - Databento `metadata.get_cost` / `metadata.get_billable_size` / `metadata.get_dataset_condition`, `hist.databento.com/v0`, called 2026-08-28. `MNQM6,MNQU6,MNQZ6` raw, `mbo`, 2026-05-01→2026-08-28 → $453.12 / 270.3 GB.
+
+---
+
+# Amendment 6 — Correction: on-disk size of Tranche 1 (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. **Corrects an error in §A5.2 and §A4.5.**
+
+**Numbering:** with this as Amendment 6, the §3 parity result becomes **Amendment 7** and the H1 result **Amendment 8**.
+
+## A6.1 The error
+
+§A4.5 and §A5.2 claimed Tranche 1 would be "~25–40 GB on disk", assuming `mbo` `.dbn.zst` compresses ~7–10×. **That ratio is wrong for MBO.** It is the ratio for `trades` / `ohlcv` (highly redundant). An MBO record is a fixed **56-byte** DBN struct, of which ~32 bytes (two nanosecond timestamps `ts_event`/`ts_recv`, the 64-bit `order_id`, `sequence`, `ts_in_delta`) are high-entropy and barely compress. Verified: `record_count × 56 B` reproduces every billable figure exactly (25.6 B records → 1,435 GB whole dataset; ~4.8 B records → 270 GB Tranche 1).
+
+Realistic zstd on MBO DBN blends the compressible fields (constant `instrument_id`/`publisher_id`, clustered `price`, small `size`, 2-symbol `action`/`side`) with the incompressible ~32 bytes → **≈ 2.5–3.5× overall**.
+
+## A6.2 Corrected figures
+
+| | Uncompressed (billable) | On disk `.dbn.zst` (est., 3×) |
+|---|---|---|
+| Tranche 1 (`MNQM6,MNQU6,MNQZ6`, 2026-05-01→08-28) | 270 GB | **~80–110 GB** |
+| Tranche 2 RTH-only (~700 GB billable) | 700 GB | ~200–280 GB |
+| Everything full-session | 1,435 GB | ~410–575 GB |
+
+The Databento portal's "270 GB" estimate is the **uncompressed** size. Setting the batch `compression` field to `zstd` yields the ~80–110 GB download; `compression=none` downloads the full 270 GB.
+
+## A6.3 Consequence for the machine (corrects §A4.5 / §A3.3)
+
+**Tranche 1 does NOT fit the current KVM 2 (64 GB free).** The KVM 2 → KVM 4 (200 GB) upgrade in §A3.3 is now **required before Tranche 1**, not optional. KVM 4 holds Tranche 1 (~100 GB) with room for parsed/intermediate forms. Tranche 2 RTH-only (~200–280 GB compressed) needs **KVM 8 (400 GB)** or an external volume.
+
+Revised machine line: **KVM 4 from the start** (~+$6/mo promo, ~+$15–20/mo renewal); KVM 8 or a burst box for Phase B per §A3.4.
+
+## A6.4 Mandatory de-risking step before the $328 purchase
+
+Submit **one day, one contract** as a batch job first:
+
+```python
+job = c.batch.submit_job(
+    dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol",
+    schema="mbo", start="2026-06-16", end="2026-06-17",
+    encoding="dbn", compression="zstd", split_duration="day")
+```
+
+Cost ~**$1–2**. It gives (a) the **exact** zstd ratio for MNQ MBO — multiply out to the real Tranche 1 disk size — and (b) an end-to-end test of account → billing → job → download → `DBNStore` read → the §5 integrity checks, on a trivial sample, before committing $328. Record the measured ratio and pipeline result in Amendment 7.
+
+## A6.5 Revised all-in (corrects §A4.6)
+
+| Stage | Data | Machine | Running total |
+|---|---|---|---|
+| Test download (§A6.4) | ~$2 | — | ~$2 |
+| Phase A: KVM 4 upgrade + Tranche 1 + sim build + parity | ~$328 + ~$6–15 (1 mo KVM 4) | | **~$335–345** |
+| — if parity FAILS (§4) | — | — | **stop. ~$335 + build time.** |
+| Phase B: Tranche 2 (RTH) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 8 or burst box $30–110 | **~$1,550–1,750** total (RTH path) |
+
+Storage is now the constraint that forces the machine spend earlier, but the dollar totals are within ~$100 of §A4.6. Build effort still dominates.

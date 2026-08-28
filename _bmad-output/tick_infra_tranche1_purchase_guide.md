@@ -1,8 +1,12 @@
 # How to buy TICK-INFRA Tranche 1 in Databento
 
 **What you are buying:** `mbo` (full order book) for the MNQ front-month contracts,
-**2026-05-01 → 2026-08-28**, ~246–270 GB uncompressed, **~$413–453** before the $125 credit
-(**~$288–328 charged**). This is the parity-gate slice only (Amendment 2/4). Not the bulk.
+**2026-05-01 → 2026-08-28**, ~270 GB uncompressed / **~80–110 GB on disk** as `.dbn.zst`,
+**$453.12** before the $125 credit (**$328.12 charged**). Parity-gate slice only (Amendment 2/4/6). Not the bulk.
+
+**Before you spend $328:** do Step 2.5 — a ~$2 one-day test download — to measure the real
+compression ratio and validate the whole pipeline. And upgrade the VPS to KVM 4 first
+(Step 1.5): Tranche 1 does **not** fit the current KVM 2's 64 GB free (Amendment 6).
 
 Companion doc: `_bmad-output/preregistration_tick_data_infrastructure.md` (the seal + Amendments 1–5).
 
@@ -39,6 +43,15 @@ Contract codes: `MNQM6` = MNQ **Jun** 2026, `MNQU6` = **Sep** 2026, `MNQZ6` = **
 
 ---
 
+## Step 1.5 — upgrade the VPS to KVM 4
+
+Tranche 1 is ~80–110 GB on disk; the current KVM 2 has 64 GB free. Upgrade **KVM 2 → KVM 4**
+(4 vCPU / 16 GB / 200 GB) in hPanel first — in-place, keeps your data. ~+$6/mo on the
+current promo. This also fixes the box's RAM shortage (it idles at ~0.2 GB free). See
+Amendment 3 / Amendment 6 §A6.3.
+
+---
+
 ## Step 2 — confirm the exact cost (free, do this first, every time)
 
 ```bash
@@ -67,6 +80,33 @@ If the number does not match what you expect, **stop** and work out why before s
 
 > Note: data availability ends **2026-08-28 22:30 UTC**. Do not set `end` past `2026-08-28`
 > or the request 422s.
+
+---
+
+## Step 2.5 — one-day test download first (~$2, mandatory)
+
+Before the $328 job, submit one day of one contract. It measures the real MNQ MBO zstd
+ratio (so you know the true Tranche 1 disk size) and exercises the entire path — billing,
+job, download, `DBNStore` read, integrity checks — on a trivial sample.
+
+```python
+job = c.batch.submit_job(
+    dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol",
+    schema="mbo", start="2026-06-16", end="2026-06-17",
+    encoding="dbn", compression="zstd", split_duration="day",
+)
+print(job["id"])
+# when ready:
+c.batch.download(job_id=job["id"], output_dir="data/tick/_test/")
+```
+
+Then: `ls -la data/tick/_test/` → compare the `.dbn.zst` size to ~0.9 GB uncompressed
+(one day, one contract) → that ratio × 270 GB = the real Tranche 1 disk footprint.
+Read it back with `db.DBNStore.from_file(...)`, run the Step 5 checks. Record the ratio
+and outcome in the seal as Amendment 7.
+
+If the ratio is far worse than ~3× (i.e. Tranche 1 would be >150 GB on disk), reconsider:
+KVM 8 instead of KVM 4, or `MNQ.v.0` (single stream, $412.65, ~10% less data).
 
 ---
 
@@ -123,9 +163,9 @@ c.batch.download(job_id="YOUR_JOB_ID", output_dir="data/tick/mnq_mbo_tranche1/")
 or the CLI: `databento download YOUR_JOB_ID --output-dir data/tick/mnq_mbo_tranche1/`
 or the HTTPS links from the portal.
 
-- **On-disk size: ~25–40 GB** of `.dbn.zst` (the 270 GB is uncompressed; zstd gives ~7–10×).
-  This fits the current box (64 GB free) with room. Do **not** decompress it all — the
-  Databento reader streams the compressed files.
+- **On-disk size: ~80–110 GB** of `.dbn.zst` (the 270 GB is uncompressed; MBO zstd is only
+  ~2.5–3.5× — Step 2.5 gives the exact figure). Fits KVM 4 (200 GB), **not** KVM 2. Do
+  **not** decompress it all — the Databento reader streams the compressed files.
 
 ---
 

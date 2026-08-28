@@ -250,3 +250,46 @@ with no paired test — which is where this session found it.
 
 **Not triggered:** §8. The fee gate is untouched and s26 remains an instrument that cannot
 clear its own costs (2.985 bps gross vs 4–10 bps round-trip).
+
+---
+
+# Amendment 2 — Reproducibility fix (2026-08-28)
+
+Append-only. **The finding in Amendment 1 is unchanged and is not revisited here.**
+
+## A2.1 Defect
+
+`study_s26_exit_atr_floor.py` selected its entry set with a lower bound only
+(`trader-s26`, `timestamp >= 2026-06-01`) and re-queried a **live, growing** `trades.db`
+on every run. Overnight on 2026-08-28 `trader-s26` logged a new trade
+(`2026-08-28T05:26:00Z`), which has no corresponding bar in the frozen Kraken file
+(`data/s26_replay/…`, ends 2026-08-27T22:11). The script then raised
+`KeyError: Timestamp('2026-08-28 05:25:00+0000')` and could no longer reproduce its own
+sealed result.
+
+Caught by a post-merge regression check, not in production — nothing live was affected.
+
+## A2.2 Fix
+
+Upper bound added: `timestamp < '2026-08-28'`, which is exactly the **165 entries frozen in
+§2** at seal time. Verified after the change:
+
+| | value | seal / A1.1 |
+|---|---|---|
+| frozen entries | 165 | 165 |
+| Arm A net | 3,089.80 | 3,089.80 |
+| Arm B net | 3,536.07 | 3,536.07 |
+| Wilcoxon W | 1,195.0 | 1,195.0 |
+| p | 0.94042 | 0.94042 |
+| verdict | NO DIFFERENCE | NO DIFFERENCE |
+
+Byte-identical reproduction. No parameter, arm, metric or verdict was touched.
+
+## A2.3 Lesson
+
+A study script that reads a **live** table cannot reproduce a sealed result once the table
+grows. Any script backing a sealed finding must pin its input set to the sealed window —
+a lower bound alone is not a freeze. `study_ofi_bar_level.py`, `study_mim_x2_powered.py`
+and `study_intraday_momentum_mnq.py` read frozen CSV files and are not exposed to this;
+`gap_velocity_prospective_tracker.py` reads live `trades.db` **by design** (it accrues) and
+is correct as written.

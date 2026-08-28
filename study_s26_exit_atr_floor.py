@@ -1,5 +1,11 @@
 """study_s26_exit_atr_floor.py — S26-EXIT paired exit experiment.
 
+REPRODUCIBILITY: the entry set is pinned to the SEALED window
+(trader-s26, 2026-06-01 <= ts < 2026-08-28) = exactly the 165 entries frozen in
+seal be099b9 §2. Without the upper bound the script re-queries a live, growing
+trades.db and picks up entries with no corresponding bar in the frozen Kraken
+file, which is how it broke on 2026-08-28. The finding is unchanged; this pins it.
+
 Pre-registration: _bmad-output/preregistration_s26_exit_atr_floor.md (seal be099b9)
 
 Arm A: ATR = ATR20                 (live behaviour)
@@ -37,7 +43,8 @@ def load_entries():
              "entry": r[2], "live_pnl": r[3], "live_reason": r[4]}
             for r in c.execute(
                 "select timestamp,direction,entry_price,pnl,exit_reason from trades "
-                "where trader_id='trader-s26' and timestamp>='2026-06-01' order by timestamp")]
+                "where trader_id='trader-s26' and timestamp>='2026-06-01' "
+                "and timestamp<'2026-08-28' order by timestamp")]  # SEAL WINDOW, see note
 
 
 def simulate(df, e, atr):

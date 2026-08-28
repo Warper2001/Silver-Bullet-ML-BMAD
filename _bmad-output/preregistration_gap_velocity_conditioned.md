@@ -440,3 +440,33 @@ the file unopened — not to analyse it and seal afterwards.
 - `trades.db` opened **read-only** (`mode=ro`). No orders placed.
 - GAP-1 unmodified: `trader-gap-fade` active, `gap_fade_live.py` SHA-256 still
   `d5715ba2285827d6`, matching §11.
+
+---
+
+# Amendment 4 — Successor seal registered (2026-08-28)
+
+Append-only. Original sealed text and Amendments 1–3 unedited.
+
+§A3.3 recorded an **OPEN REQUIREMENT**: the prospective phase was opened deliberately with
+no committed decision rule, and one had to be fixed before the ledger reached target.
+
+**That requirement is now discharged.** See `_bmad-output/preregistration_gap_v2_successor.md`
+(GAP-V2), sealed 2026-08-28 while the ledger stood at **0 trades** — i.e. before any
+prospective outcome could be seen, which was the whole point of keeping the tracker silent.
+
+GAP-V2 resolves the three items §A3.3 left open:
+
+1. **Classification rule** — resolved by **removing the threshold entirely**. The primary
+   test is a one-sided Spearman ρ between `gap_pct` and net P&L across all accrued trades.
+   A threshold cannot import a volatility regime (§A2.2) if there is no threshold.
+2. **Decision rule** — two looks (interim N=24, final N=47), α=0.025 one-sided each,
+   familywise 4.94%, with every branch pre-committed including a genuine do-nothing outcome.
+3. **Subgroup floor** — dissolved. There are no subgroups, so N=24 is no longer a floor;
+   it is an interim look that may only PASS.
+
+GAP-V2 also carries a **power statement** (its §3), per the rule set in
+`preregistration_intraday_momentum_mnq.md` §A1.5, and an **economic gate** on any successor
+(its §8), per `preregistration_ofi_bar_level.md` §2.
+
+The tracker was updated to announce both looks (GAP-V2 §10). Observation-only discipline
+from §A3.2 is unchanged: it still reports no subgroup statistics and no verdict.

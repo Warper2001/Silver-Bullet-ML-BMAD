@@ -488,3 +488,44 @@ The API key used for these free metadata calls was shared in plain text in the w
 ## A4.8 Sources
 
 - Databento Historical API, `metadata.list_unit_prices` / `metadata.get_cost` / `metadata.get_billable_size`, `hist.databento.com/v0`, called 2026-08-28 with a valid key. Raw output retained at `~/.claude/jobs/960bda86/tmp/probe_out.txt` (session-local).
+
+---
+
+# Amendment 5 — Tranche 1 request locked + symbology clarification (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. Locks the exact Databento request for Tranche 1 so the purchase matches the seal, and resolves a symbology ambiguity in §1. Costs confirmed via the free `metadata.get_cost` API, 2026-08-28.
+
+**Numbering:** with this as Amendment 5, the §3 parity result becomes **Amendment 6** and the H1 result **Amendment 7**.
+
+## A5.1 Symbology clarification (resolves §1)
+
+§1 lists two things that do not agree: the symbol `MNQ.c.0` (a *calendar*-roll continuous) and the front-month definition "the contract with the greater cumulative volume on the prior session" (a *volume* roll). The **volume roll is the substantive spec**; `MNQ.c.0` was imprecise shorthand. Combined with §1's "per-contract, no stitching … `groupby(contract)`", Tranche 1 is acquired as **explicit raw contracts**, not a continuous symbol.
+
+## A5.2 Tranche 1 — locked request
+
+| Parameter | Value |
+|---|---|
+| Dataset | `GLBX.MDP3` |
+| Symbols | `MNQM6, MNQU6, MNQZ6` (Jun / Sep / Dec 2026; MNQZ6 is ~$15 insurance against an early roll — no live trade rolled that early) |
+| `stype_in` | `raw_symbol` |
+| Schema | `mbo` |
+| Start | `2026-05-01` |
+| End | `2026-08-28` (dataset availability ends 2026-08-28 22:30 UTC) |
+| Encoding / compression | `dbn` / `zstd` |
+| Split | by day |
+| **Confirmed cost** | **$453.12** (billable 270.3 GB uncompressed) — **−$125 credit → $328.12 charged** |
+| On-disk footprint | ~25–40 GB `.dbn.zst` — fits the current KVM 2 |
+
+Cheaper alternatives on record, not chosen: `MNQM6,MNQU6` only = $437.80; `MNQ.v.0` volume-continuous = $412.65 (single front stream, still `instrument_id`-tagged, but no non-front book around the roll).
+
+## A5.3 Known data-quality flags in the window
+
+Databento `get_dataset_condition` marks **2026-05-24** and **2026-07-30** as `degraded` (still `available`). Both must be noted in the §5 integrity report; neither is excluded.
+
+## A5.4 Operational guide
+
+Step-by-step purchase and download instructions: `_bmad-output/tick_infra_tranche1_purchase_guide.md` (not part of the seal; editable).
+
+## A5.5 Source
+
+- Databento `metadata.get_cost` / `metadata.get_billable_size` / `metadata.get_dataset_condition`, `hist.databento.com/v0`, called 2026-08-28. `MNQM6,MNQU6,MNQZ6` raw, `mbo`, 2026-05-01→2026-08-28 → $453.12 / 270.3 GB.

@@ -171,3 +171,100 @@ whether 2 contracts remains correct at the new frequency.
 | Expected OOS N | ~1,350 |
 | Detectable @ t=2 / @80% power | $27.72 / $38.81 per trade |
 | Economic bar | 1.53 bps (3 × 0.51) |
+
+---
+
+# Amendment 1 — Result (2026-08-28)
+
+Append-only. Original sealed text unedited.
+Script: `study_yank_gap_floor_oos.py` | Reports: `data/reports/yank_gap_floor_oos_20260828.txt`,
+`data/reports/yank_gap_floor_sweep_2025_20260828.txt`. Run under seal `ed8b226`.
+
+## A1.1 Verdict — FAILS
+
+1,415,732 bars, 2021-01-03 → 2024-12-31 (1,457 days), both floors on the same bars.
+
+| floor | N | /day | PF | WR | net | mean | t | bps | ratio |
+|---|---|---|---|---|---|---|---|---|---|
+| **0.250 (live)** | 500 | 0.343 | **1.064** | 30.4% | +$4,808 | **+$9.62** | 0.514 | 0.33 | 0.6× |
+| **0.100 (candidate)** | 1,609 | 1.104 | **0.925** | 26.8% | −$12,946 | **−$8.05** | −1.149 | −0.27 | −0.5× |
+
+The candidate's mean is **negative**, so per §6 the verdict is **FAILS**. Recorded; closed;
+per §7.1 **no second floor value is tried on this data**.
+
+## A1.2 The relationship did not merely weaken — it INVERTED
+
+This is the finding, and it is cleaner than a simple failure.
+
+| floor | 2025 PF (sweep) | 2021–2024 PF (OOS) |
+|---|---|---|
+| 0.250 | **0.944** (worst cell) | **1.064** (best cell) |
+| 0.200 | 1.080 | 1.044 |
+| 0.150 | 1.227 | 0.993 |
+| 0.125 | 1.224 | 0.960 |
+| **0.100** | **1.300** (best cell) | **0.925** (worst cell) |
+| 0.075 | 1.177 | 0.983 |
+| 0.050 | 1.186 | 0.988 |
+
+In 2025, PF **rose** monotonically as the floor loosened, peaking at 0.10. Across 2021–2024
+it **falls** monotonically as the floor loosens, and the live floor of 0.25 is the best cell
+tested. **The argmax and the argmin swapped places.**
+
+That is the signature of a grid maximum fitted to one regime — the exact exposure §2
+disclosed and §9 warned about. Stage 1's confident-looking ordering ("every loosened cell
+beats the live floor") reversed completely on four years of unseen data.
+
+## A1.3 The test was adequately powered, so this null is informative
+
+§4 fixed, before the run: detectable at t=2.0 = **$27.72/trade**, at 80% power = **$38.81**,
+against a 2025-observed effect of **$42.56**. Realised OOS N was **1,609**, *above* the
+~1,350 assumed, so power was slightly better than sealed.
+
+The candidate came in at **−$8.05/trade**. An effect of the magnitude Stage 1 reported would
+have been detected comfortably. It is not there.
+
+Note the null is a **null, not a reversal**: t = −1.149 is not significant. The honest claim
+is "no positive effect of the 2025 magnitude", not "loosening actively loses money".
+
+## A1.4 The uncomfortable second finding: neither floor clears the economic bar
+
+The live configuration was not the control group anyone expected.
+
+At floor **0.25** on 2021–2024: PF 1.064, **+$9.62/trade, t = 0.514, 0.33 bps — 0.6× friction.**
+
+**The live floor does not clear 1× friction, let alone the project's 3× bar, and its
+t-statistic is 0.514.** On four years of unseen data YANK's own sealed configuration is
+statistically indistinguishable from zero and economically below its own costs.
+
+This is outside the question §6 asked and is therefore **not a verdict on YANK** — the seal
+tested a floor change, not YANK's viability, and 2021–2024 is a different volatility era
+from the one YANK was derived in (§9). But it is the most consequential number produced
+today and it should not be buried in a secondary table.
+
+## A1.5 Per-year, candidate floor (NOT decision-bearing, §6)
+
+| year | N | mean | net |
+|---|---|---|---|
+| 2021 | 456 | −$6.81 | −$3,105 |
+| 2022 | 377 | +$4.99 | +$1,882 |
+| 2023 | 420 | **−$28.12** | −$11,809 |
+| 2024 | 356 | +$0.24 | +$86 |
+
+Three of four years are negative or ~zero, and 2023 carries most of the damage. Per the
+September-2025 lesson this is disclosed, not acted on.
+
+## A1.6 What this closes
+
+**Closes:** loosening YANK's FVG floor to 0.10. Not viable out-of-sample, and §7.1 forbids
+trying another value on this data.
+
+**Does not close:** the diagnosis in §1, which stands and is independent of this result —
+the FVG gate really does destroy 99.89% of qualifying bars, the floor really is the binding
+filter, the ceiling really is not, and `kill_zone_active` really is inert. Those are
+measurements, not hypotheses.
+
+**Raises, for its own seal:** A1.4. If YANK's live configuration is 0.6× friction and
+t = 0.514 across four years, the question is no longer how to make it fire more often.
+
+**Live bot unmodified throughout.** No parameter changed, no service restarted, nothing
+deployed.

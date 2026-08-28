@@ -1,0 +1,22 @@
+bars 289,230  2025-01-01 18:01:00-05:00 -> 2025-12-31 17:00:00-05:00
+window: 2025 (derivation era — EXPLORATION)
+
+gates precomputed in 82s (floor does not affect them)
+
+  floor      N  freq/day      PF        net$    mean$    $/ct     bps   ratio
+-----------------------------------------------------------------------------
+  0.250     80     0.220   0.944      -1,052    -13.2    -2.6   -0.45   -0.9x
+  0.200    128     0.353   1.080       2,012     15.7     3.1    0.53    1.0x
+  0.175    165     0.455   1.116       3,476     21.1     4.2    0.71    1.4x
+  0.150    217     0.598   1.227       8,160     37.6     7.5    1.27    2.5x
+  0.125    259     0.713   1.224       8,880     34.3     6.9    1.16    2.3x
+  0.100    336     0.926   1.300      14,301     42.6     8.5    1.44    2.8x
+  0.075    395     1.088   1.177       9,124     23.1     4.6    0.78    1.5x
+  0.050    474     1.306   1.186      10,363     21.9     4.4    0.74    1.5x
+  0.025    506     1.394   1.197      11,156     22.0     4.4    0.75    1.5x
+-----------------------------------------------------------------------------
+  contracts=5 (backtest); live YANK runs 2 — bps and PF are
+  size-invariant, dollar columns are not.  friction 0.51 bps, project bar 3x.
+
+  EXPLORATION ONLY. No value here is validated. Any choice must be sealed and
+  then tested on data this sweep never saw.

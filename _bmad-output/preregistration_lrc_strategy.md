@@ -234,3 +234,129 @@ convention used throughout this doc and this project's other sealed docs.
 
 Everything else in §1-5 (base cascade, frozen `StrategyConfig` fields, stopping rule,
 out-of-scope items) is unchanged.
+
+---
+
+# Amendment 3 — Characterisation (2026-08-27)
+
+Append-only. Original text and Amendments 1–2 unedited. **No parameter is changed by this
+amendment.** Phase 2 continues on its existing clock and threshold (1.321).
+
+These are **descriptive** measurements of the already-selected `lookback=150` config. No
+config was chosen, tuned or compared here — nothing is selected, so nothing is
+multiple-compared. They are recorded because three of them change what this strategy is
+understood to *be*.
+
+## A3.1 Friction screen — PASSES, and this was never run before
+
+LRC had never been scored on edge-versus-friction, the screen every other candidate in the
+shop received on 2026-08-27 (`_bmad-output/friction_rescreen_20260827.md`).
+
+| | `lookback=150` (primary) | `lookback=100` (alternate) |
+|---|---|---|
+| N / PF | 30 / 1.811 | 39 / 1.855 |
+| net (5 contracts) | $5,983.75 | $8,044.00 |
+| mean per trade | $199.46 | $206.26 |
+| **per contract** | **$39.89** | **$41.25** |
+| **edge (bps of notional)** | **6.76 bps** | 6.99 bps |
+| friction | 0.51 bps | 0.51 bps |
+| **ratio** | **13×** | 14× |
+
+Already net of the $4.00/RT commission in `BASE_CONFIG`. **LRC clears its costs by ~13×** —
+comparable to gap-fade (13.5×) and better than MIM-NB (11.1×). On economics it is one of
+the strongest things in the shop.
+
+Note the backtest sizes at **5 contracts** (`contracts_per_trade=5`), while YANK live runs
+2. Dollar figures above are not directly comparable to live YANK P&L; the bps column is.
+
+## A3.2 Frequency — materially slower than §4.1's corrected estimate
+
+Amendment 2 corrected the cost disclosure to 0.130 trades/day → ≈7.7 months for N=30.
+Measured against the **live shadow-parity log** (2026-06-15 → 2026-08-27, 72 days):
+
+**4 trades. 0.056/day.** At that rate N=30 takes **≈540 days ≈ 18 months**, not 7.7.
+
+Poisson check: expecting 0.130 × 72 = 9.4, observing 4 gives p ≈ 0.04 — marginally
+significant, so this is more likely a real frequency difference between the 2026 backtest
+window and the live forward feed than pure noise. N=4 keeps it tentative.
+
+**Phase 2 status: 0 of 30 after 8 days.** The tracker is verified healthy — it processes
+bars daily, reports `bars_available_through` correctly, and the same shadow log yields 11
+trades for the compressed-cascade tracker over the same period. The silence is real
+low frequency, not a broken instrument.
+
+## A3.3 The paper analogy is looser than claimed — correction
+
+Earlier on 2026-08-27 it was argued in session that LRC "is structurally exactly what
+[arXiv:2605.04004] §6.2 says works" — regime classification plus 60–75 minute holds.
+**That over-stated the fit**, and the correction is recorded here rather than left standing.
+
+Measured hold periods, N=30: min 22, p25 60, **median 86**, p75 146, max **3030** minutes.
+
+| | count | share |
+|---|---|---|
+| inside the paper's *working* band (60–75 min) | 7/30 | **23%** |
+| inside the paper's *failing* band (5–30 min) | 3/30 | 10% |
+| ≥ 60 min | 23/30 | 77% |
+
+LRC sits on the **favourable side** of the paper's hold-period boundary — only 10% of its
+trades land in the band the paper reports as failing. But it is **not the same animal** as
+the paper's controls: its median hold is longer than their band and its tail runs to two
+days. The regime-classification half of the analogy holds; the hold-period half is
+directional support, not a match.
+
+## A3.4 `max_hold_bars = 60` does **not** mean 60 minutes
+
+The 14 `TIME_STOP` exits span **63 to 259 wall-clock minutes**:
+`[63, 63, 64, 73, 75, 84, 87, 92, 94, 97, 105, 204, 228, 259]`.
+
+The stop counts **bars**, and the 1-minute series has gaps through illiquid hours. A
+"60-bar" time stop therefore runs anywhere from ~1 hour to **over 4 hours** depending on
+when it fires. Nothing in the seal or either prior amendment says this.
+
+## A3.5 Overnight and weekend exposure — the material finding
+
+- **80% of entries fall outside 09:00–16:00.** LRC trades the full 24-hour session, not RTH.
+  Entry hours cluster at 00–08 and 20–22.
+- **3 of 30 trades cross a calendar day.** 4 exceed 4 hours; **2 exceed 8 hours**:
+  - `2026-01-16 15:31 → 2026-01-18 18:01` — **50.5 hours, Friday → Sunday**, TP, +$1,016.00
+  - `2026-03-04 00:36 → 2026-03-05 02:34` — 26.0 hours, Wed → Thu, SL, −$1,091.50
+
+**Consequence, not previously recorded:** a position held 50 hours across a weekend is
+**not executable on a Topstep combine account**, which requires flat before the daily
+maintenance window and does not permit weekend holds. Overnight margin also materially
+exceeds intraday margin.
+
+This does not invalidate LRC as a strategy. It does mean **LRC is not a combine candidate
+in its current form**, and any promotion path must state which venue it targets. The
+sealed Phase 2 is a research clock, not a deployment path, so nothing here is blocked —
+but the distinction should be explicit before anyone proposes funding it.
+
+## A3.6 Concentration
+
+The test applied to every candidate on 2026-08-27:
+
+| | N | net | PF |
+|---|---|---|---|
+| all | 30 | $5,983.75 | 1.811 |
+| minus top 1 | 29 | $4,107.75 | 1.557 |
+| minus top 3 | 27 | $895.75 | **1.121** |
+| minus top 5 | 25 | −$1,496.25 | **0.797** |
+
+Five trades carry the result. **Fair caveat:** at N=30, removing 5 removes 17% of the
+sample — a far harsher test than removing one month from POC Fade's N=6,880 (6%). These
+numbers are *not* directly comparable to the concentration figures in the friction
+re-screen, and should not be quoted as though they were. But LRC's edge does rest on few
+observations, which is the same thing its own seal already says about N=30.
+
+## A3.7 Net effect on LRC's standing
+
+**Improved:** it clears friction by 13×, which was never previously measured, and it sits
+on the favourable side of an independent paper's hold-period boundary.
+
+**Worsened:** its live-forward frequency looks ~2.3× slower than sealed (≈18 months to
+N=30, not 7.7), its holds reach two days with weekend exposure that rules out a combine,
+and its edge rests on 5 of 30 trades.
+
+**Unchanged:** every parameter, the Phase 2 threshold (1.321), the multiple-comparisons
+caveat from §0, and the absence of any temporal holdout.

@@ -346,3 +346,59 @@ Run the §2 simulator build and the §3 parity gate against Tranche 1.
 ## A2.6 Sources
 
 - **[S1]** Databento — Pricing page, `databento.com/pricing`, retrieved 2026-08-28: Standard plan $199/mo — historical entitlement "1 year of L1 history", "1 month of L2 and L3 history", "Pay as you go for more history"; Plus $1,750/mo adds "16+ years of L1 history" but L2/L3 stays 1 month; Unlimited $4,500/mo = "16+ years in all schemas".
+
+---
+
+# Amendment 3 — VPS / compute cost (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. Prices the machine upgrade the §A1.3 compute constraint implies, staged to match Amendment 2's two tranches. **Numbering note:** this shifts the forward references in §A2.5 — the §3 parity result is now **Amendment 4**, and the H1 result is **Amendment 5**.
+
+## A3.1 Current machine
+
+Measured 2026-08-28: KVM virt, 2 vCPU (AMD EPYC 9354P @ 2.0 GHz), **7.9 GB RAM (5.5 GB used at idle, ~0.24 GB free, no swap)**, 96 GB disk / 64 GB free. This matches **Hostinger KVM 2** (2 vCPU / 8 GB / 100 GB NVMe). RAM is already the binding constraint before any tick work.
+
+## A3.2 Hostinger KVM plan ladder [S1][S2]
+
+| Plan | vCPU | RAM | NVMe | Bandwidth | Promo /mo (24-mo term) | Renewal /mo |
+|---|---|---|---|---|---|---|
+| KVM 2 (current) | 2 | 8 GB | 100 GB | 2 TB | ~$7–9 | ~$16–20 (est.) |
+| **KVM 4** | 4 | 16 GB | 200 GB | 4 TB | **~$13–15** | ~$30–40 (est.) |
+| **KVM 8** | 8 | 32 GB | 400 GB | 8 TB | **~$30** | **~$74–78** |
+
+Promo pricing requires a 1/2/4-year prepay; renewal is at standard rate regardless of term. Upgrades are in-place via hPanel at any time; **downgrades are restricted**. KVM 2/4 renewal figures are estimates ("renewal roughly doubles" per reviews); KVM 8 renewal ~$74–78 is reported [S3].
+
+## A3.3 Phase A — now (Tranche 1 + simulator build + §3 parity gate)
+
+**Upgrade KVM 2 → KVM 4.** Justified independently of this project — the box is RAM-starved today.
+
+- 16 GB RAM: room for `mbo` book reconstruction and the streaming parity replay
+- 200 GB disk: Tranche 1 `mbo` (~20–40 GB) + repo + parsed/intermediate forms, with headroom
+- 4 cores: faster parity replay over the ~129 trades
+- **Cost delta over KVM 2: ~+$6/mo during the promo term, ~+$15–20/mo at renewal.** Keep this plan permanently.
+
+## A3.4 Phase B — only on a §3 parity PASS (Tranche 2 + the H1 108-cell grid)
+
+Tranche 2 is 2–3 years of `mbo` (~120–270 GB raw, more with intermediates) that the H1 grid iterates over repeatedly. Two routes:
+
+| Route | What | Cost | Trade-off |
+|---|---|---|---|
+| **B1 — in-place to KVM 8** | Upgrade KVM 4 → KVM 8 (8 vCPU / 32 GB / 400 GB) | promo ~$30/mo · **renewal ~$74–78/mo** | Simple, one machine. 400 GB may be tight for full `mbo` + intermediates → may force the §1 schema-fallback or the 2-year window. Downgrade is restricted, so you likely carry the ~$76/mo renewal after the project. |
+| **B2 — burst box elsewhere, keep Hostinger at KVM 4** *(recommended)* | Rent a no-commitment VM for the 1–2 months H1 runs — e.g. Hetzner CPX51 / CCX (16 vCPU, 32 GB, 360–600 GB), hourly billing, cancel anytime. Download Tranche 2 to it, run the grid, tear it down. | **~$30–110 total** for the whole H1 study | More cores (faster grid), no 24-month lock-in, stable box stays lean. One extra data egress/transfer to set up. |
+
+## A3.5 Revised all-in expectation (supersedes §A1.5)
+
+| Stage | Data | VPS/compute | Running total |
+|---|---|---|---|
+| Phase A: Tranche 1 + sim build + parity | ~$300–600 (est., candidate D) | KVM 4 upgrade: +~$6/mo × ~1 mo ≈ **+$6–15** | **~$310–615** |
+| — if parity FAILS (§4) | — | — | **stop here. ~$310–615 + build time.** |
+| Phase B: Tranche 2 + H1 grid (on PASS only) | ~$2,000–3,600 full `mbo` / ~$700 fallback | B2 burst box ~$30–110 (or B1 ~$30 promo, then ~$76/mo ongoing) | **~$2,340–4,325** (B2, full data) |
+
+Plus the KVM 4 upgrade as an ongoing ~+$6/mo (promo) / ~+$15–20/mo (renewal) line — kept regardless of the R3 outcome, since it fixes the current RAM shortage.
+
+**Not included:** a live CME data plan (~$179–199/mo) and any always-on execution box — both downstream of an H1 PASS + a successor seal, neither authorised here (§8).
+
+## A3.6 Sources
+
+- **[S1]** Hostinger — VPS Hosting page, `hostinger.com/vps-hosting`, retrieved 2026-08-28: KVM 1/2/4/8 tiers, KVM virtualization, NVMe, dedicated IP, weekly backups; in-place upgrades via hPanel.
+- **[S2]** "Hostinger VPS Pricing 2026: All Plans, Costs and What You Actually Pay", smarthostfinder.com/hostinger-vps-pricing, retrieved 2026-08-28: KVM 4 = 4 vCPU / 16 GB / 200 GB / 4 TB @ ~$14.99/mo; KVM 8 = 8 vCPU / 32 GB / 400 GB / 8 TB @ ~$29.99/mo; promo applies to first term only; upgrades any time via hPanel; no hourly billing.
+- **[S3]** bestusavps.com / smarthostfinder / search aggregation, retrieved 2026-08-28: KVM 8 renewal reported ~$73.99–77.99/mo; renewal rates 140–232% of promo depending on plan/term.

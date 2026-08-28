@@ -289,3 +289,60 @@ Plus 1–3 weeks to build the simulator. If it fails the §3 parity gate within 
 - **[S4]** Databento Docs — "Metered pricing" and "Historical.metadata.list_unit_prices", `databento.com/docs/api-reference-historical/basics/metered-pricing`, retrieved 2026-08-28: historical responses metered by compressed bytes delivered; per-dataset/per-schema unit prices returned only via the (free) `metadata.list_unit_prices` / `metadata.get_cost` API; no numeric rate card on the public page.
 - **[S5]** Databento — GLBX.MDP3 dataset page, `databento.com/datasets/GLBX.MDP3`, retrieved 2026-08-28: schema list (mbo, mbp-1, mbp-10, trades, ohlcv-*); $125 credit; no per-GB rates shown.
 - Machine spec (§A1.3): measured locally 2026-08-28 — `df -h`, `free -g`, `nproc`.
+
+---
+
+# Amendment 2 — Staged acquisition plan (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. Refines *how* the §1 data is bought — into two tranches gated on the §3 parity result — so the bulk spend is contingent on the simulator working. The §1 data **spec** (schema, symbol, contract handling, windows) is unchanged. The §4 kill criterion is unchanged and now has teeth: a parity failure stops R3 after Tranche 1 only.
+
+## A2.1 Acquisition method — pay-as-you-go, no subscription
+
+Decided after pricing the Databento CME "Standard" plan ($199/mo new, $179/mo grandfathered): its historical entitlement is **trailing 1 month of L2/L3 (MBO) and trailing 1 year of L1** [S1] — everything older is à-la-carte at the standard rate. A multi-year MBO walk-forward is therefore **not** covered by any monthly plan short of "Unlimited" ($4,500/mo), and a subscription would be paid *on top of* the same historical cost. Pay-as-you-go, à la carte, is the method. No subscription is opened for R3.
+
+## A2.2 Tranche 1 — parity slice only (buy now)
+
+The smallest purchase that lets the §3 parity gate run.
+
+| Item | Value |
+|---|---|
+| Schema | `mbo` (§1 primary) |
+| Symbol | `MNQ.c.0` (front-month continuous by volume; spans the M6→U6 roll) |
+| Date range | **2026-05-15 → 2026-09-01** (~3.5 months) |
+| Why this range | The parity sample — all live-broker fills in `data/trades.db` from `trader-mim-nb`, `trader-gap-fade`, `trader-s26-combine`, and `trader-yank` (live-combine subset) — spans **2026-06-03 → 2026-08-28**, N ≈ 129 closed trades (above the §3 minimum of N ≥ 100). The range is padded ~3 weeks before the first trade for book warm-up and a few days after the last. |
+| Mode | batch flat-files (`historical`) if cheaper per §probe; else streaming |
+| Expected cost | to be set by the free `metadata.get_cost` probe (`tools`/scratch `probe_databento_cost.py`, candidate D) before purchase — estimate ~$300–600, low confidence |
+| Delivered to | this box if it fits in the ~64 GB free (a 3.5-month `mbo` slice should); otherwise the cloud box per §A1.3 |
+
+**On the parity slice falling inside the sealed holdout window (2026-03-01+):** this is deliberate and is not holdout contamination. The parity gate checks only whether the simulator reproduces *already-known* fill prices from `trades.db`; it develops and tests no strategy, and inspects no forward return. The sealed holdout's purpose — an untouched sample for strategy validation — is not touched. H1's walk-forward (§5.4) still touches the holdout exactly once, later, per the original seal.
+
+## A2.3 Decision gate
+
+Run the §2 simulator build and the §3 parity gate against Tranche 1.
+
+| §3 outcome | Action |
+|---|---|
+| **PASS** (MAE ≤ 1 tick, p90 ≤ 2 ticks, signed bias ≤ ±0.25 tick) | Record the passing simulator commit SHA (frozen per §4). **Buy Tranche 2.** Proceed to H1. |
+| **FAIL**, not fixable within the §4 window (3 revision cycles or 15 working days) | R3 is **closed** per §4. Total spend ≈ Tranche 1 only (~$300–600) plus build time. Write up the unmodelled effect that caused the miss. **Tranche 2 is not bought.** |
+
+## A2.4 Tranche 2 — bulk dev window + holdout (buy only on a parity PASS)
+
+| Item | Value |
+|---|---|
+| Schema | `mbo` (or the §1 fallback: `mbo` from 2024-02-28 + `mbp-1`+`trades` for 2023, if the §probe puts full `mbo` over the user's budget) |
+| Symbol | `MNQ.c.0` |
+| Date ranges | dev window **2023-01-01 → 2026-05-15** (butts against Tranche 1, no overlap) + any holdout not already covered by Tranche 1 (**2026-09-01 → present**) |
+| Expected cost | §probe candidates A (full) / B (2024+ fallback) / G+H (schema fallback); estimate ~$2,000–3,600 for full `mbo`, ~$700 for the fallback |
+| A shorter or cheaper-schema Tranche 2 | is the §1 pre-committed fallback and is recorded as a §9 power reduction — not a silent change |
+
+## A2.5 Next concrete action
+
+1. Create a free Databento account (databento.com → $125 credit).
+2. Run `probe_databento_cost.py` (free `metadata.get_cost`) to replace every estimate here with firm figures — especially Tranche 1 (candidate D) and Tranche 2 options (A / B / G+H).
+3. Buy Tranche 1.
+4. Build §2 simulator → run §3 parity gate → append the result as Amendment 3.
+5. Only on a PASS: buy Tranche 2, run H1, append as Amendment 4.
+
+## A2.6 Sources
+
+- **[S1]** Databento — Pricing page, `databento.com/pricing`, retrieved 2026-08-28: Standard plan $199/mo — historical entitlement "1 year of L1 history", "1 month of L2 and L3 history", "Pay as you go for more history"; Plus $1,750/mo adds "16+ years of L1 history" but L2/L3 stays 1 month; Unlimited $4,500/mo = "16+ years in all schemas".

@@ -191,8 +191,17 @@ data/ts_sim_mirror/*
 # timers (yank-lrc-phase2, gap-velocity-prospective) and are DERIVED artifacts —
 # each tracker rebuilds its ledger from trades.db / the shadow-parity log using an
 # idempotent natural key, so nothing is lost by not versioning them.
+# data/yank_compressed_cascade/* was already TRACKED while being appended daily -- the
+# exact configuration that truncated MIM-NB's audit trail on 2026-08-06. Untracked via
+# `git rm --cached` on 2026-08-28, with 13 and 3 rows live on disk against 0 and 0
+# committed, so the repo lost nothing. Demonstrated during that work: `git checkout
+# main -- .` wiped both ledgers to 0 rows while they were still tracked. They were
+# restored from a snapshot AND independently rebuilt by their own trackers, which
+# confirms these ledgers are derived artifacts -- but the wipe is exactly the hazard
+# this rule removes.
 data/lrc_strategy/*
 data/gap_velocity/*
+data/yank_compressed_cascade/*
 
 # --- Large fetched market-data caches ------------------------------------------
 # Not bot output and not append targets — these are bulk vendor history pulled for a

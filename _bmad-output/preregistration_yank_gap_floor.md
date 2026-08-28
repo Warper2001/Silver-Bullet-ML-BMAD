@@ -268,3 +268,32 @@ t = 0.514 across four years, the question is no longer how to make it fire more 
 
 **Live bot unmodified throughout.** No parameter changed, no service restarted, nothing
 deployed.
+
+---
+
+# Amendment 2 — Correction to A1.1/A1.4 bps figures (2026-08-28)
+
+Append-only. **The verdict in A1.1 is unchanged.** This corrects arithmetic, not a conclusion.
+
+A1 normalised P&L to basis points using **$59,000** notional per contract — the *2026* MNQ
+level, hard-coded in `study_yank_gap_floor_oos.py`. The test window is **2021–2024**, where
+the mean MNQ index level was **15,186**, giving notional per contract of **$30,371**.
+
+Friction scales with notional too, so both sides of the ratio move:
+
+| | A1 reported | corrected |
+|---|---|---|
+| notional/contract | $59,000 | **$30,371** |
+| friction | 0.51 bps | **0.823 bps** ($2.50 RT) |
+| 3× economic bar | 1.53 bps | **2.469 bps** |
+| live floor 0.25 | 0.33 bps, 0.6× | **0.633 bps, 0.77×** |
+| candidate 0.10 | −0.27 bps, −0.5× | **−0.530 bps, −0.64×** |
+
+**Nothing that mattered changes.** The candidate's mean is still negative (FAILS), t = −1.149
+and t = 0.514 are unaffected by any notional choice, and the live floor is still below 1×
+friction and far below the 3× bar. But the numbers were wrong and are corrected here rather
+than left to be quoted.
+
+**Lesson:** a bps denominator is a property of the *era being measured*, not of the current
+market. Carrying today's notional back four years is the same class of error as A2.2's
+threshold-across-regimes finding in GAP-V.

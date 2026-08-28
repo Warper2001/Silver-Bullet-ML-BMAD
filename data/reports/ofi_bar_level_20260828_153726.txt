@@ -1,0 +1,45 @@
+========================================================================================
+OFI-1 — Bar-Level Signed Order Flow on MNQ   |   seal fedaf84
+========================================================================================
+  bars=2,028,965  contracts=23  OFI=(upvol-downvol)/volume
+  SEALED: primary h=10 bars; verdict is ECONOMIC;
+          friction 0.51 bps, 3x bar 1.53 bps; t-stats NOT decision-bearing (§2)
+
+  DECILE MEANS of forward 10-bar return (bps), by OFI decile:
+   decile         n   mean fwd (bps)
+        0   203,669           0.0653  <- BOTTOM (short leg)
+        1   202,047           0.0497
+        2   202,885           0.0746
+        3   202,883           0.0325
+        4   216,546           0.0667
+        5   189,214           0.0380
+        6   202,893           0.0343
+        7   204,315           0.0387
+        8   201,456           0.0055
+        9   202,827          -0.0252  <- TOP (long leg)
+
+========================================================================================
+VERDICT (seal §5) — ECONOMIC, primary h=10
+========================================================================================
+  LONG  leg edge (top decile mean)      = -0.0252 bps
+  SHORT leg edge (-1 x bottom decile)   = -0.0653 bps
+  bars: friction 0.51 bps | 3x = 1.53 bps
+
+  >>> FAILS <<<
+  Bar-level signed OFI does not carry tradeable directional content at
+  h=10 on MNQ. Pre-committed: record, close (§5).
+
+----------------------------------------------------------------------------------------
+SECONDARY — reported, NEVER decision-bearing (§5, §6.2)
+     h    long leg   short leg    spread   (bps)
+    10     -0.0252     -0.0653   -0.0905  <- PRIMARY
+     1     -0.0214     -0.0286   -0.0499
+     5     -0.0286     -0.0580   -0.0866
+    30      0.0026     -0.0630   -0.0605
+    60     -0.0006     -0.1439   -0.1445
+
+  Regression r_fwd(10) = a + b*OFI :
+    beta = -0.1045 bps per unit OFI   t = -2.8   R^2 = 0.000004
+    ^ t is HUGE by construction at N=2,028,735 and is NOT evidence of a
+      tradeable effect (seal §2, §6.7). Economic size is what decides.
+    A 1-sd OFI move (0.2203) implies -0.0230 bps.

@@ -1,0 +1,41 @@
+====================================================================================
+MIM-X — Market Intraday Momentum, MNQ cost screen   |   seal e865655
+====================================================================================
+  JFE 142 (2021) rule, unmodified. 1 MNQ @ $2.0/pt. Enter 15:30 ET, exit 15:59 ET.
+  Window: 2025-01-03 -> 2026-06-11   N = 303 sessions
+  (entirely outside the paper's 1974-2020 sample -- out-of-sample in time)
+
+  GROSS (no costs)
+    total = $ -2,739.00   mean = $  -9.04/trade   sd = $ 122.97
+    t = -1.280   win rate =  48.5%   PF = 0.817
+
+  NET @ $3.00 RT  [PRIMARY]
+    total = $ -3,648.00   mean = $ -12.04/trade   sd = $ 122.97
+    t = -1.704   win rate =  47.5%   PF = 0.764
+
+  NET @ $2.00 RT  [secondary]
+    total = $ -3,345.00   mean = $ -11.04/trade   sd = $ 122.97
+    t = -1.563   win rate =  47.9%   PF = 0.782
+
+====================================================================================
+VERDICT (seal §4) — primary is mean NET at $3.00 RT
+====================================================================================
+  mean net @ $3.00 = $-12.04/trade   t = -1.704   N = 303
+
+  >>> FAILS COST SCREEN <<<
+  The JFE effect does not survive MNQ friction at 1 contract.
+  Pre-committed: record, close, no variant search (§5).
+
+------------------------------------------------------------------------------------
+SECONDARY (reported, never decision-bearing, §4)
+  Predictive regression r_LH = a + b*r_ROD:
+    beta = +0.00069   t(beta) = +0.063   R^2 = 0.00001
+    (JFE predicts beta > 0)
+
+  Friction screen (project standard):
+    gross edge = $-9.04/trade = -1.532 bps of notional
+    friction benchmark = 0.51 bps   ratio = -3.00x  (bar: 3x)
+
+  Frequency: 1 trade/session, 303 sessions -> meets the >=1/day objective.
+
+  per-trade ledger -> data/reports/intraday_momentum_mnq_trades.csv

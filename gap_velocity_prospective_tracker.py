@@ -4,6 +4,12 @@ GAP-V Prospective Phase — accrual tracker (OBSERVATION ONLY)
 Pre-registration: _bmad-output/preregistration_gap_velocity_conditioned.md
   seal e5b40f6 | A1 (VELOCITY_SPLIT) 5f08c5d | A2 (INSUFFICIENT_SAMPLE) 1baf5cf
   Prospective phase authorised by Amendment 3.
+  Decision rule fixed by GAP-V2: _bmad-output/preregistration_gap_v2_successor.md
+
+GAP-V2 replaced the split-point design with a Spearman rank correlation over ALL
+accrued trades -- no threshold, no subgroups, no floor. Two looks: INTERIM at N=24
+(may only PASS; a null there is INCONCLUSIVE, see GAP-V2 §4) and FINAL at N=47.
+Stopping date 2027-12-31.
 
 WHY THIS SCRIPT REPORTS ALMOST NOTHING
 --------------------------------------
@@ -47,7 +53,9 @@ from pathlib import Path
 SEAL_COMMIT = "1baf5cf"
 WINDOW_OPEN = "2026-08-27T22:05:19+00:00"
 
-N_TARGET = 24            # 12 per subgroup at the §7 floor, if a median split is used
+N_INTERIM = 24           # GAP-V2 §4 interim look -- PASS only, never a stop
+N_FINAL = 47             # GAP-V2 §4 final look (80% power for rho=0.40)
+STOP_DATE = "2027-12-31" # GAP-V2 §7
 LEDGER = Path("data/gap_velocity/prospective_trades.csv")
 FIELDS = ["entry_ts", "date_et", "gap_pct", "gap_abs_pts", "entry_price",
           "exit_price", "exit_reason", "pnl_usd"]
@@ -122,17 +130,24 @@ def main() -> None:
     print(f"  window opened   : {WINDOW_OPEN}  ({days} days ago)")
     print(f"  ledger          : {LEDGER}")
     print(f"  qualifying longs: {n}   (+{added} this run, was {before})")
-    print(f"  target          : {N_TARGET}")
-    if n < N_TARGET:
-        rate = n / days if days > 0 else 0
-        eta = f"~{(N_TARGET - n) / rate:.0f} more days" if rate > 0 else "rate not yet estimable"
-        print(f"  progress        : {n}/{N_TARGET}  ({eta})")
-    else:
-        print(f"  progress        : {n}/{N_TARGET}  TARGET REACHED")
+    rate = n / days if days > 0 else 0
+    def eta(target):
+        return f"~{(target - n) / rate:.0f} more days" if rate > 0 else "rate not yet estimable"
+    print(f"  interim look    : N={N_INTERIM}   final look: N={N_FINAL}   stop: {STOP_DATE}")
+    if n < N_INTERIM:
+        print(f"  progress        : {n}/{N_INTERIM} to interim  ({eta(N_INTERIM)})")
+    elif n < N_FINAL:
+        print(f"  progress        : {n}  INTERIM LOOK REACHED (N>={N_INTERIM})")
+        print(f"                    {n}/{N_FINAL} to final  ({eta(N_FINAL)})")
         print()
-        print("  >>> DO NOT ANALYSE THIS LEDGER WITHOUT A SUCCESSOR SEAL. <<<")
-        print("  The classification and decision rules must already be committed.")
-        print("  If no successor seal exists, write it before opening this file.")
+        print("  >>> INTERIM LOOK IS DUE. Run it per GAP-V2 §4/§5. <<<")
+        print("  It may only PASS. A non-significant result is INCONCLUSIVE, not a stop,")
+        print("  and accrual CONTINUES to the final look at N=47.")
+    else:
+        print(f"  progress        : {n}/{N_FINAL}  FINAL LOOK REACHED")
+        print()
+        print("  >>> FINAL LOOK IS DUE. Run it per GAP-V2 §4/§5. <<<")
+        print("  Primary test: one-sided Spearman rho(gap_pct, pnl_usd), alpha=0.025.")
     print()
     print("  No subgroup statistics are reported by design (see module docstring).")
     print("  GAP-1 is not modified by this tracker. trades.db opened read-only.")

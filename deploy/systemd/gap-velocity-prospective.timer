@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the GAP-V prospective accrual tracker daily (GAP-1 fires <=1x/day; daily is ample)
+
+[Timer]
+OnCalendar=*-*-* 06:30:00 UTC
+OnBootSec=10min
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

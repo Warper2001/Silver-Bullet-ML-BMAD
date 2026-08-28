@@ -1,0 +1,11 @@
+[Unit]
+Description=GAP-V prospective accrual tracker (research only — reads trades.db read-only, places no orders)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python /root/Silver-Bullet-ML-BMAD/gap_velocity_prospective_tracker.py
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/gap_velocity_prospective.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/gap_velocity_prospective.log

@@ -141,3 +141,111 @@ now spent. Nothing else.
 | Config | live YANK, unchanged, `min_gap_atr_ratio=0.25` |
 | MES friction / 3× bar | 1.437 bps / **4.312 bps** |
 | Expected N / detectable @ t=2 | ~500 / **2.47 bps** |
+
+---
+
+# Amendment 1 — Result (2026-08-28)
+
+Append-only. Original sealed text unedited.
+Script: `study_yank_viability_mes.py` | Report: `data/reports/yank_viability_mes_20260828.txt`
+Run under seal `3f9167e`.
+
+## A1.1 Verdict — DOES NOT GENERALISE
+
+1,404,796 MES bars, 2021-01-03 → 2024-12-19, YANK's configuration unmodified.
+
+| | value |
+|---|---|
+| N | **412** (0.285/day) |
+| mean | **−1.827 bps/trade** |
+| sd | 18.53 bps |
+| **t** | **−2.002** |
+| PF | **0.777** |
+| win rate | 30.8% |
+| net | −752.8 bps (−340 index points/contract) |
+
+Mean ≤ 0 → **DOES NOT GENERALISE** per §6. Recorded; closed. Per §7.2 **no second
+instrument is run** — MYM and M2K remain deliberately untouched.
+
+## A1.2 This is the program's first SIGNIFICANT negative, not another null
+
+Every prior test this week returned a null — MIM-X2 t = −1.921, OFI-1 economically
+irrelevant, YANK-FLOOR t = −1.149, S26-EXIT p = 0.94. Each said "no effect found".
+
+**t = −2.002 is different.** It is significantly negative at α = 0.05 two-sided. On MES,
+YANK's structure does not merely fail to make money — it loses, with statistical support.
+
+The exit mix shows why: **SL 247 / TIME_STOP 134 / TP 31.** Only **7.5%** of trades reach
+target, against a 30.8% win rate. The 2.0/8.0 SL/TP geometry, calibrated on MNQ, is being
+stopped out before the 8× target is reachable on a lower-volatility index.
+
+## A1.3 Power was adequate, and better than sealed
+
+§5 required recomputing achieved power before reading the verdict:
+
+| | sealed estimate | realised |
+|---|---|---|
+| N | ~500 | **412** |
+| sd | ~27.6 bps | **18.53 bps** |
+| detectable @ t=2.0 | 2.47 bps | **1.825 bps** |
+
+Realised sd came in well below the MNQ proxy, so despite the smaller N the test is **more**
+sensitive than sealed: detectable 1.825 bps against a 4.312 bps bar. **ADEQUATE.** An effect
+large enough to matter would have been seen.
+
+## A1.4 Per-year (NOT decision-bearing, §6)
+
+| year | N | mean | net |
+|---|---|---|---|
+| 2021 | 89 | +0.122 bps | +10.8 |
+| 2022 | 98 | −2.867 bps | −281.0 |
+| 2023 | 122 | −2.672 bps | −326.0 |
+| 2024 | 103 | −1.521 bps | −156.6 |
+
+Three of four years clearly negative; 2021 is flat. Not carried by one year.
+
+## A1.5 A caveat that makes the result *worse*, not better
+
+The engine deducts `commission_per_roundtrip = 4.0` — **an MNQ-calibrated figure**. At 5
+contracts and the engine's internal $2/pt that is ≈0.885 bps at the MES index level, while
+MES's actual round-trip friction is **1.437 bps** (§4). The reported −1.827 bps is therefore
+**optimistic by roughly 0.55 bps**; the true figure is nearer −2.4 bps.
+
+Disclosed rather than corrected, because correcting it would move a number after seeing the
+verdict. It does not change the direction or the conclusion.
+
+## A1.6 What this does and does not establish
+
+**Establishes:** YANK's sealed structure (H1 sweep → M15 CHoCH → M1 FVG, bearish-only,
+2.0/8.0) does not transfer to the nearest sibling equity-index future. On MES it is
+significantly loss-making across four years at adequate power.
+
+**Does NOT establish** — and §7.4 binds here: anything about YANK on MNQ, in either
+direction. MES carries **1.75× the friction in bps**, a materially lower index volatility,
+and the SL/TP geometry was never calibrated for it. A strategy can be instrument-specific
+and still real.
+
+**Does not trigger §8.** No successor is authorised.
+
+## A1.7 The accumulated picture, stated without overclaiming
+
+Placing this beside §1.1 rather than in place of it:
+
+| evidence | N | result |
+|---|---|---|
+| MNQ 2021–2024 (unseen at the time) | 500 | +0.633 bps, **t = 0.514** |
+| MNQ 2025 (derivation era) | 80 | −0.446 bps, t = −0.231 |
+| **MES 2021–2024 (unseen)** | **412** | **−1.827 bps, t = −2.002** |
+| MNQ 2026 LIVE | **11** | +14.20 bps, CI **[−3.73, +32.14]** |
+
+**The only sample in which YANK's edge is large is the smallest one**, and its confidence
+interval contains zero. Every larger sample — 992 backtested trades across two instruments
+and four years — is at or below zero.
+
+That is an observation about the evidence, not a verdict on the strategy. No test here was
+designed to rule on YANK's MNQ viability, every MNQ era is spent, and §8 of this seal is not
+triggered. But the "27× headroom" premise that motivated this entire line of work does not
+survive contact with any of it.
+
+**Live bot unmodified throughout.** Nothing deployed, no parameter changed, no service
+restarted.

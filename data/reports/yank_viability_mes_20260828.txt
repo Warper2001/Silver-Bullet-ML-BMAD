@@ -1,0 +1,40 @@
+============================================================================================
+YANK-VIA — YANK's sealed config on MES   |   seal 3f9167e
+============================================================================================
+  bars 1,404,796   2021-01-03 -> 2024-12-19  (1446 days)
+  NEVER touched by YANK — no seal, sweep or backtest in this project has used MES
+  config: live YANK unchanged, min_gap_atr_ratio=0.25
+  MES: level 4,522  notional/ct $22,610  friction 1.437 bps  3x bar 4.312 bps
+  SEALED POWER: detectable @t=2 (N~500) = 2.47 bps, below the 4.31 bps bar
+
+  gates precomputed
+
+  N = 412   (0.285/day)
+  mean = -1.827 bps/trade   sd = 18.53   t = -2.002
+  PF = 0.777   WR = 30.8%
+  net = -752.8 bps  (-340 index points/contract)
+
+  ACHIEVED POWER (§5 requires recomputing if N or sd differ):
+    realised N=412, sd=18.53 -> detectable @t=2.0 = 1.825 bps
+    economic bar = 4.312 bps  ->  ADEQUATE (detectable < bar)
+
+============================================================================================
+VERDICT (seal §6)
+============================================================================================
+  mean -1.827 bps | t -2.002 | bar 4.312 bps
+
+  >>> DOES NOT GENERALISE <<<
+  The edge is not present in MES. Record; close (§6).
+  §7.4: this says nothing about YANK on MNQ in either direction.
+
+--------------------------------------------------------------------------------------------
+SECONDARY — reported, never decision-bearing (§6)
+    2021: N=  89  mean=  +0.122 bps  net=    +10.8
+    2022: N=  98  mean=  -2.867 bps  net=   -281.0
+    2023: N= 122  mean=  -2.672 bps  net=   -326.0
+    2024: N= 103  mean=  -1.521 bps  net=   -156.6
+
+  exit mix: {'SL': 247, 'TIME_STOP': 134, 'TP': 31}
+
+  At MNQ's friction (0.823 bps) this would be -2.22x — shown for comparability only.
+  Live bot unmodified. No deployment authorised.

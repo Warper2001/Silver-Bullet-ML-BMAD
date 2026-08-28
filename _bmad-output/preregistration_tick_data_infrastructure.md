@@ -402,3 +402,89 @@ Plus the KVM 4 upgrade as an ongoing ~+$6/mo (promo) / ~+$15–20/mo (renewal) l
 - **[S1]** Hostinger — VPS Hosting page, `hostinger.com/vps-hosting`, retrieved 2026-08-28: KVM 1/2/4/8 tiers, KVM virtualization, NVMe, dedicated IP, weekly backups; in-place upgrades via hPanel.
 - **[S2]** "Hostinger VPS Pricing 2026: All Plans, Costs and What You Actually Pay", smarthostfinder.com/hostinger-vps-pricing, retrieved 2026-08-28: KVM 4 = 4 vCPU / 16 GB / 200 GB / 4 TB @ ~$14.99/mo; KVM 8 = 8 vCPU / 32 GB / 400 GB / 8 TB @ ~$29.99/mo; promo applies to first term only; upgrades any time via hPanel; no hourly billing.
 - **[S3]** bestusavps.com / smarthostfinder / search aggregation, retrieved 2026-08-28: KVM 8 renewal reported ~$73.99–77.99/mo; renewal rates 140–232% of promo depending on plan/term.
+
+---
+
+# Amendment 4 — Actual costs from the Databento API (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. Replaces the **money figures** in §A1.1 and §A3.4/§A3.5 with values from `metadata.list_unit_prices` and `metadata.get_cost` / `metadata.get_billable_size` (all free calls, nothing purchased), run 2026-08-28 against MNQ front-month continuous (`MNQ.c.0`). The **method** (staged, §A2) and the **machine ladder** (§A3.2) are unchanged. Data spec unchanged.
+
+**Numbering:** with this as Amendment 4, the §3 parity result becomes **Amendment 5** and the H1 result **Amendment 6** (superseding the shifts noted in §A3).
+
+## A4.1 The real rate card — GLBX.MDP3 historical ($/GB, uncompressed)
+
+| schema | $/GB | note |
+|---|---|---|
+| **`mbo`** | **$1.80** | ~10× lower than the §A1.1 estimate |
+| `mbp-1` | $1.80 | |
+| `mbp-10` | $0.50 | but emits a full 10-level snapshot per book change → far more GB (see A4.3) |
+| `trades` | $28.00 | tiny volume, high unit price |
+| `ohlcv-1m` | $70.00 | |
+
+Batch and streaming are the **same price** for this dataset; delivery encoding (`dbn` vs `csv`) does not change the bill — Databento meters the **uncompressed record bytes**, not the download size.
+
+## A4.2 Actual cost by candidate ( `metadata.get_cost`, MNQ.c.0 )
+
+| # | Pull | Billable (uncompressed) | Cost |
+|---|---|---|---|
+| **D** | **`mbo` parity slice 2026-05-01 → 2026-09-01** | 240 GB | **$403** |
+| A | `mbo` dev window 2023-01-01 → 2026-03-01 | 1,097 GB | $1,839 |
+| C | `mbo` 2026-03-01 → 2026-08-28 (holdout) | 338 GB | $566 |
+| — | **`mbo` EVERYTHING 2023-01-01 → 2026-08-28** | **1,435 GB** | **≈ $2,405** (A + C) |
+| B | `mbo` 2024-01-01 → 2026-03-01 (2-yr fallback) | — | $1,393 |
+| E | `mbp-10` dev window | — | **$2,851** — *more* than `mbo`, and less information |
+| G / H | `mbp-1` / `trades` dev window | — | $1,664 / $686 |
+| K | `ohlcv-1m` dev window (context only) | — | **$4** |
+
+**The §1 fallbacks are dead.** `mbp-10` costs more than `mbo`; `mbp-1`+`trades` costs about the same as `mbo` and loses the full book. **`mbo` is both the best data and effectively the cheapest full-depth option.** The §1 "cheaper-schema fallback" is withdrawn; the only surviving lever is the date window (B) and the session filter (A4.4).
+
+Credit: −$125 new-account, applied once.
+
+## A4.3 RTH-only saves ~35%
+
+Measured over a normal week (`get_billable_size`, per-day, 13:30–20:00 UTC = 09:30–16:00 ET): **RTH ≈ 62–65% of full-session `mbo` volume** (a normal day is 60–75%; holiday/half-days lower the weekly average). So an RTH-only download costs **~65%** of the full-session price.
+
+H1 (Part III) is an RTH strategy, so H1 needs RTH-only. H2 (London/Asia regime reconstruction) would need the other sessions — bought later under H2's own amendment, not now.
+
+## A4.4 Revised purchase plan (supersedes §A2.2 / §A2.4 dollar figures)
+
+| Tranche | Pull | Cost | After −$125 credit |
+|---|---|---|---|
+| **1 — buy now** | `mbo` **full-session** (parity needs full book context), 2026-05-01 → 2026-09-01 | **$403** | **~$278** |
+| **2 — on §3 parity PASS only** | `mbo` **RTH-only**, 2023-01-01 → 2026-05-01 (H1 is RTH) | ~$1,150–1,250 | — |
+| (later, only if H2 is greenlit) | `mbo` non-RTH sessions, same span | ~$650 | — |
+
+- **All-in for H1 (RTH path): ~$1,450–1,550 for data.**
+- If you prefer to just buy everything full-session up front and skip the RTH bookkeeping: **~$2,280 net.**
+- 2-year window (candidate B) instead of 3-year saves ~$450 and costs one walk-forward fold (§1 fallback, recorded as a §9 power reduction).
+
+## A4.5 Storage — revised (supersedes the §A3 disk concern)
+
+Billable size is **uncompressed**. On disk, `mbo` delivered as `dbn.zst` compresses roughly 6–10×. Databento's reader streams the compressed files, so the uncompressed 1.4 TB is never needed at rest.
+
+| On disk (compressed `.dbn.zst`, est.) | ~size | Fits |
+|---|---|---|
+| Tranche 1 (240 GB billable) | **~25–40 GB** | **current KVM 2** (64 GB free) — no upgrade needed to start |
+| Tranche 2 RTH-only (~700 GB billable) | **~70–120 GB** | **KVM 4** (200 GB) comfortably |
+| Everything full-session (1,435 GB billable) | ~150–240 GB | KVM 4 tight / KVM 8 comfortable |
+
+**Consequence for §A3.3:** the KVM 2 → KVM 4 upgrade is **not required to run Tranche 1, the simulator build, or the §3 parity gate** — those fit the current box on disk. The upgrade is still worth doing for **RAM** (the box is at ~0.2 GB free) and is needed for the H1 grid in Phase B. Treat it as: optional now, required before Tranche 2.
+
+## A4.6 Revised all-in (supersedes §A1.5 and §A3.5)
+
+| Stage | Data | Machine | Running total |
+|---|---|---|---|
+| Phase A: Tranche 1 + sim build + §3 parity | **~$278** | $0 (current box) — or +$6–15 if you take KVM 4 early | **~$280–295** |
+| — if parity FAILS (§4) | — | — | **stop. ~$280 + build time.** |
+| Phase B: Tranche 2 (RTH) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 4 (~+$15–20/mo) + optional burst box ~$30–110 for the grid | **~$1,450–1,700** total |
+| (full-session up-front variant) | ~$2,280 | as above | ~$2,550–2,800 |
+
+Down from the §A1.5 / §A3.5 figure of ~$2.3–4.4k. The dominant cost is now the **~1–3 weeks of simulator build effort**, not the data.
+
+## A4.7 Security note
+
+The API key used for these free metadata calls was shared in plain text in the working session and is therefore in the transcript. It was used only for read-only `metadata.*` calls (no data purchased, no `batch.submit_job`). Recommend rotating it in the Databento portal before it is used for an actual purchase.
+
+## A4.8 Sources
+
+- Databento Historical API, `metadata.list_unit_prices` / `metadata.get_cost` / `metadata.get_billable_size`, `hist.databento.com/v0`, called 2026-08-28 with a valid key. Raw output retained at `~/.claude/jobs/960bda86/tmp/probe_out.txt` (session-local).

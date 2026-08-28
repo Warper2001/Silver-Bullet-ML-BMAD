@@ -1,203 +1,165 @@
 # How to buy TICK-INFRA Tranche 1 in Databento
 
-**What you are buying:** `mbo` (full order book) for the MNQ front-month contracts,
-**2026-05-01 → 2026-08-28**, ~270 GB uncompressed / **~80–110 GB on disk** as `.dbn.zst`,
-**$453.12** before the $125 credit (**$328.12 charged**). Parity-gate slice only (Amendment 2/4/6). Not the bulk.
+**Goal:** the minimum MBO data to run the §3 parity gate (replay 129 known live fills,
+check the simulator reproduces them). Companion: `preregistration_tick_data_infrastructure.md`
+(seal + Amendments 1–7). Machine: KVM 4, 162 GB free — **done**.
 
-**Before you spend $328:** do Step 2.5 — a ~$2 one-day test download — to measure the real
-compression ratio and validate the whole pipeline. And upgrade the VPS to KVM 4 first
-(Step 1.5): Tranche 1 does **not** fit the current KVM 2's 64 GB free (Amendment 6).
-
-Companion doc: `_bmad-output/preregistration_tick_data_infrastructure.md` (the seal + Amendments 1–5).
-
----
-
-## Step 0 — decide the symbology (pick one)
-
-| Option | Symbols / stype_in | Cost | Billable | Get |
-|---|---|---|---|---|
-| **Raw contracts (recommended)** | `MNQM6,MNQU6,MNQZ6` / `raw_symbol` | **$453.12** | 270 GB | Complete books for **every** contract — both sides of the June→Sept roll. Honors the seal's "per-contract, no stitching" exactly. MNQZ6 is ~$15 of insurance. |
-| Two contracts | `MNQM6,MNQU6` / `raw_symbol` | $437.80 | 260 GB | Same, without the Dec contract (no live trade rolled that early — safe to drop). |
-| Volume-rolled continuous | `MNQ.v.0` / `continuous` | $412.65 | 246 GB | A single stream that is the volume-front contract at each moment; every record still carries `instrument_id`, so you can split by contract. Cheapest. Does not include the non-front contract's book around the roll. |
-
-The seal §1 gives the front-month definition as **"greater cumulative volume on the prior
-session"** — that is the `.v` (volume) roll, *not* `.c` (calendar). The "`MNQ.c.0`" string in
-§1 is imprecise shorthand; Amendment 5 records the resolution. Use the raw contracts or
-`MNQ.v.0`.
-
-Contract codes: `MNQM6` = MNQ **Jun** 2026, `MNQU6` = **Sep** 2026, `MNQZ6` = **Dec** 2026
-(GLBX uses a single-digit year, so `MNQU26` in `trades.db` = `MNQU6` here).
+**Cost:** ~$2 test download, then **~$30–90** for the re-scoped Tranche 1 (Amendment 7) —
+or $453 for the full contiguous slice as a fallback. All fit the KVM 4.
 
 ---
 
 ## Step 1 — account + billing
 
-1. **databento.com → Sign up** (email + password), verify the email. A **$125 historical
-   credit** is applied automatically (expires 6 months after signup).
-2. **Portal → Settings → Billing → add a payment method.** Tranche 1 is ~$288–328 over the
-   credit, so a card (or prepaid credits) must be on file. While you are there, set a
-   **spending limit / billing alert** — a fat-finger on Tranche 2 is a ~$1,200 mistake.
-3. **Portal → Settings → API Keys → Create key.** Copy it into a password manager or the
-   repo's **gitignored** `.env` (never commit it). **Delete / rotate** the key
-   `db-sny5wf…` that was pasted into the working session — treat it as burned.
+1. **databento.com → sign up**, verify email. **$125 historical credit** auto-applied
+   (expires 6 months after signup).
+2. **Portal → Settings → Billing → add a card** (or prepay credits), and **set a spending
+   limit** — Tranche 2 later is a ~$1,200 fat-finger risk.
+3. **Portal → API Keys → create a key.** Store it in the repo's **gitignored** `.env` or a
+   password manager. Never commit it. (The key pasted earlier in chat is already rotated/dead.)
 
 ---
 
-## Step 1.5 — upgrade the VPS to KVM 4
+## Step 2 — the ~$2 test download (do this before anything else)
 
-Tranche 1 is ~80–110 GB on disk; the current KVM 2 has 64 GB free. Upgrade **KVM 2 → KVM 4**
-(4 vCPU / 16 GB / 200 GB) in hPanel first — in-place, keeps your data. ~+$6/mo on the
-current promo. This also fixes the box's RAM shortage (it idles at ~0.2 GB free). See
-Amendment 3 / Amendment 6 §A6.3.
-
----
-
-## Step 2 — confirm the exact cost (free, do this first, every time)
-
-```bash
-pip install databento     # once, in a venv
-```
+One mid-session hour of one contract. It answers three questions at once.
 
 ```python
+pip install databento          # once, in the venv
+
 import databento as db
-c = db.Historical("YOUR_NEW_KEY")
+c = db.Historical("YOUR_KEY")
 
-print(c.metadata.get_cost(
-    dataset="GLBX.MDP3",
-    symbols=["MNQM6", "MNQU6", "MNQZ6"],
-    stype_in="raw_symbol",
-    schema="mbo",
-    start="2026-05-01",
-    end="2026-08-28",
-))                                   # expect ~453.12
+print(c.metadata.get_cost(dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol",
+      schema="mbo", start="2026-06-16T14:00", end="2026-06-16T15:00"))   # ~$1-2
 
-print(c.metadata.get_billable_size(  # expect ~2.70e11  (270 GB uncompressed)
-    dataset="GLBX.MDP3", symbols=["MNQM6","MNQU6","MNQZ6"], stype_in="raw_symbol",
-    schema="mbo", start="2026-05-01", end="2026-08-28"))
-```
-
-If the number does not match what you expect, **stop** and work out why before spending.
-
-> Note: data availability ends **2026-08-28 22:30 UTC**. Do not set `end` past `2026-08-28`
-> or the request 422s.
-
----
-
-## Step 2.5 — one-day test download first (~$2, mandatory)
-
-Before the $328 job, submit one day of one contract. It measures the real MNQ MBO zstd
-ratio (so you know the true Tranche 1 disk size) and exercises the entire path — billing,
-job, download, `DBNStore` read, integrity checks — on a trivial sample.
-
-```python
 job = c.batch.submit_job(
-    dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol",
-    schema="mbo", start="2026-06-16", end="2026-06-17",
-    encoding="dbn", compression="zstd", split_duration="day",
-)
+    dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol", schema="mbo",
+    start="2026-06-16T14:00", end="2026-06-16T15:00",
+    encoding="dbn", compression="zstd", split_duration="day")
 print(job["id"])
-# when ready:
+# wait for email / poll c.batch.list_jobs(), then:
 c.batch.download(job_id=job["id"], output_dir="data/tick/_test/")
 ```
 
-Then: `ls -la data/tick/_test/` → compare the `.dbn.zst` size to ~0.9 GB uncompressed
-(one day, one contract) → that ratio × 270 GB = the real Tranche 1 disk footprint.
-Read it back with `db.DBNStore.from_file(...)`, run the Step 5 checks. Record the ratio
-and outcome in the seal as Amendment 7.
+**Record these three things (they become Amendment 8):**
 
-If the ratio is far worse than ~3× (i.e. Tranche 1 would be >150 GB on disk), reconsider:
-KVM 8 instead of KVM 4, or `MNQ.v.0` (single stream, $412.65, ~10% less data).
+1. **zstd ratio** — `.dbn.zst` file bytes ÷ (`record_count` × 56). Multiply by 270 GB → the
+   real full-slice disk size. (Expect ~2.5–3.5× → ~80–110 GB, which fits.)
+2. **Book completeness at an intraday start** — read the file:
+   ```python
+   store = db.DBNStore.from_file("data/tick/_test/<file>.mbo.dbn.zst")
+   df = store.to_df()
+   print(df["action"].head(50).value_counts())
+   ```
+   If the first records are `R` (clear) then a burst of `A` (add) → Databento rebuilds the
+   full book at an arbitrary start → **use Mode C**. If it starts mid-stream with scattered
+   `A`/`C`/`M` and no initial rebuild → **use Mode C'**.
+3. **Pipeline works** — the download, the `DBNStore` read, and the seal §5 integrity checks
+   (timestamps monotonic; reconstruct BBO, `bid ≤ ask` on 100%; trades within session range)
+   all succeed on this tiny sample.
 
 ---
 
-## Step 3 — submit the batch job
+## Step 3 — pick the acquisition mode
 
-### Option A — web portal (simplest)
+| From the test | Mode | What to buy | Est. cost | Est. disk |
+|---|---|---|---|---|
+| Book rebuilds at intraday start | **C — targeted windows** | `timeseries.get_range`, ±90 min around each of the 129 trades (87 merged windows), `MNQM6` before ~2026-06-18 / `MNQU6` after | **~$30–90** | ~3–8 GB |
+| Book does NOT rebuild intraday | **C' — parent days** | full sessions for the ~13–20 distinct calendar days the windows land on | **~$25–55** | ~5–12 GB |
+| C/C' too fiddly, want simplicity | **A — full slice** | `MNQM6,MNQU6,MNQZ6`, 2026-05-01 → 2026-08-28, one batch job | **$453.12** (−$125 = $328) | ~80–110 GB |
 
-Portal → **Download** (batch) → new request:
+All three fit the KVM 4. C/C' save ~$350–420 and leave the box clear for Tranche 2.
 
-| Field | Value |
-|---|---|
-| Dataset | CME Globex MDP 3.0 — `GLBX.MDP3` |
-| Symbology | Raw symbol → `MNQM6, MNQU6, MNQZ6` |
-| Schema | **MBO** (Market by order) |
-| Date range | 2026-05-01 → 2026-08-28 |
-| Encoding | **DBN** |
-| Compression | **Zstd** |
-| Split | **By day** (resumable downloads; one file per contract per day) |
+---
 
-Review the cost (**$453.12**, minus $125 credit → **$328.12 charged**), confirm, submit.
+## Step 4 — buy Tranche 1
 
-### Option B — Python
+### Mode C — targeted windows
+
+Build the window list from `trades.db` (the 129 parity trades → ±90 min → merge overlaps),
+then pull each:
 
 ```python
+import sqlite3, pandas as pd, datetime as dt, pathlib
+con = sqlite3.connect("data/trades.db")
+q = """select timestamp from trades
+       where trader_id in ('trader-mim-nb','trader-gap-fade','trader-s26-combine')
+          or (trader_id='trader-yank' and timestamp >= '2026-06-01')
+       order by timestamp"""
+ts = [dt.datetime.fromisoformat(r[0].replace("Z","+00:00")) for r in con.execute(q)]
+wins = []
+for t in ts:
+    s, e = t - dt.timedelta(minutes=90), t + dt.timedelta(minutes=90)
+    if wins and s <= wins[-1][1]:
+        wins[-1] = (wins[-1][0], max(wins[-1][1], e))
+    else:
+        wins.append((s, e))
+print(len(wins), "windows")
+
+out = pathlib.Path("data/tick/mnq_mbo_parity/"); out.mkdir(parents=True, exist_ok=True)
+for i, (s, e) in enumerate(wins):
+    sym = "MNQM6" if s < dt.datetime(2026, 6, 18, tzinfo=dt.timezone.utc) else "MNQU6"
+    data = c.timeseries.get_range(
+        dataset="GLBX.MDP3", symbols=[sym], stype_in="raw_symbol", schema="mbo",
+        start=s.isoformat(), end=e.isoformat())
+    data.to_file(out / f"win{i:03d}_{sym}.mbo.dbn.zst")
+```
+
+(Cross-check the running spend with `c.metadata.get_cost(...)` summed over the windows
+before you start — expect ~$30–90 total.)
+
+### Mode C' — parent days
+
+Same, but expand each window to its full calendar day(s), dedupe the day list, and pull one
+batch job per day (or one job covering the deduped set).
+
+### Mode A — full slice
+
+```python
+c.metadata.get_cost(dataset="GLBX.MDP3", symbols=["MNQM6","MNQU6","MNQZ6"],
+    stype_in="raw_symbol", schema="mbo", start="2026-05-01", end="2026-08-28")  # ~453.12
+
 job = c.batch.submit_job(
-    dataset="GLBX.MDP3",
-    symbols=["MNQM6", "MNQU6", "MNQZ6"],
-    stype_in="raw_symbol",
-    schema="mbo",
-    start="2026-05-01",
-    end="2026-08-28",
-    encoding="dbn",
-    compression="zstd",
-    split_duration="day",
-)
-print(job["id"])          # save this
+    dataset="GLBX.MDP3", symbols=["MNQM6","MNQU6","MNQZ6"], stype_in="raw_symbol",
+    schema="mbo", start="2026-05-01", end="2026-08-28",
+    encoding="dbn", compression="zstd", split_duration="day")
 ```
 
-**The job bills your account the moment it is submitted** (credit first, then card).
-There is no undo. This is why Step 2 is mandatory.
+Data availability ends **2026-08-28 22:30 UTC** — do not set `end` later.
+
+> Every job / `get_range` call **bills immediately** (credit first, then card). No undo.
+> Confirm `get_cost` before each.
 
 ---
 
-## Step 4 — wait, then download
+## Step 5 — integrity checks (seal §1 / §5, before any parity run)
 
-- The job runs server-side. ~270 GB uncompressed → **minutes to ~2 hours**. You get an
-  email when it is ready; poll with `c.batch.list_jobs()` or the portal.
-- Download into the repo's tick directory:
+For each file (or a sample):
 
 ```python
-c.batch.download(job_id="YOUR_JOB_ID", output_dir="data/tick/mnq_mbo_tranche1/")
-```
-
-or the CLI: `databento download YOUR_JOB_ID --output-dir data/tick/mnq_mbo_tranche1/`
-or the HTTPS links from the portal.
-
-- **On-disk size: ~80–110 GB** of `.dbn.zst` (the 270 GB is uncompressed; MBO zstd is only
-  ~2.5–3.5× — Step 2.5 gives the exact figure). Fits KVM 4 (200 GB), **not** KVM 2. Do
-  **not** decompress it all — the Databento reader streams the compressed files.
-
----
-
-## Step 5 — integrity checks (seal §1 requires these before use)
-
-```python
-import databento as db
-store = db.DBNStore.from_file("data/tick/mnq_mbo_tranche1/glbx-mdp3-YYYYMMDD.mbo.dbn.zst")
+store = db.DBNStore.from_file(path)
 df = store.to_df()
-# per the seal §1:
-assert df.index.is_monotonic_increasing                     # timestamps non-decreasing
-# reconstruct BBO and check bid <= ask on 100.000% of states
-# check trade prices fall within [session low, session high]
+assert df.index.is_monotonic_increasing
+# reconstruct BBO from the MBO stream; assert bid <= ask on 100.000% of book states
+# assert trade prices within [session low, session high]
 ```
 
-Record the exact pass rate (the seal wants "report the exact pass rate", same discipline as
-OFI-1's `upvol+downvol==volume` check). A `degraded` day appears in the availability list for
-**2026-05-24** and **2026-07-30** — note those in the integrity report; they are still
-`available`, just flagged by Databento.
+Report the exact pass rate. Databento flags **2026-05-24** and **2026-07-30** as `degraded`
+(still `available`) — note them, don't exclude.
 
 ---
 
 ## Step 6 — licensing
 
-On the first CME request Databento shows a click-through license. For **internal research /
-backtesting** (non-display, non-redistribution) the standard terms cover you. Do not
-redistribute the raw data or any derived real-time feed.
+First CME request shows a click-through license. Internal research / backtesting
+(non-display, non-redistribution) is covered. Do not redistribute the raw data or a derived
+real-time feed.
 
 ---
 
 ## After Tranche 1
 
-Build the §2 simulator → run the §3 parity gate against the ~129 live `trades.db` fills →
-append the result to the seal as **Amendment 6**. Only on a PASS do you buy Tranche 2
-(the bulk, RTH-only, ~$1,150–1,250 — see Amendment 4 §A4.4).
+Build the §2 simulator → run the §3 parity gate → append the result as **Amendment 9**.
+Buy Tranche 2 (RTH bulk, ~$1,150–1,250) only on a PASS. If parity fails within the §4
+window (3 cycles / 15 working days), R3 closes — total spend under $100.

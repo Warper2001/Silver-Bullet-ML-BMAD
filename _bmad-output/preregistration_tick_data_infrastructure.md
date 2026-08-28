@@ -583,3 +583,58 @@ Cost ~**$1–2**. It gives (a) the **exact** zstd ratio for MNQ MBO — multiply
 | Phase B: Tranche 2 (RTH) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 8 or burst box $30–110 | **~$1,550–1,750** total (RTH path) |
 
 Storage is now the constraint that forces the machine spend earlier, but the dollar totals are within ~$100 of §A4.6. Build effort still dominates.
+
+---
+
+# Amendment 7 — Tranche 1 re-scoped to the parity footprint (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. Re-scopes the Tranche 1 **purchase** (locked in §A5.2) down to the data the §3 parity gate actually touches. The parity gate's purpose, sample, and pass tolerances (seal §3) are unchanged. Machine is the just-upgraded **KVM 4 (193 GB disk, 162 GB free, 15 GB RAM, 4 cores)**.
+
+**Numbering:** with this as Amendment 7, the test-download findings (§A7.4) become **Amendment 8**, the §3 parity result **Amendment 9**, and the H1 result **Amendment 10**.
+
+## A7.1 The realisation
+
+The §3 parity gate replays **129 fixed live trades** from `trades.db` (`trader-mim-nb`, `trader-gap-fade`, `trader-s26-combine`, `trader-yank` live-combine subset), 2026-06-03 → 2026-08-28. Each needs the MBO stream for a window around it. Merging ±90-minute windows over the 129 trades gives **87 windows totalling ~299 hours** of MBO — roughly **13 full-session-days-equivalent, ~6–16 GB** of data, versus the 270 GB / $453 contiguous slice locked in §A5.2.
+
+The window boundaries are determined entirely by the fixed trade timestamps — there is **no window-selection freedom**, so this is not cherry-picking; it is the minimal sufficient data for the stated test.
+
+## A7.2 Re-scoped Tranche 1 — two acquisition modes, chosen after the test (§A7.4)
+
+| Mode | What | Est. cost | Est. disk (`.zst`) |
+|---|---|---|---|
+| **C — targeted windows** | `timeseries.get_range` (streaming), per merged window, `MNQM6`/`MNQU6` as active, ±90 min around each trade | **~$30–90** | ~3–8 GB |
+| **C' — parent days** | full sessions for the ~13–20 distinct calendar days the windows fall on (use if Databento MBO does not prepend a book snapshot for intraday starts — see §A7.3) | **~$25–55** | ~5–12 GB |
+| A — full contiguous slice (the §A5.2 lock) | `MNQM6,MNQU6,MNQZ6`, 2026-05-01 → 2026-08-28, batch | $453.12 | ~80–110 GB — **still fits the 162 GB free** |
+
+Mode A remains valid and fits the upgraded box; it is the fallback if C / C' prove fiddly. The saving from C / C' is ~$350–420 and it keeps the box empty for Tranche 2.
+
+## A7.3 The open question the test must answer
+
+Databento MBO is an incremental stream. For a fill simulator to know the book at time *T* it must replay from a point where the book is **complete**. Databento reconstructs the book at a requested `start` for session-boundary starts; whether it prepends a full snapshot for an **arbitrary intraday `start`** must be confirmed, not assumed. If it does → Mode C (±90 min windows). If it does not → Mode C' (whole parent sessions, book builds from the open).
+
+## A7.4 Revised test-download (replaces §A6.4) — one mid-session window, ~$2
+
+```python
+job = c.batch.submit_job(
+    dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol",
+    schema="mbo", start="2026-06-16T14:00", end="2026-06-16T15:00",   # mid-session
+    encoding="dbn", compression="zstd", split_duration="day")
+```
+
+From the delivered file, record:
+1. **zstd ratio** — file bytes ÷ (record_count × 56) → the real Tranche 1 disk size under Mode A.
+2. **Book completeness at an intraday start** — do the first records rebuild a full book (`action='R'` then a burst of `action='A'`), or does the stream start mid-incremental? This picks Mode C vs C'.
+3. **Pipeline** — billing → job → `batch.download` → `db.DBNStore.from_file` → the seal §5 integrity checks, end to end.
+
+Append the three findings to the seal as **Amendment 8**, then proceed with the chosen mode.
+
+## A7.5 Revised all-in (corrects §A6.5)
+
+| Stage | Data | Machine | Running total |
+|---|---|---|---|
+| Test download (§A7.4) | ~$2 | KVM 4 already done | ~$2 |
+| Phase A: Tranche 1 (Mode C/C') + sim build + parity | **~$30–90** | KVM 4 (~+$6/mo) | **~$40–100** |
+| — if parity FAILS (§4) | — | — | **stop. ~$40–100 + build time.** |
+| Phase B: Tranche 2 (RTH bulk) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 8 or burst box $30–110 | **~$1,250–1,450** total (RTH path) |
+
+Phase A drops from ~$335 to **under $100**. The §4 kill criterion now costs almost nothing to reach.

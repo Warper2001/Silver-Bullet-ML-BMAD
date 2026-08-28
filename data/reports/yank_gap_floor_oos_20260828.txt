@@ -1,0 +1,45 @@
+============================================================================================
+YANK-FLOOR — out-of-sample test   |   seal ed8b226
+============================================================================================
+  bars 1,415,732   2021-01-03 -> 2024-12-31   (1457 days)
+  NEVER SEEN by YANK's derivation (its seals used 2025 + the 2026 holdout)
+  SEALED POWER: detectable @t=2 $27.72 | @80% $38.81 | 2025 observed $42.56
+  one knob: min_gap_atr_ratio  0.25 (live) vs 0.1 (candidate)
+
+  gates precomputed
+
+    floor      N    /day      PF     WR        net$    mean$       t     bps   ratio
+  ------------------------------------------------------------------------------------------
+    0.250    500   0.343   1.064  30.4%       4,808      9.6   0.514    0.33    0.6x  <- LIVE
+    0.100   1609   1.104   0.925  26.8%     -12,946     -8.0  -1.149   -0.27   -0.5x  <- CANDIDATE
+
+============================================================================================
+VERDICT (seal §6)
+============================================================================================
+  candidate 0.10 : mean $-8.05  t=-1.149  -0.27 bps  (-0.5x friction)   PF 0.925
+  live      0.25 : mean $+9.62  t=0.514  0.33 bps  (0.6x friction)   PF 1.064
+  bars: t>=2.0 | >=1.53 bps | PF(0.10) > PF(0.25)
+
+  >>> FAILS <<<
+  The loosening does not survive OOS. No second floor value (§7.1).
+
+--------------------------------------------------------------------------------------------
+SECONDARY — reported, never decision-bearing (§6)
+  per-year, candidate floor 0.10:
+    2021: N= 456  mean=$   -6.81  net=$    -3,105
+    2022: N= 377  mean=$    4.99  net=$     1,882
+    2023: N= 420  mean=$  -28.12  net=$   -11,809
+    2024: N= 356  mean=$    0.24  net=$        86
+
+  OOS floor sweep (SHAPE ONLY — §7.2 forbids acting on it):
+      floor      N      PF    mean$     bps
+      0.250    500   1.064      9.6    0.33
+      0.200    728   1.044      6.1    0.21
+      0.150   1074   0.993     -0.9   -0.03
+      0.125   1291   0.960     -4.7   -0.16
+      0.100   1609   0.925     -8.0   -0.27
+      0.075   1953   0.983     -1.6   -0.05
+      0.050   2321   0.988     -1.0   -0.03
+
+  backtest runs 5 contracts / -750 daily; live YANK is 2ct / -300 (§9).
+  Live bot unmodified. This document authorises no deployment.

@@ -638,3 +638,89 @@ Append the three findings to the seal as **Amendment 8**, then proceed with the 
 | Phase B: Tranche 2 (RTH bulk) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 8 or burst box $30–110 | **~$1,250–1,450** total (RTH path) |
 
 Phase A drops from ~$335 to **under $100**. The §4 kill criterion now costs almost nothing to reach.
+
+---
+
+# Amendment 8 — Parity gate: sample corrected, threshold lowered, invariant battery added (2026-08-28, pre-purchase)
+
+Append-only. Original sealed text unedited. **Corrects a defect in the seal §3 and in §A5/§A7:** the parity sample named in §3 is smaller and partly invalid. This amendment fixes the sample, lowers the real-fill N to what exists, adds a large-N invariant check as the second half of the gate, and re-scopes Tranche 1 to match.
+
+**Future-amendment numbering is no longer pre-assigned** (the pre-assignments in §A2.5, §A3, §A6, §A7 kept shifting). Amendments are numbered in the order appended. The next appended will be the test-download findings, then the parity-gate result, then H1.
+
+## A8.1 The defect
+
+Inspection of `data/trades.db` on 2026-08-28:
+
+| Named in seal §3 | Status | Real MNQ live-broker fills |
+|---|---|---|
+| `trader-mim-nb` | valid — real combine fills, hash-chained (`data/mim_nb/trades.csv`) | **22** |
+| `trader-yank` (live-combine subset) | valid — combine account, 2026-06-17 onward | **8** |
+| `trader-gap-fade` | **invalid** — every row carries `metadata.simulated = true`; its "fills" are computed by gap-fade's own backtest logic, not a broker. Checking a new simulator against an old simulator is not a ground-truth test. | 0 |
+| `trader-s26-combine` | **invalid** — not MNQ. Prices 59,755–80,295 (vs ~28–30k for MNQ in the same window); `metadata.paper = true`. It is a paper strategy in the s26 crypto family. | 0 |
+
+**Real parity sample: 30 fills** (`trader-mim-nb` all + `trader-yank` ≥ 2026-06-17), spanning 2026-06-11 → 2026-08-28. Not the ≥100 the seal §3 assumed.
+
+## A8.2 Revised §3 — a two-part gate
+
+### Part A — real-fill calibration (corrects §3)
+
+- **Sample:** every closed `trader-mim-nb` fill + every `trader-yank` fill dated ≥ 2026-06-17, from `data/trades.db` (cross-checked against `data/mim_nb/trades.csv`). **N ≈ 30**, growing ~1–2/day as both bots trade live.
+- **Minimum to run Part A: N ≥ 28.**
+- **Tolerances — unchanged from §3:** mean absolute fill-price error ≤ 1.0 tick; 90th-pct absolute error ≤ 2.0 ticks; mean signed error within ±0.25 tick.
+- **What N ≈ 30 can and cannot do:** at these tolerances it detects a systematically wrong or biased fill model (a 0.4-tick bias is ~4 standard errors at N=30) and catastrophic per-fill errors (they blow the MAE). It is weak on rare, conditional errors. That gap is covered by Part B and by the v2 re-run (§A8.4).
+
+### Part B — synthetic invariant battery (new)
+
+Independent of any real outcome. Generate **≥ 1,000** synthetic orders (mix of marketable and passive limit, both sides, sizes 1–5) at random timestamps across the Tranche 1 data. **Every one of these must hold, 100%:**
+
+1. A buy never fills better than the best offer at (arrival + configured latency); a sell never better than the best bid.
+2. A passive limit never fills at a price through its limit.
+3. Fill timestamp ≥ submit timestamp + configured latency, always.
+4. Reconstructed queue position is non-negative and non-increasing until the order fills or is cancelled.
+5. Cumulative partial fills ≤ order size; no fill occurs when the book has no liquidity at or through the order's price.
+6. Only book events with `ts ≤ simulated-now` are used to decide any fill (strict causality — no lookahead).
+
+Any violation = **Part B FAIL**, regardless of Part A.
+
+### Verdict
+
+**PASS requires Part A (N ≥ 28, all three tolerances) AND Part B (all six invariants, 100%).** A Part A pass with a Part B failure is a FAIL — the fill model is structurally broken. A Part B pass with a Part A failure is a FAIL — the model runs but is miscalibrated.
+
+The §4 kill criterion (3 revision cycles / 15 working days, then R3 closes) applies to the combined gate.
+
+## A8.3 Tranche 1 re-scoped again (supersedes §A7.2)
+
+The 30-fill sample merges into **28 windows (±90 min), 86 hours of MBO, 24 distinct calendar days**.
+
+| | Value |
+|---|---|
+| Symbols | `MNQU6` for all windows except 2026-06-11 (`MNQM6`); pull **both** `MNQM6` and `MNQU6` for any window within ±3 days of the 2026-06-19 expiry and keep whichever contract the live order actually hit |
+| Windows | 28 (list in `~/.claude/jobs/960bda86/tmp/parity_windows.py` output; regenerate from `trades.db`) |
+| Est. cost | **~$40–95** (86 h × ~0.25–0.6 GB/h × $1.80/GB) — confirm with summed `metadata.get_cost` before pulling |
+| Est. disk | ~10–25 GB uncompressed → ~4–10 GB `.dbn.zst` |
+| Note | window 17 falls on 2026-07-30, a `degraded` day — flag in the integrity report, do not drop |
+
+Modes C / C' / A from §A7 still apply (targeted `get_range` vs parent days vs full slice). The full slice (A, $453) remains the fallback.
+
+## A8.4 Parity gate v2 — the deferred strong check
+
+Part A at N ≈ 30 is provisional. When `trader-mim-nb` + `trader-yank` have produced **≥ 100** combined real fills (projected ~Nov–Dec 2026 at the current rate), re-run **Part A at N ≥ 100** on the same tolerances, buying the incremental windows (~$1–2 each).
+
+- If v2 **passes**: the simulator is confirmed; nothing else changes.
+- If v2 **fails** where v1 passed: any H1 result computed against Tranche 2 in the interim is **quarantined** pending a fix and a re-run. This is why Part B exists — to make an interim H1 result unlikely to be built on a silently broken simulator.
+
+v2 gates the *interpretation* of H1, not the *purchase* of Tranche 2.
+
+## A8.5 Not affected
+
+H1's own acceptance gate (§5.5 / §6: N ≥ 200 trades across ≥ 2 volatility regimes, etc.) counts trades the *strategy* generates in the walk-forward — it is unrelated to the parity sample and does not change.
+
+## A8.6 Revised all-in (supersedes §A7.5)
+
+| Stage | Data | Machine | Running total |
+|---|---|---|---|
+| Test download | ~$4–5 (2026-06-22 window, doubles as 3 parity trades) | KVM 4 done | ~$5 |
+| Phase A: Tranche 1 (28 windows) + sim build + parity gate (A+B) | ~$40–95 | KVM 4 (~+$6/mo) | **~$50–105** |
+| — if the gate FAILS (§4) | — | — | **stop. ~$50–105 + build time.** |
+| Phase B: Tranche 2 (RTH bulk) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 8 or burst box $30–110 | **~$1,250–1,450** total |
+| Parity gate v2 (~Nov–Dec) | ~$50–150 incremental windows | — | +~$100 |

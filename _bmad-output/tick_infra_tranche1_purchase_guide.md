@@ -1,10 +1,12 @@
 # How to buy TICK-INFRA Tranche 1 in Databento
 
-**Goal:** the minimum MBO data to run the §3 parity gate (replay 129 known live fills,
-check the simulator reproduces them). Companion: `preregistration_tick_data_infrastructure.md`
-(seal + Amendments 1–7). Machine: KVM 4, 162 GB free — **done**.
+**Goal:** the minimum MBO data to run the parity gate — Part A replays the **~30 real MNQ
+live-broker fills** (`trader-mim-nb` + `trader-yank` combine-era) and checks the simulator
+reproduces them within a tick; Part B runs ≥1,000 synthetic orders against hard invariants.
+See `preregistration_tick_data_infrastructure.md` seal §3 + Amendment 8. Machine: KVM 4,
+162 GB free — **done**.
 
-**Cost:** ~$2 test download, then **~$30–90** for the re-scoped Tranche 1 (Amendment 7) —
+**Cost:** ~$4–5 test download, then **~$40–95** for the 28 re-scoped windows (Amendment 8),
 or $453 for the full contiguous slice as a fallback. All fit the KVM 4.
 
 ---
@@ -30,12 +32,13 @@ pip install databento          # once, in the venv
 import databento as db
 c = db.Historical("YOUR_KEY")
 
-print(c.metadata.get_cost(dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol",
-      schema="mbo", start="2026-06-16T14:00", end="2026-06-16T15:00"))   # ~$1-2
+# window straddles all 3 of trader-yank's real 2026-06-22 combine fills -> reusable
+print(c.metadata.get_cost(dataset="GLBX.MDP3", symbols=["MNQU6"], stype_in="raw_symbol",
+      schema="mbo", start="2026-06-22T14:30", end="2026-06-22T17:00"))   # ~$4-5
 
 job = c.batch.submit_job(
-    dataset="GLBX.MDP3", symbols=["MNQM6"], stype_in="raw_symbol", schema="mbo",
-    start="2026-06-16T14:00", end="2026-06-16T15:00",
+    dataset="GLBX.MDP3", symbols=["MNQU6"], stype_in="raw_symbol", schema="mbo",
+    start="2026-06-22T14:30", end="2026-06-22T17:00",
     encoding="dbn", compression="zstd", split_duration="day")
 print(job["id"])
 # wait for email / poll c.batch.list_jobs(), then:
@@ -44,8 +47,7 @@ c.batch.download(job_id=job["id"], output_dir="data/tick/_test/")
 
 **Record these three things (they become Amendment 8):**
 
-1. **zstd ratio** — `.dbn.zst` file bytes ÷ (`record_count` × 56). Multiply by 270 GB → the
-   real full-slice disk size. (Expect ~2.5–3.5× → ~80–110 GB, which fits.)
+1. **zstd ratio** — `.dbn.zst` file bytes ÷ (`record_count` × 56). (Expect ~2.5–3.5×.)
 2. **Book completeness at an intraday start** — read the file:
    ```python
    store = db.DBNStore.from_file("data/tick/_test/<file>.mbo.dbn.zst")
@@ -84,9 +86,10 @@ then pull each:
 import sqlite3, pandas as pd, datetime as dt, pathlib
 con = sqlite3.connect("data/trades.db")
 q = """select timestamp from trades
-       where trader_id in ('trader-mim-nb','trader-gap-fade','trader-s26-combine')
-          or (trader_id='trader-yank' and timestamp >= '2026-06-01')
-       order by timestamp"""
+       where exit_price != 0 and exit_reason not in ('PENDING')
+         and ( trader_id = 'trader-mim-nb'
+               or (trader_id = 'trader-yank' and timestamp >= '2026-06-17') )
+       order by timestamp"""    # ~30 real MNQ live-broker fills (Amendment 8)
 ts = [dt.datetime.fromisoformat(r[0].replace("Z","+00:00")) for r in con.execute(q)]
 wins = []
 for t in ts:
@@ -95,11 +98,13 @@ for t in ts:
         wins[-1] = (wins[-1][0], max(wins[-1][1], e))
     else:
         wins.append((s, e))
-print(len(wins), "windows")
+print(len(wins), "windows")   # expect ~28
 
 out = pathlib.Path("data/tick/mnq_mbo_parity/"); out.mkdir(parents=True, exist_ok=True)
 for i, (s, e) in enumerate(wins):
-    sym = "MNQM6" if s < dt.datetime(2026, 6, 18, tzinfo=dt.timezone.utc) else "MNQU6"
+    # M6->U6 volume roll ~2026-06-12..19; for windows in that band pull BOTH and keep
+    # whichever contract the live order hit
+    sym = "MNQM6" if s < dt.datetime(2026, 6, 12, tzinfo=dt.timezone.utc) else "MNQU6"
     data = c.timeseries.get_range(
         dataset="GLBX.MDP3", symbols=[sym], stype_in="raw_symbol", schema="mbo",
         start=s.isoformat(), end=e.isoformat())
@@ -160,6 +165,9 @@ real-time feed.
 
 ## After Tranche 1
 
-Build the §2 simulator → run the §3 parity gate → append the result as **Amendment 9**.
-Buy Tranche 2 (RTH bulk, ~$1,150–1,250) only on a PASS. If parity fails within the §4
-window (3 cycles / 15 working days), R3 closes — total spend under $100.
+Build the §2 simulator → run the parity gate: **Part A** (≥28 real fills, MAE ≤ 1 tick,
+p90 ≤ 2 ticks, bias ≤ ±0.25 tick) **and Part B** (≥1,000 synthetic orders, six invariants at
+100% — Amendment 8 §A8.2). Append the result as the next amendment. Buy Tranche 2 (RTH
+bulk, ~$1,150–1,250) only on a PASS. If the gate fails within the §4 window, R3 closes —
+total spend under ~$105. Parity gate v2 (Part A at N ≥ 100) re-runs ~Nov–Dec as the live
+sample grows (§A8.4).

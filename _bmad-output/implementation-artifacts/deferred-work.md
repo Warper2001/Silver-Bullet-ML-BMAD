@@ -357,3 +357,15 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-foundation.md`
   summary: spine AD-12 field names queue_rank_at_submit / queue_ahead_size_at_submit read "_at_submit" but AD-22 computes them at the arrival tick — consider renaming to _at_arrival in a spine polish pass (not a code defect; impl matches the AD).
   evidence: blind-hunter — semantic/name mismatch; deferred because it is a spine-AD wording change, not a diff defect.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
+  summary: commit a small truncated .dbn.zst fixture slice (a few thousand front-month records) so a real-record apply_event fold always runs in CI, not just when the 348 MB local fixture is present.
+  evidence: verification-gap review — the only real-data verification of the MBO folder currently skips silently on any checkout without the untracked fixture.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
+  summary: book.py max_transient_cross_ns is a single global max but cross_start_ns is per-instrument — for a multi-instrument fold the manifest loses which instrument crossed. Make it per-instrument when multi-instrument lands.
+  evidence: blind-hunter — fine for single-instrument H1, undocumented gap for later.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
+  summary: test_ticksim_imports.py constrains only src.* imports, not third-party — AD-4 limits ticksim's new deps to databento + sortedcontainers but nothing fails if a module imports an unlisted third-party package.
+  evidence: verification-gap — pre-existing limitation; book.py is the first module to add third-party imports under the unenforced rule.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
+  summary: a "fills observed vs subsequent resting-size reductions" cross-check to catch stream gaps where the C/M following an F is missing (total_size stays inflated with no detection). Belongs with sim.py's observe_book_event / manifest work.
+  evidence: blind-hunter — the F-as-no-op design is otherwise blind to a dropped reduction record.

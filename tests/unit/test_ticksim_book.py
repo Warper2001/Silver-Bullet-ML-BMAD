@@ -44,12 +44,18 @@ IID = 1  # default instrument id for the hand-built cases
 
 @dataclass(frozen=True)
 class _Rec:
-    """Minimal structural stand-in for ``databento_dbn.MBOMsg`` (book.MboRecord)."""
+    """Minimal structural stand-in for a normalized MBO record (book.MboRecord).
 
-    action: Action
-    side: Side
+    ``book.MboRecord`` no longer references any ``databento`` type: ``action`` /
+    ``side`` are plain ``str`` single-char codes and the price field is
+    ``price_dbn`` (the whole vendor boundary lives in ``events.py``). The
+    builders below accept the vendor enums for readability and stringify.
+    """
+
+    action: str
+    side: str
     order_id: int
-    price: int
+    price_dbn: int
     size: int
     ts_event: int
     sequence: int
@@ -69,7 +75,14 @@ def _add(
     instrument_id: int = IID,
 ) -> _Rec:
     return _Rec(
-        Action.ADD, side, order_id, price, size, ts_event, sequence, instrument_id
+        str(Action.ADD),
+        str(side),
+        order_id,
+        price,
+        size,
+        ts_event,
+        sequence,
+        instrument_id,
     )
 
 
@@ -83,7 +96,14 @@ def _cancel(
     instrument_id: int = IID,
 ) -> _Rec:
     return _Rec(
-        Action.CANCEL, side, order_id, price, size, ts_event, sequence, instrument_id
+        str(Action.CANCEL),
+        str(side),
+        order_id,
+        price,
+        size,
+        ts_event,
+        sequence,
+        instrument_id,
     )
 
 
@@ -97,7 +117,14 @@ def _modify(
     instrument_id: int = IID,
 ) -> _Rec:
     return _Rec(
-        Action.MODIFY, side, order_id, price, size, ts_event, sequence, instrument_id
+        str(Action.MODIFY),
+        str(side),
+        order_id,
+        price,
+        size,
+        ts_event,
+        sequence,
+        instrument_id,
     )
 
 
@@ -111,7 +138,14 @@ def _fill(
     instrument_id: int = IID,
 ) -> _Rec:
     return _Rec(
-        Action.FILL, side, order_id, price, size, ts_event, sequence, instrument_id
+        str(Action.FILL),
+        str(side),
+        order_id,
+        price,
+        size,
+        ts_event,
+        sequence,
+        instrument_id,
     )
 
 
@@ -125,16 +159,27 @@ def _trade(
     instrument_id: int = IID,
 ) -> _Rec:
     return _Rec(
-        Action.TRADE, side, order_id, price, size, ts_event, sequence, instrument_id
+        str(Action.TRADE),
+        str(side),
+        order_id,
+        price,
+        size,
+        ts_event,
+        sequence,
+        instrument_id,
     )
 
 
 def _clear(ts_event: int, sequence: int, instrument_id: int = IID) -> _Rec:
-    return _Rec(Action.CLEAR, Side.NONE, 0, 0, 0, ts_event, sequence, instrument_id)
+    return _Rec(
+        str(Action.CLEAR), str(Side.NONE), 0, 0, 0, ts_event, sequence, instrument_id
+    )
 
 
 def _none(ts_event: int, sequence: int, instrument_id: int = IID) -> _Rec:
-    return _Rec(Action.NONE, Side.NONE, 0, 0, 0, ts_event, sequence, instrument_id)
+    return _Rec(
+        str(Action.NONE), str(Side.NONE), 0, 0, 0, ts_event, sequence, instrument_id
+    )
 
 
 def _fold(book: Book, *records: _Rec) -> None:
@@ -618,7 +663,7 @@ def test_persistent_cross_uses_the_seal_constant() -> None:
 class TestUnhandledAction:
     def test_unknown_action_raises(self) -> None:
         book = Book()
-        bad = _Rec("Z", Side.BID, 1, 100, 1, 1, 1)  # type: ignore[arg-type]
+        bad = _Rec("Z", str(Side.BID), 1, 100, 1, 1, 1)
         with pytest.raises(BookInconsistency):
             apply_event(book, bad)
 
@@ -690,21 +735,23 @@ def test_fold_fixture_front_month_prefix() -> None:
     the fold (enforced inside ``apply_event`` now), no
     :class:`BookInconsistency`, final ``best_bid < best_ask``, a few-tick
     spread, and ``check_invariants`` at the end.
+
+    The capture is fed through ``events.DbnMboSource`` -- the production path --
+    so this also exercises the vendor-record normalization end to end.
     """
-    import databento as db
+    from src.ticksim.events import DbnMboSource
 
     fixture = _fixture_or_skip()
-    store = db.DBNStore.from_file(str(fixture))
 
     book = Book()
     folded = 0
     unseen_before_window = 0
     window_total = 0
 
-    for rec in store:
-        if rec.instrument_id != FRONT_MONTH_INSTRUMENT_ID:
+    for ev in DbnMboSource(fixture):
+        if ev.instrument_id != FRONT_MONTH_INSTRUMENT_ID:
             continue
-        apply_event(book, rec)  # raises on non-monotonic ts / persistent cross
+        apply_event(book, ev)  # raises on non-monotonic ts / persistent cross
 
         folded += 1
         if folded == _WARMUP:

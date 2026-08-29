@@ -5,13 +5,19 @@ It is a **passive data structure**: no event loop, no file reading, no stream
 merging -- ``sim.py`` drives the fold later (spine AD-20). Only *real venue*
 orders live here; our own orders never enter the book (spine AD-3).
 
-Dependencies (spine AD-7): ``src.ticksim.config`` + stdlib + ``databento_dbn``
-(record *types* only) + ``sortedcontainers`` (the O(log n) best-bid/ask, spine
-AD-4). It does **not** import ``orders.py`` -- the book holds raw tuples, not
-``OrderIntent`` / ``Fill``.
+Dependencies (spine AD-7): ``src.ticksim.config`` + stdlib + ``sortedcontainers``
+(the O(log n) best-bid/ask, spine AD-4). It imports **nothing** from
+``databento`` / ``databento_dbn``: the vendor boundary now lives entirely in
+``events.py``, which normalizes each vendor record to an ``events.BookEvent``
+before ``sim.py`` folds it here (spine AD-18). :class:`MboRecord` is a
+structural Protocol keyed on plain ``str`` action / side codes and ``int``
+fields -- whatever ``events.py`` yields. It does **not** import ``orders.py`` --
+the book holds raw tuples, not ``OrderIntent`` / ``Fill``.
 
-MBO action semantics (``databento_dbn.Action``; verified against the GLBX MDP3
-fixture ``data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst``):
+MBO action semantics -- the single-char codes ``events.py`` normalizes to
+(verified against the GLBX MDP3 capture
+``data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst`` and the committed slice
+``tests/fixtures/mnq_mbo_tiny.dbn.zst``):
 
   * ``A`` add      -- a new resting order enters the book.
   * ``C`` cancel   -- a resting order is removed. **On GLBX every ``C`` is a
@@ -33,9 +39,9 @@ fixture ``data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst``):
 
 **Ask-First resolution (spec Boundaries / Design Notes -- accepted, frozen
 matrix amended).** The spec assumed ``F`` reduces the hit resting order by
-``size`` (remove at 0). Verification against the fixture *and* ``databento_dbn``
-'s own type stubs (``Action.FILL``: "An existing order was filled. Does not
-affect the book.") shows this is wrong on GLBX: e.g. order ``6878505599343``
+``size`` (remove at 0). Verification against the capture *and* the vendor's own
+record-type docs (``FILL``: "An existing order was filled. Does not affect the
+book.") shows this is wrong on GLBX: e.g. order ``6878505599343``
 folds as ``A sz3 -> F sz1 -> M sz2 -> F sz2 -> C sz2`` -- the ``M`` and ``C``
 carry the post-fill sizes and do the book mutation; the ``F`` records are
 informational. Treating ``F`` as a reducer double-counts every fill against the
@@ -74,7 +80,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import NoReturn, Protocol
 
-from databento_dbn import Action, Side
 from sortedcontainers import SortedDict  # type: ignore[import-untyped]
 
 from .config import MAX_TRANSIENT_CROSS_NS
@@ -91,17 +96,19 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-# MBO action / side codes. ``databento_dbn`` types its ``Action`` / ``Side``
-# enum *members* as ``str`` in its stubs, and ``str(Action.ADD) == "A"`` at
-# runtime, so :func:`apply_event` normalizes to these single-char codes and
-# compares against them -- keeping mypy --strict happy without a cast dance.
+# The single-char MBO action / side codes ``events.py`` normalizes every record
+# to (``events.MboAction`` / ``events.MboSide`` are ``StrEnum``s over exactly
+# these values). :func:`apply_event` compares against them directly, so it never
+# needs a vendor import -- ``str(record.action)`` on the Protocol is enough.
 _ADD, _CANCEL, _MODIFY, _TRADE, _FILL, _CLEAR, _NONE = "A", "C", "M", "T", "F", "R", "N"
 _SIDE_BID, _SIDE_ASK = "B", "A"
 _MUTATING = frozenset({_ADD, _CANCEL, _MODIFY, _CLEAR})
 
-# DBN uses UINT32_MAX as the "undefined size" sentinel (``databento`` exposes it
-# as ``databento_dbn.UNDEF_ORDER_SIZE``; pinned here so ``book.py`` needs only
-# the record *types* from the vendor package -- spine AD-7).
+# DBN's "undefined size" sentinel (UINT32_MAX). Pinned as a literal so ``book.py``
+# stays free of any ``databento`` import (spine AD-18). ``events.py`` rejects an
+# undefined *price* on an ``A`` / ``M`` at the normalization boundary; an
+# undefined *size* is meaningful on ``C`` / ``M`` (full cancel / size unchanged)
+# and is handled below, so ``events.py`` passes it straight through.
 UNDEF_ORDER_SIZE = 4_294_967_295
 
 
@@ -131,22 +138,28 @@ class BookSide(Enum):
 class MboRecord(Protocol):
     """Structural type :func:`apply_event` consumes.
 
-    ``databento_dbn.MBOMsg`` satisfies it today; ``events.py``'s normalized
-    record type will satisfy it later (spine AD-18). Only these attributes are
+    The sole production caller is ``sim.py``, which folds ``events.BookEvent``
+    records -- whose ``action`` / ``side`` are ``events.MboAction`` /
+    ``events.MboSide`` ``str`` enums and whose price field is ``price_dbn`` --
+    so a :class:`BookEvent` satisfies this Protocol structurally under
+    ``mypy --strict`` (spine AD-18). ``action`` / ``side`` are declared ``str``
+    (not a vendor enum) and the price field is named ``price_dbn`` to match
+    ``RestingOrder`` / ``BookEvent``; the whole ``databento`` boundary lives in
+    ``events.py`` (Ask-First resolution -- accepted). Only these attributes are
     read -- ``ts_recv`` (spine AD-1) and ``flags`` are deliberately absent.
     """
 
     @property
-    def action(self) -> Action: ...
+    def action(self) -> str: ...
 
     @property
-    def side(self) -> Side: ...
+    def side(self) -> str: ...
 
     @property
     def order_id(self) -> int: ...
 
     @property
-    def price(self) -> int: ...
+    def price_dbn(self) -> int: ...
 
     @property
     def size(self) -> int: ...
@@ -412,8 +425,8 @@ def apply_event(book: Book, record: MboRecord) -> None:
 
     Args:
         book: the book to mutate in place.
-        record: an MBO record (``databento_dbn.MBOMsg`` or a compatible
-            normalized record -- see :class:`MboRecord`).
+        record: a normalized MBO record satisfying :class:`MboRecord`
+            (``events.BookEvent`` in production).
     """
     ts = int(record.ts_event)
     if ts < book.last_ts_ns:
@@ -452,7 +465,7 @@ def _apply_add(book: Book, record: MboRecord) -> None:
     order = RestingOrder(
         instrument_id=instrument_id,
         side=side,
-        price_dbn=int(record.price),
+        price_dbn=int(record.price_dbn),
         size=size,
         add_ts_ns=int(record.ts_event),
         sequence=int(record.sequence),
@@ -509,7 +522,7 @@ def _apply_modify(book: Book, record: MboRecord) -> None:
             f"{existing.side.value} -> {str(record.side)!r}"
         )
 
-    new_price = int(record.price)
+    new_price = int(record.price_dbn)
     raw = int(record.size)
     new_size = existing.size if raw == UNDEF_ORDER_SIZE else raw
 

@@ -358,7 +358,7 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
   summary: spine AD-12 field names queue_rank_at_submit / queue_ahead_size_at_submit read "_at_submit" but AD-22 computes them at the arrival tick — consider renaming to _at_arrival in a spine polish pass (not a code defect; impl matches the AD).
   evidence: blind-hunter — semantic/name mismatch; deferred because it is a spine-AD wording change, not a diff defect.
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
-  summary: commit a small truncated .dbn.zst fixture slice (a few thousand front-month records) so a real-record apply_event fold always runs in CI, not just when the 348 MB local fixture is present.
+  summary: [ADDRESSED in spec-ticksim-events.md] commit a small truncated .dbn.zst fixture slice so a real-record fold runs in the normal unit suite.
   evidence: verification-gap review — the only real-data verification of the MBO folder currently skips silently on any checkout without the untracked fixture.
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
   summary: book.py max_transient_cross_ns is a single global max but cross_start_ns is per-instrument — for a multi-instrument fold the manifest loses which instrument crossed. Make it per-instrument when multi-instrument lands.

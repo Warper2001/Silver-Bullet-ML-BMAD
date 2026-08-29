@@ -71,13 +71,11 @@ DBN is 3–7× smaller than CSV/JSON and zero-copy to read; Zstd is ~3× smaller
 `DBNStore` reader decompresses transparently. CSV/JSON only help if a human reads raw
 records — not the case here.
 
-| From the test | Mode | What to buy | Est. cost | Est. disk |
-|---|---|---|---|---|
-| Book rebuilds at intraday start | **C — targeted windows** | `timeseries.get_range`, ±90 min around each of the 129 trades (87 merged windows), `MNQM6` before ~2026-06-18 / `MNQU6` after | **~$30–90** | ~3–8 GB |
-| Book does NOT rebuild intraday | **C' — parent days** | full sessions for the ~13–20 distinct calendar days the windows land on | **~$25–55** | ~5–12 GB |
-| C/C' too fiddly, want simplicity | **A — full slice** | `MNQM6,MNQU6,MNQZ6`, 2026-05-01 → 2026-08-28, one batch job | **$453.12** (−$125 = $328) | ~80–110 GB |
-
-All three fit the KVM 4. C/C' save ~$350–420 and leave the box clear for Tranche 2.
+**The 2026-06-22 test (Amendment 9) settled this: Mode C.** The book reconstructs deep and
+tight well inside a ±90 min window; no full-session pulls needed. Buy the **28 merged
+windows** (mim-nb + yank fills, ±90 min) as `MNQ.FUT` parent via `timeseries.get_range` —
+parent avoids all roll-symbol logic for 4% more data. **~$70–77**, ~11 GB on disk; the
+$2.11 test already covers 3 of the 28. Mode A (full slice, $453) remains the fallback.
 
 ---
 

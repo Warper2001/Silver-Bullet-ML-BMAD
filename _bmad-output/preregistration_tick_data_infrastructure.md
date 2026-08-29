@@ -724,3 +724,60 @@ H1's own acceptance gate (§5.5 / §6: N ≥ 200 trades across ≥ 2 volatility 
 | — if the gate FAILS (§4) | — | — | **stop. ~$50–105 + build time.** |
 | Phase B: Tranche 2 (RTH bulk) + H1 grid (on PASS) | ~$1,150–1,250 | KVM 8 or burst box $30–110 | **~$1,250–1,450** total |
 | Parity gate v2 (~Nov–Dec) | ~$50–150 incremental windows | — | +~$100 |
+
+---
+
+# Amendment 9 — Test-download findings (2026-08-29)
+
+Append-only. Original sealed text unedited. Results of the ~$2 test download mandated by §A6.4 / §A7.4 / guide Step 2. Job `GLBX-20260829-LVAEF8VMHE`: `GLBX.MDP3`, `MNQ.FUT` (parent), `mbo`, 2026-06-22 14:30–17:00 UTC, `dbn`/`zstd`, cost **$2.11**, 22,506,972 records.
+
+## A9.1 zstd ratio — 3.46×
+
+Uncompressed (billed): 1,260,390,432 B. Compressed (downloaded): 364,585,575 B. **Ratio 3.46×** — at the top of the Amendment 6 estimate (2.5–3.5×).
+
+| | uncompressed | on disk |
+|---|---|---|
+| Re-scoped Tranche 1 (§A8.3, ~86 h MBO) | ~39 GB | **~11 GB** |
+| Full slice (Mode A) | 270 GB | ~78 GB |
+| Tranche 2 RTH bulk | ~700 GB | ~200 GB |
+
+Measured rate: **~0.50 GB/hour** of `MNQ.FUT` MBO (0.48 front-month only).
+
+## A9.2 Intraday book reconstruction — Mode C confirmed viable
+
+The stream **does not** prepend a snapshot at an arbitrary intraday `start`: no `action='R'`, no `F_SNAPSHOT` flag; the first record is a normal incremental event 1 ms after the requested start, and early records include cancels for orders added before the window.
+
+**However**, over the full 2.5 h window only **0.3 %** of cancel/modify events (34,514 of ~11.5 M) reference an unseen order, and these concentrate in the first ~60 s. At each real trade time — well inside the window — the reconstructed book is **deep and fully populated**: 6,810–8,585 resting orders, 2-tick spread, 3–11 orders on each of the top five levels per side.
+
+**Verdict: Mode C (targeted ±90 min windows) is sufficient.** With the window's built-in ≥30–90 min of warm-up before each trade, the near-touch book — the only part that determines a marketable-order fill — is completely reconstructed. The residual ~0.3 % missing orders are deep and stale. **Mode C′ (full-session pulls) is not required.** §A8.3 stands.
+
+## A9.3 Integrity (seal §5)
+
+| Check | Result |
+|---|---|
+| Record count vs metadata | 22,506,972 = 22,506,972 ✓ |
+| SHA-256 vs manifest | match ✓ |
+| Timestamps non-decreasing | **0 violations** in 22.5 M records ✓ |
+| Front-month trade-price range | 30,502.75 – 30,763.25 — tight, sensible ✓ |
+| BBO non-crossing | 2,792 crossed instants / 19.67 M checks = **0.014 %**, all transient |
+
+**The §5 check "`bid ≤ ask` on 100.000 % of book states" is too strict and is refined here:** raw CME MBO contains momentary locked/crossed markets (resolved by the matching engine in microseconds) that are *not* data errors; and a correct book requires processing `action='F'` (fill) events, not just A/C/M. The refined check: **no *persistent* cross (> a few ms), and the reconstruction must consume A/C/M/T/F.** The 0.014 % here is consistent with normal transient crossing plus this quick pass ignoring `F`.
+
+## A9.4 Data shape (feeds the simulator design)
+
+- Actions: A 8.95 M / C 8.95 M (balanced) / M 2.63 M / T 0.50 M / F 0.84 M / N 0.63 M.
+- `MNQ.FUT` parent = the front month (instrument_id 42004800) is **96 %** of records; the remaining 4 % is one active spread/back-month plus negligible others. Pulling `MNQ.FUT` parent vs the explicit front-month raw symbol costs ~4 % more and **removes the roll-symbol logic entirely** — recommended for all Tranche 1 windows. This supersedes §A8.3's `MNQM6`/`MNQU6` switching.
+- Records carry `instrument_id` (`stype_out=instrument_id`, `map_symbols=false`); the DBN metadata holds the id→contract map (`store.symbology` / `metadata.json`). The simulator must key the book by `instrument_id` and resolve the map.
+- MNQ RTH spread in-window: **2 ticks (0.50 index pt)** — consistent with the seal's conservative $4 (2-pt) round-trip friction, not optimistic.
+
+## A9.5 Pipeline
+
+End-to-end works: free metadata calls → `batch.submit_job` (web) → `batch.list_files` → HTTPS download → SHA verify → `db.DBNStore.from_file` → streaming iteration → book reconstruction. `databento` **0.85.0** installed into `.venv` (via `pip`, for this analysis) — **must be added to `pyproject.toml`** before the simulator build.
+
+## A9.6 Revised Tranche 1 cost
+
+At the measured 0.50 GB/h: **~86 h × 0.5 GB/h × $1.80 = ~$77** for the 28 windows (Mode C, `MNQ.FUT` parent), ~$70 front-month-only. −$2.11 already spent on the test (which is 3 of the 28 windows: the 2026-06-22 window covering all three yank fills). Net remaining ~**$68–75**. On disk ~11 GB. Confirm with summed `metadata.get_cost` before pulling.
+
+## A9.7 Next
+
+Build the §2 simulator **via the BMAD method** (`bmad-architecture` → `bmad-build` → `bmad-review`; project standing rule 2026-08-29). Then pull the remaining 25 Tranche-1 windows, run the two-part parity gate (§A8.2), append the result.

@@ -65,6 +65,12 @@ c.batch.download(job_id=job["id"], output_dir="data/tick/_test/")
 
 ## Step 3 — pick the acquisition mode
 
+**Format (all modes):** encoding **DBN**, compression **Zstd**, split **by day**, delivery
+**download**. Rationale: encoding does not change the price (billed on raw record bytes);
+DBN is 3–7× smaller than CSV/JSON and zero-copy to read; Zstd is ~3× smaller again and the
+`DBNStore` reader decompresses transparently. CSV/JSON only help if a human reads raw
+records — not the case here.
+
 | From the test | Mode | What to buy | Est. cost | Est. disk |
 |---|---|---|---|---|
 | Book rebuilds at intraday start | **C — targeted windows** | `timeseries.get_range`, ±90 min around each of the 129 trades (87 merged windows), `MNQM6` before ~2026-06-18 / `MNQU6` after | **~$30–90** | ~3–8 GB |

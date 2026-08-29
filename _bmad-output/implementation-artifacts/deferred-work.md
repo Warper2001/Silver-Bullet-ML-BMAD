@@ -387,3 +387,21 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-order-tracker.md`
   summary: `sim.py` must translate an `IntentAction.CANCEL` intent-log record into `tracker.cancel(order_id, now_ns)` — the tracker takes `cancel(order_id, now_ns)`, not a CANCEL `OrderIntent`. Fields on a CANCEL record beyond `order_id` are not validated by the tracker. Handle at the sim.py intent-replay seam.
   evidence: edge-case-hunter — asymmetry with submit()/replace(); acceptable but must be wired in sim.py.
+
+## Deferred from: code review of spec-ticksim-fills (2026-08-29, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-fills.md`
+  summary: a `PASSIVE_LIMIT` intent priced *through* the opposite side (i.e. actually marketable on arrival). `fills.py` routes purely on `kind`, so it sits as passive waiting for trade volume at its aggressive price rather than crossing. Part A (AD-16/17) replays real broker orders — a limit entry that the broker filled immediately on arrival must be classified `marketable_limit`, not `passive_limit`, by the intent producer, or it becomes a parity miss. Decide at the Part A slice whether `_passive_fill` should defensively cross or the producer contract just forbids it.
+  evidence: edge-case-hunter + blind-hunter review; a unified "route by actual marketability" model was judged out of scope for this slice (frozen spec separates the three kinds).
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-fills.md`
+  summary: two (or more) same-side marketable orders in a single `decide` tick each walk the full displayed book independently — combined fills can exceed a level's real size. Consistent with "no own-order market impact" and H1 submits one entry at a time, but revisit if a strategy fires multiple marketable orders per tick.
+  evidence: edge-case-hunter — `_walk_book` is per-order; the book is not depleted between orders in the same tick.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-fills.md`
+  summary: a `MARKETABLE_LIMIT` order whose limit is not crossable at its arrival tick — `_walk_book` breaks immediately, the order stays working with zero queue modelling (`observe_book_event` only tracks `PASSIVE_LIMIT`), and it crosses whenever price later reaches it. Same "route by actual marketability" gap as the passive-priced-through item. Clarify producer contract at the Part A / H1 slice.
+  evidence: blind-hunter review.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-fills.md`
+  summary: AD-21's literal tie-break is "earlier `add_ts_ns`, or equal `add_ts_ns` and earlier `sequence`". `counts_resting_order` / `book.queue_ahead_size(strict=True)` ignore `sequence` — defensible (our order carries no vendor sequence at submit, so the tie is always resolved "our order last") but the deviation isn't covered by the AD-21 amendment. Fold a one-line note into AD-21 in a spine polish pass.
+  evidence: blind-hunter — consistent with book.py's own `queue_ahead_size` comment; not a code defect.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-fills.md`
+  summary: `observe_book_event` no-ops on `R` (book clear). An `R` wipes resting liquidity ahead of working passives; their `queue_ahead` is left stale. Treated as an exchange halt/reset (prereg §2.2 not-modelled list, AD-13 mask territory) — but if a session ever contains a mid-RTH `R`, `sim.py` should zero working passives' `queue_ahead` at that seam.
+  evidence: edge-case-hunter.

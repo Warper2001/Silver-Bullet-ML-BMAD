@@ -350,15 +350,21 @@ class Book:
         side: BookSide,
         price_dbn: int,
         our_arrival_ts_ns: int,
+        *,
+        strict: bool = False,
     ) -> int:
         """Total resting size at ``price_dbn`` that is *ahead of* an order
         arriving at ``our_arrival_ts_ns`` (spine AD-22).
 
-        The cutoff is ``add_ts_ns <= our_arrival_ts_ns``: AD-22 says "our order
-        is always last at its price" at submit, so a venue order stamped at
-        exactly our arrival ns is ahead of us. ``sequence`` is not consulted --
-        our order has no vendor sequence (that tie-break belongs to ``fills.py``
-        via AD-21, not to this query).
+        With ``strict=False`` (default, the back-of-queue reading) the cutoff is
+        ``add_ts_ns <= our_arrival_ts_ns``: AD-22 says "our order is always last
+        at its price" at submit, so a venue order stamped at exactly our arrival
+        ns is ahead of us. With ``strict=True`` (the ``TimePriorityModel``
+        reading, ``fills.py``) the cutoff is ``add_ts_ns < our_arrival_ts_ns`` --
+        a venue order stamped at exactly our arrival ns is *not* ahead of us
+        (ties break so our order is last). ``sequence`` is not consulted -- our
+        order has no vendor sequence (that tie-break belongs to ``fills.py`` via
+        AD-21, not to this query).
 
         O(orders-at-that-price) -- that set is small (Design Notes); only the
         touch is required to be O(log n).
@@ -369,9 +375,35 @@ class Book:
         level = sub.side_book(side).get(price_dbn)
         if level is None:
             return 0
+        if strict:
+            return sum(
+                o.size for o in level.orders.values() if o.add_ts_ns < our_arrival_ts_ns
+            )
         return sum(
             o.size for o in level.orders.values() if o.add_ts_ns <= our_arrival_ts_ns
         )
+
+    def resting_levels(
+        self, instrument_id: int, side: BookSide
+    ) -> list[tuple[int, int]]:
+        """``(price_dbn, total_size)`` for every resting level on ``side``,
+        **best price first** (highest bid / lowest ask).
+
+        Used by ``fills._walk_book`` to consume the opposite side for a
+        marketable / marketable-limit order (spine AD-5). Read-only -- the walk
+        never mutates the book (no own-order market impact). ``[]`` if the
+        instrument is unknown or that side is empty.
+        """
+        sub = self._sub(instrument_id)
+        if sub is None:
+            return []
+        side_book = sub.side_book(side)
+        levels = [
+            (int(price), int(level.total_size)) for price, level in side_book.items()
+        ]
+        if side is BookSide.BID:
+            levels.reverse()  # SortedDict is ascending; best bid is the highest
+        return levels
 
     def check_invariants(self) -> None:
         """Assert structural integrity across every instrument (spine AD-16 kin).

@@ -492,6 +492,10 @@ class OrderSnapshot:
     queue_ahead_size_at_submit: int | None
     queue_ahead: int
     cum_trade_vol_since_arrival: int
+    # BBO snapshotted at the arrival tick (spine AD-20); lets fills.py cap a
+    # marketable order's later-tick re-walk at the arrival touch (AD-16 inv. 1).
+    arrival_best_bid_dbn: int | None
+    arrival_best_ask_dbn: int | None
 
 
 class OrderTracker:
@@ -890,6 +894,8 @@ class OrderTracker:
             queue_ahead_size_at_submit=order.queue_ahead_size_at_submit,
             queue_ahead=order.queue_ahead,
             cum_trade_vol_since_arrival=order.cum_trade_vol_since_arrival,
+            arrival_best_bid_dbn=order.arrival_best_bid_dbn,
+            arrival_best_ask_dbn=order.arrival_best_ask_dbn,
         )
 
     def live_order_ids(self) -> list[str]:

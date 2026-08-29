@@ -21,9 +21,13 @@ from src.ticksim.orders import (
     FillEvent,
     IntentAction,
     Leg,
+    LiveState,
     OrderIntent,
     OrderKind,
     OrderOutcome,
+    OrderSnapshot,
+    OrderStateError,
+    OrderTracker,
     Side,
     TerminalState,
 )
@@ -493,3 +497,442 @@ class TestOrderOutcomeIntegerAudit:
             (p, v) for p, v in self._numeric_leaves(payload) if not isinstance(v, int)
         ]
         assert offenders == []
+
+
+# ---------------------------------------------------------------------------
+# OrderTracker -- lifecycle state machine + OCO groups
+# ---------------------------------------------------------------------------
+
+P = 30_000_000_000  # a limit price in DBN 1e-9 fixed-point units
+
+
+def _submit_intent(**overrides: Any) -> OrderIntent:
+    base: dict[str, Any] = dict(
+        action=IntentAction.SUBMIT,
+        order_id="o1",
+        trade_id="t1",
+        leg=Leg.ENTRY,
+        kind=OrderKind.PASSIVE_LIMIT,
+        side=Side.SELL,
+        size=2,
+        limit_px_dbn=P,
+        submit_ts_ns=1_000,
+    )
+    base.update(overrides)
+    return OrderIntent(**base)
+
+
+def _replace_intent(order_id: str, **overrides: Any) -> OrderIntent:
+    base: dict[str, Any] = dict(
+        action=IntentAction.REPLACE,
+        order_id=order_id,
+        replaces_order_id=order_id,
+        trade_id="t1",
+        leg=Leg.ENTRY,
+        kind=OrderKind.PASSIVE_LIMIT,
+        side=Side.SELL,
+        size=2,
+        limit_px_dbn=P,
+        submit_ts_ns=1_000,
+    )
+    base.update(overrides)
+    return OrderIntent(**base)
+
+
+def _fill(order_id: str, size: int, ts_ns: int, px_dbn: int = P) -> FillEvent:
+    return FillEvent(order_id=order_id, px_dbn=px_dbn, size=size, ts_ns=ts_ns)
+
+
+class TestOrderTrackerSubmitAndArrival:
+    """I/O rows: submit -> arrival; not yet arrived; duplicate submit."""
+
+    def test_submit_then_activate_makes_working_with_arrival_ts(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(submit_ts_ns=0), latency_ns=250, now_ns=0)
+        assert tracker.in_flight_order_ids() == ["o1"]
+        tracker.activate_arrivals(now_ns=250)
+        assert tracker.working_order_ids() == ["o1"]
+        assert tracker.live_state("o1") is LiveState.WORKING
+        assert tracker.arrival_ts_ns("o1") == 250
+
+    def test_not_yet_arrived_stays_in_flight(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(submit_ts_ns=0), latency_ns=250, now_ns=0)
+        tracker.activate_arrivals(now_ns=100)
+        assert tracker.in_flight_order_ids() == ["o1"]
+        assert tracker.working_order_ids() == []
+
+    def test_duplicate_submit_raises(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(), latency_ns=10, now_ns=0)
+        with pytest.raises(OrderStateError):
+            tracker.submit(_submit_intent(), latency_ns=10, now_ns=0)
+
+    def test_submit_rejects_non_submit_action(self) -> None:
+        tracker = OrderTracker()
+        with pytest.raises(OrderStateError):
+            tracker.submit(_replace_intent("o1"), latency_ns=10, now_ns=0)
+
+
+class TestOrderTrackerFills:
+    """I/O rows: partial then full fill; over-fill; fill a non-working order."""
+
+    def _working(self, size: int = 4) -> OrderTracker:
+        tracker = OrderTracker()
+        tracker.submit(
+            _submit_intent(size=size, submit_ts_ns=0), latency_ns=0, now_ns=0
+        )
+        tracker.activate_arrivals(now_ns=0)
+        return tracker
+
+    def test_partial_then_full_fill(self) -> None:
+        tracker = self._working(size=4)
+        tracker.apply_fill(_fill("o1", size=2, ts_ns=10), now_ns=10)
+        assert tracker.terminal_state("o1") is None
+        tracker.apply_fill(_fill("o1", size=2, ts_ns=20), now_ns=20)
+        assert tracker.terminal_state("o1") is TerminalState.FILLED
+        (outcome,) = tracker.finalize()
+        assert len(outcome.fills) == 2
+        assert outcome.time_to_fill_ns == 20  # now_ns - arrival_ts_ns (0)
+
+    def test_over_fill_raises(self) -> None:
+        tracker = self._working(size=3)
+        with pytest.raises(OrderStateError):
+            tracker.apply_fill(_fill("o1", size=4, ts_ns=10), now_ns=10)
+
+    def test_fill_a_non_working_order_raises(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(size=2), latency_ns=250, now_ns=0)
+        # still IN_FLIGHT
+        with pytest.raises(OrderStateError):
+            tracker.apply_fill(_fill("o1", size=1, ts_ns=10), now_ns=10)
+
+    def test_fill_unknown_order_raises(self) -> None:
+        tracker = OrderTracker()
+        with pytest.raises(OrderStateError):
+            tracker.apply_fill(_fill("nope", size=1, ts_ns=10), now_ns=10)
+
+
+class TestOrderTrackerOCOCascade:
+    """I/O row: OCO cascade -- filling one member cancels the others."""
+
+    def _group(self) -> OrderTracker:
+        tracker = OrderTracker()
+        for oid, leg in (("entry", Leg.ENTRY), ("tp", Leg.EXIT), ("sl", Leg.EXIT)):
+            tracker.submit(
+                _submit_intent(
+                    order_id=oid, leg=leg, size=2, oco_group_id="grp", submit_ts_ns=0
+                ),
+                latency_ns=0,
+                now_ns=0,
+            )
+        tracker.activate_arrivals(now_ns=0)
+        return tracker
+
+    def test_fill_tp_cancels_entry_and_sl_at_same_now(self) -> None:
+        tracker = self._group()
+        tracker.apply_fill(_fill("tp", size=2, ts_ns=500), now_ns=500)
+        assert tracker.terminal_state("tp") is TerminalState.FILLED
+        assert tracker.terminal_state("entry") is TerminalState.CANCELLED
+        assert tracker.terminal_state("sl") is TerminalState.CANCELLED
+        assert tracker.terminal_ts_ns("entry") == 500
+        assert tracker.terminal_ts_ns("sl") == 500
+
+    def test_group_membership_is_queryable(self) -> None:
+        tracker = self._group()
+        assert tracker.oco_group_members("grp") == ["entry", "sl", "tp"]
+        assert tracker.oco_group_members("unknown") == []
+
+    def test_partial_fill_does_not_cascade(self) -> None:
+        tracker = self._group()
+        tracker.apply_fill(_fill("tp", size=1, ts_ns=500), now_ns=500)
+        assert tracker.terminal_state("tp") is None
+        assert tracker.working_order_ids() == ["entry", "tp", "sl"]
+
+
+class TestOrderTrackerCancelReplaceExpireReject:
+    """I/O rows: cancel working; replace size-down same price; replace price
+    change; expire at interval end; reject."""
+
+    def _working(self, **intent_overrides: Any) -> OrderTracker:
+        tracker = OrderTracker()
+        tracker.submit(
+            _submit_intent(submit_ts_ns=0, **intent_overrides),
+            latency_ns=0,
+            now_ns=0,
+        )
+        tracker.activate_arrivals(now_ns=0)
+        return tracker
+
+    def test_cancel_working(self) -> None:
+        tracker = self._working()
+        tracker.cancel("o1", now_ns=42)
+        assert tracker.terminal_state("o1") is TerminalState.CANCELLED
+        assert tracker.terminal_ts_ns("o1") == 42
+        assert tracker.live_state("o1") is None
+
+    def test_cancel_terminal_order_raises(self) -> None:
+        tracker = self._working()
+        tracker.cancel("o1", now_ns=42)
+        with pytest.raises(OrderStateError):
+            tracker.cancel("o1", now_ns=43)
+
+    def test_replace_size_down_same_price_keeps_priority(self) -> None:
+        tracker = self._working(size=5)
+        tracker.set_queue_position("o1", rank=3, ahead_size=9)
+        add_ts_before = tracker.snapshot("o1").add_ts_ns
+        tracker.replace(
+            _replace_intent("o1", size=3, limit_px_dbn=P, submit_ts_ns=2_000),
+            latency_ns=250,
+            now_ns=2_000,
+        )
+        snap = tracker.snapshot("o1")
+        assert tracker.live_state("o1") is LiveState.WORKING
+        assert snap.size == 3
+        assert snap.add_ts_ns == add_ts_before
+        assert snap.queue_rank_at_submit == 3
+        assert snap.queue_ahead_size_at_submit == 9
+
+    def test_replace_price_change_returns_to_in_flight_and_clears_queue(self) -> None:
+        tracker = self._working(size=5)
+        tracker.set_queue_position("o1", rank=3, ahead_size=9)
+        tracker.replace(
+            _replace_intent("o1", size=5, limit_px_dbn=P + 250_000, submit_ts_ns=2_000),
+            latency_ns=250,
+            now_ns=2_000,
+        )
+        assert tracker.in_flight_order_ids() == ["o1"]
+        assert tracker.arrival_ts_ns("o1") == 2_250  # fresh submit_ts + latency
+        tracker.activate_arrivals(now_ns=2_250)
+        snap = tracker.snapshot("o1")
+        assert snap.queue_rank_at_submit is None
+        assert snap.queue_ahead_size_at_submit is None
+        assert snap.queue_ahead == 0
+
+    def test_replace_can_set_queue_position_again_after_price_change(self) -> None:
+        tracker = self._working(size=5)
+        tracker.set_queue_position("o1", rank=3, ahead_size=9)
+        tracker.replace(
+            _replace_intent("o1", size=5, limit_px_dbn=P + 250_000, submit_ts_ns=2_000),
+            latency_ns=0,
+            now_ns=2_000,
+        )
+        tracker.activate_arrivals(now_ns=2_000)
+        tracker.set_queue_position("o1", rank=1, ahead_size=2)
+        assert tracker.snapshot("o1").queue_ahead_size_at_submit == 2
+
+    def test_expire_all_hits_working_and_in_flight(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(
+            _submit_intent(order_id="w", submit_ts_ns=0), latency_ns=0, now_ns=0
+        )
+        tracker.submit(
+            _submit_intent(order_id="f", submit_ts_ns=0), latency_ns=999, now_ns=0
+        )
+        tracker.activate_arrivals(now_ns=0)
+        assert tracker.working_order_ids() == ["w"]
+        assert tracker.in_flight_order_ids() == ["f"]
+        tracker.expire_all(now_ns=7_000)
+        assert tracker.terminal_state("w") is TerminalState.EXPIRED
+        assert tracker.terminal_state("f") is TerminalState.EXPIRED
+        assert tracker.terminal_ts_ns("w") == 7_000
+        assert tracker.terminal_ts_ns("f") == 7_000
+
+    def test_reject_from_in_flight(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(), latency_ns=250, now_ns=0)
+        tracker.reject("o1", now_ns=5, reason="broker nak")
+        assert tracker.terminal_state("o1") is TerminalState.REJECTED
+
+    def test_reject_from_working_raises(self) -> None:
+        tracker = self._working()
+        with pytest.raises(OrderStateError):
+            tracker.reject("o1", now_ns=5, reason="too late")
+
+
+class TestOrderTrackerSettersAndCounters:
+    """I/O rows: set queue position twice; adverse on a non-filled order.
+    Plus the counter mutators (spine AD-21/22) and the snapshot contract."""
+
+    def _working(self, size: int = 4) -> OrderTracker:
+        tracker = OrderTracker()
+        tracker.submit(
+            _submit_intent(size=size, submit_ts_ns=0), latency_ns=0, now_ns=0
+        )
+        tracker.activate_arrivals(now_ns=0)
+        return tracker
+
+    def test_set_queue_position_twice_raises(self) -> None:
+        tracker = self._working()
+        tracker.set_queue_position("o1", rank=2, ahead_size=5)
+        with pytest.raises(OrderStateError):
+            tracker.set_queue_position("o1", rank=1, ahead_size=1)
+
+    def test_set_arrival_bbo_twice_raises(self) -> None:
+        tracker = self._working()
+        tracker.set_arrival_bbo("o1", bid_dbn=P, ask_dbn=P + 250_000)
+        with pytest.raises(OrderStateError):
+            tracker.set_arrival_bbo("o1", bid_dbn=None, ask_dbn=None)
+
+    def test_adverse_on_non_filled_order_raises(self) -> None:
+        tracker = self._working()
+        tracker.cancel("o1", now_ns=10)
+        with pytest.raises(OrderStateError):
+            tracker.set_adverse_selection("o1", True)
+
+    def test_adverse_on_filled_order_then_finalize(self) -> None:
+        tracker = self._working(size=2)
+        tracker.apply_fill(_fill("o1", size=2, ts_ns=10), now_ns=10)
+        tracker.set_adverse_selection("o1", True)
+        (outcome,) = tracker.finalize()
+        assert outcome.adverse_selection is True
+
+    def test_adverse_after_finalize_raises(self) -> None:
+        tracker = self._working(size=2)
+        tracker.apply_fill(_fill("o1", size=2, ts_ns=10), now_ns=10)
+        tracker.finalize()
+        with pytest.raises(OrderStateError):
+            tracker.set_adverse_selection("o1", True)
+
+    def test_snapshot_carries_the_acceptance_fields(self) -> None:
+        tracker = self._working(size=6)
+        tracker.set_queue_position("o1", rank=4, ahead_size=12)
+        tracker.add_trade_volume("o1", 3)
+        tracker.add_trade_volume("o1", 2)
+        tracker.decrement_queue_ahead("o1", 5)
+        snap = tracker.snapshot("o1")
+        assert isinstance(snap, OrderSnapshot)
+        assert snap.queue_ahead == 7  # 12 - 5
+        assert snap.cum_trade_vol_since_arrival == 5
+        assert snap.queue_ahead_size_at_submit == 12
+        assert snap.add_ts_ns == 0
+        assert snap.size == 6
+        assert snap.side is Side.SELL
+        assert snap.limit_px_dbn == P
+
+    def test_snapshot_is_frozen(self) -> None:
+        tracker = self._working()
+        snap = tracker.snapshot("o1")
+        with pytest.raises(Exception):
+            snap.queue_ahead = 99  # type: ignore[misc]
+
+    def test_decrement_queue_ahead_floors_at_zero(self) -> None:
+        tracker = self._working()
+        tracker.set_queue_position("o1", rank=1, ahead_size=2)
+        tracker.decrement_queue_ahead("o1", 10)
+        assert tracker.snapshot("o1").queue_ahead == 0
+
+    def test_snapshot_of_non_working_order_raises(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(), latency_ns=250, now_ns=0)
+        with pytest.raises(OrderStateError):
+            tracker.snapshot("o1")
+
+
+class TestOrderTrackerFinalize:
+    """I/O rows: finalize with a live order; finalize all terminal."""
+
+    def test_finalize_with_a_live_order_raises(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(submit_ts_ns=0), latency_ns=0, now_ns=0)
+        tracker.activate_arrivals(now_ns=0)
+        with pytest.raises(OrderStateError):
+            tracker.finalize()
+
+    def test_finalize_is_submit_ordered_and_one_per_order(self) -> None:
+        tracker = OrderTracker()
+        for oid in ("c", "a", "b"):
+            tracker.submit(
+                _submit_intent(order_id=oid, submit_ts_ns=0), latency_ns=0, now_ns=0
+            )
+        tracker.activate_arrivals(now_ns=0)
+        tracker.cancel("c", now_ns=1)
+        tracker.cancel("a", now_ns=1)
+        tracker.cancel("b", now_ns=1)
+        outcomes = tracker.finalize()
+        assert [o.order_id for o in outcomes] == ["c", "a", "b"]
+
+    def test_finalized_outcome_fields_are_all_populated(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(
+            _submit_intent(order_id="o1", size=2, submit_ts_ns=100),
+            latency_ns=250,
+            now_ns=100,
+        )
+        tracker.activate_arrivals(now_ns=350)
+        tracker.set_queue_position("o1", rank=2, ahead_size=6)
+        tracker.set_arrival_bbo("o1", bid_dbn=P, ask_dbn=P + 250_000)
+        tracker.apply_fill(_fill("o1", size=2, ts_ns=900), now_ns=900)
+        (outcome,) = tracker.finalize()
+        assert outcome.order_id == "o1"
+        assert outcome.submit_ts_ns == 100
+        assert outcome.arrival_ts_ns == 350
+        assert outcome.terminal_state is TerminalState.FILLED
+        assert outcome.queue_rank_at_submit == 2
+        assert outcome.queue_ahead_size_at_submit == 6
+        assert outcome.time_to_fill_ns == 550  # 900 - 350
+        assert outcome.arrival_best_bid_dbn == P
+        assert outcome.arrival_best_ask_dbn == P + 250_000
+        assert len(outcome.fills) == 1
+
+
+class TestOrderTrackerBracketLifecycle:
+    """End-to-end: submit a 3-order bracket, arrive, partially fill the entry,
+    then fill the TP -> the SL (and the still-working entry) cancel; finalize
+    yields three coherent OrderOutcomes in submit order (spec Acceptance)."""
+
+    def test_full_bracket(self) -> None:
+        tracker = OrderTracker()
+        legs = [
+            ("entry", Leg.ENTRY, OrderKind.PASSIVE_LIMIT, P),
+            ("tp", Leg.EXIT, OrderKind.PASSIVE_LIMIT, P - 500_000),
+            ("sl", Leg.EXIT, OrderKind.MARKETABLE, None),
+        ]
+        for oid, leg, kind, px in legs:
+            tracker.submit(
+                _submit_intent(
+                    order_id=oid,
+                    trade_id="rt-1",
+                    leg=leg,
+                    kind=kind,
+                    side=Side.SELL,
+                    size=2,
+                    limit_px_dbn=px,
+                    oco_group_id="bracket-1",
+                    submit_ts_ns=0,
+                ),
+                latency_ns=250,
+                now_ns=0,
+            )
+        tracker.activate_arrivals(now_ns=250)
+        assert tracker.working_order_ids() == ["entry", "tp", "sl"]
+
+        # entry partially fills -- still working, no cascade
+        tracker.apply_fill(_fill("entry", size=1, ts_ns=300), now_ns=300)
+        assert tracker.terminal_state("entry") is None
+
+        # tp fills fully -> entry + sl cancel at the identical now_ns
+        tracker.apply_fill(
+            _fill("tp", size=2, ts_ns=900, px_dbn=P - 500_000), now_ns=900
+        )
+
+        assert tracker.terminal_ts_ns("entry") == 900
+        assert tracker.terminal_ts_ns("sl") == 900
+
+        outcomes = tracker.finalize()
+        assert [o.order_id for o in outcomes] == ["entry", "tp", "sl"]
+        by_id = {o.order_id: o for o in outcomes}
+
+        assert by_id["entry"].terminal_state is TerminalState.CANCELLED
+        assert len(by_id["entry"].fills) == 1
+        assert by_id["entry"].time_to_fill_ns is None
+
+        assert by_id["tp"].terminal_state is TerminalState.FILLED
+        assert by_id["tp"].fills[0].size == 2
+        assert by_id["tp"].fills[0].px_dbn == P - 500_000
+        assert by_id["tp"].time_to_fill_ns == 650  # 900 - 250
+
+        assert by_id["sl"].terminal_state is TerminalState.CANCELLED
+        assert by_id["sl"].fills == ()
+
+        assert {o.trade_id for o in outcomes} == {"rt-1"}

@@ -205,7 +205,7 @@ graph TD
 
 - **Binds:** `orders.py`, `sim.py`, `parity/part_a.py`
 - **Prevents:** bracket handling being ad-hoc; a sibling-cancel being mistaken for AD-2 feedback
-- **Rule:** an OCO group (`oco_group_id`) links a set of orders (a bracket = entry + TP + SL). When any member reaches `filled`, `OrderTracker` deterministically transitions the other members `working|in_flight → cancelled` **in the same tick**. This is bookkeeping the broker also performs; it generates **no new `OrderIntent`** and does not violate AD-2.
+- **Rule:** an OCO group (`oco_group_id`) links a set of orders (a bracket = entry + TP + SL). The cascade is **leg-aware** (amended 2026-08-29): when an **`exit`**-leg member reaches `filled`, `OrderTracker` deterministically transitions the other members `working|in_flight → cancelled` **in the same tick**; when an **`entry`**-leg member fills, nothing is cancelled — the exits stay live so the position can be closed and `parity/part_a.py` can replay the real exit fill. This is bookkeeping the broker also performs; it generates **no new `OrderIntent`** and does not violate AD-2.
 
 ### AD-26 — Parity-gate output contract
 

@@ -24,7 +24,7 @@ context:
 - One `OrderTracker` owns the machine. Live states: `IN_FLIGHT`, `WORKING`; terminals map 1:1 to `TerminalState` (`FILLED/CANCELLED/REJECTED/EXPIRED`). Transitions only via the tracker's methods; any illegal transition raises `OrderStateError`.
 - `submit(intent, latency_ns, now_ns)` — `intent.action == SUBMIT`; creates the order `IN_FLIGHT` with `arrival_ts_ns = intent.submit_ts_ns + latency_ns`; registers it in the `intent.oco_group_id` group if set. Duplicate `order_id` → `OrderStateError`.
 - `activate_arrivals(now_ns)` — every `IN_FLIGHT` order with `arrival_ts_ns <= now_ns` → `WORKING`.
-- `apply_fill(fill_event, now_ns)` — order must be `WORKING`; `filled_qty += size` (append the `Fill`); `filled_qty > order size` → `OrderStateError`; on `filled_qty == size` → `FILLED`, set `time_to_fill_ns = now_ns - arrival_ts_ns`, and **cancel every other live member of its OCO group at `now_ns`** (spine AD-25 — bookkeeping, no new intent).
+- `apply_fill(fill_event, now_ns)` — order must be `WORKING`; `filled_qty += size` (append the `Fill`); `filled_qty > order size` → `OrderStateError`; on `filled_qty == size` → `FILLED`, set `time_to_fill_ns = now_ns - arrival_ts_ns`. **Leg-aware OCO cascade (spine AD-25, amended 2026-08-29):** if the just-filled order is an **`EXIT`** leg, cancel every other live member of its OCO group at `now_ns` (bookkeeping, no new intent) and return their ids; an **`ENTRY`**-leg fill cascades nothing (the exits stay live so the position can be closed and Part A can replay the real exit). Returns `list[str]` — the cascaded ids, `[]` otherwise.
 - `cancel(order_id, now_ns)` / `replace(intent, latency_ns, now_ns)` from `IN_FLIGHT` or `WORKING`. `replace`: a **size decrease at the same price** stays `WORKING`, keeps `add_ts_ns` + queue counters (priority preserved); **any price change** → back to `IN_FLIGHT` with a fresh `arrival_ts_ns` and queue counters cleared to `None` (priority lost, spine AD-8).
 - `expire_all(now_ns)` — every `IN_FLIGHT` and `WORKING` order → `EXPIRED` at `now_ns` (spine AD-13(b); sim calls it at a `valid_interval` end, `[start, end)`).
 - `reject(order_id, now_ns, reason)` from `IN_FLIGHT`.
@@ -53,7 +53,9 @@ context:
 | Partial then full fill | `WORKING` size 4; `apply_fill(sz2)`, `apply_fill(sz2)` | after 2nd: `FILLED`, `len(fills)==2`, `time_to_fill_ns` set | N/A |
 | Over-fill | `WORKING` size 3; `apply_fill(sz4)` | — | `OrderStateError` |
 | Fill a non-working order | `IN_FLIGHT`; `apply_fill(...)` | — | `OrderStateError` |
-| OCO cascade | group {entry, tp, sl} all live; `apply_fill` fills `tp` | `tp` `FILLED`; `entry`, `sl` → `CANCELLED` at the same `now_ns` | N/A |
+| OCO cascade — exit leg fills | group {entry, tp, sl} all live; `apply_fill` fills `tp` (an `EXIT` leg) | `tp` `FILLED`; `entry`, `sl` → `CANCELLED` at the same `now_ns`; `apply_fill` returns `["entry", "sl"]` (sorted) | N/A |
+| OCO cascade — entry leg fills | group {entry, tp, sl} all live; `apply_fill` fully fills `entry` (an `ENTRY` leg) | `entry` `FILLED`; `tp`, `sl` stay `WORKING`; `apply_fill` returns `[]` | N/A |
+| OCO cascade — both exits cross same tick | `tp` and `sl` both fully fill in one `fills.decide` batch | first `apply_fill` → that leg `FILLED` + sibling `CANCELLED`; second `apply_fill` on the cancelled sibling returns `[]` (voided, not an error) | N/A |
 | Cancel working | `WORKING`; `cancel(now)` | `CANCELLED`, `terminal` at `now` | N/A |
 | Replace, size down same price | `WORKING` size 5 @ P; `replace(size 3 @ P)` | stays `WORKING`, size 3, `add_ts_ns`/`queue_*` unchanged | N/A |
 | Replace, price change | `WORKING` @ P; `replace(@ P')` | → `IN_FLIGHT`, new `arrival_ts_ns`, `queue_rank/ahead_at_submit` → `None` | N/A |
@@ -101,6 +103,28 @@ context:
 
 ## Spec Change Log
 
+### 2026-08-29 (later) — AD-25 leg-aware cascade [HUMAN-AUTHORIZED frozen-block amendment]
+
+Alex chose "leg-aware cascade" for the AD-25 question surfaced by the review pass
+(below). Frozen-block edits, authorized:
+- Boundaries `apply_fill` bullet: the OCO cascade now fires **only on an `EXIT`-leg
+  fill** (cancels the other live group members + returns their ids); an `ENTRY`-leg
+  fill cascades nothing.
+- I/O matrix: the old single "OCO cascade" row is replaced by three — exit-leg
+  fills (cascades), entry-leg fills (no cascade), and both-exits-cross-same-tick
+  (second fill voided).
+
+Known-bad state this avoids: a fully-filled bracket ENTRY cancelling its own TP/SL
+(naked position) and Part A (AD-16/17) being unable to replay a real exit fill.
+Code: `_cascade_oco` gains a `filled.intent.leg is Leg.EXIT` guard; `+1` test
+(`test_entry_leg_fill_cascades_nothing`), `test_replace_of_oco_member_*` reworked to
+a TP/SL pair. Spine AD-25 amended in the same pass (its Rule now carries the
+leg-aware wording).
+
+KEEP: `_cascade_oco`'s sorted iteration + reuse of `cancel` + `oco_cancelled_at`
+tagging for the same-tick void — the leg guard is a filter in front of that, nothing
+else changed.
+
 ### 2026-08-29 — review pass (blind-hunter / edge-case-hunter / verification-gap), no frozen-block change
 
 The three reviewers ran against the OrderTracker diff. No `bad_spec` / `intent_gap`
@@ -136,15 +160,12 @@ loopback — the frozen block held. Findings triaged as follows.
   `side/leg/kind` on a `BUY` outcome. `test_snapshot_is_frozen` tightened to
   `dataclasses.FrozenInstanceError`.
 
-**Surfaced, NOT patched (frozen spine + frozen block — needs a human call):**
-- **AD-25 bracket semantics.** As frozen, any group member reaching `FILLED`
-  cancels every other member, so a fully-filled bracket ENTRY cancels its own
-  TP/SL. The tracker implements the frozen AD faithfully; the fix (leg-aware
-  cascade, or entry not sharing the group) touches AD-25 + the frozen matrix +
-  the Part A slice. Logged in `deferred-work.md`; resolve before `fills.py`/`sim.py`
-  and the Part A slice. **KEEP:** the current `_cascade_oco` structure (sorted
-  iteration, reuse of `cancel`, returns the id list) — a leg-aware rule slots in
-  as a filter on which members it visits.
+**Surfaced, then RESOLVED by the AD-25 leg-aware amendment above:**
+- **AD-25 bracket semantics.** As originally frozen, any group member reaching
+  `FILLED` cancelled every other member, so a fully-filled bracket ENTRY cancelled
+  its own TP/SL and Part A (AD-16/17) could not replay a real exit fill. Alex chose
+  the leg-aware cascade; frozen block + spine AD-25 amended, code + tests updated
+  (see the later 2026-08-29 entry). No longer open.
 
 ## Suggested Review Order
 
@@ -158,10 +179,10 @@ loopback — the frozen block held. Findings triaged as follows.
 
 **OCO / bracket (AD-25)**
 
-- `_cascade_oco` — on `FILLED`, cancels the other live group members at the same
-  `now_ns`, returns their ids; `oco_cancelled_at` tags them so a same-tick stale
-  fill on the losing leg is voided
-- ⚠️ `apply_fill` cascades on *any* leg — see Spec Change Log, AD-25 open question
+- `_cascade_oco` — **leg-aware**: on an `EXIT`-leg `FILLED`, cancels the other live
+  group members at the same `now_ns` and returns their ids; an `ENTRY`-leg fill
+  returns `[]`. `oco_cancelled_at` tags cancelled legs so a same-tick stale fill on
+  a losing exit is voided.
 
 **replace priority rules (AD-8)**
 

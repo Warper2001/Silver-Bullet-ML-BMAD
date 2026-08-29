@@ -613,16 +613,16 @@ class OrderTracker:
 
         ``filled_qty += fill_event.size`` and the :class:`Fill` is appended.
         A cumulative fill past the order size raises. When ``filled_qty``
-        reaches the order size the order becomes ``FILLED``,
-        ``time_to_fill_ns = now_ns - arrival_ts_ns`` is recorded, and every
-        other live member of its OCO group is cancelled at ``now_ns``
-        (spine AD-25 -- bookkeeping, no new intent).
+        reaches the order size the order becomes ``FILLED``; if the filled
+        order is an **EXIT** leg, every other live member of its OCO group is
+        cancelled at ``now_ns`` (leg-aware cascade, spine AD-25 -- bookkeeping,
+        no new intent). An ENTRY-leg fill cascades nothing.
 
         Returns the ids cancelled by the OCO cascade (``[]`` when the fill was
-        partial or the order has no group) -- ``sim.py`` records these in the
-        outcome log. If both legs of an OCO cross in the same ``fills.decide``
-        batch, the fill on the leg the cascade already cancelled *this tick* is
-        voided (returns ``[]``), not an error.
+        partial, an entry-leg fill, or the order has no group) -- ``sim.py``
+        records these in the outcome log. If both exit legs of an OCO cross in
+        the same ``fills.decide`` batch, the fill on the leg the cascade
+        already cancelled *this tick* is voided (returns ``[]``), not an error.
 
         Caller (``sim.py``) owns exactly-once delivery: :class:`FillEvent`s come
         straight from one ``fills.decide`` call per tick and are never replayed.
@@ -659,12 +659,20 @@ class OrderTracker:
         return []
 
     def _cascade_oco(self, filled_order_id: str, now_ns: int) -> list[str]:
-        """Cancel the other live members of ``filled_order_id``'s OCO group
-        (spine AD-25). Reuses :meth:`cancel` so its guards apply; iterates
-        sorted for determinism (spine AD-11).
+        """Leg-aware OCO cascade (spine AD-25).
+
+        A bracket shares one ``oco_group_id`` across entry + TP + SL. Only an
+        **EXIT**-leg fill closes the bracket: it cancels every other live
+        member (the sibling exit, and any entry still unfilled). An
+        **ENTRY**-leg fill cascades **nothing** -- the exits stay live so the
+        position can be closed (and so Part A can replay the real exit fill).
+
+        Reuses :meth:`cancel` so its guards apply; iterates sorted for
+        determinism (spine AD-11).
         """
-        group_id = self._orders[filled_order_id].intent.oco_group_id
-        if group_id is None:
+        filled = self._orders[filled_order_id]
+        group_id = filled.intent.oco_group_id
+        if group_id is None or filled.intent.leg is not Leg.EXIT:
             return []
         cascaded: list[str] = []
         for other_id in sorted(self._oco_groups.get(group_id, set())):

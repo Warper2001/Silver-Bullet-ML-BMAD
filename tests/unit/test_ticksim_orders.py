@@ -650,6 +650,14 @@ class TestOrderTrackerOCOCascade:
         assert tracker.terminal_state("tp") is None
         assert tracker.working_order_ids() == ["entry", "tp", "sl"]
 
+    def test_entry_leg_fill_cascades_nothing(self) -> None:
+        # leg-aware AD-25: a fully-filled bracket ENTRY leaves TP + SL live
+        tracker = self._group()
+        cascaded = tracker.apply_fill(_fill("entry", size=2, ts_ns=500), now_ns=500)
+        assert cascaded == []
+        assert tracker.terminal_state("entry") is TerminalState.FILLED
+        assert tracker.working_order_ids() == ["tp", "sl"]
+
 
 class TestOrderTrackerCancelReplaceExpireReject:
     """I/O rows: cancel working; replace size-down same price; replace price
@@ -1026,16 +1034,23 @@ class TestOrderTrackerReviewHardening:
 
     def test_replace_of_oco_member_keeps_group_and_cascades(self) -> None:
         tracker = OrderTracker()
-        for oid in ("entry", "exit"):
+        for oid in ("tp", "sl"):
             tracker.submit(
-                _submit_intent(order_id=oid, size=2, oco_group_id="g", submit_ts_ns=0),
+                _submit_intent(
+                    order_id=oid,
+                    leg=Leg.EXIT,
+                    size=2,
+                    oco_group_id="g",
+                    submit_ts_ns=0,
+                ),
                 latency_ns=0,
                 now_ns=0,
             )
         tracker.activate_arrivals(now_ns=0)
         tracker.replace(
             _replace_intent(
-                "entry",
+                "tp",
+                leg=Leg.EXIT,
                 size=2,
                 limit_px_dbn=P + 250_000,
                 oco_group_id="g",
@@ -1045,9 +1060,10 @@ class TestOrderTrackerReviewHardening:
             now_ns=100,
         )
         tracker.activate_arrivals(now_ns=100)
-        cascaded = tracker.apply_fill(_fill("entry", size=2, ts_ns=200), now_ns=200)
-        assert cascaded == ["exit"]
-        assert tracker.terminal_state("exit") is TerminalState.CANCELLED
+        # filling the sibling exit still cascades to the replaced member
+        cascaded = tracker.apply_fill(_fill("sl", size=2, ts_ns=200), now_ns=200)
+        assert cascaded == ["tp"]
+        assert tracker.terminal_state("tp") is TerminalState.CANCELLED
 
     # --- OCO cascade return + same-tick crossing --------------------
 

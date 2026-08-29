@@ -324,3 +324,36 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - Report PF per timeframe, best_TF_PF = max of non-None PFs, verdict (≥ 1.1 → design_phase2_ml_test; < 1.1 → PIVOT)
 - Gate: same `--preregistration 910e95c` + ACCESS_LOG append, same self-contained implementation pattern as S12
 - Spec draft: `spec-program-c-phase-1-s12-s13.md` (S13 tasks already written; trim S12 tasks and rename if resuming)
+- source_spec: none
+  summary: src/ticksim/book.py — L3 OrderBook per instrument_id + apply_event(A/C/M/T/F) + queries (AD-3, AD-9, AD-22)
+  evidence: split from the ticksim build; independently shippable after the foundation contract layer
+- source_spec: none
+  summary: src/ticksim/orders.py OrderTracker — the order lifecycle state machine + OCO groups (AD-8, AD-25)
+  evidence: split from the ticksim build; depends only on the foundation schemas
+- source_spec: none
+  summary: src/ticksim/events.py — BookEventSource protocol + DbnMboSource + stable merge_streams (AD-18, AD-20)
+  evidence: split from the ticksim build
+- source_spec: none
+  summary: src/ticksim/fills.py — pure decide() + BackOfQueueModel/TimePriorityModel + observe_book_event (AD-5, AD-21, AD-22)
+  evidence: split from the ticksim build; depends on book + orders
+- source_spec: none
+  summary: src/ticksim/sim.py — SimRun discrete-event loop (AD-20), book->order seam (AD-21), deferred adverse-selection (AD-28), run manifest (AD-11)
+  evidence: split from the ticksim build; the orchestration layer, depends on all leaves
+- source_spec: none
+  summary: src/ticksim/report.py — the three-way P&L report (AD-14, AD-24)
+  evidence: split from the ticksim build
+- source_spec: none
+  summary: src/ticksim/parity/ — invariants.py (AD-16), part_a.py (AD-17), part_b.py, gate.py (AD-26); the acceptance gate
+  evidence: split from the ticksim build; the parity gate that certifies the simulator per seal §3/Amendment 8
+- source_spec: none
+  summary: src/ticksim/cli.py — `simulate` and `parity-gate` entry points
+  evidence: split from the ticksim build
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-foundation.md`
+  summary: AD-24 wording — DOLLARS_PER_INDEX_POINT is a compile-time constant report.py imports directly from config.py; "read from the manifest's SimConfig dump" in AD-24 applies only to the configurable fee fields (commission/exch_reg). Reconcile at the report.py spec + a spine touch-up.
+  evidence: blind-hunter review — a module constant does not appear in SimConfig.model_dump(), so AD-24 as literally worded is unsatisfiable. config.py placement is correct; only the AD sentence + the future consumer need aligning.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-foundation.md`
+  summary: SimConfig derived-config creation (AD-15) must re-validate — Pydantic v2 model_copy(update=) skips validation. Provide a SimConfig.derive() helper or use model_validate(base.model_dump() | overrides) when study/report code lands.
+  evidence: blind-hunter — AD-15 tells studies to build derived configs; model_copy bypass would let latency_ns=-1 or a float through silently.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-foundation.md`
+  summary: spine AD-12 field names queue_rank_at_submit / queue_ahead_size_at_submit read "_at_submit" but AD-22 computes them at the arrival tick — consider renaming to _at_arrival in a spine polish pass (not a code defect; impl matches the AD).
+  evidence: blind-hunter — semantic/name mismatch; deferred because it is a spine-AD wording change, not a diff defect.

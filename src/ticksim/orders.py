@@ -455,6 +455,11 @@ class _TrackedOrder:
     reject_reason: str | None = None
     queue_position_set: bool = False
     arrival_bbo_set: bool = False
+    adverse_selection_set: bool = False
+    # set to `now_ns` when this order is cancelled by an OCO cascade, so a
+    # same-tick fill on the losing leg (both legs of an OCO crossing in one
+    # `fills.decide` batch) is voided rather than raising (review: edge-case).
+    oco_cancelled_at: int | None = None
 
     @property
     def is_live(self) -> bool:
@@ -469,12 +474,15 @@ class OrderSnapshot:
 
     Carries, per the spec's acceptance criterion: ``queue_ahead``,
     ``cum_trade_vol_since_arrival``, ``queue_ahead_size_at_submit``,
-    ``add_ts_ns``, ``size``, ``side``, ``limit_px_dbn`` -- plus a few more
-    read-only fields a queue model may want.
+    ``add_ts_ns``, ``size``, ``side``, ``limit_px_dbn`` -- plus ``kind`` (the
+    queue model branches marketable vs passive on it) and a few more read-only
+    fields a queue model may want. Fields the ``fills.decide`` signature turns
+    out to need beyond these are added when that slice lands.
     """
 
     order_id: str
     side: Side
+    kind: OrderKind
     size: int
     limit_px_dbn: int | None
     arrival_ts_ns: int
@@ -509,8 +517,29 @@ class OrderTracker:
         # oco_group_id -> the set of order ids registered in that group (AD-25)
         self._oco_groups: dict[str, set[str]] = {}
         self._finalized: bool = False
+        # highest `now_ns` any transition has been called with; the clock only
+        # moves forward (review: edge-case -- a backwards clock silently
+        # produced negative durations and non-monotonic terminal timestamps).
+        self._last_now_ns: int = 0
 
     # --- internal guards --------------------------------------------------
+
+    def _require_open(self) -> None:
+        """Every mutating transition funnels through here first: once
+        :meth:`finalize` has run the tracker is sealed and any further
+        transition would be silently absent from the emitted outcome list
+        (review: edge-case).
+        """
+        if self._finalized:
+            _state_error("tracker already finalized; no further transitions")
+
+    def _advance_clock(self, now_ns: int) -> None:
+        """Guard + record the monotonic simulation clock. `now_ns` may repeat
+        (many transitions share a tick) but never move backwards.
+        """
+        if now_ns < self._last_now_ns:
+            _state_error(f"now_ns went backwards: {now_ns} < last {self._last_now_ns}")
+        self._last_now_ns = now_ns
 
     def _get(self, order_id: str) -> _TrackedOrder:
         order = self._orders.get(order_id)
@@ -544,6 +573,7 @@ class OrderTracker:
         accepted for call-site symmetry with the other transitions.
         """
         del now_ns  # not needed to create an IN_FLIGHT order; kept for symmetry
+        self._require_open()
         if intent.action is not IntentAction.SUBMIT:
             _state_error(f"submit() needs action == submit, got {intent.action.value}")
         if latency_ns < 0:
@@ -563,6 +593,8 @@ class OrderTracker:
         now_ns`` to ``WORKING`` (spine AD-8). Returns the ids activated, in
         submit order.
         """
+        self._require_open()
+        self._advance_clock(now_ns)
         activated: list[str] = []
         for order_id, order in self._orders.items():
             if (
@@ -575,7 +607,7 @@ class OrderTracker:
                 activated.append(order_id)
         return activated
 
-    def apply_fill(self, fill_event: FillEvent, now_ns: int) -> None:
+    def apply_fill(self, fill_event: FillEvent, now_ns: int) -> list[str]:
         """Apply one this-tick incremental fill to a ``WORKING`` order (spine
         AD-8, AD-19).
 
@@ -585,7 +617,24 @@ class OrderTracker:
         ``time_to_fill_ns = now_ns - arrival_ts_ns`` is recorded, and every
         other live member of its OCO group is cancelled at ``now_ns``
         (spine AD-25 -- bookkeeping, no new intent).
+
+        Returns the ids cancelled by the OCO cascade (``[]`` when the fill was
+        partial or the order has no group) -- ``sim.py`` records these in the
+        outcome log. If both legs of an OCO cross in the same ``fills.decide``
+        batch, the fill on the leg the cascade already cancelled *this tick* is
+        voided (returns ``[]``), not an error.
+
+        Caller (``sim.py``) owns exactly-once delivery: :class:`FillEvent`s come
+        straight from one ``fills.decide`` call per tick and are never replayed.
         """
+        self._require_open()
+        self._advance_clock(now_ns)
+        target = self._get(fill_event.order_id)
+        if (
+            target.terminal_state is TerminalState.CANCELLED
+            and target.oco_cancelled_at == now_ns
+        ):
+            return []  # losing leg of a same-tick OCO cross -- void the fill
         order = self._require_working(fill_event.order_id)
         new_filled = order.filled_qty + fill_event.size
         if new_filled > order.intent.size:
@@ -606,27 +655,34 @@ class OrderTracker:
             order.terminal_state = TerminalState.FILLED
             order.terminal_ts_ns = now_ns
             order.time_to_fill_ns = now_ns - order.arrival_ts_ns
-            self._cascade_oco(fill_event.order_id, now_ns)
+            return self._cascade_oco(fill_event.order_id, now_ns)
+        return []
 
-    def _cascade_oco(self, filled_order_id: str, now_ns: int) -> None:
+    def _cascade_oco(self, filled_order_id: str, now_ns: int) -> list[str]:
         """Cancel the other live members of ``filled_order_id``'s OCO group
         (spine AD-25). Reuses :meth:`cancel` so its guards apply; iterates
         sorted for determinism (spine AD-11).
         """
         group_id = self._orders[filled_order_id].intent.oco_group_id
         if group_id is None:
-            return
+            return []
+        cascaded: list[str] = []
         for other_id in sorted(self._oco_groups.get(group_id, set())):
             if other_id == filled_order_id:
                 continue
             other = self._orders.get(other_id)
             if other is not None and other.terminal_state is None:
                 self.cancel(other_id, now_ns)
+                other.oco_cancelled_at = now_ns
+                cascaded.append(other_id)
+        return cascaded
 
     def cancel(self, order_id: str, now_ns: int) -> None:
         """Transition a live (``IN_FLIGHT`` or ``WORKING``) order to
         ``CANCELLED`` at ``now_ns`` (spine AD-8).
         """
+        self._require_open()
+        self._advance_clock(now_ns)
         order = self._require_live(order_id)
         order.terminal_state = TerminalState.CANCELLED
         order.terminal_ts_ns = now_ns
@@ -635,6 +691,8 @@ class OrderTracker:
         """Transition an ``IN_FLIGHT`` order to ``REJECTED`` at ``now_ns``
         (spine AD-8). Rejecting a ``WORKING`` or terminal order raises.
         """
+        self._require_open()
+        self._advance_clock(now_ns)
         order = self._get(order_id)
         if order.terminal_state is not None or order.state is not LiveState.IN_FLIGHT:
             current = (
@@ -661,6 +719,7 @@ class OrderTracker:
         cleared (priority lost, spine AD-8).
         """
         del now_ns  # transition time is implied by the fresh arrival_ts_ns
+        self._require_open()
         if intent.action is not IntentAction.REPLACE:
             _state_error(
                 f"replace() needs action == replace, got {intent.action.value}"
@@ -669,6 +728,19 @@ class OrderTracker:
             _state_error(f"latency_ns must be >= 0, got {latency_ns}")
         order = self._require_live(intent.order_id)
         old = order.intent
+        # a replace may only change price and/or size -- identity fields carry
+        # into the OrderOutcome and the OCO registry (review: blind/edge-case).
+        for f in ("order_id", "trade_id", "leg", "kind", "side", "oco_group_id"):
+            if getattr(intent, f) != getattr(old, f):
+                _state_error(
+                    f"replace() may not change {f}: "
+                    f"{getattr(old, f)!r} -> {getattr(intent, f)!r}"
+                )
+        if intent.size < order.filled_qty:
+            _state_error(
+                f"replace() size {intent.size} below already-filled "
+                f"{order.filled_qty} on {intent.order_id!r}"
+            )
         keeps_priority = (
             intent.limit_px_dbn == old.limit_px_dbn and intent.size <= old.size
         )
@@ -692,6 +764,8 @@ class OrderTracker:
         at ``now_ns`` (spine AD-13(b)). The sim calls this at a
         ``valid_interval`` end. Returns the ids expired, in submit order.
         """
+        self._require_open()
+        self._advance_clock(now_ns)
         expired: list[str] = []
         for order_id, order in self._orders.items():
             if order.terminal_state is None:
@@ -707,7 +781,8 @@ class OrderTracker:
         (spine AD-22). A second call, or a negative value, raises. The live
         ``queue_ahead`` counter is seeded from ``ahead_size``.
         """
-        order = self._require_live(order_id)
+        self._require_open()
+        order = self._require_working(order_id)
         if order.queue_position_set:
             _state_error(f"set_queue_position already called for {order_id!r}")
         if rank < 0 or ahead_size < 0:
@@ -727,7 +802,8 @@ class OrderTracker:
         (spine AD-12, AD-20). A second call raises. ``None`` on a side means no
         quote there.
         """
-        order = self._require_live(order_id)
+        self._require_open()
+        order = self._require_working(order_id)
         if order.arrival_bbo_set:
             _state_error(f"set_arrival_bbo already called for {order_id!r}")
         order.arrival_best_bid_dbn = bid_dbn
@@ -754,7 +830,13 @@ class OrderTracker:
             )
         if self._finalized:
             _state_error(f"set_adverse_selection for {order_id!r} after finalize()")
+        if order.adverse_selection_set:
+            _state_error(
+                f"set_adverse_selection already called for {order_id!r} "
+                "(callable once, spine AD-28)"
+            )
         order.adverse_selection = value
+        order.adverse_selection_set = True
 
     # --- fills-only counter mutators (spine AD-21/22: rules live in fills.py;
     #     only the guarded state lives here) ------------------------------
@@ -764,6 +846,7 @@ class OrderTracker:
         (spine AD-21/22). ``fills.py`` decides *which* trades count; this only
         holds the running total.
         """
+        self._require_open()
         if qty < 0:
             _state_error(f"add_trade_volume qty must be >= 0, got {qty}")
         order = self._require_working(order_id)
@@ -773,6 +856,7 @@ class OrderTracker:
         """Decrement a working order's live ``queue_ahead`` by ``qty``, floored
         at 0 (spine AD-21/22). ``fills.py`` decides *when* to call this.
         """
+        self._require_open()
         if qty < 0:
             _state_error(f"decrement_queue_ahead qty must be >= 0, got {qty}")
         order = self._require_working(order_id)
@@ -788,6 +872,7 @@ class OrderTracker:
         return OrderSnapshot(
             order_id=order_id,
             side=order.intent.side,
+            kind=order.intent.kind,
             size=order.intent.size,
             limit_px_dbn=order.intent.limit_px_dbn,
             arrival_ts_ns=order.arrival_ts_ns,
@@ -834,6 +919,13 @@ class OrderTracker:
         """
         return self._get(order_id).terminal_ts_ns
 
+    def reject_reason(self, order_id: str) -> str | None:
+        """The reason string passed to :meth:`reject`, or ``None`` if the order
+        was not rejected. ``OrderOutcome`` (AD-12) has no reason field, so this
+        reader is the only way ``sim.py`` recovers a rejection cause.
+        """
+        return self._get(order_id).reject_reason
+
     def oco_group_members(self, group_id: str) -> list[str]:
         """Sorted ids registered in ``group_id`` (empty for an unknown group)."""
         return sorted(self._oco_groups.get(group_id, set()))
@@ -851,10 +943,11 @@ class OrderTracker:
         AD-8, AD-12). Every order must be terminal or this raises. Every field
         is read from a transition this tracker performed.
         """
+        if self._finalized:
+            _state_error("finalize() already called; the tracker is sealed")
         live = [oid for oid, o in self._orders.items() if o.terminal_state is None]
         if live:
             _state_error(f"finalize() with live orders: {live}")
-        self._finalized = True
         outcomes: list[OrderOutcome] = []
         for order_id, order in self._orders.items():
             terminal_state = order.terminal_state
@@ -878,4 +971,5 @@ class OrderTracker:
                     adverse_selection=order.adverse_selection,
                 )
             )
+        self._finalized = True  # seal only after every OrderOutcome built
         return outcomes

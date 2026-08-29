@@ -10,6 +10,7 @@ Covers the spec's I/O & Edge-Case Matrix rows and guards:
     OrderTracker / sim / book / parity per the spine).
 """
 
+import dataclasses
 import json
 from typing import Any
 
@@ -808,12 +809,13 @@ class TestOrderTrackerSettersAndCounters:
         assert snap.add_ts_ns == 0
         assert snap.size == 6
         assert snap.side is Side.SELL
+        assert snap.kind is OrderKind.PASSIVE_LIMIT
         assert snap.limit_px_dbn == P
 
     def test_snapshot_is_frozen(self) -> None:
         tracker = self._working()
         snap = tracker.snapshot("o1")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             snap.queue_ahead = 99  # type: ignore[misc]
 
     def test_decrement_queue_ahead_floors_at_zero(self) -> None:
@@ -936,3 +938,211 @@ class TestOrderTrackerBracketLifecycle:
         assert by_id["sl"].fills == ()
 
         assert {o.trade_id for o in outcomes} == {"rt-1"}
+
+
+class TestOrderTrackerReviewHardening:
+    """Review-driven coverage (blind / edge-case / verification-gap passes):
+    the finalized-tracker seal, the monotonic clock, replace-identity guards,
+    the OCO cascade return value, and same-tick OCO crossing."""
+
+    def _working(self, **kw: Any) -> OrderTracker:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(submit_ts_ns=0, **kw), latency_ns=0, now_ns=0)
+        tracker.activate_arrivals(now_ns=0)
+        return tracker
+
+    # --- finalized seal --------------------------------------------------
+
+    def test_transitions_after_finalize_raise(self) -> None:
+        tracker = self._working(size=2)
+        tracker.cancel("o1", now_ns=10)
+        tracker.finalize()
+        with pytest.raises(OrderStateError):
+            tracker.submit(_submit_intent(order_id="o2"), latency_ns=0, now_ns=20)
+        with pytest.raises(OrderStateError):
+            tracker.cancel("o1", now_ns=20)
+
+    def test_double_finalize_raises(self) -> None:
+        tracker = self._working(size=2)
+        tracker.cancel("o1", now_ns=10)
+        tracker.finalize()
+        with pytest.raises(OrderStateError):
+            tracker.finalize()
+
+    # --- monotonic clock ----------------------------------------------
+
+    def test_backwards_now_ns_raises(self) -> None:
+        tracker = self._working(size=2)
+        tracker.apply_fill(_fill("o1", size=1, ts_ns=500), now_ns=500)
+        with pytest.raises(OrderStateError):
+            tracker.apply_fill(_fill("o1", size=1, ts_ns=100), now_ns=100)
+
+    def test_same_now_ns_across_transitions_is_allowed(self) -> None:
+        tracker = OrderTracker()
+        for oid in ("a", "b"):
+            tracker.submit(
+                _submit_intent(order_id=oid, submit_ts_ns=0), latency_ns=0, now_ns=0
+            )
+        tracker.activate_arrivals(now_ns=5)
+        tracker.cancel("a", now_ns=5)
+        tracker.cancel("b", now_ns=5)
+        assert tracker.terminal_ts_ns("a") == 5
+
+    # --- replace guards ---------------------------------------------
+
+    def test_replace_may_not_change_identity_fields(self) -> None:
+        tracker = self._working(size=5)
+        with pytest.raises(OrderStateError):
+            tracker.replace(
+                _replace_intent("o1", side=Side.BUY, size=5, limit_px_dbn=P),
+                latency_ns=0,
+                now_ns=1_000,
+            )
+
+    def test_replace_below_filled_qty_raises(self) -> None:
+        tracker = self._working(size=5)
+        tracker.apply_fill(_fill("o1", size=3, ts_ns=10), now_ns=10)
+        with pytest.raises(OrderStateError):
+            tracker.replace(
+                _replace_intent("o1", size=2, limit_px_dbn=P, submit_ts_ns=20),
+                latency_ns=0,
+                now_ns=20,
+            )
+
+    def test_replace_size_up_same_price_loses_priority(self) -> None:
+        tracker = self._working(size=3)
+        tracker.set_queue_position("o1", rank=2, ahead_size=4)
+        tracker.replace(
+            _replace_intent("o1", size=8, limit_px_dbn=P, submit_ts_ns=2_000),
+            latency_ns=250,
+            now_ns=2_000,
+        )
+        assert tracker.in_flight_order_ids() == ["o1"]
+        assert tracker.arrival_ts_ns("o1") == 2_250
+        tracker.activate_arrivals(now_ns=2_250)
+        snap = tracker.snapshot("o1")
+        assert snap.queue_rank_at_submit is None
+        assert snap.queue_ahead == 0
+
+    def test_replace_of_oco_member_keeps_group_and_cascades(self) -> None:
+        tracker = OrderTracker()
+        for oid in ("entry", "exit"):
+            tracker.submit(
+                _submit_intent(order_id=oid, size=2, oco_group_id="g", submit_ts_ns=0),
+                latency_ns=0,
+                now_ns=0,
+            )
+        tracker.activate_arrivals(now_ns=0)
+        tracker.replace(
+            _replace_intent(
+                "entry",
+                size=2,
+                limit_px_dbn=P + 250_000,
+                oco_group_id="g",
+                submit_ts_ns=100,
+            ),
+            latency_ns=0,
+            now_ns=100,
+        )
+        tracker.activate_arrivals(now_ns=100)
+        cascaded = tracker.apply_fill(_fill("entry", size=2, ts_ns=200), now_ns=200)
+        assert cascaded == ["exit"]
+        assert tracker.terminal_state("exit") is TerminalState.CANCELLED
+
+    # --- OCO cascade return + same-tick crossing --------------------
+
+    def test_apply_fill_returns_cascaded_ids(self) -> None:
+        tracker = OrderTracker()
+        for oid, leg in (("tp", Leg.EXIT), ("sl", Leg.EXIT)):
+            tracker.submit(
+                _submit_intent(
+                    order_id=oid, leg=leg, size=2, oco_group_id="g", submit_ts_ns=0
+                ),
+                latency_ns=0,
+                now_ns=0,
+            )
+        tracker.activate_arrivals(now_ns=0)
+        assert tracker.apply_fill(_fill("tp", size=1, ts_ns=1), now_ns=1) == []
+        assert tracker.apply_fill(_fill("tp", size=1, ts_ns=2), now_ns=2) == ["sl"]
+
+    def test_same_tick_oco_double_fill_voids_the_losing_leg(self) -> None:
+        tracker = OrderTracker()
+        for oid in ("tp", "sl"):
+            tracker.submit(
+                _submit_intent(
+                    order_id=oid,
+                    leg=Leg.EXIT,
+                    size=2,
+                    oco_group_id="g",
+                    submit_ts_ns=0,
+                ),
+                latency_ns=0,
+                now_ns=0,
+            )
+        tracker.activate_arrivals(now_ns=0)
+        tracker.apply_fill(_fill("tp", size=2, ts_ns=500), now_ns=500)
+        # sl was cascade-cancelled this same tick -- a stale fill for it is void
+        assert tracker.apply_fill(_fill("sl", size=2, ts_ns=500), now_ns=500) == []
+        assert tracker.terminal_state("sl") is TerminalState.CANCELLED
+
+    # --- reject reason reader ---------------------------------------
+
+    def test_reject_reason_is_readable(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(_submit_intent(size=2), latency_ns=250, now_ns=0)
+        tracker.reject("o1", now_ns=5, reason="broker nak")
+        assert tracker.reject_reason("o1") == "broker nak"
+        tracker2 = self._working(size=2)
+        assert tracker2.reject_reason("o1") is None
+
+    # --- return-value ordering ------------------------------------
+
+    def test_activate_and_expire_return_submit_ordered_ids(self) -> None:
+        tracker = OrderTracker()
+        for oid in ("c", "a", "b"):
+            tracker.submit(
+                _submit_intent(order_id=oid, submit_ts_ns=0), latency_ns=0, now_ns=0
+            )
+        assert tracker.activate_arrivals(now_ns=0) == ["c", "a", "b"]
+        assert tracker.expire_all(now_ns=9) == ["c", "a", "b"]
+
+    # --- setter guards -------------------------------------------
+
+    def test_set_adverse_selection_twice_raises(self) -> None:
+        tracker = self._working(size=2)
+        tracker.apply_fill(_fill("o1", size=2, ts_ns=10), now_ns=10)
+        tracker.set_adverse_selection("o1", True)
+        with pytest.raises(OrderStateError):
+            tracker.set_adverse_selection("o1", False)
+
+    def test_negative_latency_and_counter_qty_raise(self) -> None:
+        tracker = OrderTracker()
+        with pytest.raises(OrderStateError):
+            tracker.submit(_submit_intent(), latency_ns=-1, now_ns=0)
+        working = self._working(size=4)
+        with pytest.raises(OrderStateError):
+            working.add_trade_volume("o1", -1)
+        with pytest.raises(OrderStateError):
+            working.decrement_queue_ahead("o1", -1)
+
+    def test_finalize_emits_side_leg_kind_from_intent(self) -> None:
+        tracker = OrderTracker()
+        tracker.submit(
+            _submit_intent(
+                order_id="b",
+                side=Side.BUY,
+                leg=Leg.EXIT,
+                kind=OrderKind.MARKETABLE,
+                limit_px_dbn=None,
+                size=2,
+                submit_ts_ns=0,
+            ),
+            latency_ns=0,
+            now_ns=0,
+        )
+        tracker.activate_arrivals(now_ns=0)
+        tracker.apply_fill(_fill("b", size=2, ts_ns=1), now_ns=1)
+        (outcome,) = tracker.finalize()
+        assert outcome.side is Side.BUY
+        assert outcome.leg is Leg.EXIT
+        assert outcome.kind is OrderKind.MARKETABLE

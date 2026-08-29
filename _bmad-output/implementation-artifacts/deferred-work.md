@@ -369,3 +369,21 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-book.md`
   summary: a "fills observed vs subsequent resting-size reductions" cross-check to catch stream gaps where the C/M following an F is missing (total_size stays inflated with no detection). Belongs with sim.py's observe_book_event / manifest work.
   evidence: blind-hunter — the F-as-no-op design is otherwise blind to a dropped reduction record.
+
+## Deferred from: code review of spec-ticksim-order-tracker (2026-08-29)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-order-tracker.md`
+  summary: **AD-25 bracket semantics — HUMAN DECISION PENDING.** As frozen, AD-25 / the spec matrix say *any* OCO-group member reaching FILLED cancels every other live member. For a bracket (entry + TP + SL in one group) that means a fully-filled ENTRY cancels its own TP and SL, leaving a naked position — and Part A (AD-16/AD-17) replays real bracket orders whose entries *do* fully fill, so parity replay of the exit leg becomes structurally impossible. The tracker as merged faithfully implements frozen AD-25. Options: (a) leg-aware cascade — an ENTRY-leg fill cascades nothing, only an EXIT-leg fill cancels the other exit + any unfilled entry; (b) the Part A intent-log producer keeps the entry in its own group and only TP+SL share an oco_group_id. Recommendation: (a). Resolve before the fills.py/sim.py seam and before the Part A slice.
+  evidence: blind-hunter + edge-case-hunter review; touches the frozen spine AD-25 + spec frozen block, so surfaced not patched.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-order-tracker.md`
+  summary: OrderSnapshot carries only the spec's acceptance fields + `kind`. `fills.decide(book, tracker, clock_ns, config)` may need `arrival_best_bid_dbn`/`arrival_best_ask_dbn`, `oco_group_id`, `trade_id` on the snapshot. Add whatever that signature turns out to require when the fills.py slice lands.
+  evidence: blind-hunter — snapshot field set can't be finalized until the queue-model interface is written.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-order-tracker.md`
+  summary: `activate_arrivals` / `expire_all` full-scan `self._orders` every call (O(n) per tick, ~O(n²) per run). Fine for an H1 run (thousands of orders); add an `arrival_ts_ns`-keyed index if a study ever drives many orders per tick.
+  evidence: edge-case-hunter — perf, not correctness.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-order-tracker.md`
+  summary: no per-order time-in-force / validity window — `expire_all(now_ns)` force-expires every live order. AD-13(b) only requires interval-end expiry; per-order TIF (GTD/GTC/IOC) is not modelled. Revisit only if a strategy needs order-level expiry.
+  evidence: blind-hunter — documented scope limit.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-order-tracker.md`
+  summary: `sim.py` must translate an `IntentAction.CANCEL` intent-log record into `tracker.cancel(order_id, now_ns)` — the tracker takes `cancel(order_id, now_ns)`, not a CANCEL `OrderIntent`. Fields on a CANCEL record beyond `order_id` are not validated by the tracker. Handle at the sim.py intent-replay seam.
+  evidence: edge-case-hunter — asymmetry with submit()/replace(); acceptable but must be wired in sim.py.

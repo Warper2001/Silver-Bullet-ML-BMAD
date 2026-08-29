@@ -39,7 +39,7 @@ FORBIDDEN_SRC_PACKAGES = {
 PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     "config": set(),
     "orders": set(),
-    "book": set(),
+    "book": {"config"},
     "events": {"book", "orders"},
     "fills": {"book", "orders", "config"},
     "sim": {"config", "book", "orders", "events", "fills"},

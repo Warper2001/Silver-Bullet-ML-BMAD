@@ -432,3 +432,15 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim-adverse.md`
   summary: `parity/invariants.py` (a later slice) should pick up an AD-28 structural invariant: `adverse_selection is True ⇒ terminal_state == FILLED and kind == passive_limit`; a `MARKETABLE`/`MARKETABLE_LIMIT` outcome never has `adverse_selection`. Currently enforced only inline in `sim._step_fills`; no independent check.
   evidence: blind-hunter.
+
+## Deferred from: code review of spec-ticksim-report (2026-08-30, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-report.md`
+  summary: `ThreeWayReport` carries `config_primary` / `config_optimistic` as provenance but no `study_id`, source-manifest SHA-256, intent-log SHA, or simulator commit — AD-11 makes the manifest the unit of reproducibility. `cli.py` persists the full manifests alongside the report; if a study wants the linkage inside the report object, add a `provenance` field there (cli-slice concern).
+  evidence: blind-hunter.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-report.md`
+  summary: no `ThreeWayReport.from_dict` — `to_dict()` is one-way. Add a round-tripping constructor if a consumer needs to reload a persisted report (rather than re-running `build_report`).
+  evidence: blind-hunter (`to_dict` "round-trips" language) + verification-gap.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-report.md`
+  summary: an `OpenPosition` (entry filled, exit never) whose entry fill was `adverse_selection`-flagged loses that signal — `adverse` is only recorded on `RoundTrip`. A `.adverse` field on `OpenPosition` would preserve it. Rare; §2.2 exposure detail is already captured (size/px/ts).
+  evidence: blind-hunter.

@@ -43,7 +43,7 @@ PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     "events": {"book", "orders"},
     "fills": {"book", "orders", "config"},
     "sim": {"config", "book", "orders", "events", "fills"},
-    "report": {"orders"},
+    "report": {"orders", "config"},
 }
 
 

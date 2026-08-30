@@ -52,6 +52,7 @@ graph TD
   sim --> orders
   sim --> config
   report --> orders
+  report --> config
   parity --> sim
   parity --> report
   parity --> book
@@ -97,7 +98,8 @@ graph TD
 
 - **Binds:** `src/ticksim/`
 - **Prevents:** import cycles; `book`/`orders` acquiring knowledge of higher layers
-- **Rule:** `book.py` and `orders.py` import nothing from `src/ticksim`. Permitted import edges only: `events` → book, orders · `fills` → book, orders, config · `sim` → any ticksim module · `report` → orders · `parity` → sim, report, book, config. No other edges; no cycles. Enforced by a test that walks the import graph.
+- **Rule:** `book.py` and `orders.py` import nothing from `src/ticksim`. Permitted import edges only: `events` → book, orders · `fills` → book, orders, config · `sim` → any ticksim module · `report` → orders, config · `parity` → sim, report, book, config. No other edges; no cycles. Enforced by a test that walks the import graph.
+  - *Note (2026-08-30, human-authorized for the report slice): `report` → `config` widens the original `report` → `orders` edge. AD-24 (finalized after AD-7) makes `report.py` the sole consumer of `config.DOLLARS_PER_INDEX_POINT` / `config.MNQ_TICK_DBN`; importing the two seal-cited module constants is the AD-24-sanctioned reconciliation. Fees still reach `report.py` only via the manifest dict — the alternative (a `dollars_per_index_point` field on `Manifest`) would be a `sim.py` change for one constant and is not what AD-24 sanctions.*
 
 ### AD-8 — One owner of order lifecycle
 
@@ -257,7 +259,7 @@ src/ticksim/
   events.py        # BookEventSource protocol, DbnMboSource, merge_streams (stable)
   fills.py         # decide(), BackOfQueueModel, TimePriorityModel, observe_book_event
   sim.py           # SimRun (AD-20 loop, AD-21/22 seam, AD-28 deferred queue), manifest
-  report.py        # three_way_report()
+  report.py        # build_report() -> ThreeWayReport (spec name; was "three_way_report" in AD-14)
   parity/
     __init__.py
     invariants.py  # the 6 assertion functions (AD-16)
@@ -280,7 +282,7 @@ tests/integration/test_ticksim_parity.py
 | §2.1 primary model | `config.PRIMARY` + `fills.BackOfQueueModel` | AD-5, AD-15, AD-21, AD-22 |
 | §2.1 secondary model | `config.OPTIMISTIC` + `fills.TimePriorityModel` | AD-5, AD-15, AD-22 |
 | §2.2 not-modelled list | not built; halts handled by AD-13 mask | Deferred |
-| §2.3 three-way reporting | `report.three_way_report` | AD-14, AD-24 |
+| §2.3 three-way reporting | `report.build_report` | AD-14, AD-24 |
 | §3 / A8 Part A (real-fill replay) | `parity/part_a.py` | AD-17, AD-12, AD-23, AD-25 |
 | §3 / A8 Part B (≥1000 synthetic, 6 invariants) | `parity/part_b.py` + `parity/invariants.py` | AD-16, AD-27 |
 | §4 kill criterion / verdict / frozen SHA | `parity/gate.py` | AD-26, AD-27 |

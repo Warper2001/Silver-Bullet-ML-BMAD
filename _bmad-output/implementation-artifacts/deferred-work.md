@@ -459,3 +459,33 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-invariants.md`
   summary: `check_no_price_improvement` raises "unverifiable" when a marketable order filled with the crossed-side arrival quote `None` (fail-closed, deviates from frozen-block iteration-0 "→ None"). If Part A/B surfaces legitimate `None`-quote fills (thin book, warm-up edge) this may need softening to a counted-and-recorded miss rather than a hard `InvariantViolation`. Revisit when Part B runs against real MNQ data.
   evidence: Spec Change Log #4; Suggested Review Order #3.
+
+## Deferred from: planning of spec-ticksim-parity-part-a (2026-08-30, token split)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: `run_part_a` — the MBO-window runner tying reconstruction to the sim: build a `DbnMboSource` per trade's ±90-min window, call `sim.simulate(source, trade.intents, PRIMARY, [window_ns])` (and `OPTIMISTIC` for the reported-only errors), feed the outcomes to `compare_fills`, price every `leg_unfilled` miss as the same-side touch at `exit_ts` + 1 tick adverse slip (AD-17), then `aggregate`. Needs AD-7 widened `parity → events` (inline note; part_b needs it too). Ships with `tests/integration/test_ticksim_parity_part_a.py` (@integration) reconstructing the 3 yank 2026-06-22 trades and running against `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst`. Full N≥28 run is post-Tranche-1-purchase.
+  evidence: part-a planning token check — frozen block hit ~1650+ tokens with the runner included; the pure core (reconstruct + compare + aggregate, imports only orders/config, fixture-tested) is the independently-mergeable half. User approved the split 2026-08-30.
+
+## Deferred from: code review of spec-ticksim-parity-part-a (2026-08-30, review-1 → intent_gap loopback)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: Part A does not exercise resting-order queue behaviour at all — mim-nb's `otype 4` protective stop is always cancelled (never fills, never graded) and yank rows have no resting limit legs, so Part A is a pure market-order fill-price replay. Back-of-queue position, partial fills vs real trade volume, and non-through-limit passive fills are covered only by Part B's ≥1000 synthetic orders. If a live bot later runs real resting limit entries/exits, Part A's sample should be extended to grade them (v2 / §A8.4).
+  evidence: blind-hunter + the human's loopback-1 "minimal replay" decision — accepted scope, recorded so the gate's coverage is honest.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: `compare_fills` assumes a single `RealFill` per `(order_id, leg)` and `reconstruct_mim_nb` raises on a second `FILL` row for one order_id. The real Part A sample is 1–2 lot and fills in one shot, but yank is 2ct and future bots larger. Partial real fills would need per-order fill accumulation in the lifecycle walk and a multi-fill `RealFill` list per leg.
+  evidence: all three reviewers; forced by the current single-fill data shape.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: `data/mim_nb/orders.csv` (and `trades.csv`) carry a `chain` hash-chain integrity column; `reconstruct_mim_nb` ignores it. A truncated or tampered ledger is accepted silently. Chain validation belongs in the `run_part_a` loader (this slice takes already-parsed rows), which should verify the chain before reconstruction and refuse a broken ledger.
+  evidence: blind-hunter + project memory (`data/mim_nb` logs are hash-chained).
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: `run_part_a` (deferred slice 2) is where the routed-exit-leg vs `OrderTracker` OCO-cascade interaction actually bites, where the `leg_unfilled` miss magnitude is priced (touch @ exit_ts + 1 tick slip, AD-17), and where `trades.db` timestamp timezone (verified `+00:00` UTC-aware now, but assert at load) and nanosecond resolution (source is µs — no ns lost from these ledgers) must be re-checked against real MBO windows.
+  evidence: verification-gap + edge-case-hunter — carried forward to the runner slice.
+
+## Deferred from: code review of spec-ticksim-parity-part-a (2026-08-30, review-2 / patch round)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: Part A grades fill *price* only — `compare_fills` ignores fill timestamps entirely. A sim that fills a leg far from the real fill time at a coincidentally close price passes Part A clean. The prereg §A8.2 tolerances are all price (MAE/p90/bias in ticks), so this is in-seal, but `run_part_a` (slice 2) should add a time-divergence sanity bound (e.g. flag any leg whose sim fill ts is > N seconds from the real fill ts) as a non-verdict-bearing diagnostic, and v2 (§A8.4) could tighten it.
+  evidence: blind-hunter r2 (raised twice) — a real class of simulator bug currently invisible to the gate.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
+  summary: the reconstructed entry+exit legs share one `oco_group_id` (AD-25). `OrderTracker._cascade_oco` cancels other live group members (incl. an unfilled entry) when an EXIT-leg fills. For the real mim-nb/yank data the exit is hours after the entry fill so this never bites, but `run_part_a`'s integration test should exercise a 2-member entry+exit OCO group through the tracker under latency to confirm the exit-fill cascade does not void an already-filled (or still-in-flight) entry.
+  evidence: blind-hunter r2 — no test currently covers an entry+exit OCO group end-to-end through the tracker.

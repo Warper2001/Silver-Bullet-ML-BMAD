@@ -11,4 +11,11 @@ This subpackage may import from ``sim``, ``report``, ``book`` and ``config``
 (spine AD-7), plus ``orders`` (AD-7 inline note, 2026-08-30 — ``invariants.py``
 needs the ``OrderIntent`` / ``OrderOutcome`` types); it imports nothing from any
 other ``src.*`` package (spine AD-4).
+
+``part_a.py`` (the prereg §A8.2 Part A pure core — order reconstruction + fill
+comparison + aggregate) is the tightest case: it imports only ``orders`` and
+``config`` from ``src.ticksim`` — it never touches ``sim`` / ``events`` /
+``report`` / ``book`` / ``databento`` and never calls ``simulate`` (it takes
+``OrderOutcome``\\ s as input). ``PERMITTED_INTERNAL_EDGES["part_a"] =
+{"orders", "config"}``.
 """

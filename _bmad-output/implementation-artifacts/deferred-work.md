@@ -444,3 +444,18 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-report.md`
   summary: an `OpenPosition` (entry filled, exit never) whose entry fill was `adverse_selection`-flagged loses that signal — `adverse` is only recorded on `RoundTrip`. A `.adverse` field on `OpenPosition` would preserve it. Rare; §2.2 exposure detail is already captured (size/px/ts).
   evidence: blind-hunter.
+
+## Deferred from: code review of spec-ticksim-parity-invariants (2026-08-30, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-invariants.md`
+  summary: **invariant 6 (strict causality / no-lookahead) has no post-hoc `OrderOutcome` form.** `check_fill_causality` only checks the *trace* (fills non-decreasing, `>= arrival_ts_ns`). The real AD-20 property — "only book events with `ts_event <= clock` decided any fill" — must be enforced in `parity/part_b.py`, which owns the book/event stream: e.g. re-drive the sim with the event source truncated at each fill's `ts_ns` and assert the same fill, or assert every consumed event's `ts_event <= fill.ts_ns`. Not this slice.
+  evidence: verification-gap + blind-hunter — the module docstring and spec Design Notes both name it a construction guarantee; part_b must add the live check.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-invariants.md`
+  summary: **invariant 4's time-series monotonicity is not checked on Part B's synthetic orders.** `check_queue_position` checks only the serialized endpoint (both fields present + non-negative for a worked passive). The "non-increasing until terminal" series is asserted only in `test_ticksim_orders.py` on hand-built tracker sequences. `parity/part_b.py` should, for each synthetic passive order, capture the `queue_ahead_size` series across ticks and assert monotone-non-increasing until fill/cancel — the ≥1000-order gate is where it gets exercised against real book churn.
+  evidence: verification-gap.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-invariants.md`
+  summary: **invariant 5's liquidity half** ("no fill without book liquidity at/through the price") is a `fills.py` construction guarantee (`_walk_book` only emits for `level_size > 0`; passive fill only when `cum_trade_vol_since_arrival - queue_ahead > 0`), verified in `test_ticksim_fills.py`. `parity/part_b.py` MAY add a book cross-check at each fill tick since it has the book. Confirmed as the resolution to the spec's "Ask First" at CHECKPOINT 1.
+  evidence: planning CHECKPOINT 1 (option b) + all three reviewers.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-invariants.md`
+  summary: `check_no_price_improvement` raises "unverifiable" when a marketable order filled with the crossed-side arrival quote `None` (fail-closed, deviates from frozen-block iteration-0 "→ None"). If Part A/B surfaces legitimate `None`-quote fills (thin book, warm-up edge) this may need softening to a counted-and-recorded miss rather than a hard `InvariantViolation`. Revisit when Part B runs against real MNQ data.
+  evidence: Spec Change Log #4; Suggested Review Order #3.

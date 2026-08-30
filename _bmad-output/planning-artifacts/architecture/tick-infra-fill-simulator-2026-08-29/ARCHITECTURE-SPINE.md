@@ -56,6 +56,8 @@ graph TD
   parity --> sim
   parity --> report
   parity --> book
+  parity --> orders
+  parity --> config
 ```
 
 ### AD-1 — Discrete-event core, one logical clock
@@ -98,8 +100,9 @@ graph TD
 
 - **Binds:** `src/ticksim/`
 - **Prevents:** import cycles; `book`/`orders` acquiring knowledge of higher layers
-- **Rule:** `book.py` and `orders.py` import nothing from `src/ticksim`. Permitted import edges only: `events` → book, orders · `fills` → book, orders, config · `sim` → any ticksim module · `report` → orders, config · `parity` → sim, report, book, config. No other edges; no cycles. Enforced by a test that walks the import graph.
+- **Rule:** `book.py` and `orders.py` import nothing from `src/ticksim`. Permitted import edges only: `events` → book, orders · `fills` → book, orders, config · `sim` → any ticksim module · `report` → orders, config · `parity` → sim, report, book, orders, config. No other edges; no cycles. Enforced by a test that walks the import graph.
   - *Note (2026-08-30, human-authorized for the report slice): `report` → `config` widens the original `report` → `orders` edge. AD-24 (finalized after AD-7) makes `report.py` the sole consumer of `config.DOLLARS_PER_INDEX_POINT` / `config.MNQ_TICK_DBN`; importing the two seal-cited module constants is the AD-24-sanctioned reconciliation. Fees still reach `report.py` only via the manifest dict — the alternative (a `dollars_per_index_point` field on `Manifest`) would be a `sim.py` change for one constant and is not what AD-24 sanctions.*
+  - *Note (2026-08-30, human-authorized for the parity-invariants slice): `parity` → `orders` widens AD-7's original `parity → sim, report, book, config` list. AD-16's `parity/invariants.py` functions take frozen `OrderIntent` / `OrderOutcome` values (AD-12: the outcome carries no `size` / `limit_px_dbn`, so invariant checks must join to the intent), and AD-12 names `parity/invariants.py` a co-owner of the `terminal_state == FILLED ⇔ fills` consistency family — both require the `orders` types. The imports test already used `from ..orders import Fill` as its canonical `parity` example. No cycle: `orders` imports nothing from `src/ticksim` (AD-8).*
 
 ### AD-8 — One owner of order lifecycle
 

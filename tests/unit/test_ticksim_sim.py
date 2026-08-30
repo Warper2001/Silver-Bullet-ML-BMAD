@@ -378,15 +378,22 @@ def test_determinism_across_hash_seeds() -> None:
 
     script = (
         "import json,sys; sys.path.insert(0, %r);"
-        "from tests.unit.test_ticksim_sim import _Source,_submit,_trade,CFG,INTERVALS;"
+        "from tests.unit.test_ticksim_sim import "
+        "_Source,_submit,_trade,_add,_cancel_ev,CFG,AINT;"
         "from src.ticksim.events import MboSide;"
         "from src.ticksim.orders import Side,OrderKind;"
         "from src.ticksim.sim import simulate;"
-        "src=_Source([_trade(100,20,ts=300,seq=1)]);"
+        # two passive BUYs fill in one trade, then the bid drops in-window: both
+        # AD-28 checks latch and seal in the same tick -- exercises check-list
+        # iteration order (AD-11) as well as OrderOutcome emit order.
+        "src=_Source([_add(1,MboSide.BID,100,1,ts=5,seq=1),"
+        "_add(2,MboSide.BID,99,99,ts=6,seq=2),"
+        "_trade(100,50,ts=1000000,seq=3),"
+        "_cancel_ev(1,MboSide.BID,100,1,ts=1500000,seq=4)]);"
         "i=[_submit('a',Side.BUY,OrderKind.PASSIVE_LIMIT,5,100,ts=10),"
-        "_submit('b',Side.SELL,OrderKind.PASSIVE_LIMIT,5,100,ts=10,oco='g'),"
-        "_submit('c',Side.SELL,OrderKind.PASSIVE_LIMIT,5,100,ts=10,oco='g')];"
-        "o,_=simulate(src,i,CFG,INTERVALS);"
+        "_submit('b',Side.BUY,OrderKind.PASSIVE_LIMIT,5,100,ts=11)];"
+        "o,m=simulate(src,i,CFG,AINT);"
+        "assert m.adverse_fill_count==2 and all(x.adverse_selection for x in o);"
         "print(json.dumps([x.model_dump_json() for x in o]))"
     ) % str(__import__("pathlib").Path(__file__).resolve().parents[2])
 
@@ -636,3 +643,282 @@ def test_manifest_to_dict_is_json_safe() -> None:
     dumped = json.dumps(manifest.to_dict())
     assert '"queue_model": "back_of_queue"' in dumped
     assert manifest.to_dict()["oco_cascade_cancel_count"] == 0
+    assert manifest.to_dict()["adverse_fill_count"] == 0
+
+
+# --- AD-28 adverse-selection deferred-check queue --------------------
+#
+# One test per row of the spec's I/O & Edge-Case Matrix, plus the
+# `manifest.adverse_fill_count` accumulator. The 1 s adverse window
+# (ADVERSE_SELECTION_WINDOW_NS = 1e9) dwarfs the tiny INTERVALS above, so these
+# use a wide `AINT` and ~1 ms fill timestamps; an adverse quote move is driven
+# by a `_cancel_ev` that removes the best bid/ask level.
+
+WINDOW_NS = 1_000_000_000
+AINT = [(0, 5_000_000_000)]
+
+
+def test_passive_buy_bid_drops_in_window_is_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),  # 3 contracts ahead @ P
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),  # a lower bid that stays
+            _trade(100, 10, ts=1_000_000, seq=3),  # fills our 5 @100
+            _cancel_ev(1, MboSide.BID, 100, 3, ts=1_500_000, seq=4),  # bid -> 99
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is True
+    assert manifest.adverse_fill_count == 1
+
+
+def test_passive_buy_bid_drops_after_window_not_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),
+            _trade(100, 10, ts=1_000_000, seq=3),
+            _cancel_ev(
+                1, MboSide.BID, 100, 3, ts=1_000_000 + WINDOW_NS + 500_000, seq=4
+            ),
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is False
+    assert manifest.adverse_fill_count == 0
+
+
+def test_passive_buy_transient_dip_that_reverts_is_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),
+            _trade(100, 10, ts=1_000_000, seq=3),
+            _cancel_ev(1, MboSide.BID, 100, 3, ts=1_300_000, seq=4),  # bid -> 99
+            _add(3, MboSide.BID, 100, 8, ts=1_600_000, seq=5),  # bid back to 100
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.adverse_selection is True  # any point in the window counts
+    assert manifest.adverse_fill_count == 1
+
+
+def test_passive_sell_ask_rises_in_window_is_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.ASK, 100, 3, ts=5, seq=1),  # 3 ahead @ P
+            _add(2, MboSide.ASK, 101, 100, ts=6, seq=2),  # a higher ask that stays
+            _trade(100, 10, ts=1_000_000, seq=3),  # fills our SELL 5 @100
+            _cancel_ev(1, MboSide.ASK, 100, 3, ts=1_500_000, seq=4),  # ask -> 101
+        ]
+    )
+    intents = [_submit("s1", Side.SELL, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is True
+    assert manifest.adverse_fill_count == 1
+
+
+def test_passive_buy_quote_side_empties_not_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),  # the only bid
+            _trade(100, 10, ts=1_000_000, seq=2),
+            _cancel_ev(1, MboSide.BID, 100, 3, ts=1_500_000, seq=3),  # bid -> None
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is False  # a None touch never triggers
+    assert manifest.adverse_fill_count == 0
+
+
+def test_marketable_fill_is_never_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.ASK, 100, 100, ts=5, seq=1),  # ask to hit
+            _add(2, MboSide.BID, 100, 5, ts=6, seq=2),  # bid @ fill px
+            _add(3, MboSide.BID, 98, 100, ts=7, seq=3),  # a lower bid
+            _cancel_ev(2, MboSide.BID, 100, 5, ts=1_500_000, seq=4),  # bid -> 98
+        ]
+    )
+    intents = [_submit("m1", Side.BUY, OrderKind.MARKETABLE, 5, None, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is False  # marketable fills are never marked
+    assert manifest.adverse_fill_count == 0
+
+
+def test_adverse_window_crosses_interval_end_still_evaluated() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),
+            _trade(100, 10, ts=1_000_000, seq=3),  # fill in-mask
+            _cancel_ev(1, MboSide.BID, 100, 3, ts=1_400_000, seq=4),  # past the end
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, [(0, 1_200_000)])
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is True  # book is continuous across the boundary
+    assert manifest.adverse_fill_count == 1
+
+
+def test_run_ends_before_window_closes_seals_latched_hit() -> None:
+    # interval ends at 3_000_000 -- every wake precedes the ~1.002e9 deadline,
+    # so the check is genuinely still open when _loop returns and is sealed by
+    # run()'s `_step_adverse(_max_deadline + 1)` call, before finalize().
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),
+            _trade(100, 10, ts=2_000_000, seq=3),
+            _cancel_ev(
+                1, MboSide.BID, 100, 3, ts=2_400_000, seq=4
+            ),  # adverse, in-window
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, [(0, 3_000_000)])
+
+    (o,) = outcomes
+    assert manifest.last_ts_ns == 2_400_000
+    assert o.adverse_selection is True
+    assert manifest.adverse_fill_count == 1
+
+
+def test_adverse_sealed_in_loop_when_a_wake_crosses_the_deadline() -> None:
+    # a real book event lands past the deadline -> the check seals INSIDE _loop
+    # (not via the run-end sentinel); a later still-open check must not be
+    # re-counted at run end.
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 3, ts=5, seq=1),
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),
+            _trade(100, 10, ts=1_000_000, seq=3),  # fill p1 @100
+            _cancel_ev(
+                1, MboSide.BID, 100, 3, ts=1_500_000, seq=4
+            ),  # adverse in-window
+            _trade(
+                99, 1, ts=1_000_000 + WINDOW_NS + 10, seq=5
+            ),  # wake past p1 deadline
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+    (o,) = outcomes
+    assert o.adverse_selection is True
+    assert manifest.adverse_fill_count == 1  # exactly once
+
+
+def test_non_book_wake_does_not_latch_adverse() -> None:
+    # the bid is below P for the whole window but the ONLY in-window wake is an
+    # unrelated order arrival (no book delta) -> must NOT latch (AD-11: the
+    # marker cannot depend on arrival timing).
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 99, 100, ts=5, seq=1),  # only bid: 99 < P=100
+            _trade(100, 10, ts=1_000_000, seq=2),  # fills p1 @100 (bid already 99)
+            _trade(
+                99, 1, ts=1_000_000 + WINDOW_NS + 5, seq=3
+            ),  # seal wake, past deadline
+        ]
+    )
+    intents = [
+        _submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10),
+        # p2 arrives at 1_400_000 + latency -- a non-book wake inside p1's window
+        _submit("p2", Side.BUY, OrderKind.PASSIVE_LIMIT, 1, 50, ts=1_400_000),
+    ]
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+    by = {o.order_id: o for o in outcomes}
+    # bid 99 < 100 held all through p1's window, but only at the fill tick and an
+    # arrival wake -- neither latches -> not adverse (matches "fill tick itself").
+    assert by["p1"].adverse_selection is False
+    assert manifest.adverse_fill_count == 0
+
+
+def test_marketable_limit_fill_is_never_adverse() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.ASK, 100, 10, ts=5, seq=1),
+            _trade(100, 1, ts=1_000_000, seq=2),  # wake >= arrival; m1 walks @100
+            _add(2, MboSide.BID, 90, 100, ts=1_500_000, seq=3),  # bid far below fill px
+        ]
+    )
+    intents = [_submit("m1", Side.BUY, OrderKind.MARKETABLE_LIMIT, 5, 100, ts=10)]
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    assert o.adverse_selection is False
+    assert manifest.adverse_fill_count == 0
+
+
+def test_fill_tick_itself_adverse_is_not_marked() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 99, 100, ts=5, seq=1),  # only bid: 99 < our P=100
+            _trade(100, 10, ts=1_000_000, seq=2),  # fills our passive BUY @100
+            _trade(100, 1, ts=1_000_000 + WINDOW_NS + 1, seq=3),  # tick past deadline
+        ]
+    )
+    intents = [_submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10)]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    (o,) = outcomes
+    assert o.terminal_state is TerminalState.FILLED
+    # bid < P only at the fill tick (strict now > fill_ts) and at a tick that is
+    # already past the deadline (not evaluated) -> sealed False.
+    assert o.adverse_selection is False
+    assert manifest.adverse_fill_count == 0
+
+
+def test_manifest_adverse_fill_count_counts_each_hit() -> None:
+    src = _Source(
+        [
+            _add(1, MboSide.BID, 100, 1, ts=5, seq=1),
+            _add(2, MboSide.BID, 99, 100, ts=6, seq=2),
+            _trade(100, 50, ts=1_000_000, seq=3),  # fills both passive BUYs
+            _cancel_ev(1, MboSide.BID, 100, 1, ts=1_500_000, seq=4),  # bid -> 99
+        ]
+    )
+    intents = [
+        _submit("p1", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=10),
+        _submit("p2", Side.BUY, OrderKind.PASSIVE_LIMIT, 5, 100, ts=11),
+    ]
+
+    outcomes, manifest = simulate(src, intents, CFG, AINT)
+
+    assert all(o.terminal_state is TerminalState.FILLED for o in outcomes)
+    assert all(o.adverse_selection is True for o in outcomes)
+    assert manifest.adverse_fill_count == 2

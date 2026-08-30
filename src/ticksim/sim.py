@@ -18,7 +18,7 @@ timestamps are ``{book-event ts} u {intent submit_ts_ns} u {valid_interval
 bounds} u {pending deferred intent-effect ts} u {order arrival ts}`` -- a
 latency-delayed arrival **is** a wake so the AD-22 queue position / arrival BBO
 snapshot at exactly ``arrival_ts``, not at the next later book event. Per distinct
-wake ``T`` the five ordered steps are:
+wake ``T`` the six ordered steps are:
 
   1. fold every book delta at ``T`` (``apply_event`` + ``observe_book_event``);
      always, even outside the session mask (spine AD-21: sim is the sole driver);
@@ -27,7 +27,15 @@ wake ``T`` the five ordered steps are:
   3. deferred ``CANCEL`` / ``REPLACE`` effects due by ``T``;
   4. arrivals -- ``activate_arrivals`` + the AD-22 queue position (once) + the
      arrival-tick BBO snapshot;
-  5. fills -- ``fills.decide`` once, then ``tracker.apply_fill`` for each.
+  5. fills -- ``fills.decide`` once, then ``tracker.apply_fill`` for each;
+  6. adverse-selection (AD-28) -- ``_step_adverse``: latch ``hit`` on every open
+     ``_AdverseCheck`` whose 1 s window contains this tick, **only when a book
+     delta was folded** (the BBO moves only on a book event; a bare arrival /
+     bound wake must not latch, AD-11); seal the ones whose window has closed
+     (write ``adverse_selection`` on the tracker order). Runs every tick, in
+     *and* out of the mask (the book is continuous), and once more at run end.
+     Not a second replay (AD-14). This is the "deferred fill application" of
+     AD-20's paradigm; it is not one of AD-20's three merged-stream classes.
 
 Session mask (spine AD-13): ``valid_intervals`` are canonicalized on construction
 (non-empty, sorted, and **merged** -- overlapping or contiguous windows become one,
@@ -38,8 +46,12 @@ regardless of the mask so a latency hop landing past an interval end cannot wedg
 the loop -- its target is by then already ``EXPIRED`` and the effect is dropped. At
 each interval ``end`` every live order is force-expired (``tracker.expire_all``);
 ``book.check_invariants()`` runs at every boundary and at run end.
-``adverse_selection`` is out of this slice (AD-28 deferred) -- every outcome's flag
-stays ``False``.
+``adverse_selection`` (AD-28) is computed here by a bounded deferred-check queue
+(step 6): a passive fill @P latches ``adverse_selection = True`` if, at any tick
+strictly after the fill and within ``ADVERSE_SELECTION_WINDOW_NS`` (1 s), the
+same-side quote has moved away (BUY: ``best_bid < P``; SELL: ``best_ask > P``; a
+``None`` quote never triggers). Each check seals at its deadline or at run end;
+marketable fills are never marked. Not a second replay (AD-14).
 
 Dependencies (spine AD-7): ``.config`` / ``.book`` / ``.orders`` / ``.events`` /
 ``.fills`` + stdlib. Relative imports (``mypy --strict`` duplicate-module errors
@@ -58,7 +70,7 @@ from importlib.metadata import version as _pkg_metadata_version
 from typing import Any, Iterable, Iterator, Sequence
 
 from .book import Book, BookSide, RestingOrder, apply_event
-from .config import SimConfig
+from .config import ADVERSE_SELECTION_WINDOW_NS, SimConfig
 from .events import BookEvent, BookEventSource, MboAction
 from .fills import decide, queue_model_for
 from .orders import (
@@ -69,6 +81,7 @@ from .orders import (
     OrderOutcome,
     OrderTracker,
     Side,
+    TerminalState,
 )
 
 __all__ = [
@@ -89,6 +102,24 @@ _CM_ACTIONS: tuple[MboAction, ...] = (MboAction.CANCEL, MboAction.MODIFY)
 # Progress cadence for the info log (spine Consistency Conventions: progress at a
 # record interval, never per-event). The parity fixture is ~22.5M records.
 _PROGRESS_EVERY = 1_000_000
+
+
+@dataclass
+class _AdverseCheck:
+    """One in-flight AD-28 adverse-selection check for a passive fill.
+
+    Private, sim-internal, never serialized. ``hit`` is the only mutable field --
+    latched ``True`` the first tick (strictly after the fill) that the same-side
+    quote is away from ``price_dbn`` within the 1 s window, and never un-latched
+    (the predicate is "any point in the window", Alex-pinned 2026-08-29). The
+    fill tick is ``deadline_ns - ADVERSE_SELECTION_WINDOW_NS``.
+    """
+
+    order_id: str
+    price_dbn: int
+    side: Side
+    deadline_ns: int
+    hit: bool = False
 
 
 class IntentLogError(Exception):
@@ -227,7 +258,9 @@ class Manifest:
     last_ts_ns: int
     event_count: int
     intent_count: int
-    oco_cascade_cancel_count: int
+    oco_cascade_cancel_count: int  # OCO-cascade cancellations (events, AD-25)
+    adverse_fill_count: int  # orders whose AD-28 window latched adverse (== # of
+    #                          OrderOutcomes with adverse_selection == True)
     outcome_schema_version: int
     python_version: str
     databento_version: str
@@ -248,6 +281,7 @@ class Manifest:
             "event_count": self.event_count,
             "intent_count": self.intent_count,
             "oco_cascade_cancel_count": self.oco_cascade_cancel_count,
+            "adverse_fill_count": self.adverse_fill_count,
             "outcome_schema_version": self.outcome_schema_version,
             "python_version": self.python_version,
             "databento_version": self.databento_version,
@@ -291,6 +325,12 @@ class SimRun:
         self._event_count = 0
         self._intent_count = 0
         self._oco_cascade_cancel_count = 0
+        # AD-28: bounded deferred adverse-selection checks (push order == list
+        # order -- deterministic iteration, AD-11). `_max_deadline` gives the
+        # run-end seal a `now_ns` >= every remaining deadline.
+        self._adverse_checks: list[_AdverseCheck] = []
+        self._adverse_fill_count = 0
+        self._max_deadline = -1
         self._ran = False
 
     # -- public API ------------------------------------------------------
@@ -311,8 +351,9 @@ class SimRun:
             RuntimeError: :meth:`run` was already called (single-shot).
             BookInconsistency: a structural book check failed (from ``book``).
             OrderStateError: an illegal tracker transition (e.g. an over-fill
-                from ``fills.decide``) -- a bug, propagated not caught (from
-                ``orders``).
+                from ``fills.decide``, or an AD-28 ``set_adverse_selection`` on
+                an order that is not ``FILLED`` / already finalized) -- a bug,
+                propagated not caught (from ``orders``).
         """
         if self._ran:
             raise RuntimeError("SimRun.run() is single-shot (spine AD-14)")
@@ -320,6 +361,12 @@ class SimRun:
         intents = list(intent_log)
         _validate_intent_log(intents, self.valid_intervals)
         self._loop(book_event_source, intents)
+        # AD-28: seal every still-open adverse check before the tracker is
+        # serialized (the order stays mutable "until run end, then serialized").
+        # `_max_deadline + 1` is >= every remaining deadline so all of them seal;
+        # `evaluate=False` -- no book delta at run end, only the latched `hit`
+        # counts.
+        self._step_adverse(self._max_deadline + 1, evaluate=False)
         self.book.check_invariants()
         outcomes = self.tracker.finalize()
         return outcomes, self._build_manifest()
@@ -372,6 +419,7 @@ class SimRun:
 
             # -- STEP 1: fold every book delta at T (spine AD-20 step 1). Always,
             #    even outside the mask -- the book stays continuous (AD-13).
+            events_before = self._event_count
             while ev_buf is not None and ev_buf.ts_event == now_ns:
                 event = ev_buf
                 if self._iid is None:
@@ -478,6 +526,16 @@ class SimRun:
                 self._step_arrivals(now_ns)
                 self._step_fills(now_ns)
 
+            # -- STEP 6: AD-28 deferred-check pass (the "deferred fill
+            #    application" of AD-20's paradigm). Every tick, in *and* out of
+            #    the mask -- a fill's 1 s window may cross an interval boundary
+            #    and the book is continuous (AD-13). `evaluate` only when a book
+            #    delta was folded this tick: the BBO can move only on a book
+            #    event, so a non-book wake (an arrival, an interval bound) must
+            #    not latch `hit` -- that would make the marker depend on
+            #    unrelated timing (AD-11).
+            self._step_adverse(now_ns, evaluate=self._event_count > events_before)
+
             while arrival_wakes and arrival_wakes[0] <= now_ns:
                 heappop(arrival_wakes)
             while bp < len(bounds) and bounds[bp] <= now_ns:
@@ -527,6 +585,15 @@ class SimRun:
                 "(spine AD-13c)"
             )
         for fill_event in decide(self.book, self.tracker, now_ns, self.config):
+            # AD-28 enqueue: read the snapshot while the order is still WORKING
+            # (before `apply_fill`). A losing OCO leg whose fill this batch has
+            # already cascade-cancelled is no longer WORKING -- skip it (its
+            # fill is voided by `apply_fill` anyway).
+            snap = (
+                self.tracker.snapshot(fill_event.order_id)
+                if self.tracker.live_state(fill_event.order_id) is LiveState.WORKING
+                else None
+            )
             cascaded = self.tracker.apply_fill(fill_event, now_ns)
             self._oco_cascade_cancel_count += len(cascaded)
             if cascaded:
@@ -535,6 +602,85 @@ class SimRun:
                     fill_event.order_id,
                     cascaded,
                 )
+            # Only a passive fill that actually completed the order is an
+            # adverse-selection candidate (§2.1 passive-only; and
+            # `set_adverse_selection` needs a FILLED order). Marketable /
+            # marketable-limit fills enqueue nothing.
+            if (
+                snap is not None
+                and snap.kind is OrderKind.PASSIVE_LIMIT
+                and self.tracker.terminal_state(fill_event.order_id)
+                is TerminalState.FILLED
+            ):
+                deadline_ns = fill_event.ts_ns + ADVERSE_SELECTION_WINDOW_NS
+                self._adverse_checks.append(
+                    _AdverseCheck(
+                        order_id=fill_event.order_id,
+                        price_dbn=fill_event.px_dbn,
+                        side=snap.side,
+                        deadline_ns=deadline_ns,
+                        hit=False,
+                    )
+                )
+                if deadline_ns > self._max_deadline:
+                    self._max_deadline = deadline_ns
+
+    # -- STEP 6: the AD-28 deferred-check pass ---------------------------
+
+    def _step_adverse(self, now_ns: int, *, evaluate: bool) -> None:
+        """Evaluate + seal the AD-28 adverse-selection checks (spine AD-28;
+        predicate pinned by Alex 2026-08-30).
+
+        *Evaluate* (only when ``evaluate`` -- i.e. a book delta was folded this
+        tick; the BBO moves only on a book event, so a non-book wake must not
+        latch, AD-11): for every open check whose window contains ``now_ns``
+        strictly after the fill tick (``fill_ts < now_ns <= deadline_ns``),
+        latch ``hit`` if the same-side quote is away from the fill price
+        (BUY: ``best_bid_dbn < P``; SELL: ``best_ask_dbn > P``; a ``None``
+        quote never triggers -- a quote that is not there did not move through
+        a price).
+
+        *Seal* (always): for every check with ``deadline_ns <= now_ns`` -- and
+        for every remaining check at run end -- write ``adverse_selection =
+        True`` on the tracker order iff it latched ``hit``, count it, drop it.
+
+        O(open checks); open checks are bounded by the passive fills in the last
+        1 s. Deterministic push-order iteration; the list is only rebuilt when a
+        check actually seals.
+        """
+        if not self._adverse_checks:
+            return
+        if evaluate:
+            iid = self._iid if self._iid is not None else 0
+            best_bid = self.book.best_bid_dbn(iid)
+            best_ask = self.book.best_ask_dbn(iid)
+            for check in self._adverse_checks:
+                if check.hit:
+                    continue
+                fill_ts = check.deadline_ns - ADVERSE_SELECTION_WINDOW_NS
+                if not (fill_ts < now_ns <= check.deadline_ns):
+                    continue
+                if check.side is Side.BUY:
+                    if best_bid is not None and best_bid < check.price_dbn:
+                        check.hit = True
+                elif best_ask is not None and best_ask > check.price_dbn:
+                    check.hit = True
+
+        # Push order == non-decreasing deadline (deadline = fill.ts_ns + a
+        # constant; fills are appended in tick order). So if the oldest check's
+        # deadline is still in the future, nothing seals -- keep the list as-is,
+        # no realloc (this is the hot path over ~22.5M ticks).
+        if self._adverse_checks[0].deadline_ns > now_ns:
+            return
+        survivors: list[_AdverseCheck] = []
+        for check in self._adverse_checks:
+            if check.deadline_ns <= now_ns:
+                if check.hit:
+                    self.tracker.set_adverse_selection(check.order_id, True)
+                    self._adverse_fill_count += 1
+            else:
+                survivors.append(check)
+        self._adverse_checks = survivors
 
     # -- manifest ------------------------------------------------------
 
@@ -551,6 +697,7 @@ class SimRun:
             event_count=self._event_count,
             intent_count=self._intent_count,
             oco_cascade_cancel_count=self._oco_cascade_cancel_count,
+            adverse_fill_count=self._adverse_fill_count,
             outcome_schema_version=_outcome_schema_version(),
             python_version=platform.python_version(),
             databento_version=_pkg_version("databento"),

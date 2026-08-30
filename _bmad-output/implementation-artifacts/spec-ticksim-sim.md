@@ -95,6 +95,14 @@ context:
 
 ## Spec Change Log
 
+### 2026-08-30 — AD-28 `adverse_selection` no longer carved off
+
+The follow-up slice `spec-ticksim-sim-adverse.md` (done) added the AD-28 deferred-check
+queue as step 6 of `SimRun._loop`. The frozen "`adverse_selection` is out of this
+slice / always `False`" statements above are superseded — every passive-limit fill
+now gets a 1 s adverse-selection window (predicate pinned by Alex 2026-08-30). Spine
+AD-28 amended. `Manifest` gained `adverse_fill_count`.
+
 ### 2026-08-29 review-1 (blind / edge-case / verification-gap) — `bad_spec` loopback
 
 Two real defects the reviewers demonstrated, both traceable to the frozen spec / Design Notes:

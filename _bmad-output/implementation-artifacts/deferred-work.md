@@ -409,8 +409,8 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 ## Deferred from: spec-ticksim-sim planning split (2026-08-29)
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim.md`
-  summary: **AD-28 `adverse_selection` deferred-check queue.** sim.py ships with `OrderOutcome.adverse_selection` always `False`. Follow-up: a bounded deferred-check queue (class_rank 2 in the AD-20 order) — when a passive fill lands, enqueue a check for `fill_ts + config.ADVERSE_SELECTION_WINDOW_NS`; as the clock advances, mark `tracker.set_adverse_selection(oid, True)` iff a same-side quote move went through our fill price within the window. Needs the exact §2.1 predicate pinned (endpoint vs. window; direction) — a HALT-and-ask item for that slice.
-  evidence: planning split — spec-ticksim-sim was ~2,100 tokens; the loop + seam + mask + manifest are one indivisible goal, AD-28 is the clean carve-off (independent: reads book BBO, calls one tracker setter, does not touch fills / outcomes structure / loop correctness).
+  summary: **[RESOLVED 2026-08-30] AD-28 `adverse_selection` deferred-check queue.** Built as step 6 of `SimRun._loop` — `spec-ticksim-sim-adverse.md` (done). Alex pinned the §2.1 predicate: any point in the 1 s window, same-side quote moves away, latched on book ticks. Spine AD-28 amended.
+  evidence: planning split from the sim.py slice; predicate needed a human decision.
 
 ## Deferred from: code review of spec-ticksim-sim (2026-08-29, review-1)
 
@@ -423,3 +423,12 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim.md`
   summary: the intent log is not validated against per-order terminal state within its own timeline (e.g. `SUBMIT o1; CANCEL o1; CANCEL o1` passes up-front validation; the 2nd cancel is dropped at runtime when the deferred effect finds o1 terminal). Safe (no crash, broker-realistic) but a stricter producer-contract check could fail-fast. A REPLACE can un-terminalize, so "terminal in the log" is fuzzy — revisit at the Part A intent-log reconstruction slice.
   evidence: edge-case-hunter + verification-gap.
+
+## Deferred from: code review of spec-ticksim-sim-adverse (2026-08-30, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim-adverse.md`
+  summary: **multi-partial passive fills** — the AD-28 check is enqueued only on the *completing* fill (its `ts_ns` / `px_dbn`), because `tracker.set_adverse_selection` requires a `FILLED` order. Adverse moves between a passive order's first partial and its completion, and the filled quantity of a passive order that partial-fills then EXPIRES/CANCELS, are not measured. Fix would need per-partial `_AdverseCheck`s with the `set_adverse_selection` call deferred until FILLED (or a per-partial adverse field). Rare for 1–5-lot H1 (fills in one shot at the touch). Revisit if a study shows meaningful passive partials.
+  evidence: edge-case-hunter + blind-hunter; forced by the `set_adverse_selection` FILLED contract.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim-adverse.md`
+  summary: `parity/invariants.py` (a later slice) should pick up an AD-28 structural invariant: `adverse_selection is True ⇒ terminal_state == FILLED and kind == passive_limit`; a `MARKETABLE`/`MARKETABLE_LIMIT` outcome never has `adverse_selection`. Currently enforced only inline in `sim._step_fills`; no independent check.
+  evidence: blind-hunter.

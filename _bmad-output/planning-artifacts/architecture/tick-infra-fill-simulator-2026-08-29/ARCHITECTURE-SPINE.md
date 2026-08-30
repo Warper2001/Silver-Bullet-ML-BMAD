@@ -223,7 +223,7 @@ graph TD
 
 - **Binds:** `sim.py`, `orders.py`
 - **Prevents:** a forbidden look-ahead in `fills.decide`; a second replay pass (AD-14 says exactly two `SimRun`s)
-- **Rule:** `adverse_selection` (book state 1 s after the fill — seal §2.1) is computed by `sim` via a bounded deferred-check queue processed as the clock advances. The tracker order stays mutable **for this one field only** until `fill_ts_ns + 1_000_000_000` or run end, then serialized. Not a second replay.
+- **Rule:** `adverse_selection` (seal §2.1) is computed by `sim` via a bounded deferred-check queue processed as the clock advances. The tracker order stays mutable **for this one field only** until `fill_ts_ns + config.ADVERSE_SELECTION_WINDOW_NS` or run end, then serialized. Not a second replay. **Predicate (Alex 2026-08-30, superseding "book state 1 s *after* the fill"):** a *passive-limit* fill at price P is adverse iff at **any** book-event tick strictly after the fill and within the 1 s window the same-side best quote is away from P — for a passive BUY, `best_bid_dbn < P`; for a passive SELL, `best_ask_dbn > P`; a `None` quote never triggers. Latch on book ticks only (the BBO moves only on a book event — a non-book wake must not latch, AD-11). `MARKETABLE` / `MARKETABLE_LIMIT` fills are never marked. Known conservative (under-flagging) biases are enumerated in `_bmad-output/implementation-artifacts/spec-ticksim-sim-adverse.md`. *(Amended 2026-08-30 — the deferred-check is step 6 of `SimRun._loop`, the "deferred fill application" of the paradigm; it is not one of AD-20's three merged-stream classes.)*
 
 ## Consistency Conventions
 

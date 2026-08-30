@@ -405,3 +405,21 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-fills.md`
   summary: `observe_book_event` no-ops on `R` (book clear). An `R` wipes resting liquidity ahead of working passives; their `queue_ahead` is left stale. Treated as an exchange halt/reset (prereg §2.2 not-modelled list, AD-13 mask territory) — but if a session ever contains a mid-RTH `R`, `sim.py` should zero working passives' `queue_ahead` at that seam.
   evidence: edge-case-hunter.
+
+## Deferred from: spec-ticksim-sim planning split (2026-08-29)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim.md`
+  summary: **AD-28 `adverse_selection` deferred-check queue.** sim.py ships with `OrderOutcome.adverse_selection` always `False`. Follow-up: a bounded deferred-check queue (class_rank 2 in the AD-20 order) — when a passive fill lands, enqueue a check for `fill_ts + config.ADVERSE_SELECTION_WINDOW_NS`; as the clock advances, mark `tracker.set_adverse_selection(oid, True)` iff a same-side quote move went through our fill price within the window. Needs the exact §2.1 predicate pinned (endpoint vs. window; direction) — a HALT-and-ask item for that slice.
+  evidence: planning split — spec-ticksim-sim was ~2,100 tokens; the loop + seam + mask + manifest are one indivisible goal, AD-28 is the clean carve-off (independent: reads book BBO, calls one tracker setter, does not touch fills / outcomes structure / loop correctness).
+
+## Deferred from: code review of spec-ticksim-sim (2026-08-29, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim.md`
+  summary: `OrderOutcome.queue_rank_at_submit` is set to the contracts-ahead total (== `queue_ahead_size_at_submit`), not a true order-count rank. A real rank needs `QueueModel.queue_ahead_size` (or a sibling) to return the number of resting orders ahead, not just their summed size. Revisit if a study wants rank as a distinct signal. spine AD-12 field-name note also open (`_at_submit` vs `_at_arrival`).
+  evidence: blind-hunter + verification-gap — flagged since the foundation slice; `queue_ahead_size` returns a total.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim.md`
+  summary: OCO-cascade cancels are surfaced only as a manifest counter (`oco_cascade_cancel_count`) and `logger.debug`; the per-fill cascaded-id list the spec's step 5 says to "record" is not machine-readable beyond `finalize()`'s terminal states. Fine for parity (recoverable) — add a structured cascade log to the manifest only if a consumer needs the linkage.
+  evidence: blind-hunter.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-sim.md`
+  summary: the intent log is not validated against per-order terminal state within its own timeline (e.g. `SUBMIT o1; CANCEL o1; CANCEL o1` passes up-front validation; the 2nd cancel is dropped at runtime when the deferred effect finds o1 terminal). Safe (no crash, broker-realistic) but a stricter producer-contract check could fail-fast. A REPLACE can un-terminalize, so "terminal in the log" is fuzzy — revisit at the Part A intent-log reconstruction slice.
+  evidence: edge-case-hunter + verification-gap.

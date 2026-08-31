@@ -52,4 +52,15 @@ queue time-series and invariant 6's merge ordering (loopback 1, 2026-08-31);
 ``PART_B_COVERAGE_NOTE`` records this verbatim. ``events`` is imported only for
 the ``BookEventSource`` type annotation. ``PERMITTED_INTERNAL_EDGES["part_b"] =
 {"sim", "orders", "config", "invariants", "events"}``.
+
+``gate.py`` (the prereg §A8.2 / spine AD-26 output contract) folds a
+``part_a.PartAResult`` + a ``part_b.PartBResult`` into the two-part verdict
+(``evaluate`` -- PASS iff **both** parts pass), resolves the frozen simulator
+commit via the one sanctioned ``subprocess`` call (``frozen_sha`` --
+``git rev-parse HEAD``; AD-4 / AD-11 otherwise stand), and renders the
+fixed-template append-only amendment stub (``build_amendment_stub`` -- returns
+text, never writes a file). It imports only ``config`` and its two siblings and
+makes no ``sim`` / ``events`` / ``book`` call -- it consumes the two part
+results as values. ``PERMITTED_INTERNAL_EDGES["gate"] = {"config", "part_a",
+"part_b"}``.
 """

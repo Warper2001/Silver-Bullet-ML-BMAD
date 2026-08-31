@@ -131,6 +131,13 @@ class PartAError(Exception):
     trip, a ``FILL`` row flagged rejected, an unparseable price / timestamp /
     size, or a missing / duplicate / side-mismatched
     :class:`~src.ticksim.orders.OrderOutcome`.
+
+    The runner (:mod:`~src.ticksim.parity.part_a_runner`) reuses it for a
+    **window-book data fault**: an unfilled leg whose miss cannot be priced
+    because the ±90-min MBO capture has no touch on the crossed side at the real
+    fill ts, a multi-instrument or mis-ordered window stream, a non-re-iterable
+    ``source_for`` result, a duplicate ``trade_id``, or a ``sim`` outcome for a
+    foreign ``trade_id``.
     """
 
 

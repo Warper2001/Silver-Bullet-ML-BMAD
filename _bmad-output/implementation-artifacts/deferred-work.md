@@ -489,3 +489,15 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-a.md`
   summary: the reconstructed entry+exit legs share one `oco_group_id` (AD-25). `OrderTracker._cascade_oco` cancels other live group members (incl. an unfilled entry) when an EXIT-leg fills. For the real mim-nb/yank data the exit is hours after the entry fill so this never bites, but `run_part_a`'s integration test should exercise a 2-member entry+exit OCO group through the tracker under latency to confirm the exit-fill cascade does not void an already-filled (or still-in-flight) entry.
   evidence: blind-hunter r2 — no test currently covers an entry+exit OCO group end-to-end through the tracker.
+
+## Deferred from: code review of spec-ticksim-parity-run-part-a (2026-08-30, review-1 / patch round)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-run-part-a.md`
+  summary: `tests/integration/test_ticksim_parity_run_part_a_integration.py` (the only test that drives `run_part_a` over a real re-iterable `DbnMboSource` + a dense real book — real DBN iteration, `_touch_at` finding touches in real depth, `unresolved_misses == 0` on real data) skips whenever the window fixture `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst` is absent, which it is in this worktree and in CI (`TICKSIM_REQUIRE_FIXTURE` unset). Run it (and set `TICKSIM_REQUIRE_FIXTURE=1` in a fixture-carrying CI lane) once Tranche 1 data lands; regenerating the capture may also need `_WindowSource`'s lead margin re-tuned.
+  evidence: verification-gap + blind-hunter r1 — the real-data path has never executed.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-run-part-a.md`
+  summary: `_touch_at` re-walks the whole window source once per `leg_unfilled` miss (CHECKPOINT-1: kept simple, O(misses × window) is negligible at Part A's N≈28 × ≤1 miss). If Part A v2 (§A8.4, N≥100) or a future high-miss window makes this hot, amortise to a single sorted-BBO-timeline pass with a bisect per miss.
+  evidence: CHECKPOINT-1 decision — recorded as the revisit condition.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-run-part-a.md`
+  summary: `_window_span`'s "span every `RealFill.ts_ns`" term is load-bearing only for mim-nb-reconstructed trades (where `_build_mim_trade` sets `RealFill.ts_ns` to the FILL row ts, later than the PLACE/submit ts); no unit or integration test uses a trade whose real fill ts differs from its submit ts (integration is yank-only, where they're equal). The 5-min `PART_A_WINDOW_PAD_NS` absorbs realistic market-order fill latency so the observable impact is ~nil, but add a mim-nb-shaped fixture when the real ledger is available.
+  evidence: verification-gap r1.

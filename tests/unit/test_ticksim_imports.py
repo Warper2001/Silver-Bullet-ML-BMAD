@@ -46,6 +46,7 @@ PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     "report": {"orders", "config"},
     "invariants": {"sim", "orders"},
     "part_a": {"orders", "config"},
+    "part_a_runner": {"sim", "events", "book", "orders", "config", "part_a"},
 }
 
 
@@ -102,13 +103,26 @@ def _hits_forbidden(names: set[str]) -> set[str]:
     }
 
 
-def _internal_targets(names: set[str]) -> set[str]:
-    """The set of ``src.ticksim`` submodule stems referenced in ``names``."""
+def _internal_targets(names: set[str], importer_package: str = "") -> set[str]:
+    """The set of ``src.ticksim`` module stems referenced in ``names``.
+
+    A ``src.ticksim.parity.<sibling>`` reference resolves to the sibling stem
+    (``part_a``), not to ``parity`` -- **but only when the importer itself lives
+    in ``src.ticksim.parity``** (e.g. ``from .part_a import compare_fills`` inside
+    ``part_a_runner.py``), so a parity submodule's edge set is keyed on the
+    sibling it actually imports. An importer outside the package still sees a
+    ``parity`` edge for ``from src.ticksim.parity.part_a import ...``.
+    """
+    parity_internal = importer_package == "src.ticksim.parity"
     targets: set[str] = set()
     for name in names:
         if name == "src.ticksim" or not name.startswith("src.ticksim."):
             continue
-        targets.add(name.removeprefix("src.ticksim.").split(".")[0])
+        parts = name.removeprefix("src.ticksim.").split(".")
+        if parity_internal and len(parts) >= 2 and parts[0] == "parity":
+            targets.add(parts[1])
+        else:
+            targets.add(parts[0])
     return targets
 
 
@@ -153,6 +167,28 @@ class TestImportResolver:
         got = _resolve_imports("from ...ml import inference", "src.ticksim.parity")
         assert _hits_forbidden(got) == {"src.ml", "src.ml.inference"}
 
+    def test_parity_sibling_import_resolves_to_sibling_stem(self) -> None:
+        # `from .part_a import compare_fills` inside src.ticksim.parity is a
+        # sibling-module edge -- it must resolve to `part_a`, not `parity`, so
+        # part_a_runner's permitted-edge set can name the sibling directly.
+        got = _resolve_imports(
+            "from .part_a import compare_fills, aggregate", "src.ticksim.parity"
+        )
+        assert _internal_targets(got, "src.ticksim.parity") == {"part_a"}
+
+    def test_parity_package_import_still_resolves_to_parity(self) -> None:
+        got = _resolve_imports("from src.ticksim import parity", "src.ticksim.other")
+        assert _internal_targets(got) == {"parity"}
+
+    def test_outside_importer_of_parity_submodule_sees_parity_edge(self) -> None:
+        # a non-parity module doing `from src.ticksim.parity.part_a import X`
+        # must still resolve to `parity` -- the sibling rewrite is scoped to
+        # importers inside src.ticksim.parity.
+        got = _resolve_imports(
+            "from src.ticksim.parity.part_a import compare_fills", "src.ticksim.sim"
+        )
+        assert _internal_targets(got, "src.ticksim") == {"parity"}
+
 
 @pytest.mark.parametrize("path", _module_files(), ids=lambda p: p.name)
 class TestTicksimImportIsolation:
@@ -163,7 +199,7 @@ class TestTicksimImportIsolation:
     def test_internal_edges_are_permitted(self, path: Path) -> None:
         if path.stem == "__init__":
             pytest.skip("package marker")
-        internal = _internal_targets(_imported_modules(path))
+        internal = _internal_targets(_imported_modules(path), _file_package(path))
         permitted = PERMITTED_INTERNAL_EDGES.get(path.stem, set())
         assert internal <= permitted, (
             f"{path.name} imports {internal - permitted} from src.ticksim, "

@@ -58,6 +58,7 @@ graph TD
   parity --> book
   parity --> orders
   parity --> config
+  parity --> events
 ```
 
 ### AD-1 — Discrete-event core, one logical clock
@@ -100,8 +101,9 @@ graph TD
 
 - **Binds:** `src/ticksim/`
 - **Prevents:** import cycles; `book`/`orders` acquiring knowledge of higher layers
-- **Rule:** `book.py` and `orders.py` import nothing from `src/ticksim`. Permitted import edges only: `events` → book, orders · `fills` → book, orders, config · `sim` → any ticksim module · `report` → orders, config · `parity` → sim, report, book, orders, config. No other edges; no cycles. Enforced by a test that walks the import graph.
+- **Rule:** `book.py` and `orders.py` import nothing from `src/ticksim`. Permitted import edges only: `events` → book, orders · `fills` → book, orders, config · `sim` → any ticksim module · `report` → orders, config · `parity` → sim, report, book, orders, config, events. No other edges; no cycles. Enforced by a test that walks the import graph.
   - *Note (2026-08-30, human-authorized for the report slice): `report` → `config` widens the original `report` → `orders` edge. AD-24 (finalized after AD-7) makes `report.py` the sole consumer of `config.DOLLARS_PER_INDEX_POINT` / `config.MNQ_TICK_DBN`; importing the two seal-cited module constants is the AD-24-sanctioned reconciliation. Fees still reach `report.py` only via the manifest dict — the alternative (a `dollars_per_index_point` field on `Manifest`) would be a `sim.py` change for one constant and is not what AD-24 sanctions.*
+  - *Note (2026-08-30, human-authorized for the part-a-runner slice): `parity` → `events` widens AD-7's list. `parity/part_a_runner.py` (AD-17's Part A MBO-window runner, `run_part_a`) drives `sim.simulate` over an injected window `BookEventSource` and, to price a `leg_unfilled` miss (AD-17), does a bounded read-only re-walk of that same source (`_touch_at`); the injected-callable and the re-walk are both typed on `events.BookEventSource`. `part_a_runner` also imports its sibling `parity/part_a.py` (`ReconstructedTrade` / `FillError` / `PartAResult` / `compare_fills` / `aggregate`) — a within-package edge, tracked as `PERMITTED_INTERNAL_EDGES["part_a_runner"]`. No cycle: `events` imports only `book`, and `book` imports nothing from `src.ticksim` above `config` (AD-8).*
   - *Note (2026-08-30, human-authorized for the parity-invariants slice): `parity` → `orders` widens AD-7's original `parity → sim, report, book, config` list. AD-16's `parity/invariants.py` functions take frozen `OrderIntent` / `OrderOutcome` values (AD-12: the outcome carries no `size` / `limit_px_dbn`, so invariant checks must join to the intent), and AD-12 names `parity/invariants.py` a co-owner of the `terminal_state == FILLED ⇔ fills` consistency family — both require the `orders` types. The imports test already used `from ..orders import Fill` as its canonical `parity` example. No cycle: `orders` imports nothing from `src/ticksim` (AD-8).*
 
 ### AD-8 — One owner of order lifecycle

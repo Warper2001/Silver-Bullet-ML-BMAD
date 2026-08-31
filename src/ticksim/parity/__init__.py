@@ -27,6 +27,29 @@ slice that *does* run the simulation: for each ``ReconstructedTrade`` it calls
 outcomes with ``part_a.compare_fills``, resolves each ``leg_unfilled`` miss from
 a bounded read-only re-walk of that source (the window book's touch at the real
 fill ts + one tick of adverse slip, AD-17), and folds the whole error set
-through ``part_a.aggregate``. ``PERMITTED_INTERNAL_EDGES["part_a_runner"] =
-{"sim", "events", "book", "orders", "config", "part_a"}``.
+through ``part_a.aggregate``. The bounded re-walk is ``_bookwalk``'s job now, so
+``part_a_runner`` no longer imports ``book`` directly.
+``PERMITTED_INTERNAL_EDGES["part_a_runner"] = {"sim", "events", "orders",
+"config", "part_a", "_bookwalk"}``.
+
+``_bookwalk.py`` (``BookReplay`` / ``BookWalkError``) is the shared bounded,
+read-only forward book replay -- one ``book.Book`` folded over one
+``events.BookEventSource`` up to a non-decreasing ``ts_ns`` cutoff, with
+fail-closed guards (source ``ts_event`` regression, cutoff regression across
+calls, a second ``instrument_id``, a non-``StopIteration`` iterator error).
+``part_a_runner._touch_at`` is a thin wrapper over it; ``part_b`` does **not**
+use it (loopback 1 -- no book replay in Part B). The slice-2 synthetic-order
+generator will need it for BBO sampling.
+``PERMITTED_INTERNAL_EDGES["_bookwalk"] = {"book", "events"}``.
+
+``part_b.py`` (the prereg §A8.2 Part B battery runner, ``run_part_b``) does one
+``sim.simulate`` over the >=1000 synthetic orders, joins each ``OrderOutcome``
+to its ``OrderIntent`` on ``order_id``, runs ``invariants.check_order`` per pair
+and collects every ``Violation`` into a ``PartBResult``. It does **no** book
+replay -- invariant 5's book-liquidity half is a ``fills.py`` construction
+guarantee, treated exactly as ``invariants.py`` already treats invariant 4's
+queue time-series and invariant 6's merge ordering (loopback 1, 2026-08-31);
+``PART_B_COVERAGE_NOTE`` records this verbatim. ``events`` is imported only for
+the ``BookEventSource`` type annotation. ``PERMITTED_INTERNAL_EDGES["part_b"] =
+{"sim", "orders", "config", "invariants", "events"}``.
 """

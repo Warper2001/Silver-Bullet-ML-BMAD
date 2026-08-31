@@ -440,6 +440,54 @@ def test_touch_at_empty_before_ts_returns_none_none() -> None:
     assert _touch_at(ListSource(events), B) == (None, None)
 
 
+def test_touch_at_misordered_source_raises_part_a_error() -> None:
+    # a window stream whose ts_event regresses -> BookReplay raises BookWalkError
+    # which _touch_at translates to PartAError (fail loud, never truncate).
+    events = [
+        be(MboAction.ADD, MboSide.BID, 1, P, 10, ts=B + 1_000, seq=1),
+        be(MboAction.ADD, MboSide.BID, 2, P + TICK, 10, ts=B, seq=2),  # goes back
+    ]
+    with pytest.raises(PartAError, match="ts_event regressed"):
+        _touch_at(ListSource(events), B + 10_000)
+
+
+def test_touch_at_multi_instrument_source_raises_part_a_error() -> None:
+    # a second instrument_id inside the walk's cutoff -> PartAError (sim's own
+    # multi-instrument guard is lazy and could miss an id past ts_ns).
+    events = [
+        be(MboAction.ADD, MboSide.BID, 1, P, 10, ts=B, seq=1),
+        BookEvent(
+            action=MboAction.ADD,
+            side=MboSide.ASK,
+            order_id=2,
+            price_dbn=P + TICK,
+            size=10,
+            ts_event=B + 1_000,
+            sequence=2,
+            instrument_id=IID + 1,
+        ),
+    ]
+    with pytest.raises(PartAError, match="multi-instrument"):
+        _touch_at(ListSource(events), B + 10_000)
+
+
+def test_touch_at_source_iterator_error_raises_part_a_error() -> None:
+    # a window stream whose iterator blows up mid-scan (I/O, decode) -> the
+    # _bookwalk non-StopIteration wrap -> BookWalkError -> PartAError.
+    class BoomSource:
+        class_rank = 0
+
+        def __iter__(self) -> Iterator[BookEvent]:
+            def _gen() -> Iterator[BookEvent]:
+                yield be(MboAction.ADD, MboSide.BID, 1, P, 10, ts=B, seq=1)
+                raise RuntimeError("window file truncated")
+
+            return _gen()
+
+    with pytest.raises(PartAError, match="window file truncated"):
+        _touch_at(BoomSource(), B + 10_000)
+
+
 # --------------------------------------------------------------------------- #
 # propagation: non-re-iterable source, missing window
 # --------------------------------------------------------------------------- #

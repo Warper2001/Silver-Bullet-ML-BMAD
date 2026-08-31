@@ -46,7 +46,22 @@ PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     "report": {"orders", "config"},
     "invariants": {"sim", "orders"},
     "part_a": {"orders", "config"},
-    "part_a_runner": {"sim", "events", "book", "orders", "config", "part_a"},
+    "part_a_runner": {
+        "sim",
+        "events",
+        "orders",
+        "config",
+        "part_a",
+        "_bookwalk",
+    },
+    "_bookwalk": {"book", "events"},
+    "part_b": {
+        "sim",
+        "orders",
+        "config",
+        "invariants",
+        "events",
+    },
 }
 
 

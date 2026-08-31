@@ -501,3 +501,24 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-run-part-a.md`
   summary: `_window_span`'s "span every `RealFill.ts_ns`" term is load-bearing only for mim-nb-reconstructed trades (where `_build_mim_trade` sets `RealFill.ts_ns` to the FILL row ts, later than the PLACE/submit ts); no unit or integration test uses a trade whose real fill ts differs from its submit ts (integration is yank-only, where they're equal). The 5-min `PART_A_WINDOW_PAD_NS` absorbs realistic market-order fill latency so the observable impact is ~nil, but add a mim-nb-shaped fixture when the real ledger is available.
   evidence: verification-gap r1.
+
+## Deferred from: code review of spec-ticksim-parity-part-b (2026-08-31, review-1 → intent_gap loopback)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-b.md`
+  summary: `_bookwalk.BookReplay`'s multi-instrument guard is lazy — it only fires for a second `instrument_id` that appears at or before the `advance_to` cutoff. A foreign contract that appears only later in the window is not caught (same limitation as `sim`'s own lazy multi-instrument check). A `BookReplay.scan_single_instrument()` full-pass mode would close it; not needed while callers filter to front-month.
+  evidence: edge-case-hunter r1.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-b.md`
+  summary: Part B's `valid_intervals` is one spanning `[lo-pad, hi+pad)` window. The prereg generates ≥1000 orders "across the Tranche 1 data" = 28 windows / 24 calendar days; a single interval marks orders valid during overnight / inter-window gaps. If per-window bucketing is wanted for the real run it must come from the slice-2 generator emitting orders only inside real session windows, or `run_part_b` taking `valid_intervals` explicitly. Revisit at slice 2 / the real gate run.
+  evidence: blind-hunter r1.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-b.md`
+  summary: `part_b` no longer needs `_bookwalk`, but the slice-2 synthetic-order generator will (BBO sampling to pick realistic `limit_px_dbn` for `passive_limit` / `marketable_limit` orders). `BookReplay` is the primitive for that.
+  evidence: loopback-1 KEEP rationale.
+
+## Deferred from: code review of spec-ticksim-parity-part-b (2026-08-31, review-2 / patch round)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-b.md`
+  summary: `PART_B_COVERAGE_NOTE` (which invariants Part B verifies post-hoc vs construction-guaranteed) is carried on `PartBResult.coverage_note` but nothing forces a consumer to surface it. `gate.py` (next slice) MUST render the note into the §A8.2 gate report so a gate reader knows the ≥1000-order battery is a scaled post-hoc check, not a re-derivation of the sim's internal ordering.
+  evidence: blind-hunter r2 — flagged as a slice-2/gate.py requirement so the note doesn't become decorative.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-b.md`
+  summary: `run_part_b` does not eagerly scan `source` for a second `instrument_id` — it relies on `sim`'s lazy multi-instrument check, which misses a foreign contract appearing only outside the padded submit-ts window. Same stance as `run_part_a` (caller filters front-month). A `BookReplay.scan_single_instrument()` full-pass or an eager `{ev.instrument_id for ev in source}` check in the gate driver would close it; revisit at the real gate run when the front-month filter's correctness matters most.
+  evidence: edge-case-hunter r1+r2, blind-hunter r1.

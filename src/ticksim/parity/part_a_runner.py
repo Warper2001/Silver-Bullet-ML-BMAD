@@ -15,8 +15,9 @@ simulation itself and a ``leg_unfilled`` miss comes back with
   ``leg_unfilled`` miss to a defined magnitude (spine AD-17), then
   :func:`~src.ticksim.parity.part_a.aggregate` the full error set into the
   :class:`~src.ticksim.parity.part_a.PartAResult` verdict.
-* :func:`_touch_at` -- a bounded, read-only book replay returning the window
-  book's BBO at a timestamp, used to price an unfilled leg's miss.
+* :func:`_touch_at` -- a thin wrapper over
+  :class:`~src.ticksim.parity._bookwalk.BookReplay` returning the window book's
+  BBO at a timestamp, used to price an unfilled leg's miss.
 
 Scope (spec Never): this module does not load ``.dbn.zst`` paths, resolve which
 window belongs to which trade, or filter to the front-month instrument -- that is
@@ -30,9 +31,12 @@ grades fill-price fidelity of the decision-bearing model, not the deliberately
 generous ``OPTIMISTIC`` one (Design Notes). A caller may still pass
 ``config=OPTIMISTIC`` for a diagnostic stat line.
 
-Dependencies (spine AD-7, widened 2026-08-30): ``sim``, ``events``, ``book``,
-``orders``, ``config`` + the sibling ``part_a``. Relative imports only
-(``mypy --strict`` duplicate-module-errors on the absolute form).
+Dependencies (spine AD-7, widened 2026-08-30 / 2026-08-31): ``sim``, ``events``,
+``orders``, ``config`` + the siblings ``part_a`` and ``_bookwalk``. The
+``_touch_at`` rewrite moved the direct ``book`` import into ``_bookwalk`` --
+``part_a_runner`` no longer imports ``book`` (``BookInconsistency`` still
+propagates through, from ``sim`` / the ``_bookwalk`` replay). Relative imports
+only (``mypy --strict`` duplicate-module-errors on the absolute form).
 """
 
 from __future__ import annotations
@@ -40,11 +44,11 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Sequence
 
-from ..book import Book, apply_event
 from ..config import MNQ_TICK_DBN, PRIMARY, SimConfig
 from ..events import BookEventSource
 from ..orders import Side
 from ..sim import simulate
+from ._bookwalk import BookReplay, BookWalkError
 from .part_a import (
     FillError,
     PartAError,
@@ -224,39 +228,24 @@ def _touch_at(source: BookEventSource, ts_ns: int) -> tuple[int | None, int | No
     """The window book's ``(best_bid_dbn, best_ask_dbn)`` at ``ts_ns`` (spine
     AD-17).
 
-    A bounded, read-only replay: a fresh :class:`~src.ticksim.book.Book`, a fresh
-    pass of ``source``, folding every event with ``ev.ts_event <= ts_ns`` and
-    stopping at the first event past it. No fills, no tracker, no mutation of
-    anything outside the local ``Book``. The ``instrument_id`` is captured from
-    the first event walked; a later event with a different ``instrument_id`` ->
-    :class:`PartAError` (``sim``'s own multi-instrument check is lazy and could
-    miss an id that only appears after ``ts_ns``). Event ``ts_event`` must be
-    non-decreasing -- a regression -> :class:`PartAError` (a mis-ordered source
-    is a window-loader bug; fail loud rather than silently truncate the book).
-    Returns ``(None, None)`` if no event at or before ``ts_ns`` was seen (an
-    empty book cannot be priced -- the caller surfaces that as a
-    :class:`PartAError`).
+    A thin wrapper over :class:`~src.ticksim.parity._bookwalk.BookReplay`: a
+    fresh replay of ``source`` folded up to (and including) ``ts_ns``, then the
+    book's BBO. No fills, no tracker, no mutation outside the replay's own
+    ``Book``. The ``instrument_id`` is captured from the first event folded; a
+    later event with a different ``instrument_id`` -> :class:`PartAError`
+    (``sim``'s own multi-instrument check is lazy and could miss an id that only
+    appears after ``ts_ns``). Source ``ts_event`` must be non-decreasing -- a
+    regression -> :class:`PartAError` (a mis-ordered source is a window-loader
+    bug; fail loud rather than silently truncate the book). Returns
+    ``(None, None)`` if no event at or before ``ts_ns`` was seen (an empty book
+    cannot be priced -- the caller surfaces that as a :class:`PartAError`).
     """
-    book = Book()
-    instrument_id: int | None = None
-    prev_ts: int | None = None
-    for ev in source:
-        if prev_ts is not None and ev.ts_event < prev_ts:
-            raise PartAError(
-                f"window source ts_event regressed ({ev.ts_event} < {prev_ts}) "
-                f"-- a mis-ordered stream cannot be replayed for a touch"
-            )
-        prev_ts = ev.ts_event
-        if ev.ts_event > ts_ns:
-            break
-        if instrument_id is None:
-            instrument_id = ev.instrument_id
-        elif ev.instrument_id != instrument_id:
-            raise PartAError(
-                f"window source is multi-instrument ({ev.instrument_id} != "
-                f"{instrument_id}) -- front-month filtering is the caller's job"
-            )
-        apply_event(book, ev)
+    replay = BookReplay(source)
+    try:
+        replay.advance_to(ts_ns)
+    except BookWalkError as exc:
+        raise PartAError(f"window {exc}") from exc
+    instrument_id = replay.instrument_id
     if instrument_id is None:
         return (None, None)
-    return book.snapshot_bbo(instrument_id)
+    return replay.book.snapshot_bbo(instrument_id)

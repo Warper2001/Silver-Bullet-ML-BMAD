@@ -522,3 +522,15 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-part-b.md`
   summary: `run_part_b` does not eagerly scan `source` for a second `instrument_id` — it relies on `sim`'s lazy multi-instrument check, which misses a foreign contract appearing only outside the padded submit-ts window. Same stance as `run_part_a` (caller filters front-month). A `BookReplay.scan_single_instrument()` full-pass or an eager `{ev.instrument_id for ev in source}` check in the gate driver would close it; revisit at the real gate run when the front-month filter's correctness matters most.
   evidence: edge-case-hunter r1+r2, blind-hunter r1.
+
+## Deferred from: code review of spec-ticksim-cli-simulate (2026-08-31, review-1 / patch round)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-cli-simulate.md`
+  summary: `simulate` with `--instrument-id` omitted reads the whole `.dbn.zst` twice — once for `detect_front_month`, once for the sim run. On the ~22.5M-record parity fixture that doubles decompression. Round-1 patch documents it (`--help` recommends passing `--instrument-id` for large windows) but a caching solution (return the first-pass events, or a peek-and-tee source) is deferred — RAM cost of holding 22.5M `BookEvent`s in memory needs measuring first.
+  evidence: blind-hunter + verification-gap r1.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-cli-simulate.md`
+  summary: the `simulate` integration test (`tests/integration/test_ticksim_cli.py`) skips without `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst`, so `FrontMonthSource` over a REAL `DbnMboSource` (real `class_rank`, real re-iterability, real auto-detect pass over a `.dbn.zst`) is never exercised in CI. Run it (and set `TICKSIM_REQUIRE_FIXTURE=1` in a fixture-carrying lane) once Tranche 1 data lands.
+  evidence: verification-gap r1.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-cli-simulate.md`
+  summary: cli.py has three more subcommands to build in later slices: `report` (AD-14 3-way P&L from two outcome+manifest pairs — re-adds the `report` import edge), `parity-gate` (reconstruct trades → run_part_a + run_part_b → gate.build_amendment_stub → append-only stub), and the §5 integrity preflight scan (gate.py slice) wired into `parity-gate`. Plus the synthetic-order generator (`generate_synthetic_orders`, BBO sampling via `_bookwalk.BookReplay`) feeding `parity-gate`'s Part B. None can run a real verdict until the Tranche 1 MBO windows are purchased.
+  evidence: planning splits across the parity build.

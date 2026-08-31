@@ -66,6 +66,7 @@ PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     },
     "synthetic": {"orders", "config", "_bookwalk", "events"},
     "gate": {"config", "part_a", "part_b"},
+    "integrity": {"events", "book", "config"},
 }
 
 

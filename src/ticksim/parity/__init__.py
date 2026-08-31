@@ -65,6 +65,22 @@ whole window.  It never imports ``sim`` / ``part_b`` / ``part_a`` / ``report`` /
 (AD-2).  ``PERMITTED_INTERNAL_EDGES["synthetic"] = {"orders", "config",
 "_bookwalk", "events"}``.
 
+``integrity.py`` (the seal §5 / prereg §1 / §A9.3 MBO-window integrity
+preflight, ``preflight_integrity`` + ``format_integrity``) makes one read-only
+pass over a window ``events.BookEventSource``, folding a fresh ``book.Book`` to
+watch the BBO after every event -- counting ``ts_event`` regressions, transient
+vs persistent crossed markets, off-book trade prints, caught
+``book.BookInconsistency``\\ s, warm-up vs post-warm-up unknown-order
+references, and a foreign second ``instrument_id``. It **never raises on a data
+problem** -- it returns an ``IntegrityReport`` with verdict ``"OK"`` /
+``"FLAGGED"`` (verdict-reporting, not verdict-bearing). ``format_integrity``
+renders that report as the deterministic ASCII Markdown block
+``gate.build_amendment_stub`` drops into its ``integrity:`` slot (decoupled by
+the ``str`` type -- ``gate`` is not imported here). It never imports ``sim`` /
+``part_a`` / ``part_b`` / ``gate`` / ``report`` / ``databento`` and runs no
+``simulate`` and no front-month filtering. ``PERMITTED_INTERNAL_EDGES["integrity"]
+= {"events", "book", "config"}``.
+
 ``gate.py`` (the prereg §A8.2 / spine AD-26 output contract) folds a
 ``part_a.PartAResult`` + a ``part_b.PartBResult`` into the two-part verdict
 (``evaluate`` -- PASS iff **both** parts pass), resolves the frozen simulator

@@ -543,3 +543,15 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-synthetic.md`
   summary: the `n>=1000` full-book Part B battery (generator + `run_part_b` over a real GLBX capture) is only in `tests/integration/test_ticksim_parity_synthetic.py`, which skips without `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst`. Run it (with `TICKSIM_REQUIRE_FIXTURE=1`) once Tranche 1 lands; also fix the integration test to start `gen_source` with the same warm lead-in as `sim_source` (currently the generator prices off a cold/partial book while the sim uses a warm one) and to scan the full file (not first 400k records) for the front-month `iid`.
   evidence: verification-gap + blind-hunter r1.
+
+## Deferred from: code review of spec-ticksim-parity-integrity (2026-08-31, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-integrity.md`
+  summary: `preflight_integrity`'s BBO-watch cross state machine partly duplicates `book`'s own `cross_start_ns` timer; on an `R` (clear) event the two could momentarily disagree. Round-1 patch requires recomputing the module's open-cross var after every folded event (incl. a clear) to stay in sync. If a future `book` change alters the cross-timer semantics, re-check this. Cleaner long-term: expose `book`'s persistent-cross episodes as a queryable list so the module doesn't re-derive durations at all.
+  evidence: blind-hunter r1.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-integrity.md`
+  summary: `_MAX_GAP_NS` (inter-event-gap halt threshold) and `_TRADE_BBO_TOLERANCE_TICKS` are guesses. Once Tranche 1 data lands, run `preflight_integrity` over each real window and calibrate: the 2026-06-22 test window's `bbo_cross_rate` should be ≈0.014% (Amendment 9); the degraded days 2026-05-24 / 2026-07-30 windows are where a real persistent cross / large gap would show — use those to confirm the thresholds don't false-positive on normal degraded-but-usable data.
+  evidence: verification-gap + blind-hunter r1 (integration test skips; real-window figures unverified).
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-integrity.md`
+  summary: correlating a flagged anomaly's `ts_event` with whether it fell on a `degraded` day would be the highest-value triage output, but needs ts→date arithmetic this module deliberately avoids (`datetime` banned). The parity-gate CLI slice (which already has the window→date mapping) could do the correlation when it assembles the amendment stub.
+  evidence: blind-hunter r1.

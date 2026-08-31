@@ -534,3 +534,12 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-cli-simulate.md`
   summary: cli.py has three more subcommands to build in later slices: `report` (AD-14 3-way P&L from two outcome+manifest pairs — re-adds the `report` import edge), `parity-gate` (reconstruct trades → run_part_a + run_part_b → gate.build_amendment_stub → append-only stub), and the §5 integrity preflight scan (gate.py slice) wired into `parity-gate`. Plus the synthetic-order generator (`generate_synthetic_orders`, BBO sampling via `_bookwalk.BookReplay`) feeding `parity-gate`'s Part B. None can run a real verdict until the Tranche 1 MBO windows are purchased.
   evidence: planning splits across the parity build.
+
+## Deferred from: code review of spec-ticksim-parity-synthetic (2026-08-31, review-1)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-synthetic.md`
+  summary: `_OVERGEN_FACTOR = 2.0` is a guess at how many limit candidates a real Tranche-1 window drops. `generate_synthetic_orders` prices BBO at `submit_ts_ns`; the sim fills at `+250ms` (PRIMARY latency), so the marketable-vs-passive label is nominal. Once Tranche 1 data lands: check the `logger.debug` drop-rate breakdown on a real window and re-tune `_OVERGEN_FACTOR`; if the nominal-label drift matters for a study, add an `advance_to(submit_ts_ns + latency_ns)` variant.
+  evidence: blind-hunter + verification-gap r1.
+- source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-synthetic.md`
+  summary: the `n>=1000` full-book Part B battery (generator + `run_part_b` over a real GLBX capture) is only in `tests/integration/test_ticksim_parity_synthetic.py`, which skips without `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst`. Run it (with `TICKSIM_REQUIRE_FIXTURE=1`) once Tranche 1 lands; also fix the integration test to start `gen_source` with the same warm lead-in as `sim_source` (currently the generator prices off a cold/partial book while the sim uses a warm one) and to scan the full file (not first 400k records) for the front-month `iid`.
+  evidence: verification-gap + blind-hunter r1.

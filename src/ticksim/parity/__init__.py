@@ -53,6 +53,18 @@ queue time-series and invariant 6's merge ordering (loopback 1, 2026-08-31);
 the ``BookEventSource`` type annotation. ``PERMITTED_INTERNAL_EDGES["part_b"] =
 {"sim", "orders", "config", "invariants", "events"}``.
 
+``synthetic.py`` (the prereg §A8.2 Part B synthetic-order *generator*,
+``generate_synthetic_orders``) produces the ``>=1000``-order
+``list[OrderIntent]`` ``run_part_b`` consumes.  It draws ``(ts, side, kind,
+size)`` tuples deterministically from ``random.Random(seed)`` (the sole entropy,
+AD-11), over-generates ``ceil(n * _OVERGEN_FACTOR)`` candidates, prices the two
+limit kinds off the BBO via **one** ``_bookwalk.BookReplay`` forward pass, and
+emits ``n`` of the priceable ones at evenly-spaced indices so they span the
+whole window.  It never imports ``sim`` / ``part_b`` / ``part_a`` / ``report`` /
+``databento`` and never calls ``simulate`` -- it emits intents and nothing else
+(AD-2).  ``PERMITTED_INTERNAL_EDGES["synthetic"] = {"orders", "config",
+"_bookwalk", "events"}``.
+
 ``gate.py`` (the prereg §A8.2 / spine AD-26 output contract) folds a
 ``part_a.PartAResult`` + a ``part_b.PartBResult`` into the two-part verdict
 (``evaluate`` -- PASS iff **both** parts pass), resolves the frozen simulator

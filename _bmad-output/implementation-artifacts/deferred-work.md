@@ -555,3 +555,16 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - source_spec: `_bmad-output/implementation-artifacts/spec-ticksim-parity-integrity.md`
   summary: correlating a flagged anomaly's `ts_event` with whether it fell on a `degraded` day would be the highest-value triage output, but needs ts→date arithmetic this module deliberately avoids (`datetime` banned). The parity-gate CLI slice (which already has the window→date mapping) could do the correlation when it assembles the amendment stub.
   evidence: blind-hunter r1.
+
+## Deferred: the `cli.py parity-gate` subcommand — the last capstone slice (2026-08-31)
+
+- source_spec: (to be written — `spec-ticksim-cli-parity-gate.md`)
+  summary: The one remaining code slice. `ticksim parity-gate` wires every built module into the §A8.2 append-only amendment stub. All dependencies exist and are merged (`part_a` + `part_a_runner`, `synthetic` + `part_b`, `integrity`, `gate`, `cli.FrontMonthSource`). Cannot run a real verdict until the 28 Tranche-1 MBO windows are purchased (~$68, `tick_infra_tranche1_purchase_guide.md`).
+  Design captured while the pieces are fresh:
+  * **Part A**: read `data/mim_nb/orders.csv` → `part_a.reconstruct_mim_nb(rows)`; read `data/trades.db` `trades` where `trader_id='trader-yank' AND timestamp>='2026-06-17'` (and any new mim-nb rows) → `part_a.reconstruct_trades_db_row(row)` per row. A `--windows` JSON maps each trade_id (or a ±90-min window key) → its `.dbn.zst` path + the front-month `instrument_id` + any degraded-day tag (regenerate from `~/.claude/jobs/960bda86/tmp/parity_windows.py`). `source_for(trade) = FrontMonthSource(DbnMboSource(path), iid)` clipped to the trade's window. `part_a_runner.run_part_a(trades, source_for) -> PartAResult`.
+  * **Part B**: pick one dense window (or concatenate a few via `events.merge_streams`), `synthetic.generate_synthetic_orders(source, lo, hi, n=1000, seed=<cli arg>)` → `part_b.run_part_b(intents, source) -> PartBResult`.
+  * **Integrity**: `integrity.preflight_integrity(FrontMonthSource(...), degraded_days=[...])` per window → `integrity.format_integrity` → concatenate into the `integrity:` string for `gate.build_amendment_stub`.
+  * **Verdict + stub**: `gate.evaluate(part_a, part_b)`; `gate.build_amendment_stub(part_a, part_b, amendment_number=<cli>, cycle_number=<cli>, integrity=<combined>, trader_by_trade_id=<derived from reconstruction>, date=<cli or TBD>)` → write the `.md` (append-only — the function returns text, the CLI writes a NEW file, the analyst appends to the seal).
+  * **CHECKPOINTs for that slice**: (a) does a FLAGGED integrity report block the gate verdict, or just annotate the stub? (b) Part B over one window vs several merged? (c) `--windows` JSON schema. (d) trader_by_trade_id: derive from the `mimnb-` prefix vs a real map.
+  * Edge: `cli` would gain `parity` (all the parity siblings) — a large widening; consider a `parity/gate_cli.py` helper module inside `parity/` instead so `cli.py` stays thin.
+  evidence: planning — every upstream slice is done; only the wiring + the data purchase remain.

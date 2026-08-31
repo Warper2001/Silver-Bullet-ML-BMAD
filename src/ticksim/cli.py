@@ -1,10 +1,12 @@
 """``ticksim`` command-line entry point (spine AD-6).
 
-An ``argparse`` sub-command dispatcher. This slice ships **one** sub-command,
-``simulate`` -- read a JSONL :class:`~src.ticksim.orders.OrderIntent` log, open a
-Databento ``.dbn.zst`` MBO window, filter it to a single front-month
-``instrument_id``, run :func:`~src.ticksim.sim.simulate` under one seal-bound
-config (``PRIMARY`` or ``OPTIMISTIC``), and write the
+An ``argparse`` sub-command dispatcher. It ships two sub-commands, ``simulate``
+and ``report``.
+
+``simulate`` reads a JSONL :class:`~src.ticksim.orders.OrderIntent` log, opens a
+Databento ``.dbn.zst`` MBO window, filters it to a single front-month
+``instrument_id``, runs :func:`~src.ticksim.sim.simulate` under one seal-bound
+config (``PRIMARY`` or ``OPTIMISTIC``), and writes the
 :class:`~src.ticksim.orders.OrderOutcome` JSONL plus the run
 :class:`~src.ticksim.sim.Manifest` JSON (both written atomically -- spine AD-11).
 
@@ -13,11 +15,18 @@ Also lands the shared, re-iterable :class:`FrontMonthSource` wrapper and
 ~4% calendar spread (pre-registration Amendment 9), so every consumer that feeds
 ``sim`` a single-instrument stream needs this filter.
 
-The ``report`` (3-way P&L) and ``parity-gate`` sub-commands are later slices.
+``report`` reads the :class:`~src.ticksim.orders.OrderOutcome` JSONL logs plus
+run :class:`~src.ticksim.sim.Manifest` JSON files from a prior ``PRIMARY`` and
+``OPTIMISTIC`` ``simulate`` pair, calls
+:func:`~src.ticksim.report.build_report`, and writes the §2.3 / AD-14 three-way
+P&L (:meth:`~src.ticksim.report.ThreeWayReport.to_dict`) as pretty JSON.
+
+The ``parity-gate`` sub-command is a later slice.
 
 Dependencies (spine AD-7): ``.sim`` / ``.events`` / ``.orders`` / ``.config`` /
 ``.book`` (for :class:`~src.ticksim.book.BookInconsistency` -- an analyst-facing
-simulator fault this boundary catches) + stdlib. No ``datetime`` -- a
+simulator fault this boundary catches) / ``.report`` (the AD-14 money layer the
+``report`` sub-command wraps) + stdlib. No ``datetime`` -- a
 ``--degraded-day`` is carried through to the manifest as the exact ``str`` token
 the analyst typed (spine AD-13). Relative imports only (``mypy --strict``
 duplicate-module-errors on the absolute form).
@@ -35,11 +44,15 @@ import sys
 from collections import Counter
 from collections.abc import Iterator, Sequence
 from pathlib import Path
+from typing import TypeVar
+
+from pydantic import BaseModel
 
 from .book import BookInconsistency
 from .config import OPTIMISTIC, PRIMARY, SimConfig
 from .events import BookEvent, BookEventSource, DbnMboSource
 from .orders import OrderIntent, OrderOutcome, OrderStateError
+from .report import ModelPnL, ReportError, ThreeWayReport, build_report
 from .sim import IntentLogError, InvariantViolation, Manifest, simulate
 
 __all__ = ["FrontMonthSource", "detect_front_month", "main"]
@@ -155,35 +168,58 @@ def _detect_front_month_with_stats(source: BookEventSource) -> tuple[int, int, i
 # --------------------------------------------------------------------------- #
 
 
-def _read_intents(path: Path) -> list[OrderIntent]:
-    """Parse a UTF-8 JSONL :class:`~src.ticksim.orders.OrderIntent` log.
+_JsonlModel = TypeVar("_JsonlModel", bound=BaseModel)
 
-    One record per non-blank line via ``OrderIntent.model_validate_json``. The
-    list is returned as-is -- ``sim`` validates causal replayability (spine
-    AD-2) and raises :class:`~src.ticksim.sim.IntentLogError`.
+
+def _read_jsonl(
+    path: Path, model_cls: type[_JsonlModel], label: str, empty_noun: str
+) -> list[_JsonlModel]:
+    """Parse a UTF-8 JSONL log of ``model_cls`` records, one per non-blank line.
+
+    The shared reader behind :func:`_read_intents` and :func:`_read_outcomes`:
+    same read / decode guard, same per-line ``model_validate_json`` loop that
+    names the offending line, same empty-file guard.
+
+    Args:
+        path: the ``.jsonl`` file.
+        model_cls: the Pydantic model each line must validate against.
+        label: human name for ``path`` in read / line error messages
+            (e.g. ``"intent log"``).
+        empty_noun: plural noun for the empty-file error (e.g. ``"intents"``).
 
     Raises:
         _CliError: the file is unreadable or not UTF-8, a non-blank line is not
-            a valid ``OrderIntent`` (the line number is named), or the file has
-            no intents.
+            a valid ``model_cls`` (the line number is named), or the file has no
+            records.
     """
     try:
         raw = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise _CliError(f"cannot read intent log {path}: {exc}") from exc
-    intents: list[OrderIntent] = []
+        raise _CliError(f"cannot read {label} {path}: {exc}") from exc
+    records: list[_JsonlModel] = []
     for lineno, line in enumerate(raw.splitlines(), start=1):
         if not line.strip():
             continue
         try:
-            intents.append(OrderIntent.model_validate_json(line))
+            records.append(model_cls.model_validate_json(line))
         except ValueError as exc:
             raise _CliError(
-                f"intent log {path} line {lineno}: not a valid OrderIntent ({exc})"
+                f"{label} {path} line {lineno}: not a valid "
+                f"{model_cls.__name__} ({exc})"
             ) from exc
-    if not intents:
-        raise _CliError(f"intent log {path}: no intents")
-    return intents
+    if not records:
+        raise _CliError(f"{label} {path}: no {empty_noun}")
+    return records
+
+
+def _read_intents(path: Path) -> list[OrderIntent]:
+    """Parse a UTF-8 JSONL :class:`~src.ticksim.orders.OrderIntent` log.
+
+    Thin wrapper over :func:`_read_jsonl`. The list is returned as-is -- ``sim``
+    validates causal replayability (spine AD-2) and raises
+    :class:`~src.ticksim.sim.IntentLogError`.
+    """
+    return _read_jsonl(path, OrderIntent, "intent log", "intents")
 
 
 def _span_interval(intents: Sequence[OrderIntent], pad_ns: int) -> tuple[int, int]:
@@ -391,6 +427,195 @@ def _print_summary(
 
 
 # --------------------------------------------------------------------------- #
+# the `report` sub-command
+# --------------------------------------------------------------------------- #
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    try:
+        return _run_report(args)
+    except _CliError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    except BrokenPipeError:
+        # A downstream reader (`ticksim report ... | head`) closed the pipe. The
+        # `--out` file is already written; redirect stdout to devnull so the
+        # interpreter's shutdown flush does not re-raise, and exit clean.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        return 0
+
+
+def _run_report(args: argparse.Namespace) -> int:
+    primary_outcomes = _read_outcomes(Path(args.primary_outcomes))
+    primary_manifest = _read_manifest(Path(args.primary_manifest))
+    optimistic_outcomes = _read_outcomes(Path(args.optimistic_outcomes))
+    optimistic_manifest = _read_manifest(Path(args.optimistic_manifest))
+    out_path = Path(args.out)
+
+    logger.info(
+        "report: primary=%d outcomes (queue_model=%s), "
+        "optimistic=%d outcomes (queue_model=%s)",
+        len(primary_outcomes),
+        _manifest_queue_model(primary_manifest),
+        len(optimistic_outcomes),
+        _manifest_queue_model(optimistic_manifest),
+    )
+
+    try:
+        report = build_report(
+            primary_outcomes,
+            primary_manifest,
+            optimistic_outcomes,
+            optimistic_manifest,
+        )
+    except ReportError as exc:
+        # Every malformed-input case (a non-PRIMARY/OPTIMISTIC manifest pair,
+        # mixed entry sides, a duplicate order_id, differing trade_id sets, a
+        # bad fee field, ...) funnels through build_report's ReportError
+        # taxonomy -- an analyst condition, exit 1, never a traceback.
+        raise _CliError(str(exc)) from exc
+
+    logger.info(
+        "built report: %d round trips, %d incomplete, %d partially closed",
+        len(report.round_trips),
+        len(report.incomplete),
+        len(report.partially_closed),
+    )
+
+    # `ModelPnL.profit_factor` can be `float('inf')`; `json.dumps` would write a
+    # bare `Infinity` token, which is not valid JSON for a non-Python parser.
+    # Sanitize the on-disk dict only -- the stdout summary still renders "inf".
+    _atomic_write_one(
+        out_path,
+        json.dumps(_json_safe(report.to_dict()), indent=2, sort_keys=True) + "\n",
+    )
+    logger.info("wrote three-way P&L report -> %s", out_path)
+
+    _print_report_summary(report, out_path)
+    return 0
+
+
+def _json_safe(obj: object) -> object:
+    """Recursively replace non-finite ``float``s (``inf`` / ``-inf`` / ``nan``)
+    with ``None`` so ``json.dumps`` emits strict, portable JSON. Everything else
+    passes through untouched.
+    """
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {key: _json_safe(value) for key, value in obj.items()}
+    if isinstance(obj, list):
+        return [_json_safe(item) for item in obj]
+    return obj
+
+
+def _manifest_queue_model(manifest: dict[str, object]) -> str:
+    """The ``config.queue_model`` token in ``manifest``, or ``"?"`` if absent --
+    a best-effort read for the ``-v`` log line (``build_report`` owns the real
+    validation)."""
+    config = manifest.get("config")
+    if isinstance(config, dict):
+        return str(config.get("queue_model", "?"))
+    return "?"
+
+
+def _read_outcomes(path: Path) -> list[OrderOutcome]:
+    """Parse a UTF-8 JSONL :class:`~src.ticksim.orders.OrderOutcome` log.
+
+    Thin wrapper over :func:`_read_jsonl`. ``build_report`` validates the
+    round-trip structure and raises :class:`~src.ticksim.report.ReportError`.
+    """
+    return _read_jsonl(path, OrderOutcome, "outcome log", "outcomes")
+
+
+def _read_manifest(path: Path) -> dict[str, object]:
+    """Read a run :class:`~src.ticksim.sim.Manifest` JSON file.
+
+    ``json.loads(path.read_text(...))`` -- the parsed value must be a JSON
+    object (``dict``); it is handed straight to ``build_report`` as the
+    ``Manifest.to_dict()``-shaped ``Mapping`` (spine AD-24).
+
+    Raises:
+        _CliError: the file is unreadable / not UTF-8, not valid JSON, or not a
+            JSON object.
+    """
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _CliError(f"cannot read manifest {path}: {exc}") from exc
+    try:
+        parsed = json.loads(raw)
+    except ValueError as exc:
+        raise _CliError(f"manifest {path}: not valid JSON ({exc})") from exc
+    if not isinstance(parsed, dict):
+        raise _CliError(
+            f"manifest {path}: expected a JSON object, got {type(parsed).__name__}"
+        )
+    return parsed
+
+
+def _atomic_write_one(path: Path, text: str) -> None:
+    """Write ``text`` to ``path`` atomically (spine AD-11): a sibling ``*.tmp``
+    then ``os.replace``. Parent dirs are created; an existing file is
+    overwritten. Any failure unlinks the ``.tmp`` and raises :class:`_CliError`.
+    """
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _write_tmp(tmp, text)
+        os.replace(tmp, path)
+    except OSError as exc:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise _CliError(f"cannot write output {path}: {exc}") from exc
+
+
+def _fmt_ratio(value: float | None) -> str:
+    """Render a profit factor: ``None`` -> ``"n/a"``, ``inf`` -> ``"inf"``."""
+    if value is None:
+        return "n/a"
+    if math.isinf(value):
+        return "inf"
+    return f"{value:.3f}"
+
+
+def _fmt_win_rate(model: ModelPnL) -> str:
+    """``wins / n`` as a 3-dp string, or ``"n/a"`` for an empty model."""
+    if model.n == 0:
+        return "n/a"
+    return f"{model.wins / model.n:.3f}"
+
+
+def _print_report_summary(report: ThreeWayReport, out_path: Path) -> None:
+    """A short, ``grep``-able human block to stdout (not JSON)."""
+    n_open = len(report.incomplete)
+    print(f"round trips: {len(report.round_trips)}")
+    print(f"incomplete: {n_open} open position" + ("" if n_open == 1 else "s"))
+    print(f"partially closed: {len(report.partially_closed)}")
+    print(f"optimistic-only completed: {len(report.optimistic_only_completed)}")
+    for name, model in (
+        ("primary", report.primary),
+        ("stressed", report.stressed),
+        ("optimistic", report.optimistic),
+    ):
+        print(
+            f"{name:<11} n={model.n} net_cents={model.sum_net_cents} "
+            f"win_rate={_fmt_win_rate(model)} "
+            f"profit_factor={_fmt_ratio(model.profit_factor)}"
+        )
+    print(f"optimistic n={report.optimistic.n} (primary n={report.primary.n})")
+    if report.optimistic.n != report.primary.n:
+        print(
+            "note: optimistic P&L is over the trades that completed under BOTH "
+            "models"
+        )
+    print(f"report -> {out_path}")
+
+
+# --------------------------------------------------------------------------- #
 # argparse dispatcher
 # --------------------------------------------------------------------------- #
 
@@ -500,6 +725,53 @@ def _build_parser() -> argparse.ArgumentParser:
             "(spine AD-13). Repeatable; sim sorts + de-dups the list"
         ),
     )
+
+    rp = sub.add_parser(
+        "report",
+        help="build the AD-14 three-way P&L from a PRIMARY + OPTIMISTIC run pair",
+        description=(
+            "Read the OrderOutcome JSONL logs + run Manifest JSON files from a "
+            "prior `simulate --config primary` and `simulate --config "
+            "optimistic` pair, call report.build_report, and write the "
+            "ThreeWayReport (prereg §2.3 / spine AD-14) as pretty JSON."
+        ),
+    )
+    rp.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="INFO-level logging to stderr",
+    )
+    rp.add_argument(
+        "--primary-outcomes",
+        required=True,
+        metavar="PATH",
+        help="PRIMARY run OrderOutcome JSONL (from `simulate --config primary`)",
+    )
+    rp.add_argument(
+        "--primary-manifest",
+        required=True,
+        metavar="PATH",
+        help="PRIMARY run Manifest JSON",
+    )
+    rp.add_argument(
+        "--optimistic-outcomes",
+        required=True,
+        metavar="PATH",
+        help="OPTIMISTIC run OrderOutcome JSONL (from `simulate --config optimistic`)",
+    )
+    rp.add_argument(
+        "--optimistic-manifest",
+        required=True,
+        metavar="PATH",
+        help="OPTIMISTIC run Manifest JSON",
+    )
+    rp.add_argument(
+        "--out",
+        required=True,
+        metavar="PATH",
+        help="ThreeWayReport JSON output (atomically overwritten if it exists)",
+    )
     return parser
 
 
@@ -533,6 +805,32 @@ def _validate_simulate_args(
                 )
 
 
+def _validate_report_args(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """All five ``report`` paths must resolve to distinct files (a collision --
+    e.g. ``--out`` equal to an input -- is a usage error), and ``--out`` must
+    name a file (not ``.`` / ``/`` / ``""``, which would make the atomic write's
+    ``Path.with_name`` raise past its ``except OSError``). ``parser.error`` ->
+    exit 2."""
+    if not Path(args.out).name:
+        parser.error("--out must name a file")
+    labeled = (
+        ("--primary-outcomes", Path(args.primary_outcomes).resolve()),
+        ("--primary-manifest", Path(args.primary_manifest).resolve()),
+        ("--optimistic-outcomes", Path(args.optimistic_outcomes).resolve()),
+        ("--optimistic-manifest", Path(args.optimistic_manifest).resolve()),
+        ("--out", Path(args.out).resolve()),
+    )
+    seen: dict[Path, str] = {}
+    for label, resolved in labeled:
+        if resolved in seen:
+            parser.error(
+                f"{label} and {seen[resolved]} must be different paths " f"({resolved})"
+            )
+        seen[resolved] = label
+
+
 def _configure_logging(verbose: bool) -> None:
     """Route ``src.ticksim`` logs to stderr at INFO (``-v``) or WARNING.
 
@@ -563,6 +861,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         args = parser.parse_args(argv)
         if getattr(args, "command", None) == "simulate":
             _validate_simulate_args(parser, args)
+        elif getattr(args, "command", None) == "report":
+            _validate_report_args(parser, args)
     except SystemExit as exc:
         code = exc.code
         if code is None:
@@ -578,6 +878,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "simulate":
         _configure_logging(bool(args.verbose))
         return _cmd_simulate(args)
+    if args.command == "report":
+        _configure_logging(bool(args.verbose))
+        return _cmd_report(args)
     # defensive: argparse already rejects an unknown sub-command with exit 2
     parser.print_usage(sys.stderr)
     return 2

@@ -43,7 +43,7 @@ PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     "events": {"book", "orders"},
     "fills": {"book", "orders", "config"},
     "sim": {"config", "book", "orders", "events", "fills"},
-    "cli": {"sim", "events", "orders", "config", "book", "report"},
+    "cli": {"sim", "events", "orders", "config", "book", "report", "parity"},
     "__main__": {"cli"},
     "report": {"orders", "config"},
     "invariants": {"sim", "orders"},
@@ -67,6 +67,15 @@ PERMITTED_INTERNAL_EDGES: dict[str, set[str]] = {
     "synthetic": {"orders", "config", "_bookwalk", "events"},
     "gate": {"config", "part_a", "part_b"},
     "integrity": {"events", "book", "config"},
+    "gate_cli": {
+        "part_a",
+        "part_a_runner",
+        "synthetic",
+        "part_b",
+        "integrity",
+        "gate",
+        "events",
+    },
 }
 
 
@@ -80,16 +89,45 @@ def _file_package(path: Path) -> str:
     return ".".join(rel.parts[:-1])
 
 
+def _is_type_checking_test(test: ast.expr) -> bool:
+    """``True`` for ``TYPE_CHECKING`` / ``typing.TYPE_CHECKING`` as an ``if`` test."""
+    if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
+        return True
+    return isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
+
+
+def _type_only_import_nodes(tree: ast.AST) -> set[int]:
+    """``id()``s of ``import`` / ``from`` nodes nested under ``if TYPE_CHECKING:``.
+
+    A ``from ..config import SimConfig`` guarded by ``if TYPE_CHECKING:`` is a
+    type-only reference (``mypy`` sees it, the interpreter never runs it) -- not a
+    runtime dependency edge, so it is excluded from the AD-7 edge check. Only the
+    ``if`` body is type-only; an ``else`` branch is a real runtime fallback.
+    """
+    guarded: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If) and _is_type_checking_test(node.test):
+            for child in node.body:
+                for sub in ast.walk(child):
+                    if isinstance(sub, (ast.Import, ast.ImportFrom)):
+                        guarded.add(id(sub))
+    return guarded
+
+
 def _resolve_imports(source: str, file_package: str) -> set[str]:
     """Every dotted module name an ``import`` / ``from ... import`` can reach.
 
     Relative imports are resolved against ``file_package``. For
     ``from X import a, b`` both ``X`` and ``X.a`` / ``X.b`` are emitted, so the
-    module-level form ``from src import data`` is caught as ``src.data``.
+    module-level form ``from src import data`` is caught as ``src.data``. Imports
+    nested under ``if TYPE_CHECKING:`` are skipped (type-only, not runtime edges).
     """
     names: set[str] = set()
     tree = ast.parse(source)
+    type_only = _type_only_import_nodes(tree)
     for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)) and id(node) in type_only:
+            continue
         if isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.name)
@@ -208,6 +246,40 @@ class TestImportResolver:
             "from src.ticksim.parity.part_a import compare_fills", "src.ticksim.sim"
         )
         assert _internal_targets(got, "src.ticksim") == {"parity"}
+
+    def test_type_checking_guarded_import_is_not_an_edge(self) -> None:
+        # `if TYPE_CHECKING: from ..config import SimConfig` is a type-only
+        # reference -- excluded from the runtime dependency edge set.
+        src = (
+            "from typing import TYPE_CHECKING\n"
+            "if TYPE_CHECKING:\n"
+            "    from ..config import SimConfig\n"
+        )
+        got = _resolve_imports(src, "src.ticksim.parity")
+        assert "src.ticksim.config" not in got
+        assert _internal_targets(got, "src.ticksim.parity") == set()
+
+    def test_type_checking_else_branch_is_a_runtime_edge(self) -> None:
+        # only the `if` body is type-only; an `else` fallback is real.
+        src = (
+            "from typing import TYPE_CHECKING\n"
+            "if TYPE_CHECKING:\n"
+            "    from ..fake import A\n"
+            "else:\n"
+            "    from ..book import Book\n"
+        )
+        got = _resolve_imports(src, "src.ticksim.parity")
+        assert "src.ticksim.book" in got
+        assert "src.ticksim.fake" not in got
+
+    def test_typing_dot_type_checking_guard_recognised(self) -> None:
+        src = (
+            "import typing\n"
+            "if typing.TYPE_CHECKING:\n"
+            "    from ..config import SimConfig\n"
+        )
+        got = _resolve_imports(src, "src.ticksim.parity")
+        assert "src.ticksim.config" not in got
 
 
 @pytest.mark.parametrize("path", _module_files(), ids=lambda p: p.name)

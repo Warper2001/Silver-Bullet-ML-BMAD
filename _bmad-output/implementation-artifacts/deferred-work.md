@@ -568,3 +568,16 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
   * **CHECKPOINTs for that slice**: (a) does a FLAGGED integrity report block the gate verdict, or just annotate the stub? (b) Part B over one window vs several merged? (c) `--windows` JSON schema. (d) trader_by_trade_id: derive from the `mimnb-` prefix vs a real map.
   * Edge: `cli` would gain `parity` (all the parity siblings) — a large widening; consider a `parity/gate_cli.py` helper module inside `parity/` instead so `cli.py` stays thin.
   evidence: planning — every upstream slice is done; only the wiring + the data purchase remain.
+
+## Deferred: `parity-gate` slice — merged 2026-09-01
+
+- source_spec: `spec-ticksim-parity-gate-cli.md`
+  summary: The capstone slice shipped. These are the knowingly-unfinished edges.
+  * **The three round-2 reviewer subagents never ran** — all three (blind-spot, edge-case, verification-gap) died on an API session rate limit. The round-2 pass was done inline by the main session and found + fixed two untested round-1 patches (source memoisation, BOM tolerance), but it is not a substitute for the adversarial pass. Re-run `bmad-review` over `gate_cli.py` + the `cli.py parity-gate` delta when the limit clears.
+  * **The integration test has never actually executed.** `tests/integration/test_ticksim_parity_gate.py` skips cleanly because `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst` is not present in the worktree. Every parity-gate assertion to date is against in-memory hand-built sources. Run it before trusting a real verdict.
+  * `test_broken_pipe_preserves_fail_exit_code` monkeypatches `cli.os.dup2` to a no-op so the handler's real-fd redirect cannot clobber pytest's capture. The exit-code path is genuinely asserted; the redirect's actual side effect is not.
+  * `_is_type_checking_test` (`tests/unit/test_ticksim_imports.py`) matches any `ast.Attribute` with `.attr == "TYPE_CHECKING"`, not specifically a `typing` binding. Unreachable today; tightening needs import-alias tracking.
+  * `--out` pointing at an existing **directory** with `--force` surfaces as a generic `_CliError` from `os.replace`, not a targeted message.
+  * `_run_parity_gate`'s `getattr(args, "windows_parsed", None) or _read_windows(...)` fallback exists only for direct `_run_parity_gate` calls that bypass `_validate_parity_gate_args`; it is untested and, in the CLI path, unreachable.
+  * `--config optimistic` is asserted at the `run_parity_gate` level (`test_config_forwarded_to_both_runners`) but not end-to-end through `cli.main`.
+  evidence: review round 2, inline (2026-09-01).

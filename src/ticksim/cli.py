@@ -1,7 +1,7 @@
 """``ticksim`` command-line entry point (spine AD-6).
 
-An ``argparse`` sub-command dispatcher. It ships two sub-commands, ``simulate``
-and ``report``.
+An ``argparse`` sub-command dispatcher. It ships three sub-commands,
+``simulate``, ``report`` and ``parity-gate``.
 
 ``simulate`` reads a JSONL :class:`~src.ticksim.orders.OrderIntent` log, opens a
 Databento ``.dbn.zst`` MBO window, filters it to a single front-month
@@ -21,37 +21,65 @@ run :class:`~src.ticksim.sim.Manifest` JSON files from a prior ``PRIMARY`` and
 :func:`~src.ticksim.report.build_report`, and writes the §2.3 / AD-14 three-way
 P&L (:meth:`~src.ticksim.report.ThreeWayReport.to_dict`) as pretty JSON.
 
-The ``parity-gate`` sub-command is a later slice.
+``parity-gate`` reconstructs the live bots' orders (mim-nb from
+``data/mim_nb/orders.csv`` via ``csv.DictReader``, yank from ``data/trades.db``
+rows on/after 2026-06-17 via ``sqlite3``), reads a ``--windows`` JSON, builds the
+ts-clipped front-month ``source_for`` callable, and hands all of it to
+:func:`~src.ticksim.parity.gate_cli.run_parity_gate` (the pure §A8.2
+orchestrator). It writes the ``gate.build_amendment_stub`` text to ``--out`` as a
+**standalone** ``.md`` (the analyst appends it to the seal -- AD-26). Exit ``0``
+PASS / ``3`` PASS with an integrity flag / ``1`` FAIL-or-handled-error / ``2``
+usage.
 
 Dependencies (spine AD-7): ``.sim`` / ``.events`` / ``.orders`` / ``.config`` /
 ``.book`` (for :class:`~src.ticksim.book.BookInconsistency` -- an analyst-facing
 simulator fault this boundary catches) / ``.report`` (the AD-14 money layer the
-``report`` sub-command wraps) + stdlib. No ``datetime`` -- a
-``--degraded-day`` is carried through to the manifest as the exact ``str`` token
-the analyst typed (spine AD-13). Relative imports only (``mypy --strict``
-duplicate-module-errors on the absolute form).
+``report`` sub-command wraps) / ``.parity`` (``parity.gate_cli`` +
+``parity.part_a`` for the reconstruction helpers) + stdlib (``csv`` / ``sqlite3``
+for the ``parity-gate`` reconstruction). No ``datetime`` -- a ``--degraded-day``
+is carried through to the manifest as the exact ``str`` token the analyst typed
+(spine AD-13). Relative imports only (``mypy --strict`` duplicate-module-errors
+on the absolute form).
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 import math
 import os
 import re
+import sqlite3
 import sys
 from collections import Counter
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeVar
 
 from pydantic import BaseModel
 
 from .book import BookInconsistency
-from .config import OPTIMISTIC, PRIMARY, SimConfig
+from .config import OPTIMISTIC, PART_B_MIN_ORDERS, PRIMARY, SimConfig
 from .events import BookEvent, BookEventSource, DbnMboSource
 from .orders import OrderIntent, OrderOutcome, OrderStateError
+from .parity.gate_cli import (
+    GateCliError,
+    GateError,
+    GateRun,
+    PartBError,
+    SyntheticError,
+    WindowSpec,
+    run_parity_gate,
+)
+from .parity.part_a import (
+    PartAError,
+    ReconstructedTrade,
+    reconstruct_mim_nb,
+    reconstruct_trades_db_row,
+)
 from .report import ModelPnL, ReportError, ThreeWayReport, build_report
 from .sim import IntentLogError, InvariantViolation, Manifest, simulate
 
@@ -161,6 +189,37 @@ def _detect_front_month_with_stats(source: BookEventSource) -> tuple[int, int, i
         )
     iid, count = ranked[0]
     return iid, count, sum(counts.values())
+
+
+class _ClippedSource:
+    """A re-iterable :class:`~src.ticksim.events.BookEventSource` view of
+    ``inner`` clipped to a half-open ``[lo_ns, hi_ns)`` ``ts_event`` window.
+
+    A parity window's ``.dbn.zst`` is the +/-90-min neighbourhood of a cluster of
+    live fills; clipping keeps :func:`~src.ticksim.parity.integrity.preflight_integrity`
+    (no interval argument -- it surveys the whole source) and the Part B book
+    replay bounded to the analyst-declared window. ``inner`` is already
+    front-month-filtered (:class:`FrontMonthSource`); ``class_rank`` is forwarded,
+    no reordering, no mutation. Each :meth:`__iter__` rebuilds the filtered
+    iterator over a fresh pass of ``inner`` (spine AD-18).
+    """
+
+    def __init__(self, inner: BookEventSource, lo_ns: int, hi_ns: int) -> None:
+        _require_reiterable(inner)
+        self._inner = inner
+        self._lo_ns = lo_ns
+        self._hi_ns = hi_ns
+        self.class_rank: int = inner.class_rank
+
+    def __iter__(self) -> Iterator[BookEvent]:
+        lo, hi = self._lo_ns, self._hi_ns
+        return (ev for ev in self._inner if lo <= ev.ts_event < hi)
+
+    def __repr__(self) -> str:
+        return (
+            f"_ClippedSource({self._inner!r}, lo_ns={self._lo_ns}, "
+            f"hi_ns={self._hi_ns})"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -616,6 +675,401 @@ def _print_report_summary(report: ThreeWayReport, out_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# the `parity-gate` sub-command
+# --------------------------------------------------------------------------- #
+
+_PART_A_DB_SINCE = "2026-06-17"
+
+_MIM_NB_DB_FALLBACK_PROVENANCE = (
+    "<!-- parity-gate provenance -->\n"
+    "> **Provenance note (mim-nb):** `data/mim_nb/orders.csv` was absent -- the "
+    "mim-nb trades in this run were reconstructed from `data/trades.db` rows "
+    "(2-leg market reconstruction, no protective-stop leg, `bar_reconstructed` "
+    "fidelity), not from the authoritative order-lifecycle CSV.\n\n"
+)
+
+
+@dataclass(frozen=True)
+class _WindowEntry:
+    """One parsed + validated ``--windows`` JSON entry."""
+
+    dbn: str
+    instrument_id: int
+    lo_ns: int
+    hi_ns: int
+    degraded_days: tuple[str, ...]
+
+
+def _cmd_parity_gate(args: argparse.Namespace) -> int:
+    try:
+        rc, run, out_path = _run_parity_gate(args)
+    except _CliError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    # ``rc`` is fully determined (and the stub is already written). The summary
+    # is the only pipe-fragile step, and a broken pipe must NOT downgrade a
+    # FAIL / flagged-PASS to a clean ``0`` -- here the exit code IS the verdict.
+    try:
+        if run.verdict.verdict != "PASS":
+            print(f"reason: {run.verdict.reason}", file=sys.stderr)
+        print(f"verdict:           {run.verdict.verdict}")
+        print(f"integrity_flagged: {run.integrity_flagged}")
+        print(f"stub ->            {out_path}")
+    except BrokenPipeError:
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except (ValueError, OSError):
+            pass
+    return rc
+
+
+def _run_parity_gate(args: argparse.Namespace) -> tuple[int, GateRun, Path]:
+    orders_csv = Path(args.orders_csv)
+    trades_db = Path(args.trades_db)
+    out_path = Path(args.out)
+    config_name: str = args.config
+    cfg: SimConfig = PRIMARY if config_name == "primary" else OPTIMISTIC
+
+    windows_raw: dict[str, _WindowEntry] = getattr(
+        args, "windows_parsed", None
+    ) or _read_windows(Path(args.windows))
+    windows = {
+        key: WindowSpec(
+            lo_ns=entry.lo_ns,
+            hi_ns=entry.hi_ns,
+            degraded_days=entry.degraded_days,
+        )
+        for key, entry in windows_raw.items()
+    }
+    trades, provenance = _reconstruct_part_a_trades(orders_csv, trades_db)
+    source_for = _source_for_factory(windows_raw)
+
+    logger.info(
+        "parity-gate: %d Part A trades, %d windows, synthetic_window=%s, config=%s",
+        len(trades),
+        len(windows),
+        args.synthetic_window,
+        config_name,
+    )
+
+    try:
+        run = run_parity_gate(
+            trades,
+            windows,
+            args.synthetic_window,
+            source_for,
+            synthetic_seed=int(args.synthetic_seed),
+            synthetic_n=int(args.synthetic_n),
+            amendment_number=int(args.amendment_number),
+            cycle_number=int(args.cycle_number),
+            config=cfg,
+            sha=args.sha,
+            date=args.date,
+        )
+    except OrderStateError:
+        raise  # an illegal tracker transition is a bug -- propagate, never mask
+    except (
+        PartAError,
+        SyntheticError,
+        PartBError,
+        GateError,
+        GateCliError,
+        BookInconsistency,
+        IntentLogError,
+        InvariantViolation,
+        ValueError,
+        FileNotFoundError,
+    ) as exc:
+        # Every declared analyst-facing fault of the sequenced modules (a
+        # window-book data fault, a too-sparse synthetic window, a structural
+        # Part B fault, a bad SHA / template break, a mis-mapped trade or
+        # window, a sim fault). A TypeError / AttributeError / KeyError from a
+        # cli<->gate_cli wiring bug is NOT caught here.
+        raise _CliError(
+            f"parity gate could not complete: {type(exc).__name__}: {exc}"
+        ) from exc
+
+    document = run.stub if run.stub.endswith("\n") else run.stub + "\n"
+    if provenance is not None:
+        document = provenance + document
+    _atomic_write_one(out_path, document)
+
+    rc = 1 if run.verdict.verdict != "PASS" else (3 if run.integrity_flagged else 0)
+    return rc, run, out_path
+
+
+def _read_windows(path: Path) -> dict[str, _WindowEntry]:
+    """Read + shallow-validate the ``--windows`` JSON.
+
+    Schema: ``{"<key>": {"dbn": <path str>, "instrument_id": <int>, "lo_ns":
+    <int>, "hi_ns": <int>, "degraded_days": [<"YYYY-MM-DD">, ...]}}`` (the last
+    optional).
+
+    Raises:
+        _CliError: unreadable / not UTF-8 / not JSON / not a JSON object / no
+            entries; an entry that is not an object, is missing a required key,
+            has a non-integer / negative bound (``instrument_id`` / ``lo_ns`` /
+            ``hi_ns``), a ``hi_ns <= lo_ns``, an empty ``dbn``, a ``degraded_days``
+            that is not a list of strings, or a window key / ``degraded_days``
+            entry carrying a newline or ``"## "`` (both land in the amendment
+            template and trip ``build_amendment_stub``'s guard).
+    """
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _CliError(f"cannot read windows file {path}: {exc}") from exc
+    try:
+        parsed: object = json.loads(raw)
+    except ValueError as exc:
+        raise _CliError(f"windows file {path}: not valid JSON ({exc})") from exc
+    if not isinstance(parsed, dict):
+        raise _CliError(
+            f"windows file {path}: expected a JSON object, got "
+            f"{type(parsed).__name__}"
+        )
+    if not parsed:
+        raise _CliError(f"windows file {path}: no window entries")
+
+    out: dict[str, _WindowEntry] = {}
+    for key, entry in parsed.items():
+        label = f"windows file {path}, entry {key!r}"
+        key_str = str(key)
+        if "\n" in key_str or "## " in key_str:
+            raise _CliError(
+                f"{label}: window key contains a newline or '## ' -- it lands "
+                f"verbatim in the amendment template"
+            )
+        if not isinstance(entry, dict):
+            raise _CliError(f"{label}: not a JSON object")
+        for field in ("dbn", "instrument_id", "lo_ns", "hi_ns"):
+            if field not in entry:
+                raise _CliError(f"{label}: missing required key {field!r}")
+        dbn = entry["dbn"]
+        if not isinstance(dbn, str) or not dbn:
+            raise _CliError(f"{label}: 'dbn' must be a non-empty string")
+        instrument_id = _windows_int(entry["instrument_id"], "instrument_id", label)
+        if instrument_id < 0:
+            raise _CliError(f"{label}: instrument_id ({instrument_id}) must be >= 0")
+        lo_ns = _windows_int(entry["lo_ns"], "lo_ns", label)
+        hi_ns = _windows_int(entry["hi_ns"], "hi_ns", label)
+        if lo_ns < 0:
+            raise _CliError(f"{label}: lo_ns ({lo_ns}) must be >= 0 (spine AD-1)")
+        if hi_ns <= lo_ns:
+            raise _CliError(f"{label}: hi_ns ({hi_ns}) must exceed lo_ns ({lo_ns})")
+        degraded_raw = entry.get("degraded_days", [])
+        if not isinstance(degraded_raw, list) or not all(
+            isinstance(day, str) for day in degraded_raw
+        ):
+            raise _CliError(f"{label}: 'degraded_days' must be a list of date strings")
+        for day in degraded_raw:
+            if "\n" in day or "## " in day:
+                raise _CliError(
+                    f"{label}: degraded_days entry {day!r} contains a newline "
+                    f"or '## ' -- it lands verbatim in the amendment template"
+                )
+        out[str(key)] = _WindowEntry(
+            dbn=dbn,
+            instrument_id=instrument_id,
+            lo_ns=lo_ns,
+            hi_ns=hi_ns,
+            degraded_days=tuple(str(day) for day in degraded_raw),
+        )
+    return out
+
+
+def _windows_int(value: object, field: str, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise _CliError(f"{label}: {field!r} must be an integer, got {value!r}")
+    return value
+
+
+def _source_for_factory(
+    windows: dict[str, _WindowEntry],
+) -> Callable[[str], BookEventSource]:
+    """The ``WindowKey -> BookEventSource`` callable ``run_parity_gate`` injects.
+
+    For a key: a ts-clipped :class:`_ClippedSource` over a :class:`FrontMonthSource`
+    over a :class:`~src.ticksim.events.DbnMboSource` of that window's ``.dbn.zst``.
+    **Memoised per key** -- ``run_parity_gate`` calls ``source_for`` once per Part A
+    trade (+ once per unfilled leg) + once for Part B + once per integrity window;
+    without the cache N trades in one window would each spin up a fresh
+    ``DBNStore.from_file`` decompression pass. Each cached source is still
+    re-iterable, so a re-fold just re-opens the handle. A missing ``.dbn.zst`` ->
+    :class:`_CliError` (raised on the first ``source_for`` call for that window).
+    """
+    cache: dict[str, BookEventSource] = {}
+
+    def source_for(key: str) -> BookEventSource:
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        entry = windows[key]
+        dbn_path = Path(entry.dbn)
+        if not dbn_path.is_file():
+            raise _CliError(f"window {key!r}: no such DBN file: {dbn_path}")
+        source: BookEventSource = _ClippedSource(
+            FrontMonthSource(DbnMboSource(str(dbn_path)), entry.instrument_id),
+            entry.lo_ns,
+            entry.hi_ns,
+        )
+        cache[key] = source
+        return source
+
+    return source_for
+
+
+def _reconstruct_part_a_trades(
+    orders_csv: Path, trades_db: Path
+) -> tuple[list[ReconstructedTrade], str | None]:
+    """The Part A trade set: mim-nb from ``orders.csv`` (CHECKPOINT 1c -- the CSV
+    is authoritative; the DB's mim-nb rows are a fallback only when the CSV is
+    absent), yank always from ``trades.db`` rows on/after 2026-06-17.
+
+    Returns ``(trades, provenance)`` where ``provenance`` is a one-line Markdown
+    note (else ``None``) that the CLI prepends to the written stub when >= 1
+    mim-nb trade came from the lower-fidelity DB fallback.
+
+    Raises:
+        _CliError: an unreadable CSV / DB, or a reconstruction ``PartAError``
+            (naming the offending row).
+    """
+    trades: list[ReconstructedTrade] = []
+    provenance: str | None = None
+
+    if orders_csv.is_file():
+        try:
+            with orders_csv.open(encoding="utf-8-sig", newline="") as handle:
+                rows: list[dict[str, object]] = [
+                    dict(row) for row in csv.DictReader(handle)
+                ]
+        except (OSError, UnicodeDecodeError) as exc:
+            raise _CliError(f"cannot read orders CSV {orders_csv}: {exc}") from exc
+        try:
+            trades.extend(reconstruct_mim_nb(rows))
+        except PartAError as exc:
+            raise _CliError(
+                f"mim-nb reconstruction from {orders_csv} failed: {exc}"
+            ) from exc
+    else:
+        logger.warning(
+            "orders CSV %s absent -- falling back to trades.db mim-nb rows "
+            "(no bracket legs, bar_reconstructed fidelity)",
+            orders_csv,
+        )
+        mim_db_trades = [
+            _reconstruct_db_row(row, trades_db)
+            for row in _db_rows(trades_db, "trader-mim-nb", since=_PART_A_DB_SINCE)
+        ]
+        if mim_db_trades:
+            provenance = _MIM_NB_DB_FALLBACK_PROVENANCE
+        trades.extend(mim_db_trades)
+
+    for row in _db_rows(trades_db, "trader-yank", since=_PART_A_DB_SINCE):
+        trades.append(_reconstruct_db_row(row, trades_db))
+
+    return trades, provenance
+
+
+def _reconstruct_db_row(row: dict[str, object], trades_db: Path) -> ReconstructedTrade:
+    try:
+        return reconstruct_trades_db_row(row)
+    except PartAError as exc:
+        raise _CliError(
+            f"trades.db reconstruction ({trades_db}) failed: {exc}"
+        ) from exc
+
+
+def _db_rows(trades_db: Path, trader_id: str, *, since: str) -> list[dict[str, object]]:
+    """Rows of ``trades_db``'s ``trades`` table for ``trader_id`` with
+    ``timestamp >= since`` (NULL timestamps excluded, not mis-compared), ordered
+    ``timestamp, id`` so the reconstructed stub is byte-deterministic across runs.
+    Each row is a plain ``dict`` via a :class:`sqlite3.Row` row factory.
+
+    Raises:
+        _CliError: the DB file is missing, or ``sqlite3`` raised (unreadable, no
+            ``trades`` table).
+    """
+    if not trades_db.is_file():
+        raise _CliError(f"no such trades DB: {trades_db}")
+    query = (
+        "SELECT * FROM trades WHERE trader_id = ? AND timestamp IS NOT NULL "
+        "AND timestamp >= ? ORDER BY timestamp, id"
+    )
+    params: list[object] = [trader_id, since]
+    try:
+        connection = sqlite3.connect(str(trades_db))
+    except sqlite3.Error as exc:
+        raise _CliError(f"cannot open trades DB {trades_db}: {exc}") from exc
+    try:
+        connection.row_factory = sqlite3.Row
+        cursor = connection.execute(query, params)
+        return [{name: row[name] for name in row.keys()} for row in cursor.fetchall()]
+    except sqlite3.Error as exc:
+        raise _CliError(f"trades DB {trades_db} query failed: {exc}") from exc
+    finally:
+        connection.close()
+
+
+def _validate_parity_gate_args(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """Usage-level checks (every failure -> ``parser.error`` -> exit 2).
+
+    ``--windows`` is read + fully validated **here, once** -- the parsed
+    ``dict[str, _WindowEntry]`` is stashed on ``args.windows_parsed`` so
+    ``_run_parity_gate`` never re-reads it (a second parse at a different
+    strictness was the root of the ``--synthetic-window`` exit-code
+    inconsistency -- round 1). Checks: ``--amendment-number`` / ``--cycle-number``
+    ``> 0``; ``--out`` names a file, does not collide with any input
+    (``--orders-csv`` / ``--trades-db`` / ``--windows`` / any window ``.dbn.zst``),
+    and does not already exist unless ``--force``; ``--synthetic-window`` is a key
+    in ``--windows``.
+    """
+    if int(args.amendment_number) <= 0:
+        parser.error("--amendment-number must be > 0 (analyst-owned; AD-26)")
+    if int(args.cycle_number) <= 0:
+        parser.error("--cycle-number must be > 0 (analyst-owned; AD-26)")
+
+    if not Path(args.out).name:
+        parser.error("--out must name a file")
+
+    out_resolved = Path(args.out).resolve()
+    for label, value in (
+        ("--orders-csv", args.orders_csv),
+        ("--trades-db", args.trades_db),
+        ("--windows", args.windows),
+    ):
+        if Path(value).resolve() == out_resolved:
+            parser.error(f"--out must not be the same file as {label} ({out_resolved})")
+
+    try:
+        windows = _read_windows(Path(args.windows))
+    except _CliError as exc:
+        parser.error(str(exc))
+
+    for key, entry in windows.items():
+        if Path(entry.dbn).resolve() == out_resolved:
+            parser.error(
+                f"--out must not be the same file as the .dbn.zst for window {key!r}"
+            )
+
+    if args.synthetic_window not in windows:
+        parser.error(
+            f"--synthetic-window {args.synthetic_window!r} is not a key in "
+            f"--windows ({sorted(windows)!r})"
+        )
+
+    if Path(args.out).exists() and not args.force:
+        parser.error(
+            f"--out {args.out} already exists -- pass --force to overwrite (each "
+            f"kill-clock cycle keeps its own amendment stub)"
+        )
+
+    args.windows_parsed = windows
+
+
+# --------------------------------------------------------------------------- #
 # argparse dispatcher
 # --------------------------------------------------------------------------- #
 
@@ -772,6 +1226,123 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="ThreeWayReport JSON output (atomically overwritten if it exists)",
     )
+
+    gp = sub.add_parser(
+        "parity-gate",
+        help="run the §A8.2 two-part parity gate and write the amendment stub",
+        description=(
+            "Reconstruct the live bots' orders (mim-nb from "
+            "data/mim_nb/orders.csv, yank from data/trades.db rows on/after "
+            "2026-06-17), run Part A real-fill calibration over their MBO "
+            "windows, a >=1000-order Part B invariant battery over one "
+            "synthetic window, the seal-5 integrity preflight per window, then "
+            "gate.evaluate + build_amendment_stub. Writes a STANDALONE "
+            "amendment .md (the analyst appends it to the seal -- AD-26). Exit "
+            "0 PASS / 3 PASS+integrity-flagged / 1 FAIL-or-error / 2 usage."
+        ),
+    )
+    gp.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="INFO-level logging to stderr",
+    )
+    gp.add_argument(
+        "--orders-csv",
+        default="data/mim_nb/orders.csv",
+        metavar="PATH",
+        help=(
+            "mim-nb order-lifecycle CSV (default: data/mim_nb/orders.csv); "
+            "authoritative for mim-nb -- the DB's mim-nb rows are used only if "
+            "this file is absent"
+        ),
+    )
+    gp.add_argument(
+        "--trades-db",
+        default="data/trades.db",
+        metavar="PATH",
+        help=(
+            "trades.db (default: data/trades.db); yank rows on/after "
+            "2026-06-17 always, mim-nb rows only when --orders-csv is absent"
+        ),
+    )
+    gp.add_argument(
+        "--windows",
+        required=True,
+        metavar="PATH",
+        help=(
+            "window JSON: {key: {dbn, instrument_id, lo_ns, hi_ns, "
+            "degraded_days?}}; a trade is routed to the entry whose "
+            "[lo_ns, hi_ns) fully contains its stamp span"
+        ),
+    )
+    gp.add_argument(
+        "--synthetic-window",
+        required=True,
+        metavar="KEY",
+        help="the --windows key Part B's synthetic orders are generated over",
+    )
+    gp.add_argument(
+        "--synthetic-seed",
+        type=_nonneg_int,
+        default=0,
+        metavar="INT",
+        help="Part B RNG seed -- the sole entropy source (default: 0)",
+    )
+    gp.add_argument(
+        "--synthetic-n",
+        type=_nonneg_int,
+        default=PART_B_MIN_ORDERS,
+        metavar="INT",
+        help=f"synthetic order count (default: PART_B_MIN_ORDERS = {PART_B_MIN_ORDERS})",
+    )
+    gp.add_argument(
+        "--amendment-number",
+        type=int,
+        required=True,
+        metavar="INT",
+        help="the amendment's number in the seal (analyst-owned; AD-26)",
+    )
+    gp.add_argument(
+        "--cycle-number",
+        type=int,
+        required=True,
+        metavar="INT",
+        help="the revision-cycle number, rendered `cycle N of 3` (analyst-owned)",
+    )
+    gp.add_argument(
+        "--config",
+        choices=("primary", "optimistic"),
+        default="primary",
+        help="seal-bound sim config (default: primary)",
+    )
+    gp.add_argument(
+        "--sha",
+        default=None,
+        metavar="SHA",
+        help=(
+            "frozen simulator SHA (40-char hex); omitted -> gate.frozen_sha() "
+            "(`git rev-parse HEAD`)"
+        ),
+    )
+    gp.add_argument(
+        "--date",
+        default=None,
+        metavar="STR",
+        help="append date for the stub; omitted -> 'TBD (fill on append)'",
+    )
+    gp.add_argument(
+        "--out",
+        required=True,
+        metavar="PATH",
+        help="amendment stub .md output -- a NEW standalone file (atomic write)",
+    )
+    gp.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite --out if it already exists (default: refuse -- each "
+        "kill-clock cycle keeps its own stub)",
+    )
     return parser
 
 
@@ -863,6 +1434,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _validate_simulate_args(parser, args)
         elif getattr(args, "command", None) == "report":
             _validate_report_args(parser, args)
+        elif getattr(args, "command", None) == "parity-gate":
+            _validate_parity_gate_args(parser, args)
     except SystemExit as exc:
         code = exc.code
         if code is None:
@@ -881,6 +1454,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "report":
         _configure_logging(bool(args.verbose))
         return _cmd_report(args)
+    if args.command == "parity-gate":
+        _configure_logging(bool(args.verbose))
+        return _cmd_parity_gate(args)
     # defensive: argparse already rejects an unknown sub-command with exit 2
     parser.print_usage(sys.stderr)
     return 2

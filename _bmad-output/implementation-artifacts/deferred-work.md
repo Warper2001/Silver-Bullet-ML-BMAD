@@ -581,3 +581,19 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
   * `_run_parity_gate`'s `getattr(args, "windows_parsed", None) or _read_windows(...)` fallback exists only for direct `_run_parity_gate` calls that bypass `_validate_parity_gate_args`; it is untested and, in the CLI path, unreachable.
   * `--config optimistic` is asserted at the `run_parity_gate` level (`test_config_forwarded_to_both_runners`) but not end-to-end through `cli.main`.
   evidence: review round 2, inline (2026-09-01).
+
+## Deferred: §A8.2 gate RUNTIME — measured, and it is the binding practical constraint (2026-09-01)
+
+- source_spec: `spec-ticksim-parity-gate-cli.md` (post-merge measurement, not a code defect)
+  summary: The parity-gate integration test was executed for the first time against the real `data/tick/_test/glbx-mdp3-20260622.mbo.dbn.zst` capture (364 MB compressed, 22.5M records, 2.5h of MNQ tape). Measured on the KVM4 box (4 vCPU):
+  * raw `DbnMboSource` decode: **~297,000 rec/s**
+  * decode + `book.apply_event` fold: **~111,000 rec/s** (folding costs ~2.7x)
+  * the test's nominal "90-minute" window (`anchor-30min .. anchor+60min`) actually contains **~20.3M records — essentially the whole capture**, so `_ClippedSource`'s `hi_ns` break buys almost nothing here.
+  * a single folding pass over that window: **~3 minutes**. `run_parity_gate` makes ~9 such passes (one per Part A trade, one per unfilled leg, one for `generate_synthetic_orders` pricing, one for `run_part_b`'s `simulate`, one for integrity, plus the test's 2 anchor passes) -> a ~27-minute floor.
+  * **Observed: >1h25m and still running.** The excess over the 27-min fold floor is `run_part_b`'s `simulate` over 1000 synthetic orders — per-event order matching, not decompression — which dominates.
+  What this means for the real §A8.2 run: **28 Tranche-1 windows at this cost is not a single overnight job.** Before the purchase is spent, decide one of:
+  1. Size Part B's window deliberately — the prereg requires >=1000 synthetic orders, *not* a 20M-event window. A 5-10 minute dense RTH slice satisfies §A8.2 Part B and cuts the dominant cost by ~10x. `--synthetic-window` already makes this a CLI argument, so no code change is needed — just point it at a narrow window entry.
+  2. Profile `sim.simulate`'s per-event hot path (the resting-order scan) before running the real gate.
+  3. Parallelise across windows (each window is independent; Part A is embarrassingly parallel per trade).
+  Option 1 is free and should be the default. **Do not budget the real gate run assuming it is minutes.**
+  evidence: measured 2026-09-01 on the merged `feat/ticksim-fill-simulator` @ 937073b.

@@ -18,7 +18,7 @@ Usage
 
     # 3. buy it -- ONLY after reading the probe total
     PYTHONPATH=. .venv/bin/python tools/tranche1_purchase.py \
-        --download --confirm-spend 22.50 --max-spend 30.00
+        --download --confirm-spend 37.41 --max-spend 45.00
 
 Safety
 ------
@@ -46,7 +46,14 @@ from pathlib import Path
 
 DATASET = "GLBX.MDP3"
 SCHEMA = "mbo"
-STYPE_IN = "raw_symbol"
+# Parent symbology (guide §Mode C: "parent avoids all roll-symbol logic for 4%
+# more data"). Measured premium over per-contract raw_symbol on the real 28
+# windows: $2.04 (+5.8%) -- paid deliberately. It removes the M6->U6 roll as a
+# source of error entirely, and this project has already been bitten once by a
+# stale-contract bug. Every existing order on the account used parent too, so
+# this also keeps the purchases homogeneous.
+STYPE_IN = "parent"
+SYMBOLS = ["MNQ.FUT"]
 
 TRADES_DB = Path("data/trades.db")
 OUT_DIR = Path("data/tick/mnq_mbo_parity")
@@ -78,8 +85,8 @@ DEGRADED_DAYS = {"2026-05-24", "2026-07-30"}
 PARTB_WINDOW = {
     "start": "2026-06-22T13:00:00+00:00",
     "end": "2026-06-22T20:00:00+00:00",
-    "symbol": "MNQU6",
-    "filename": "partb_20260622_1300_2000_MNQU6.mbo.dbn.zst",
+    "symbol": "MNQ.FUT",
+    "filename": "partb_20260622_1300_2000_MNQFUT.mbo.dbn.zst",
     "synthetic_slice": ("2026-06-22T13:30:00+00:00", "2026-06-22T13:35:00+00:00"),
 }
 
@@ -105,7 +112,7 @@ class Window:
 
     @property
     def filename(self) -> str:
-        return f"win{self.index:03d}_{self.symbol}.mbo.dbn.zst"
+        return f"win{self.index:03d}_MNQFUT.mbo.dbn.zst"
 
 
 def derive_windows(db_path: Path) -> list[Window]:
@@ -178,7 +185,7 @@ def probe(windows: list[Window]) -> float:
     for win in windows:
         cost = client.metadata.get_cost(
             dataset=DATASET,
-            symbols=[win.symbol],
+            symbols=SYMBOLS,
             stype_in=STYPE_IN,
             schema=SCHEMA,
             start=win.start,
@@ -221,7 +228,7 @@ def download(
         )
         data = client.timeseries.get_range(
             dataset=DATASET,
-            symbols=[win.symbol],
+            symbols=SYMBOLS,
             stype_in=STYPE_IN,
             schema=SCHEMA,
             start=win.start,
@@ -275,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         default=40.0,
         metavar="USD",
-        help="hard ceiling; abort before billing if exceeded (default: 40)",
+        help="hard ceiling; abort before billing if exceeded (default: 50)",
     )
     parser.add_argument(
         "--tolerance",

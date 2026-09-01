@@ -356,6 +356,23 @@ def _walk_book(book: Book, snap: OrderSnapshot, clock_ns: int) -> list[FillEvent
             )
         limit_px = snap.limit_px_dbn
 
+    # AD-16 invariant 1's arrival-touch clamp below must never push a fill
+    # *through* the limit (invariant 2). Both terms are frozen at arrival, so
+    # the question is time-invariant and is settled once, here: if the arrival
+    # touch is already through the limit this order was never marketable at
+    # arrival and can never fill, on this tick or any later one.
+    #
+    # Hoisted above the loop deliberately. ``decide`` re-walks every working
+    # marketable order on every tick, and such an order never fills and so
+    # never leaves the working set -- an in-loop test would re-open
+    # ``resting_levels`` on each of ~20M ticks per window (measured: ~6-10x
+    # slower end to end). Returning here is O(1).
+    if limit_px is not None and arrival_touch is not None:
+        if snap.side is Side.BUY and arrival_touch > limit_px:
+            return []
+        if snap.side is Side.SELL and arrival_touch < limit_px:
+            return []
+
     out: list[FillEvent] = []
     for price_dbn, level_size in book.resting_levels(instrument_id, opposite):
         if limit_px is not None:
@@ -373,6 +390,15 @@ def _walk_book(book: Book, snap: OrderSnapshot, clock_ns: int) -> list[FillEvent
                 if snap.side is Side.BUY
                 else min(price_dbn, arrival_touch)
             )
+        # Defence in depth: the hoisted pre-check above already guarantees the
+        # clamp cannot carry ``fill_px`` through the limit, so this never fires
+        # in practice -- it is kept so a future change to either the clamp or
+        # the pre-check cannot silently reintroduce an invariant-2 breach.
+        if limit_px is not None:
+            if snap.side is Side.BUY and fill_px > limit_px:
+                break
+            if snap.side is Side.SELL and fill_px < limit_px:
+                break
         out.append(
             FillEvent(
                 order_id=snap.order_id,

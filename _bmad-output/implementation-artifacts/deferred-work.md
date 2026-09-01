@@ -611,3 +611,49 @@ preflight, `gate.evaluate`, and `build_amendment_stub` (the stub's
 The deferred item "the integration test has never actually executed" is now
 **CLOSED**. What remains is the runtime consequence above: ~3h/window x 28
 windows = ~83h serial, so **narrow `--synthetic-window` before the real run**.
+
+## FIXED 2026-09-01: invariant-2 breach in `fills._walk_book` -- found by the gate on real data
+
+The §A8.2 Part B battery over the real 2026-06-22 capture
+(`tests/integration/test_ticksim_parity_synthetic.py`) FAILED with **87 of 1000
+synthetic orders breaching invariant 2** ("a limit order never fills at a price
+through its limit"). This is the first defect the parity gate caught that the
+entire unit suite could not -- every prior green run was against in-memory
+hand-built sources.
+
+**Root cause.** `_walk_book` applies invariant 1's no-price-improvement clamp
+(`fill_px = max(price_dbn, arrival_touch)` for a BUY) *after* the level test that
+bounds `price_dbn` by the limit, with no re-check. When the market ran away
+during the 250 ms latency hop so `arrival_best_ask > limit_px`, the clamp raised
+the fill price **above the order's own limit**. Minimal repro: a marketable-limit
+BUY limited at 100 ticks filled at 102.
+
+**Why it mattered.** The simulator granted fills a trader could never have
+received, precisely when the market moved against them -- an optimistic bias in
+exactly the direction a queue-aware fill simulator exists to remove. Left in, it
+would have inflated backtested fill rates and corrupted any R3 edge estimate.
+
+**Fix.** The condition is time-invariant (both `arrival_touch` and `limit_px` are
+frozen at arrival), so it is settled once, hoisted above the level loop, with an
+O(1) `return []`: an order whose arrival touch is already through its limit was
+never marketable and can never fill. The in-loop test is retained as defence in
+depth.
+
+**Placement matters -- a second lesson.** The first version of this fix put the
+guard *inside* the loop. `decide` re-walks every working marketable order on
+every tick, and these orders now correctly never fill, so they never leave the
+working set -- the in-loop test re-opened `resting_levels` on each of ~20M ticks
+per window. Measured: the same test went from ~35 min to **>7h35m** (killed).
+Hoisting restored it.
+
+**Verification.** `test_part_b_battery_over_the_2026_06_22_window` **PASSES in
+35m12s** (was: 87 violations). 834 unit tests pass, `mypy --strict` clean, black
+clean. Five new regression tests in
+`tests/unit/test_ticksim_fills.py::TestArrivalClampNeverBreachesLimit` cover both
+sides, the legitimate-fill case, plain `MARKETABLE` (unaffected -- a true market
+order has no limit), and a partial walk truncating at the breaching level.
+
+**Still to re-run after this change:** the other integration tests that fold real
+MBO data -- `test_ticksim_parity_gate.py` (~3h), `test_ticksim_cli.py`,
+`test_ticksim_parity_integrity.py`, `test_ticksim_parity_run_part_a_integration.py`.
+The unit suite and Part B are green; those are unverified against the fix.

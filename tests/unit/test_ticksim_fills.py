@@ -646,3 +646,105 @@ class TestReviewHardening:
         assert FillEvent(order_id="p1", px_dbn=200, size=2, ts_ns=7) in fills
         assert FillEvent(order_id="m1", px_dbn=30000, size=2, ts_ns=7) in fills
         assert len(fills) == 2
+
+
+class TestArrivalClampNeverBreachesLimit:
+    """Regression: AD-16 invariant 1's arrival-touch clamp must never push a
+    marketable-**limit** fill *through* its own limit (invariant 2).
+
+    Found by `tests/integration/test_ticksim_parity_synthetic.py` on the real
+    2026-06-22 capture -- 87 of 1000 synthetic orders breached invariant 2. The
+    level test at the top of `_walk_book` bounds `price_dbn`, but the clamp
+    `max(price_dbn, arrival_touch)` could raise `fill_px` past the limit
+    whenever the market ran away during the 250 ms latency hop. Such an order
+    was never marketable at arrival and must take no liquidity at all --
+    granting it a fill is an optimistic bias in exactly the adverse direction
+    this simulator exists to remove.
+    """
+
+    def test_buy_limit_below_arrival_ask_does_not_fill(self) -> None:
+        book = Book()
+        # a level at 30000 is at/below the limit, so the level test admits it...
+        apply_event(book, _add(1, "A", 30000, 5, ts=1, seq=1))
+        tracker = OrderTracker()
+        _working_order(
+            tracker,
+            "m1",
+            OrderKind.MARKETABLE_LIMIT,
+            Side.BUY,
+            3,
+            limit_px_dbn=30000,
+        )
+        # ...but the market ran away during the hop: arrival ask 30050 > limit.
+        tracker.set_arrival_bbo("m1", bid_dbn=30025, ask_dbn=30050)
+        assert decide(book, tracker, clock_ns=50, config=config.PRIMARY) == []
+
+    def test_sell_limit_above_arrival_bid_does_not_fill(self) -> None:
+        book = Book()
+        apply_event(book, _add(1, "B", 30000, 5, ts=1, seq=1))
+        tracker = OrderTracker()
+        _working_order(
+            tracker,
+            "m1",
+            OrderKind.MARKETABLE_LIMIT,
+            Side.SELL,
+            3,
+            limit_px_dbn=30000,
+        )
+        # market ran away downward: arrival bid 29950 < limit.
+        tracker.set_arrival_bbo("m1", bid_dbn=29950, ask_dbn=29975)
+        assert decide(book, tracker, clock_ns=50, config=config.PRIMARY) == []
+
+    def test_buy_limit_at_arrival_ask_still_fills_at_the_limit(self) -> None:
+        """The fix must not suppress a legitimately marketable order."""
+        book = Book()
+        apply_event(book, _add(1, "A", 30000, 5, ts=1, seq=1))
+        tracker = OrderTracker()
+        _working_order(
+            tracker,
+            "m1",
+            OrderKind.MARKETABLE_LIMIT,
+            Side.BUY,
+            3,
+            limit_px_dbn=30000,
+        )
+        tracker.set_arrival_bbo("m1", bid_dbn=29975, ask_dbn=30000)
+        assert decide(book, tracker, clock_ns=50, config=config.PRIMARY) == [
+            FillEvent(order_id="m1", px_dbn=30000, size=3, ts_ns=50)
+        ]
+
+    def test_plain_marketable_is_unaffected_by_the_guard(self) -> None:
+        """A true market order has no limit -- it still pays the arrival touch."""
+        book = Book()
+        apply_event(book, _add(1, "A", 30000, 3, ts=1, seq=1))
+        tracker = OrderTracker()
+        _working_order(
+            tracker, "m1", OrderKind.MARKETABLE, Side.BUY, 3, limit_px_dbn=None
+        )
+        tracker.set_arrival_bbo("m1", bid_dbn=30025, ask_dbn=30050)
+        assert decide(book, tracker, clock_ns=50, config=config.PRIMARY) == [
+            FillEvent(order_id="m1", px_dbn=30050, size=3, ts_ns=50)
+        ]
+
+    def test_partial_walk_stops_at_the_level_that_would_breach(self) -> None:
+        """A deeper level whose clamped price breaches the limit truncates the
+        walk rather than filling through."""
+        book = Book()
+        apply_event(book, _add(1, "A", 30000, 2, ts=1, seq=1))
+        apply_event(book, _add(2, "A", 30025, 10, ts=2, seq=2))
+        tracker = OrderTracker()
+        _working_order(
+            tracker,
+            "m1",
+            OrderKind.MARKETABLE_LIMIT,
+            Side.BUY,
+            5,
+            limit_px_dbn=30025,
+        )
+        tracker.set_arrival_bbo("m1", bid_dbn=29975, ask_dbn=30000)
+        fills = decide(book, tracker, clock_ns=50, config=config.PRIMARY)
+        assert fills == [
+            FillEvent(order_id="m1", px_dbn=30000, size=2, ts_ns=50),
+            FillEvent(order_id="m1", px_dbn=30025, size=3, ts_ns=50),
+        ]
+        assert all(f.px_dbn <= 30025 for f in fills)

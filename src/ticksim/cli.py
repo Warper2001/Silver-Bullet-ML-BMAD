@@ -763,6 +763,7 @@ def _run_parity_gate(args: argparse.Namespace) -> tuple[int, GateRun, Path]:
             synthetic_n=int(args.synthetic_n),
             amendment_number=int(args.amendment_number),
             cycle_number=int(args.cycle_number),
+            skip_uncovered=bool(args.skip_uncovered),
             config=cfg,
             sha=args.sha,
             date=args.date,
@@ -1336,6 +1337,13 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         metavar="PATH",
         help="amendment stub .md output -- a NEW standalone file (atomic write)",
+    )
+    gp.add_argument(
+        "--skip-uncovered",
+        action="store_true",
+        help="drop Part A trades whose full span is not inside any --windows "
+        "entry (their MBO window was never purchased) instead of aborting; the "
+        "dropped ids are logged and recorded in the stub",
     )
     gp.add_argument(
         "--force",

@@ -45,6 +45,7 @@ T2 = "2026-06-17T14:00:02+00:00"
 T3 = "2026-06-17T14:30:00+00:00"
 T4 = "2026-06-17T14:30:01+00:00"
 T5 = "2026-06-17T14:30:02+00:00"
+T6 = "2026-06-17T14:30:03+00:00"
 
 ENTRY_PX = "20000.25"
 EXIT_PX = "20010.50"
@@ -203,11 +204,36 @@ class TestReconstructMimNb:
         with pytest.raises(PartAError, match="non-market"):
             reconstruct_mim_nb(rows)
 
-    def test_protective_stop_fires_raises(self) -> None:
+    def test_protective_stop_fill_is_scored_as_the_exit(self) -> None:
+        """A fired stop is a REAL exit fill and must be scored (2026-09-01).
+
+        The original code raised here, on the spec's assumption that the stop
+        "never fills in the real ledger". `data/mim_nb/orders.csv` falsifies
+        that: 2026-07-29 and 2026-08-28 both carry an otype-4 FILL with a
+        `pnl=` detail. Discarding those would silently drop real stop-out
+        exits from Part A's sample.
+        """
+        rows = [
+            mrow(T0, "PLACE", "E1", "2", side="0"),
+            mrow(T0, "PLACE", "S1", "4", side="1", price="19990.00"),
+            mrow(T1, "FILL", "E1", "2", side="0", price=ENTRY_PX),
+            mrow(T3, "FILL", "S1", "4", side="1", price="19990.00"),
+        ]
+        trades = reconstruct_mim_nb(rows)
+        assert len(trades) == 1
+        exit_fill = trades[0].real_fills[-1]
+        assert exit_fill.order_id == "S1"
+        assert exit_fill.leg is Leg.EXIT
+        assert exit_fill.price_dbn == 19990_000_000_000
+
+    def test_unattributable_stop_fill_is_skipped_not_raised(self) -> None:
+        """An otype-4 FILL with no live position (the real 2026-07-29
+        `order_id='111'` row, which has no PLACE anywhere) cannot be attributed
+        to a trade -- skipped and reported, never guessed at."""
         rows = standard_mim_lifecycle()
-        rows.insert(4, mrow(T3, "FILL", "S1", "4", side="1", price="19990.00"))
-        with pytest.raises(PartAError, match="protective stop"):
-            reconstruct_mim_nb(rows)
+        rows.append(mrow(T3, "FILL", "111", "4", side="1", price="19990.00"))
+        trades = reconstruct_mim_nb(rows)
+        assert len(trades) == 1  # the standard trade survives
 
     def test_replace_event_raises(self) -> None:
         rows = standard_mim_lifecycle()
@@ -221,13 +247,47 @@ class TestReconstructMimNb:
         with pytest.raises(PartAError, match="MODIFY"):
             reconstruct_mim_nb(rows)
 
-    def test_trailing_mid_trade_raises(self) -> None:
+    def test_trailing_mid_trade_is_dropped_not_raised(self) -> None:
+        """A ledger ending mid-trade is the bot still holding, or an exit that
+        was never written. It has no comparable fill pair, so it is dropped
+        with a warning (2026-09-01) -- one open trade at the tail must not cost
+        Part A the other 20+ scoreable trades, which is what raising did on the
+        real ledger."""
         rows = [
             mrow(T0, "PLACE", "E1", "2", side="0"),
             mrow(T1, "FILL", "E1", "2", side="0", price=ENTRY_PX),
         ]
-        with pytest.raises(PartAError, match="mid-trade"):
-            reconstruct_mim_nb(rows)
+        assert reconstruct_mim_nb(rows) == []
+
+    def test_unfilled_entry_then_unbracketed_flatten_is_dropped(self) -> None:
+        """The real 2026-06-11 shape: entry placed, never filled, then a
+        cat-stop flatten that also never fills. Neither leg produced a fill, so
+        there is nothing to compare -- dropped, not raised."""
+        rows = [
+            mrow(T0, "PLACE", "E1", "2", side="0"),
+            mrow(T0, "PLACE", "S1", "4", side="1", price="19990.00"),
+            mrow(T2, "CANCEL", "S1", "4", side="1"),
+            mrow(T3, "PLACE", "X1", "2", side="1"),
+        ]
+        assert reconstruct_mim_nb(rows) == []
+
+    def test_unclosed_trade_superseded_by_new_bracketed_entry(self) -> None:
+        """The real 2026-06-24 -> 06-25 shape: a trade whose exit was never
+        logged must NOT swallow the next day's entry as its exit. The bracket
+        signal (an entry is followed by its otype-4 stop) separates them."""
+        rows = [
+            mrow(T0, "PLACE", "E1", "2", side="0"),
+            mrow(T0, "PLACE", "S1", "4", side="1", price="19990.00"),
+            mrow(T1, "FILL", "E1", "2", side="0", price=ENTRY_PX),
+            # next trade, bracketed -- a NEW entry, not E1's exit
+            mrow(T3, "PLACE", "E2", "2", side="0"),
+            mrow(T3, "PLACE", "S2", "4", side="1", price="19980.00"),
+            mrow(T4, "FILL", "E2", "2", side="0", price=ENTRY_PX),
+            mrow(T5, "PLACE", "X2", "2", side="1"),
+            mrow(T6, "FILL", "X2", "2", side="1", price=EXIT_PX),
+        ]
+        trades = reconstruct_mim_nb(rows)
+        assert [t.trade_id for t in trades] == ["mimnb-E2"]
 
     def test_fill_without_order_id_raises(self) -> None:
         rows = standard_mim_lifecycle()

@@ -54,6 +54,7 @@ the offending row. No trade or fill is ever silently excluded from ``n``.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import re
 from collections.abc import Iterable, Mapping, Sequence
@@ -103,6 +104,8 @@ row that carries no order log."""
 Verdict = Literal["PASS", "FAIL"]
 """Part A calibration verdict."""
 
+logger = logging.getLogger(__name__)
+
 _NS_PER_SECOND = 1_000_000_000
 _NS_PER_MINUTE = 60 * _NS_PER_SECOND
 _DBN_PER_INDEX_POINT = 1_000_000_000
@@ -110,6 +113,9 @@ _DBN_PER_INDEX_POINT = 1_000_000_000
 # mim-nb orders.csv otype tokens (spec: otype 2 = market, otype 4 = protective stop)
 _MIM_MARKET_OTYPE = "2"
 _MIM_STOP_OTYPE = "4"
+# A bracketed entry places its protective otype-4 stop within ~0.1 s on the real
+# ledger; 5 s is a generous bound that still cannot reach the next trade.
+_MIM_BRACKET_WINDOW_NS = 5_000_000_000
 # events that must never appear in the mim-nb ledger (verified absent 2026-08-30)
 _REPLACE_EVENTS = frozenset({"REPLACE", "MODIFY"})
 # lifecycle sort tie-break: a same-ts PLACE must sort before its FILL, and a
@@ -542,11 +548,32 @@ def reconstruct_mim_nb(
         )
     parsed.sort(key=lambda r: (r.ts_ns, _EVENT_RANK.get(r.event, 9), r.order_id))
 
+    # Classify every market PLACE as an ENTRY or an EXIT before walking the
+    # lifecycle. The live bot brackets an entry: it places the market entry and,
+    # ~0.1 s later, its protective otype-4 stop. An exit (the "cat stop" flatten)
+    # is placed alone, right after CANCELling that stop. So a market PLACE
+    # followed by a stop PLACE within `_MIM_BRACKET_WINDOW_NS` is an entry;
+    # otherwise it is an exit.
+    #
+    # This discriminator is load-bearing on the real ledger. Without it a trade
+    # whose exit was never logged (shape 2 below) swallows the *next* day's entry
+    # as its exit, silently pairing legs from different trades.
+    entry_place_ids: set[str] = set()
+    stop_places = [
+        r for r in parsed if r.event == "PLACE" and r.otype == _MIM_STOP_OTYPE
+    ]
+    for r in parsed:
+        if r.event != "PLACE" or r.otype != _MIM_MARKET_OTYPE:
+            continue
+        if any(0 <= s.ts_ns - r.ts_ns <= _MIM_BRACKET_WINDOW_NS for s in stop_places):
+            entry_place_ids.add(r.order_id)
+
     trades: list[ReconstructedTrade] = []
     state = "FLAT"
     entry: _PendingLeg | None = None
     exit_: _PendingLeg | None = None
     stop_order_ids: set[str] = set()
+    abandoned = 0  # incomplete trades dropped (no fill to compare) -- reported
 
     for r in parsed:
         if r.event == "PLACE":
@@ -564,10 +591,40 @@ def reconstruct_mim_nb(
                 side=_mim_side(r.side, r.row_repr),
                 size=_int_size(r.size_raw, field_name="size", row_repr=r.row_repr),
             )
+            # The bracket signal is only consulted to answer one question: while a
+            # trade is still open, is this PLACE the *exit* of that trade, or a
+            # *new entry* whose predecessor was never closed in the ledger? When
+            # FLAT the answer is unambiguous (it is an entry) and the signal is
+            # not needed -- which also keeps unbracketed fixtures working.
+            is_new_entry = state != "FLAT" and r.order_id in entry_place_ids
             if state == "FLAT":
-                entry, state = leg, "ENTRY_PENDING"
+                entry, exit_, state = leg, None, "ENTRY_PENDING"
+            elif is_new_entry:
+                # A new bracketed entry supersedes whatever was pending. Either
+                # the prior entry never filled (nothing to compare), or its exit
+                # was never written to the ledger -- both are incomplete trades
+                # that Part A cannot score, so they are dropped, not guessed at.
+                abandoned += 1
+                logger.warning(
+                    "mim-nb: dropping incomplete trade (state=%s) superseded "
+                    "by new bracketed entry %s -- no comparable fill pair",
+                    state,
+                    r.order_id,
+                )
+                entry, exit_, state = leg, None, "ENTRY_PENDING"
             elif state == "ACTIVE":
                 exit_, state = leg, "EXIT_PENDING"
+            elif state == "ENTRY_PENDING":
+                # The entry never filled, so this flatten has no position to
+                # close and neither leg can produce a real fill. Drop both.
+                abandoned += 1
+                logger.warning(
+                    "mim-nb: entry %s never filled; its unbracketed flatten %s "
+                    "closes nothing -- dropping the pair",
+                    entry.order_id if entry else "?",
+                    r.order_id,
+                )
+                entry, exit_, state = None, None, "FLAT"
             else:
                 raise PartAError(
                     f"unexpected market PLACE for {r.order_id!r} while "
@@ -575,10 +632,51 @@ def reconstruct_mim_nb(
                 )
         elif r.event == "FILL":
             if r.otype == _MIM_STOP_OTYPE or r.order_id in stop_order_ids:
-                raise PartAError(
-                    f"protective stop (otype 4) fired — FILL on {r.order_id!r} "
-                    f"in mim-nb row {r.row_repr}"
+                # The protective stop FIRED. The pre-2026-09-01 code raised here,
+                # on the assumption (spec Reconstruction shape) that the stop "is
+                # always cancelled before the exit and never fills in the real
+                # ledger". The real ledger falsifies that: 2026-07-29 and
+                # 2026-08-28 both carry an otype-4 FILL with a `pnl=` detail.
+                #
+                # A stop-out is a real exit fill and must be scored, not
+                # discarded. It is modelled the same way the cat-stop flatten is:
+                # a marketable exit submitted at the moment the stop triggered
+                # (the fill ts), which is the correct comparison point -- using
+                # the stop's original resting PLACE ts would have the simulator
+                # fill at entry time.
+                if state == "ACTIVE" and entry is not None:
+                    stop_px = _px_to_dbn(
+                        r.price_raw, field_name="price", row_repr=r.row_repr
+                    )
+                    stop_size = _int_size(
+                        r.size_raw, field_name="size", row_repr=r.row_repr
+                    )
+                    stop_leg = _PendingLeg(
+                        order_id=r.order_id,
+                        ts_ns=r.ts_ns,
+                        side=_mim_side(r.side, r.row_repr),
+                        size=stop_size,
+                    )
+                    stop_leg.fill_px_dbn = stop_px
+                    stop_leg.fill_ts_ns = r.ts_ns
+                    stop_leg.fill_size = stop_size
+                    trades.append(_build_mim_trade(entry, stop_leg))
+                    entry = exit_ = None
+                    state = "FLAT"
+                    continue
+                # An otype-4 FILL with no live position -- e.g. the 2026-07-29
+                # `order_id='111'` row, which has no PLACE anywhere in the
+                # ledger. It cannot be attributed to a trade, so it is reported
+                # and skipped rather than guessed at.
+                abandoned += 1
+                logger.warning(
+                    "mim-nb: unattributable stop FILL on %s (state=%s, no live "
+                    "position) -- skipping row %s",
+                    r.order_id,
+                    state,
+                    r.row_repr,
                 )
+                continue
             fill_px = _px_to_dbn(r.price_raw, field_name="price", row_repr=r.row_repr)
             fill_size = _int_size(r.size_raw, field_name="size", row_repr=r.row_repr)
             if (
@@ -635,9 +733,22 @@ def reconstruct_mim_nb(
             raise PartAError(f"unknown event {r.event!r} in mim-nb row {r.row_repr}")
 
     if state != "FLAT":
-        raise PartAError(
-            f"mim-nb ledger ends mid-trade (state={state}) — a truncated "
-            "ledger is a data fault, never a silently-dropped trade"
+        # A ledger that ends mid-trade is the live bot still holding, or an exit
+        # that was never written. Either way the trade has no comparable fill
+        # pair, so it is dropped with a warning rather than failing the whole
+        # reconstruction -- one open trade at the tail must not cost Part A the
+        # other 20+ scoreable trades. (Before 2026-09-01 this raised.)
+        abandoned += 1
+        logger.warning(
+            "mim-nb: ledger ends mid-trade (state=%s) -- dropping the trailing "
+            "incomplete trade",
+            state,
+        )
+    if abandoned:
+        logger.warning(
+            "mim-nb: %d incomplete trade(s) dropped, %d reconstructed",
+            abandoned,
+            len(trades),
         )
     return trades
 

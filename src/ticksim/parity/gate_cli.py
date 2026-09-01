@@ -57,6 +57,7 @@ relative form only. No runtime ``config`` / ``orders`` / ``sim`` / ``book`` /
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -71,6 +72,8 @@ from .synthetic import SyntheticError, generate_synthetic_orders
 
 if TYPE_CHECKING:  # type-only -- not a runtime dependency edge (imports-test carve-out)
     from ..config import SimConfig
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "WindowKey",
@@ -139,6 +142,12 @@ class GateRun:
     verdict: GateVerdict
     stub: str
     integrity_flagged: bool
+    skipped_uncovered: tuple[str, ...] = ()
+    """trade_ids dropped because no purchased window contains their full span.
+
+    Empty unless ``skip_uncovered=True``. These trades are **not** scored, so
+    Part A's N excludes them -- the count and the ids are surfaced in the stub so
+    a reader can see the sample is a coverage subset, never a silent filter."""
 
 
 _MIM_NB_TRADE_ID_PREFIXES = ("mimnb-", "trader-mim-nb-")
@@ -237,6 +246,7 @@ def run_parity_gate(
     synthetic_n: int,
     amendment_number: int,
     cycle_number: int,
+    skip_uncovered: bool = False,
     config: SimConfig | None = None,
     sha: str | None = None,
     date: str | None = None,
@@ -296,9 +306,29 @@ def run_parity_gate(
         )
 
     # --- step 1: Part A --------------------------------------------------- #
-    trade_window: dict[str, WindowKey] = {
-        trade.trade_id: _window_of(trade, windows) for trade in part_a_trades
-    }
+    trade_window: dict[str, WindowKey] = {}
+    skipped: list[str] = []
+    for trade in part_a_trades:
+        try:
+            trade_window[trade.trade_id] = _window_of(trade, windows)
+        except GateCliError:
+            if not skip_uncovered:
+                raise
+            # The MBO window covering this trade's span was never purchased, so
+            # its fills cannot be scored at all. Dropping it is a DATA-COVERAGE
+            # limit, not a filter on outcome -- but it does bias the sample if
+            # the uncovered trades differ systematically (mim-nb's long EOD holds
+            # are exactly such a class), so every id is recorded and surfaced.
+            skipped.append(trade.trade_id)
+    if skipped:
+        logger.warning(
+            "parity-gate: %d of %d Part A trades dropped -- no purchased window "
+            "contains their full span: %s",
+            len(skipped),
+            len(part_a_trades),
+            ", ".join(sorted(skipped)),
+        )
+    part_a_trades = [t for t in part_a_trades if t.trade_id in trade_window]
 
     def _trade_source(trade: ReconstructedTrade) -> BookEventSource:
         return source_for(trade_window[trade.trade_id])
@@ -360,4 +390,5 @@ def run_parity_gate(
         verdict=verdict,
         stub=stub,
         integrity_flagged=integrity_flagged,
+        skipped_uncovered=tuple(sorted(skipped)),
     )

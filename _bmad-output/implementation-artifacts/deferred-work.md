@@ -657,3 +657,51 @@ order has no limit), and a partial walk truncating at the breaching level.
 MBO data -- `test_ticksim_parity_gate.py` (~3h), `test_ticksim_cli.py`,
 `test_ticksim_parity_integrity.py`, `test_ticksim_parity_run_part_a_integration.py`.
 The unit suite and Part B are green; those are unverified against the fix.
+
+## CORRECTION 2026-09-01: the "~83h for 28 windows" runtime estimate was WRONG
+
+The earlier note derived the real §A8.2 gate cost as "~3h per window x 28 = ~83h
+serial". **That is wrong.** The ~3h figure came from the parity-gate integration
+test, whose cost is dominated by **Part B** -- and `run_parity_gate` calls Part B
+**exactly once**, over the single `synthetic_window`. It is not a per-window cost.
+
+Re-reading the orchestrator: Part A runs per *trade*, `preflight_integrity` runs
+once per distinct *window*, and `generate_synthetic_orders` + `run_part_b` run
+**once** for the whole gate.
+
+### Measured (KVM4, 4 vCPU, real 2026-06-22 capture)
+
+Book-folding throughput ~111k rec/s; MNQ front-month tape ~250k events per minute
+of tape, so one fold pass over a +/-90-min window (180 min) is **~6-7 min**.
+
+`run_part_b` over the CLI's exact `_ClippedSource` shape, 1000 orders:
+
+| synthetic window | generate | run_part_b | total | verdict |
+|---|---|---|---|---|
+| 1 min | 6.8s | 107.2s | 114s | PASS, 0 violations |
+| 2 min | 9.1s | 194.2s | 203s | PASS, 0 violations |
+| 5 min | 14.7s | 401.5s | 416s (~7 min) | PASS, 0 violations |
+
+Linear at ~80s per minute of window. Order count is **never** the constraint --
+even a 1-minute window yields the full 1000 (265,882 events in 1 min of tape).
+
+### Corrected whole-gate estimate
+
+* integrity: 28 windows x ~6-7 min = **~3h**
+* Part A: ~30 trades, each folding only to its own timestamps (less than a full
+  window) = **~3h or under**
+* Part B: **one** run = **~7 min** at a 5-min synthetic window (vs ~2h if aimed
+  at a full +/-90-min window)
+
+**Total ~6-8h -- one overnight run, not 3.5 days.** The Tranche-1 purchase is far
+less compute-constrained than previously recorded.
+
+### Recommendation: `--synthetic-window` = a 5-minute dense RTH slice
+
+Every width PASSes, so this is a coverage choice, not a feasibility one. Do
+**not** drop to 1 min: one minute is a single market micro-regime, and the
+invariant-2 bug fixed in 41b442b only manifested when price ran away during the
+250 ms latency hop -- a window containing no such moment returns a clean PASS
+while blind to that entire defect class. ~7 min of one-time cost for materially
+more book-state diversity is the right trade. Still worth pointing at a slice
+that spans a real move (an RTH open or a data release), not a quiet drift.

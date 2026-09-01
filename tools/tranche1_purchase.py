@@ -63,6 +63,26 @@ ROLL_HI = dt.datetime(2026, 6, 19, tzinfo=dt.timezone.utc)
 # dropped -- spine AD-13 / prereg §A9.3.
 DEGRADED_DAYS = {"2026-05-24", "2026-07-30"}
 
+# --- the Part B / minimum-order window ------------------------------------ #
+# 2026-06-22, 13:00 -> 20:00 UTC = 30 min pre-open + the full RTH session
+# (09:30-16:00 ET). Sized to the $1.80 minimum order at $1.80/GB: 7.0 h of
+# MNQ.FUT parent tape ~= 1.0 GB ~= $1.79.
+#
+# Deliberately a **superset of purchase window 1** (13:29-18:23, 3 merged
+# parity fills), so this is not throwaway spend -- it completes 1 of the 28
+# Tranche 1 windows and `--download` will skip it later. It also supersedes the
+# existing 14:30-17:00 test fixture, and contains the recommended Part B
+# synthetic slice 13:30-13:35 UTC (the RTH open -- the densest, most
+# book-state-diverse five minutes available, which a quiet window would not
+# exercise; see the invariant-2 bug fixed in 41b442b).
+PARTB_WINDOW = {
+    "start": "2026-06-22T13:00:00+00:00",
+    "end": "2026-06-22T20:00:00+00:00",
+    "symbol": "MNQU6",
+    "filename": "partb_20260622_1300_2000_MNQU6.mbo.dbn.zst",
+    "synthetic_slice": ("2026-06-22T13:30:00+00:00", "2026-06-22T13:35:00+00:00"),
+}
+
 PARITY_FILL_QUERY = """
     select timestamp from trades
     where exit_price != 0 and exit_reason not in ('PENDING')
@@ -236,6 +256,12 @@ def main(argv: list[str] | None = None) -> int:
         "--manifest", action="store_true", help="write the window manifest JSON"
     )
     parser.add_argument(
+        "--partb",
+        action="store_true",
+        help="the Part B / $1.80-minimum window only (7.0 h, 2026-06-22 "
+        "13:00-20:00 UTC); a superset of purchase window 1",
+    )
+    parser.add_argument(
         "--download", action="store_true", help="BILLS. Pull every window."
     )
     parser.add_argument(
@@ -264,8 +290,8 @@ def main(argv: list[str] | None = None) -> int:
     # Validate the billing guards BEFORE touching the DB or the network, so a
     # missing --confirm-spend fails loudly at the usage layer rather than behind
     # an unrelated error.
-    if not (args.probe or args.manifest or args.download):
-        parser.error("pick one of --probe / --manifest / --download")
+    if not (args.probe or args.manifest or args.download or args.partb):
+        parser.error("pick one of --probe / --manifest / --partb / --download")
     if args.download and args.confirm_spend is None:
         parser.error("--download requires --confirm-spend (run --probe first)")
 
@@ -282,6 +308,43 @@ def main(argv: list[str] | None = None) -> int:
     if both:
         print(f"  !! windows inside the M6->U6 roll band need BOTH contracts: {both}")
     print()
+
+    if args.partb:
+        w = PARTB_WINDOW
+        lo = dt.datetime.fromisoformat(w["start"])
+        hi = dt.datetime.fromisoformat(w["end"])
+        hours = (hi - lo).total_seconds() / 3600
+        print(
+            f"Part B / minimum-order window ({hours:.1f} h, ~${hours * 0.2563:.2f} at $1.80/GB):"
+        )
+        print(f"  {w['symbol']}  {w['start']}  ->  {w['end']}")
+        print(
+            f"  synthetic slice for --synthetic-window: "
+            f"{w['synthetic_slice'][0]} .. {w['synthetic_slice'][1]}"
+        )
+        print(f"  superset of purchase window 1 -> counts toward Tranche 1\n")
+        partb = [
+            Window(
+                index=900,
+                start=w["start"],
+                end=w["end"],
+                symbol=w["symbol"],
+                minutes=hours * 60,
+                n_fills=3,
+                degraded_days=[],
+                needs_both_contracts=False,
+            )
+        ]
+        if args.download:
+            download(
+                partb,
+                confirmed=args.confirm_spend,
+                tolerance=args.tolerance,
+                ceiling=args.max_spend,
+            )
+        else:
+            probe(partb)
+        return 0
 
     if args.manifest:
         write_manifest(windows)

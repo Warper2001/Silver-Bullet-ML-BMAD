@@ -1,0 +1,279 @@
+{
+  "w00": {
+    "dbn": "data/tick/mnq_mbo_parity/win000_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004936,
+    "lo_ns": 1781179200001917037,
+    "hi_ns": 1781189999999194506,
+    "degraded_days": []
+  },
+  "w01": {
+    "dbn": "data/tick/mnq_mbo_parity/win001_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782134940000534949,
+    "hi_ns": 1782152579998572444,
+    "degraded_days": []
+  },
+  "w02": {
+    "dbn": "data/tick/mnq_mbo_parity/win002_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782318603544467455,
+    "hi_ns": 1782329403541435350,
+    "degraded_days": []
+  },
+  "w03": {
+    "dbn": "data/tick/mnq_mbo_parity/win003_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782410669919055395,
+    "hi_ns": 1782421200068023994,
+    "degraded_days": []
+  },
+  "w04": {
+    "dbn": "data/tick/mnq_mbo_parity/win004_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782757804040976221,
+    "hi_ns": 1782766800068017384,
+    "degraded_days": []
+  },
+  "w05": {
+    "dbn": "data/tick/mnq_mbo_parity/win005_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782844203090581431,
+    "hi_ns": 1782853200068020550,
+    "degraded_days": []
+  },
+  "w06": {
+    "dbn": "data/tick/mnq_mbo_parity/win006_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782997203187207115,
+    "hi_ns": 1783008003185332410,
+    "degraded_days": []
+  },
+  "w07": {
+    "dbn": "data/tick/mnq_mbo_parity/win007_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1783355403928911621,
+    "hi_ns": 1783366203926930508,
+    "degraded_days": []
+  },
+  "w08": {
+    "dbn": "data/tick/mnq_mbo_parity/win008_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1783438204588954755,
+    "hi_ns": 1783449004586615854,
+    "degraded_days": []
+  },
+  "w09": {
+    "dbn": "data/tick/mnq_mbo_parity/win009_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1783949410000565401,
+    "hi_ns": 1783960209997180418,
+    "degraded_days": []
+  },
+  "w10": {
+    "dbn": "data/tick/mnq_mbo_parity/win010_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1783967404444788069,
+    "hi_ns": 1783976400068018348,
+    "degraded_days": []
+  },
+  "w11": {
+    "dbn": "data/tick/mnq_mbo_parity/win011_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1784124000000552403,
+    "hi_ns": 1784134799996810724,
+    "degraded_days": []
+  },
+  "w12": {
+    "dbn": "data/tick/mnq_mbo_parity/win012_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1784140202913208147,
+    "hi_ns": 1784149200068024278,
+    "degraded_days": []
+  },
+  "w13": {
+    "dbn": "data/tick/mnq_mbo_parity/win013_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1784226603484726603,
+    "hi_ns": 1784235600068029694,
+    "degraded_days": []
+  },
+  "w14": {
+    "dbn": "data/tick/mnq_mbo_parity/win014_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1784705880000282059,
+    "hi_ns": 1784716679868368834,
+    "degraded_days": []
+  },
+  "w15": {
+    "dbn": "data/tick/mnq_mbo_parity/win015_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1784831403905242761,
+    "hi_ns": 1784840400068023124,
+    "degraded_days": []
+  },
+  "w16": {
+    "dbn": "data/tick/mnq_mbo_parity/win016_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785349803123421833,
+    "hi_ns": 1785358800068014960,
+    "degraded_days": []
+  },
+  "w17": {
+    "dbn": "data/tick/mnq_mbo_parity/win017_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785436203088993905,
+    "hi_ns": 1785445200068021502,
+    "degraded_days": [
+      "2026-07-30"
+    ]
+  },
+  "w18": {
+    "dbn": "data/tick/mnq_mbo_parity/win018_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785781805018893395,
+    "hi_ns": 1785790800068017350,
+    "degraded_days": []
+  },
+  "w19": {
+    "dbn": "data/tick/mnq_mbo_parity/win019_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785868203798782777,
+    "hi_ns": 1785877200068014100,
+    "degraded_days": []
+  },
+  "w20": {
+    "dbn": "data/tick/mnq_mbo_parity/win020_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1786633171071779577,
+    "hi_ns": 1786643971047315982,
+    "degraded_days": []
+  },
+  "w21": {
+    "dbn": "data/tick/mnq_mbo_parity/win021_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1786645803935217877,
+    "hi_ns": 1786654800068014044,
+    "degraded_days": []
+  },
+  "w22": {
+    "dbn": "data/tick/mnq_mbo_parity/win022_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1786722720008242889,
+    "hi_ns": 1786733519996197268,
+    "degraded_days": []
+  },
+  "w23": {
+    "dbn": "data/tick/mnq_mbo_parity/win023_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1786971720005085043,
+    "hi_ns": 1786982519970300244,
+    "degraded_days": []
+  },
+  "w24": {
+    "dbn": "data/tick/mnq_mbo_parity/win024_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1787596203269611161,
+    "hi_ns": 1787605200068009236,
+    "degraded_days": []
+  },
+  "w25": {
+    "dbn": "data/tick/mnq_mbo_parity/win025_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1787855403580566353,
+    "hi_ns": 1787864400068012834,
+    "degraded_days": []
+  },
+  "w26": {
+    "dbn": "data/tick/mnq_mbo_parity/win026_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1787927272333815841,
+    "hi_ns": 1787938072316642814,
+    "degraded_days": []
+  },
+  "w27": {
+    "dbn": "data/tick/mnq_mbo_parity/win027_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1787941802991958951,
+    "hi_ns": 1787950800068014274,
+    "degraded_days": []
+  },
+  "wsyn": {
+    "dbn": "data/tick/mnq_mbo_parity/partb_20260622/GLBX-20260901-V4YDQLGVGJ/glbx-mdp3-20260622.mbo.dbn",
+    "instrument_id": 42004800,
+    "lo_ns": 1782134700000000000,
+    "hi_ns": 1782135900000000000,
+    "degraded_days": []
+  },
+  "t00": {
+    "dbn": "data/tick/mnq_mbo_parity/topup00_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004936,
+    "lo_ns": 1781271007418283335,
+    "hi_ns": 1781281807412728784,
+    "degraded_days": []
+  },
+  "t01": {
+    "dbn": "data/tick/mnq_mbo_parity/topup01_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004936,
+    "lo_ns": 1781289006200735593,
+    "hi_ns": 1781298000068022392,
+    "degraded_days": []
+  },
+  "t02": {
+    "dbn": "data/tick/mnq_mbo_parity/topup02_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782747005778150697,
+    "hi_ns": 1782757805777259572,
+    "degraded_days": []
+  },
+  "t03": {
+    "dbn": "data/tick/mnq_mbo_parity/topup03_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1782822607192511401,
+    "hi_ns": 1782833407171511302,
+    "degraded_days": []
+  },
+  "t04": {
+    "dbn": "data/tick/mnq_mbo_parity/topup04_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1784813407382484199,
+    "hi_ns": 1784824207380555098,
+    "degraded_days": []
+  },
+  "t05": {
+    "dbn": "data/tick/mnq_mbo_parity/topup05_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785414605966343271,
+    "hi_ns": 1785425405964689984,
+    "degraded_days": [
+      "2026-07-30"
+    ]
+  },
+  "t06": {
+    "dbn": "data/tick/mnq_mbo_parity/topup06_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785760206887914733,
+    "hi_ns": 1785771006884976986,
+    "degraded_days": []
+  },
+  "t07": {
+    "dbn": "data/tick/mnq_mbo_parity/topup07_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1785846606376197099,
+    "hi_ns": 1785857406369332810,
+    "degraded_days": []
+  },
+  "t08": {
+    "dbn": "data/tick/mnq_mbo_parity/topup08_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1787574604237381729,
+    "hi_ns": 1787585407248133052,
+    "degraded_days": []
+  },
+  "t09": {
+    "dbn": "data/tick/mnq_mbo_parity/topup09_MNQFUT.mbo.dbn.zst",
+    "instrument_id": 42004800,
+    "lo_ns": 1787842803758791933,
+    "hi_ns": 1787853606889656536,
+    "degraded_days": []
+  }
+}

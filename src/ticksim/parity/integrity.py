@@ -98,8 +98,20 @@ class IntegrityReport:
     ``book_inconsistencies > 0``; ``trades_off_book > 0``;
     ``malformed_events > 0``; ``gaps_over_threshold > 0``;
     ``check_invariants_failed``; ``n_events == 0``. Transient crosses,
-    ``degraded_days`` and ``warmup_unknown_ref`` never flag (all expected --
-    §A9.2 / §A9.3). ``flags`` is a fixed-order human list of the reasons and is
+    ``degraded_days``, ``warmup_unknown_ref`` and ``stale_cross_count`` never
+    flag (all expected -- §A9.2 / §A9.3).
+
+    ``stale_cross_count`` is ``Book.stale_cross_count`` after the fold: the
+    number of crossed-market *episodes* wider than
+    ``config.STALE_CROSS_MAX_TICKS`` that ``book._check_cross`` tolerated as
+    cold-start ghosts (this window's book has no opening snapshot, so a
+    pre-window resting order is never ``A``-dded and its stale level can sit on
+    one side of the book). Reported so a reader can judge the tolerance; it is
+    never a flag reason, and a ghost cross that *does* outlive
+    ``MAX_TRANSIENT_CROSS_NS`` still lands in ``persistent_cross_count`` via
+    this module's own (unchanged) BBO state machine.
+
+    ``flags`` is a fixed-order human list of the reasons and is
     empty iff ``verdict == "OK"``.
     """
 
@@ -127,6 +139,7 @@ class IntegrityReport:
     missing_actions: tuple[str, ...]
     book_inconsistencies: int
     warmup_unknown_ref: int
+    stale_cross_count: int
     check_invariants_failed: bool
     degraded_days: tuple[str, ...]
     verdict: Literal["OK", "FLAGGED"]
@@ -368,6 +381,7 @@ def preflight_integrity(
         missing_actions=missing_actions,
         book_inconsistencies=book_inconsistencies,
         warmup_unknown_ref=warmup_unknown_ref,
+        stale_cross_count=book.stale_cross_count,
         check_invariants_failed=check_invariants_failed,
         degraded_days=tuple(str(d) for d in degraded_days),
         verdict=verdict,
@@ -425,6 +439,8 @@ def format_integrity(report: IntegrityReport) -> str:
             f"- missing actions: {missing}",
             f"- book inconsistencies: {report.book_inconsistencies}",
             f"- warmup unknown refs: {report.warmup_unknown_ref}",
+            f"- stale (cold-start) cross episodes tolerated: "
+            f"{report.stale_cross_count}",
             f"- check_invariants failed: {report.check_invariants_failed}",
             f"- degraded days: {degraded}",
         ]

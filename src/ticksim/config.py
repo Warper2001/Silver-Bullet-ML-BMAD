@@ -164,6 +164,43 @@ MAX_TRANSIENT_CROSS_NS: int = 50_000_000
 A longer-lived cross is a ``BookInconsistency``. Changing this needs a seal
 amendment."""
 
+STALE_CROSS_MAX_TICKS: int = 50
+"""Widest crossed market, in MNQ ticks, still treated as a *real* (timed) cross.
+
+A **tolerance parameter**: it gates only whether a crossed book arms the
+``MAX_TRANSIENT_CROSS_NS`` persistence timer, and it never enters a fill price,
+a P&L figure or a §A8.2 decision rule the way ``MAX_TRANSIENT_CROSS_NS`` /
+``PART_A_MIN_N`` / the ``PARITY_*`` tolerances do.
+
+It is **not** therefore free to move. This is the guard deciding whether a run
+against a given book is admissible at all: widen it far enough and a genuinely
+corrupt book stops aborting, Part A scores its fills against that book, and the
+resulting MAE / verdict is wrong -- so it can change a verdict *indirectly*, by
+admitting a run that should have stopped. Treat a change here with the same
+discipline as a seal-bound constant: re-derive it from a fresh measurement (as
+below) and record the derivation, never widen it to make a failing run pass.
+
+Why a width bound exists at all: the +/-90-min parity windows carry no
+UTC-midnight book snapshot, so every window's book is reconstructed **cold** --
+orders resting before the window opens are never ``A``-dded, their ``C`` / ``M``
+arrive as unseen-ref no-ops (``Book.unseen_cm_count``) and the stale side of the
+book can sit there for the whole window. A cross whose width is far outside any
+plausible market cross is one of those pre-window ghosts, not a venue event.
+
+Why **50**: measured cold-folded over whole real windows (deepest crossed BBO
+observed) --
+
+  * w03 2026-06-25, MNQU6 (a normal front month): deepest 17 ticks, nothing >20
+  * t01 2026-06-12 pm, MNQM6: deepest 49 ticks, nothing >50
+  * w00 2026-06-11, MNQM6 pre-roll: deepest 281 ticks, 1,777 crosses >200
+  * t00 2026-06-12 am, MNQM6 pre-roll: deepest 484 ticks, 10,145 crosses >200
+
+A clean front-month book never crosses beyond ~17 ticks; the pre-roll MNQM6
+windows reach 484 with over half their crosses beyond 200. 50 is ~3x the widest
+cross ever seen in a clean book and sits below the bands that carry the ghost
+population. Derived from the measurement above, not hand-set.
+"""
+
 ADVERSE_SELECTION_WINDOW_NS: int = 1_000_000_000
 """Look-ahead window for the ``adverse_selection`` marker, in nanoseconds
 (prereg §2.1 / spine AD-28: 'book state 1 s after' a passive fill). 1 s.

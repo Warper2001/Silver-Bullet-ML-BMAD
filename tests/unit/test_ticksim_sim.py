@@ -418,10 +418,12 @@ def test_manifest_surfaces_book_counters() -> None:
     assert outcomes == []
     assert manifest.unseen_cm_count > 0
     assert manifest.max_transient_cross_ns == 0
+    assert manifest.stale_cross_count == 0
     assert manifest.last_ts_ns == 100
     d = manifest.to_dict()
     json.dumps(d)  # JSON-safe (spine AD-12)
     assert d["unseen_cm_count"] == manifest.unseen_cm_count
+    assert d["stale_cross_count"] == manifest.stale_cross_count
 
 
 # --- Acceptance Criteria ---------------------------------------------

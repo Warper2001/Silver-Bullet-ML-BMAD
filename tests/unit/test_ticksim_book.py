@@ -34,7 +34,11 @@ from src.ticksim.book import (
     apply_event,
 )
 from src.ticksim import book as book_module
-from src.ticksim.config import MAX_TRANSIENT_CROSS_NS
+from src.ticksim.config import (
+    MAX_TRANSIENT_CROSS_NS,
+    MNQ_TICK_DBN,
+    STALE_CROSS_MAX_TICKS,
+)
 
 # The one source of truth for the fixture's front-month instrument id (the book
 # itself is instrument-agnostic, so this magic number lives with the tests).
@@ -658,6 +662,261 @@ def test_persistent_cross_uses_the_seal_constant() -> None:
     assert book.max_transient_cross_ns == MAX_TRANSIENT_CROSS_NS - 1
     with pytest.raises(BookInconsistency):
         apply_event(book, _none(ts_event=MAX_TRANSIENT_CROSS_NS, sequence=4))
+
+
+class TestStaleColdStartCross:
+    """The cold-start book tolerance: a cross wider than
+    ``config.STALE_CROSS_MAX_TICKS`` is a pre-window ghost (the +/-90-min parity
+    windows carry no opening snapshot), so it is counted, never timed and never
+    fatal. Narrow crosses keep the seal's 50 ms timer verbatim.
+
+    ``MAX_TRANSIENT_CROSS_NS`` is monkeypatched small so the timed paths are
+    fast; ``STALE_CROSS_MAX_TICKS`` is the real seal-adjacent value throughout.
+    """
+
+    TOL = 1_000  # stand-in MAX_TRANSIENT_CROSS_NS
+    ASK = 20_000 * MNQ_TICK_DBN  # a realistic MNQ price in DBN units
+
+    @pytest.fixture(autouse=True)
+    def _small_tolerance(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(book_module, "MAX_TRANSIENT_CROSS_NS", self.TOL)
+
+    def _cross(self, book: Book, ticks: int, *, ts: int = 0) -> None:
+        """Open a cross ``ticks`` wide: one ask at ``ASK``, one bid above it."""
+        _fold(
+            book,
+            _add(1, Side.ASK, self.ASK, 1, ts_event=ts, sequence=1),
+            _add(
+                2,
+                Side.BID,
+                self.ASK + ticks * MNQ_TICK_DBN,
+                1,
+                ts_event=ts,
+                sequence=2,
+            ),
+        )
+
+    # -- matrix row: stale ghost cross ---------------------------------
+
+    def test_wide_cross_is_counted_never_timed_never_fatal(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1)
+        # a mutating event far past the persistence tolerance: still no raise
+        apply_event(
+            book,
+            _add(
+                3,
+                Side.ASK,
+                self.ASK + 900 * MNQ_TICK_DBN,
+                1,
+                ts_event=100 * self.TOL,
+                sequence=3,
+            ),
+        )
+        assert book.stale_cross_count == 1
+        assert book.max_transient_cross_ns == 0  # the timer never armed
+        assert book.instruments[IID].cross_start_ns is None
+
+    def test_wide_cross_counts_one_episode_not_one_per_event(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS + 10)
+        for i in range(5):
+            apply_event(
+                book,
+                _add(
+                    10 + i,
+                    Side.ASK,
+                    self.ASK + (900 + i) * MNQ_TICK_DBN,
+                    1,
+                    ts_event=self.TOL * (i + 1),
+                    sequence=10 + i,
+                ),
+            )
+        assert book.stale_cross_count == 1
+
+    def test_second_episode_after_the_book_uncrosses(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1)
+        apply_event(
+            book,
+            _cancel(
+                2,
+                Side.BID,
+                self.ASK + (STALE_CROSS_MAX_TICKS + 1) * MNQ_TICK_DBN,
+                1,
+                ts_event=10,
+                sequence=3,
+            ),
+        )
+        assert book.best_bid_dbn(IID) is None  # uncrossed
+        apply_event(
+            book,
+            _add(
+                4,
+                Side.BID,
+                self.ASK + (STALE_CROSS_MAX_TICKS + 2) * MNQ_TICK_DBN,
+                1,
+                ts_event=20,
+                sequence=4,
+            ),
+        )
+        assert book.stale_cross_count == 2
+
+    # -- matrix row: real persistent cross (unchanged) ------------------
+
+    def test_cross_exactly_at_the_bound_is_still_timed_and_fatal(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS)  # == bound: not "wider than"
+        with pytest.raises(BookInconsistency):
+            apply_event(book, _none(ts_event=self.TOL, sequence=3))
+        assert book.stale_cross_count == 0
+
+    # -- matrix row: normal transient cross (unchanged) -----------------
+
+    def test_narrow_cross_still_arms_and_clears(self) -> None:
+        book = Book()
+        self._cross(book, 1)
+        apply_event(
+            book,
+            _cancel(
+                2,
+                Side.BID,
+                self.ASK + MNQ_TICK_DBN,
+                1,
+                ts_event=self.TOL - 1,
+                sequence=3,
+            ),
+        )
+        assert book.stale_cross_count == 0
+        assert book.max_transient_cross_ns == 0  # cleared before any re-check
+        assert book.instruments[IID].cross_start_ns is None
+
+    # -- matrix row: ghost then real ------------------------------------
+
+    def test_ghost_then_narrow_cross_arms_its_own_timer(self) -> None:
+        book = Book()
+        ghost_px = self.ASK + (STALE_CROSS_MAX_TICKS + 1) * MNQ_TICK_DBN
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1)
+        # the ghost bid is replaced by a 1-tick cross, long after the ghost opened
+        late = 100 * self.TOL
+        apply_event(book, _cancel(2, Side.BID, ghost_px, 1, ts_event=late, sequence=3))
+        apply_event(
+            book,
+            _add(3, Side.BID, self.ASK + MNQ_TICK_DBN, 1, ts_event=late, sequence=4),
+        )
+        assert book.stale_cross_count == 1
+        # the narrow cross is timed from *its own* start, not the ghost's
+        apply_event(book, _none(ts_event=late + self.TOL - 1, sequence=5))
+        with pytest.raises(BookInconsistency):
+            apply_event(book, _none(ts_event=late + self.TOL, sequence=6))
+
+    def test_narrow_cross_that_widens_drops_its_timer(self) -> None:
+        book = Book()
+        self._cross(book, 1)  # narrow: timer armed at ts 0
+        # the ghost side appears -> the book is now wider than the bound
+        apply_event(
+            book,
+            _add(
+                3,
+                Side.BID,
+                self.ASK + (STALE_CROSS_MAX_TICKS + 5) * MNQ_TICK_DBN,
+                1,
+                ts_event=self.TOL // 2,
+                sequence=3,
+            ),
+        )
+        assert book.stale_cross_count == 1
+        assert book.instruments[IID].cross_start_ns is None
+        # no raise even well past the tolerance measured from the narrow start
+        apply_event(
+            book,
+            _add(
+                4,
+                Side.ASK,
+                self.ASK + 900 * MNQ_TICK_DBN,
+                1,
+                ts_event=10 * self.TOL,
+                sequence=4,
+            ),
+        )
+
+    # -- matrix row: no cross -------------------------------------------
+
+    def test_uncrossed_book_counts_nothing(self) -> None:
+        book = Book()
+        _fold(
+            book,
+            _add(1, Side.ASK, self.ASK, 1, ts_event=0, sequence=1),
+            _add(2, Side.BID, self.ASK - 900 * MNQ_TICK_DBN, 1, ts_event=0, sequence=2),
+        )
+        assert book.stale_cross_count == 0
+        assert book.max_transient_cross_ns == 0
+        assert book.instruments[IID].cross_start_ns is None
+
+    # -- matrix row: ts regression (unchanged, fatal on every path) ------
+
+    def test_ts_regression_is_still_fatal_under_a_stale_cross(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1, ts=1_000)
+        with pytest.raises(BookInconsistency):
+            apply_event(book, _none(ts_event=999, sequence=3))
+
+    # -- end-of-run structural check ------------------------------------
+
+    def test_check_invariants_tolerates_an_open_stale_cross(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1)
+        assert book.instruments[IID].cross_start_ns is None
+        book.check_invariants()  # must not raise: the ghost has no timer by design
+
+    def test_check_invariants_still_rejects_a_narrow_untracked_cross(self) -> None:
+        book = Book()
+        sub = book._sub_or_create(IID)
+        sub.add(1, RestingOrder(IID, BookSide.BID, self.ASK + MNQ_TICK_DBN, 1, 1, 1))
+        sub.add(2, RestingOrder(IID, BookSide.ASK, self.ASK, 1, 1, 2))
+        with pytest.raises(BookInconsistency):
+            book.check_invariants()
+
+    # -- CLEAR resets the episode flag ----------------------------------
+
+    def test_clear_resets_the_stale_episode(self) -> None:
+        book = Book()
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1)
+        apply_event(book, _clear(ts_event=10, sequence=3))
+        self._cross(book, STALE_CROSS_MAX_TICKS + 1, ts=20)
+        assert book.stale_cross_count == 2
+
+
+def test_stale_cross_bound_uses_the_config_constant() -> None:
+    # the real (unmonkeypatched) width bound is wired in: 50 ticks
+    assert STALE_CROSS_MAX_TICKS == 50
+    book = Book()
+    ask = 20_000 * MNQ_TICK_DBN
+    _fold(
+        book,
+        _add(1, Side.ASK, ask, 1, ts_event=0, sequence=1),
+        _add(
+            2,
+            Side.BID,
+            ask + (STALE_CROSS_MAX_TICKS + 1) * MNQ_TICK_DBN,
+            1,
+            ts_event=0,
+            sequence=2,
+        ),
+    )
+    apply_event(
+        book,
+        _add(
+            3,
+            Side.ASK,
+            ask + 900 * MNQ_TICK_DBN,
+            1,
+            ts_event=MAX_TRANSIENT_CROSS_NS * 10,
+            sequence=3,
+        ),
+    )
+    assert book.stale_cross_count == 1
+    assert book.max_transient_cross_ns == 0
 
 
 class TestUnhandledAction:

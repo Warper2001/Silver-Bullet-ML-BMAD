@@ -292,6 +292,32 @@ def test_post_warmup_unknown_ref_counts_as_book_inconsistency() -> None:
     assert "book inconsistencies" in report.flags
 
 
+def test_stale_cold_start_cross_is_counted_and_rendered() -> None:
+    """A cross wider than ``STALE_CROSS_MAX_TICKS`` (a pre-window ghost the cold
+    reconstruction never saw ``A``-dded) is surfaced as ``stale_cross_count``,
+    which the ``format_integrity`` block renders. It is not a flag reason of its
+    own -- the preflight's own BBO state machine still reports the episode as a
+    persistent cross, exactly as before."""
+    events = clean_events()
+    # a resting bid 60 ticks above the ask, never cancelled
+    events.append(be(MboAction.ADD, MboSide.BID, 99, ASK_PX + 60 * TICK, 5, 7_000, 7))
+    events.append(be(MboAction.ADD, MboSide.ASK, 98, ASK_PX + 900 * TICK, 5, 8_000, 8))
+    report = preflight_integrity(ListSource(events))
+    assert report.stale_cross_count == 1
+    assert "- stale (cold-start) cross episodes tolerated: 1" in format_integrity(
+        report
+    )
+
+
+def test_clean_window_reports_no_stale_crosses() -> None:
+    report = preflight_integrity(ListSource(clean_events()))
+    assert report.stale_cross_count == 0
+    assert report.verdict == "OK"
+    assert "- stale (cold-start) cross episodes tolerated: 0" in format_integrity(
+        report
+    )
+
+
 def test_warmup_unknown_ref_does_not_flag() -> None:
     events = clean_events()
     events.append(be(MboAction.CANCEL, MboSide.BID, 999, BID_PX, 5, 7_000, 7))

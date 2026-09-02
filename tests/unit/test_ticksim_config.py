@@ -117,6 +117,11 @@ class TestNamedConstants:
     def test_max_transient_cross_ns(self) -> None:
         assert config.MAX_TRANSIENT_CROSS_NS == 50_000_000
 
+    def test_stale_cross_max_ticks(self) -> None:
+        # tolerance parameter (not decision-bearing): derived from the widest
+        # cross seen in a clean front-month book (~17 ticks), ~3x that.
+        assert config.STALE_CROSS_MAX_TICKS == 50
+
     def test_adverse_selection_window_ns(self) -> None:
         # prereg §2.1 / spine AD-28: book state 1 s after a passive fill.
         assert config.ADVERSE_SELECTION_WINDOW_NS == 1_000_000_000

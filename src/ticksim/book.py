@@ -57,6 +57,12 @@ Tolerances (spine AD-9):
   * a transient crossed market (``best_bid_dbn >= best_ask_dbn``) is tolerated
     for ``< config.MAX_TRANSIENT_CROSS_NS``; a cross persisting ``>=`` that long
     raises :class:`BookInconsistency`.
+  * a crossed market **wider than** ``config.STALE_CROSS_MAX_TICKS`` is a
+    cold-start ghost, not a market cross: the +/-90-min parity windows carry no
+    UTC-midnight snapshot, so a pre-window resting order is never ``A``-dded and
+    its stale level can sit on one side of the book for the whole window. Such a
+    cross never arms the persistence timer and never raises; it bumps
+    ``Book.stale_cross_count`` instead (one per stale-cross *episode*).
 
 Input hardening (this module is AD-9's sole authority, so a malformed record
 must fail deterministically, never a bare ``KeyError`` or silent corruption):
@@ -82,7 +88,7 @@ from typing import NoReturn, Protocol
 
 from sortedcontainers import SortedDict  # type: ignore[import-untyped]
 
-from .config import MAX_TRANSIENT_CROSS_NS
+from .config import MAX_TRANSIENT_CROSS_NS, MNQ_TICK_DBN, STALE_CROSS_MAX_TICKS
 
 __all__ = [
     "Book",
@@ -220,6 +226,10 @@ class _InstrumentBook:
     bids: SortedDict = field(default_factory=SortedDict)
     asks: SortedDict = field(default_factory=SortedDict)
     cross_start_ns: int | None = None
+    # True while the book is crossed *wider* than config.STALE_CROSS_MAX_TICKS
+    # (a cold-start ghost -- never timed, never fatal). Used only to count one
+    # ``Book.stale_cross_count`` per episode rather than per event.
+    stale_cross_open: bool = False
 
     def side_book(self, side: BookSide) -> SortedDict:
         return self.bids if side is BookSide.BID else self.asks
@@ -280,20 +290,28 @@ class _InstrumentBook:
         self.bids.clear()
         self.asks.clear()
         self.cross_start_ns = None
+        self.stale_cross_open = False
 
 
 @dataclass
 class Book:
     """Top-level L3 book: one ``_InstrumentBook`` per ``instrument_id``.
 
-    ``unseen_cm_count`` / ``overcancel_count`` / ``max_transient_cross_ns`` /
-    ``last_ts_ns`` are plain attributes ``sim.py`` folds into the run manifest
-    later (spine AD-9, Design Notes).
+    ``unseen_cm_count`` / ``overcancel_count`` / ``stale_cross_count`` /
+    ``max_transient_cross_ns`` / ``last_ts_ns`` are plain attributes ``sim.py``
+    folds into the run manifest later (spine AD-9, Design Notes).
+
+    ``stale_cross_count`` counts **episodes** (not events) of a crossed market
+    wider than ``config.STALE_CROSS_MAX_TICKS`` -- the cold-start ghosts
+    described in the module docstring. It is a tolerance counter: a non-zero
+    value never fails a run, it only tells a reader the window's book was
+    reconstructed without a snapshot, so the tolerance can be judged.
     """
 
     instruments: dict[int, _InstrumentBook] = field(default_factory=dict)
     unseen_cm_count: int = 0
     overcancel_count: int = 0
+    stale_cross_count: int = 0
     max_transient_cross_ns: int = 0
     last_ts_ns: int = -1  # ts_event of the last record folded (AD-20 monotonic)
 
@@ -410,8 +428,12 @@ class Book:
 
         Raises :class:`BookInconsistency` if any price level's ``total_size``
         disagrees with the sum of its orders, or if a book is crossed without an
-        active transient-cross timer. Cheap enough for unit tests and the parity
-        preflight; not called on the hot path.
+        active transient-cross timer. A cross wider than
+        ``config.STALE_CROSS_MAX_TICKS`` is a cold-start ghost (already counted
+        in ``stale_cross_count``): it legitimately has no timer, so it is
+        tolerated here too -- otherwise the end-of-run check would abort exactly
+        the runs :func:`_check_cross` was taught to survive. Cheap enough for
+        unit tests and the parity preflight; not called on the hot path.
         """
         for instrument_id, sub in self.instruments.items():
             for side in (BookSide.BID, BookSide.ASK):
@@ -431,7 +453,7 @@ class Book:
             bid = sub.best_bid_dbn()
             ask = sub.best_ask_dbn()
             if bid is not None and ask is not None and bid >= ask:
-                if sub.cross_start_ns is None:
+                if sub.cross_start_ns is None and not _is_stale_cross(bid, ask):
                     _fail(
                         f"instrument {instrument_id} crossed (bid {bid} >= ask "
                         f"{ask}) with no active transient-cross timer"
@@ -591,16 +613,38 @@ def _apply_clear(book: Book, record: MboRecord) -> None:
         sub.clear()
 
 
+def _is_stale_cross(bid_dbn: int, ask_dbn: int) -> bool:
+    """``True`` iff a crossed book is a cold-start ghost, not a market cross.
+
+    The single width test: ``bid - ask`` beyond ``STALE_CROSS_MAX_TICKS`` ticks.
+    Read through the module globals so a test can monkeypatch either constant
+    (as ``TestCrossedMarket`` already does for ``MAX_TRANSIENT_CROSS_NS``).
+    """
+    return bid_dbn - ask_dbn > STALE_CROSS_MAX_TICKS * MNQ_TICK_DBN
+
+
 def _check_cross(book: Book, record: MboRecord, *, mutated: bool) -> None:
     """Advance / reset the transient-cross timer for ``record``'s instrument.
 
     Called after every :func:`apply_event`. When the action was a book no-op
     (``T`` / ``F`` / ``N``) and no cross is currently open, there is nothing to
     do -- skip the BBO recompute.
+
+    A cross wider than ``config.STALE_CROSS_MAX_TICKS`` (:func:`_is_stale_cross`)
+    is a pre-window ghost, not a venue cross: it bumps ``stale_cross_count``
+    once per episode, never arms the timer and never :func:`_fail`\\ s. If a
+    *timed* cross was open when the book widened past the bound, that timer is
+    dropped -- the narrow cross it was measuring is no longer the state of the
+    book -- so a later narrow cross arms a fresh timer of its own. Crosses
+    inside the bound are unchanged: the seal's 50 ms
+    ``MAX_TRANSIENT_CROSS_NS`` still applies and still raises.
     """
     sub = book._sub(int(record.instrument_id))
     if sub is None:
         return
+    # A T / F / N cannot move the BBO, so with no timer running there is nothing
+    # to recompute -- including while a stale cross is open (its episode can only
+    # end on a mutating event).
     if not mutated and sub.cross_start_ns is None:
         return
 
@@ -609,6 +653,23 @@ def _check_cross(book: Book, record: MboRecord, *, mutated: bool) -> None:
     now = int(record.ts_event)
 
     if bid is not None and ask is not None and bid >= ask:
+        if _is_stale_cross(bid, ask):
+            sub.cross_start_ns = None  # a ghost cross is never timed
+            if not sub.stale_cross_open:
+                sub.stale_cross_open = True
+                book.stale_cross_count += 1
+                logger.debug(
+                    "stale (cold-start) cross on instrument %d (bid %d >= ask "
+                    "%d, %d ticks) at %d -- tolerated, not timed (count=%d)",
+                    int(record.instrument_id),
+                    bid,
+                    ask,
+                    (bid - ask) // MNQ_TICK_DBN,
+                    now,
+                    book.stale_cross_count,
+                )
+            return
+        sub.stale_cross_open = False
         if sub.cross_start_ns is None:
             sub.cross_start_ns = now
             logger.debug(
@@ -627,10 +688,12 @@ def _check_cross(book: Book, record: MboRecord, *, mutated: bool) -> None:
                 f"(bid {bid} >= ask {ask}) persisted {duration} ns "
                 f">= MAX_TRANSIENT_CROSS_NS ({MAX_TRANSIENT_CROSS_NS})"
             )
-    elif sub.cross_start_ns is not None:
-        logger.debug(
-            "transient cross resolved on instrument %d after %d ns",
-            int(record.instrument_id),
-            now - sub.cross_start_ns,
-        )
-        sub.cross_start_ns = None
+    else:
+        sub.stale_cross_open = False
+        if sub.cross_start_ns is not None:
+            logger.debug(
+                "transient cross resolved on instrument %d after %d ns",
+                int(record.instrument_id),
+                now - sub.cross_start_ns,
+            )
+            sub.cross_start_ns = None

@@ -254,6 +254,11 @@ class Manifest:
     degraded_days: tuple[str, ...]
     unseen_cm_count: int
     overcancel_count: int
+    # Cold-start ghost-cross episodes tolerated by ``book._check_cross`` (a
+    # cross wider than ``config.STALE_CROSS_MAX_TICKS``). A tolerance counter:
+    # non-zero never fails a run, it tells the reader the window's book was
+    # reconstructed with no opening snapshot.
+    stale_cross_count: int
     max_transient_cross_ns: int
     last_ts_ns: int
     event_count: int
@@ -276,6 +281,7 @@ class Manifest:
             "degraded_days": list(self.degraded_days),
             "unseen_cm_count": self.unseen_cm_count,
             "overcancel_count": self.overcancel_count,
+            "stale_cross_count": self.stale_cross_count,
             "max_transient_cross_ns": self.max_transient_cross_ns,
             "last_ts_ns": self.last_ts_ns,
             "event_count": self.event_count,
@@ -692,6 +698,7 @@ class SimRun:
             degraded_days=self.degraded_days,
             unseen_cm_count=self.book.unseen_cm_count,
             overcancel_count=self.book.overcancel_count,
+            stale_cross_count=self.book.stale_cross_count,
             max_transient_cross_ns=self.book.max_transient_cross_ns,
             last_ts_ns=self.book.last_ts_ns,
             event_count=self._event_count,

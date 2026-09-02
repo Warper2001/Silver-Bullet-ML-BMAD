@@ -222,6 +222,13 @@ def _join_integrity(
     window(s) and states that the §A8.2 verdict is unchanged (AD-26) -- it does
     **not** narrate a CLI exit code (this is a library artifact; on a FAIL run the
     same flag rides an exit ``1``, not ``3``).
+
+    A second lead segment names every window whose cold-reconstructed book
+    carried a **stale (ghost) cross** -- a cross wider than
+    ``config.STALE_CROSS_MAX_TICKS``, which ``book._check_cross`` tolerates
+    instead of aborting the fold. It is not a flag and never changes the verdict;
+    it is stated up front (rather than only as a per-window bullet) so a reader
+    can judge whether the tolerance was warranted on the windows it was used on.
     """
     segments: list[str] = []
     if flagged:
@@ -230,6 +237,15 @@ def _join_integrity(
             f"integrity FLAGGED on window(s) {', '.join(flagged_keys)} -- the "
             f"parity verdict is unchanged per AD-26 (a FLAGGED preflight does "
             f"not fail the gate); review this run's data before relying on it."
+        )
+    stale = [(key, r.stale_cross_count) for key, r in reports if r.stale_cross_count]
+    if stale:
+        detail = ", ".join(f"{key}={count}" for key, count in stale)
+        segments.append(
+            f"stale (cold-start) cross episodes tolerated per window: {detail} "
+            f"-- a cross wider than STALE_CROSS_MAX_TICKS is a pre-window ghost "
+            f"(no opening book snapshot), counted and never timed; the parity "
+            f"verdict is unchanged."
         )
     for key, report in reports:
         segments.append(f"window {key}: {_flatten(format_integrity(report))}")

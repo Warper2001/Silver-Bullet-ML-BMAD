@@ -316,6 +316,84 @@ def test_integrity_string_joins_per_window_subheadings() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# cold-start ghost cross: tolerated, and visible in the stub
+# --------------------------------------------------------------------------- #
+
+
+def ghost_cross_events(base: int) -> list[BookEvent]:
+    """``clean_events`` plus a pre-window ghost: a resting bid 60 ticks *above*
+    the ask that is never cancelled (this window's book has no opening snapshot,
+    so the order that would have removed it was never seen).
+
+    The cross therefore stays open for the whole 20 s window -- far beyond
+    ``MAX_TRANSIENT_CROSS_NS`` -- which used to abort the whole gate with a
+    ``BookInconsistency`` mid-fold.
+    """
+    events = clean_events(base)
+    events.append(
+        be(MboAction.ADD, MboSide.BID, 99, ASK_PX + 60 * TICK, 7, base + 5, 8)
+    )
+    # a later event so the cross is *seen* to persist well past 50 ms
+    events.append(
+        be(
+            MboAction.ADD,
+            MboSide.ASK,
+            98,
+            ASK_PX + 900 * TICK,
+            5,
+            base + 300_000_000,
+            9,
+        )
+    )
+    return events
+
+
+def test_ghost_cross_window_does_not_abort_and_is_named_in_the_stub() -> None:
+    # Part A legs ride the ghost window; Part B draws over a clean second window
+    # (a crossed book has no priceable limit orders, which is a synthetic.py
+    # concern, not the tolerance under test).
+    windows = {
+        "wA": WindowSpec(lo_ns=B, hi_ns=B + W),
+        "wB": WindowSpec(lo_ns=B + W, hi_ns=B + 2 * W),
+    }
+    run = run_parity_gate(
+        passing_trades(B),
+        windows,
+        "wB",
+        source_of({"wA": ghost_cross_events(B), "wB": clean_events(B + W)}),
+        synthetic_seed=0,
+        synthetic_n=1000,
+        amendment_number=7,
+        cycle_number=1,
+    )
+    # the run completed to a verdict instead of raising BookInconsistency
+    assert isinstance(run, GateRun)
+    reports = dict(run.integrity_reports)
+    assert reports["wA"].stale_cross_count >= 1
+    assert reports["wB"].stale_cross_count == 0
+    assert "stale (cold-start) cross episodes tolerated per window: wA=" in run.stub
+    assert (
+        f"- stale (cold-start) cross episodes tolerated: "
+        f"{reports['wA'].stale_cross_count}" in run.stub.replace(" / ", "\n")
+    )
+
+
+def test_clean_window_says_nothing_about_stale_crosses_up_front() -> None:
+    run = run_parity_gate(
+        passing_trades(B),
+        one_window(),
+        "w0",
+        source_of({"w0": clean_events(B)}),
+        synthetic_seed=0,
+        synthetic_n=1000,
+        amendment_number=7,
+        cycle_number=1,
+    )
+    assert run.integrity_reports[0][1].stale_cross_count == 0
+    assert "stale (cold-start) cross episodes tolerated per window:" not in run.stub
+
+
+# --------------------------------------------------------------------------- #
 # per-leg routing (spec: Part A grades fills, each fill routes on its own)
 # --------------------------------------------------------------------------- #
 

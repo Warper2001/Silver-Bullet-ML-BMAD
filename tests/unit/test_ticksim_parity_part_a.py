@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 import pytest
 
@@ -32,7 +33,9 @@ from src.ticksim.parity.part_a import (
     aggregate,
     compare_fills,
     reconstruct_mim_nb,
+    reconstruct_projectx_fills,
     reconstruct_trades_db_row,
+    split_legs,
 )
 
 # --------------------------------------------------------------------------- #
@@ -396,6 +399,231 @@ class TestParseTs:
     def test_empty_raises(self) -> None:
         with pytest.raises(PartAError, match="empty"):
             _parse_ts_ns("   ", field_name="t", row_repr="r")
+
+
+# --------------------------------------------------------------------------- #
+# reconstruct_projectx_fills
+# --------------------------------------------------------------------------- #
+
+
+def px(
+    order_id: object = 1,
+    ts: str = T0,
+    *,
+    side: object = 0,
+    size: object = 1,
+    price: object = "20000.25",
+    pnl: object | None = None,
+    contract: str = "CON.F.US.MNQ.U26",
+    **over: object,
+) -> dict[str, object]:
+    """One ProjectX fill export object (``profitAndLoss is None`` == an open)."""
+    row: dict[str, object] = {
+        "id": 2_985_449_537,
+        "accountId": 26556101,
+        "contractId": contract,
+        "creationTimestamp": ts,
+        "price": price,
+        "profitAndLoss": pnl,
+        "fees": 0.36,
+        "commissions": 0.25,
+        "side": side,
+        "size": size,
+        "voided": False,
+        "orderId": order_id,
+    }
+    row.update(over)
+    return row
+
+
+class TestReconstructProjectxFills:
+    def test_empty_is_empty(self) -> None:
+        assert reconstruct_projectx_fills([]) == []
+
+    def test_round_trip_two_broker_fill_legs(self) -> None:
+        trades = reconstruct_projectx_fills(
+            [
+                px(3407519214, T0, side=1, size=2, price="30091.75"),
+                px(3408188342, T3, side=0, size=2, price="30073.75", pnl=72.0),
+            ]
+        )
+        assert len(trades) == 1
+        trade = trades[0]
+        assert trade.trade_id == "yank-3407519214"
+        assert trade.fidelity == "broker_fill"
+        entry, exit_ = trade.intents
+        assert entry.kind is OrderKind.MARKETABLE
+        assert exit_.kind is OrderKind.MARKETABLE
+        assert entry.side is Side.SELL and exit_.side is Side.BUY  # short round trip
+        assert entry.size == exit_.size == 2
+        assert entry.order_id == "3407519214" and exit_.order_id == "3408188342"
+        assert entry.oco_group_id == exit_.oco_group_id is not None
+        # submit ts == the broker fill ts: a marketable order at the fill moment
+        assert entry.submit_ts_ns == _parse_ts_ns(T0, field_name="t", row_repr="r")
+        assert exit_.submit_ts_ns == _parse_ts_ns(T3, field_name="t", row_repr="r")
+        assert [rf.fidelity for rf in trade.real_fills] == ["broker_fill"] * 2
+        assert trade.real_fills[0].price_dbn == 30091_750_000_000
+        assert trade.real_fills[1].price_dbn == 30073_750_000_000
+        assert trade.real_fills[0].ts_ns == entry.submit_ts_ns
+
+    def test_fills_are_sorted_by_creation_timestamp(self) -> None:
+        # the close is listed FIRST in the file; sorting must still pair correctly
+        trades = reconstruct_projectx_fills(
+            [
+                px(2, T3, side=1, pnl=-2.5),
+                px(1, T0, side=0),
+            ]
+        )
+        assert [t.trade_id for t in trades] == ["yank-1"]
+
+    def test_two_contracts_pair_independently(self) -> None:
+        trades = reconstruct_projectx_fills(
+            [
+                px(1, T0, side=0, contract="CON.F.US.MNQ.U26"),
+                px(2, T1, side=1, contract="CON.F.US.MES.U26"),
+                px(3, T2, side=1, pnl=1.0, contract="CON.F.US.MNQ.U26"),
+                px(4, T3, side=0, pnl=2.0, contract="CON.F.US.MES.U26"),
+            ]
+        )
+        assert [t.trade_id for t in trades] == ["yank-1", "yank-2"]
+
+    def test_trailing_unpaired_open_is_dropped_and_logged(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # `cli._configure_logging` sets propagate=False on the package logger,
+        # and it may already have run in this process (test order) -- caplog
+        # needs propagation to see the record.
+        monkeypatch.setattr(logging.getLogger("src.ticksim"), "propagate", True)
+        with caplog.at_level("WARNING"):
+            trades = reconstruct_projectx_fills(
+                [
+                    px(1, T0, side=0),
+                    px(2, T2, side=1, pnl=-2.5),
+                    px(3, T3, side=0),  # still holding -- no close
+                ]
+            )
+        assert [t.trade_id for t in trades] == ["yank-1"]
+        assert "unpaired opening fill 3" in caplog.text
+
+    def test_close_without_open_raises(self) -> None:
+        with pytest.raises(PartAError, match="no preceding opening fill"):
+            reconstruct_projectx_fills([px(9, T0, side=1, pnl=-2.5)])
+
+    def test_second_open_while_one_pending_raises(self) -> None:
+        with pytest.raises(PartAError, match="still unclosed"):
+            reconstruct_projectx_fills([px(1, T0, side=0), px(2, T1, side=0)])
+
+    def test_same_side_round_trip_raises(self) -> None:
+        with pytest.raises(PartAError, match="same-side round trip"):
+            reconstruct_projectx_fills([px(1, T0, side=0), px(2, T2, side=0, pnl=1.0)])
+
+    def test_voided_fill_raises(self) -> None:
+        with pytest.raises(PartAError, match="voided"):
+            reconstruct_projectx_fills([px(1, T0, side=0, voided=True)])
+
+    def test_missing_key_raises(self) -> None:
+        row = px(1, T0)
+        del row["profitAndLoss"]
+        with pytest.raises(PartAError, match="missing 'profitAndLoss'"):
+            reconstruct_projectx_fills([row])
+
+    def test_bad_side_token_raises(self) -> None:
+        with pytest.raises(PartAError, match="bad side token"):
+            reconstruct_projectx_fills([px(1, T0, side=7)])
+
+    def test_non_positive_size_raises(self) -> None:
+        with pytest.raises(PartAError, match="non-positive size"):
+            reconstruct_projectx_fills([px(1, T0, size=0)])
+
+    def test_non_positive_price_raises(self) -> None:
+        with pytest.raises(PartAError, match="non-positive price"):
+            reconstruct_projectx_fills([px(1, T0, price="0")])
+
+    def test_empty_order_id_raises(self) -> None:
+        with pytest.raises(PartAError, match="no orderId"):
+            reconstruct_projectx_fills([px("", T0)])
+
+    def test_same_ts_close_raises_causally_corrupt(self) -> None:
+        with pytest.raises(PartAError, match="causally corrupt"):
+            reconstruct_projectx_fills([px(1, T0, side=0), px(2, T0, side=1, pnl=1.0)])
+
+
+# --------------------------------------------------------------------------- #
+# split_legs -- one pseudo-trade per RealFill
+# --------------------------------------------------------------------------- #
+
+
+class TestSplitLegs:
+    def test_two_leg_trade_becomes_two_one_leg_pseudo_trades(self) -> None:
+        parent = reconstruct_mim_nb(standard_mim_lifecycle())[0]
+        legs = split_legs(parent)
+
+        assert [leg.trade_id for leg in legs] == [
+            f"{TRADE_ID}#ENTRY",
+            f"{TRADE_ID}#EXIT",
+        ]
+        for leg, parent_fill, parent_intent in zip(
+            legs, parent.real_fills, parent.intents
+        ):
+            assert len(leg.intents) == 1
+            assert len(leg.real_fills) == 1
+            # every graded value verbatim
+            assert leg.real_fills[0] == parent_fill
+            assert leg.fidelity == parent.fidelity
+            intent = leg.intents[0]
+            assert intent.order_id == parent_intent.order_id
+            assert intent.leg is parent_intent.leg
+            assert intent.side is parent_intent.side
+            assert intent.size == parent_intent.size
+            assert intent.kind is parent_intent.kind
+            assert intent.submit_ts_ns == parent_intent.submit_ts_ns
+            assert intent.oco_group_id == parent_intent.oco_group_id
+            # identity is the ONLY change, and the intent agrees with the trade
+            # (sim stamps outcomes with the intent's trade_id)
+            assert intent.trade_id == leg.trade_id
+
+    def test_span_of_a_split_leg_is_its_own_leg_only(self) -> None:
+        """The whole point: an entry near 14:00 and an EOD exit no longer share
+        one span, so each can route to its own +/-90-min window."""
+        parent = reconstruct_mim_nb(standard_mim_lifecycle())[0]
+        entry_leg, exit_leg = split_legs(parent)
+
+        def span(trade: ReconstructedTrade) -> tuple[int, int]:
+            stamps = [i.submit_ts_ns for i in trade.intents]
+            stamps += [f.ts_ns for f in trade.real_fills]
+            return min(stamps), max(stamps)
+
+        parent_lo, parent_hi = span(parent)
+        entry_lo, entry_hi = span(entry_leg)
+        exit_lo, exit_hi = span(exit_leg)
+        assert entry_hi - entry_lo < parent_hi - parent_lo
+        assert exit_lo > entry_hi
+        assert (parent_lo, parent_hi) == (entry_lo, exit_hi)
+
+    def test_parent_prefix_survives_the_suffix(self) -> None:
+        parent = reconstruct_mim_nb(standard_mim_lifecycle())[0]
+        assert all(leg.trade_id.startswith("mimnb-") for leg in split_legs(parent))
+
+    def test_two_fills_on_one_leg_raise(self) -> None:
+        parent = reconstruct_mim_nb(standard_mim_lifecycle())[0]
+        doubled = ReconstructedTrade(
+            trade_id=parent.trade_id,
+            intents=parent.intents,
+            real_fills=parent.real_fills + (parent.real_fills[0],),
+            fidelity=parent.fidelity,
+        )
+        with pytest.raises(PartAError, match="would share pseudo-trade_id"):
+            split_legs(doubled)
+
+    def test_projectx_trade_splits_the_same_way(self) -> None:
+        trade = reconstruct_projectx_fills(
+            [px(1, T0, side=0), px(2, T3, side=1, pnl=1.0)]
+        )[0]
+        legs = split_legs(trade)
+        assert [leg.trade_id for leg in legs] == ["yank-1#ENTRY", "yank-1#EXIT"]
+        assert all(leg.fidelity == "broker_fill" for leg in legs)
 
 
 # --------------------------------------------------------------------------- #

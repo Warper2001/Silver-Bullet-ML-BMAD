@@ -16,9 +16,13 @@ simulator input.
 
 This module is the **pure core**:
 
-1. :func:`reconstruct_mim_nb` / :func:`reconstruct_trades_db_row` — build a
-   per-trade :class:`~src.ticksim.orders.OrderIntent` log plus the list of real
-   broker fills (:class:`RealFill`) from the real order records.
+1. :func:`reconstruct_mim_nb` / :func:`reconstruct_projectx_fills` /
+   :func:`reconstruct_trades_db_row` — build a per-trade
+   :class:`~src.ticksim.orders.OrderIntent` log plus the list of real broker
+   fills (:class:`RealFill`) from the real order records.
+1b. :func:`split_legs` — split a reconstructed trade into one pseudo-trade per
+   :class:`RealFill` so each leg routes to its own MBO window (Part A grades
+   *fills*, and a mim-nb entry and its EOD exit are ~6 h apart).
 2. :func:`compare_fills` — join each :class:`RealFill` to the
    :class:`~src.ticksim.orders.OrderOutcome` a sim run produced for that leg and
    compute the signed tick error (positive = simulator worse for the trader).
@@ -42,10 +46,28 @@ Reconstruction shape (human decision, spec loopback 1):
   never fills in the real ledger; resting-stop queue behaviour is Part B). A
   single FILL per leg is assumed — a second FILL on one ``order_id`` raises,
   matching the single-``RealFill``-per-leg assumption in :func:`compare_fills`.
-* **yank** — strictly 2 marketable legs from a ``trades.db`` ``trades`` row. A
-  ``marketable`` entry at ``timestamp`` and a ``marketable`` exit at the exit ts
-  (``exit_timestamp`` if present, else ``timestamp + max(bars_held, 1)``
-  minutes). **No TP/SL limit legs** — the real sample carries none.
+* **yank (broker-accurate)** — strictly 2 marketable legs per ProjectX round
+  trip in ``data/mim_nb/projectx_fills.json``: an opening fill
+  (``profitAndLoss is None``) paired to the next closing fill (``profitAndLoss``
+  set) on the same ``contractId``. Both legs are ``broker_fill`` fidelity — the
+  price *and* the timestamp are the broker's own.
+* **yank (legacy, bar-reconstructed)** — strictly 2 marketable legs from a
+  ``trades.db`` ``trades`` row: a ``marketable`` entry at ``timestamp`` and a
+  ``marketable`` exit at the exit ts (``exit_timestamp`` if present, else
+  ``timestamp + max(bars_held, 1)`` minutes). **No TP/SL limit legs** — the real
+  sample carries none. This path is **not** a ``parity-gate`` Part A source: a
+  ``trades.db`` timestamp is a bar stamp, not a fill time (the 2026-06-25 mim-nb
+  row reads 19:34 @ 29318.50 where ``orders.csv`` has 14:00 @ 29359.5). It stays
+  here for other callers and for provenance.
+
+Routing (spec ``spec-ticksim-part-a-per-leg-routing``): a reconstructed trade
+spans hours — a mim-nb entry near 14:00 UTC and its 20:00 EOD exit — while a
+purchased MBO window is ±90 min, so no single window contains a whole trade.
+:func:`split_legs` therefore splits every trade into one pseudo-trade per
+:class:`RealFill` (1 intent + 1 fill) before the caller routes it; every graded
+value is carried over verbatim and only the ``trade_id`` changes (suffixed
+``#ENTRY`` / ``#EXIT``). ``n`` is then the count of scored **legs** — prereg
+§A8.2 reads "N ≥ 28 real broker *fills*", and a leg is a fill.
 
 Fail-closed throughout: any unexpected shape raises :class:`PartAError` naming
 the offending row. No trade or fill is ever silently excluded from ``n``.
@@ -90,7 +112,9 @@ __all__ = [
     "PartAResult",
     "PartAError",
     "reconstruct_mim_nb",
+    "reconstruct_projectx_fills",
     "reconstruct_trades_db_row",
+    "split_legs",
     "compare_fills",
     "aggregate",
 ]
@@ -754,6 +778,281 @@ def reconstruct_mim_nb(
 
 
 # ---------------------------------------------------------------------------
+# yank reconstruction — broker-accurate ProjectX fills (open -> close pairing)
+# ---------------------------------------------------------------------------
+
+
+class _PxFill(NamedTuple):
+    ts_ns: int
+    order_id: str
+    contract_id: str
+    side: Side
+    size: int
+    price_dbn: int
+    is_open: bool
+    row_repr: str
+
+
+def _projectx_side(raw: object, row_repr: str) -> Side:
+    """ProjectX ``side``: ``0`` = buy, ``1`` = sell (same encoding as mim-nb)."""
+    return _mim_side(str(raw if raw is not None else "").strip(), row_repr)
+
+
+def _build_projectx_trade(open_: _PxFill, close: _PxFill) -> ReconstructedTrade:
+    """One ProjectX round trip -> a 2-leg :class:`ReconstructedTrade`."""
+    if close.ts_ns <= open_.ts_ns:
+        raise PartAError(
+            f"ProjectX close ts {close.ts_ns} <= open ts {open_.ts_ns} "
+            f"(causally corrupt round trip, opening order {open_.order_id!r})"
+        )
+    if close.side != _opposite(open_.side):
+        raise PartAError(
+            f"ProjectX round trip {open_.order_id!r}: close side "
+            f"{close.side.value} is not the opposite of open side "
+            f"{open_.side.value} (corrupt same-side round trip)"
+        )
+    trade_id = f"yank-{open_.order_id}"
+    oco = f"{trade_id}-oco"
+    entry_intent = OrderIntent(
+        action=IntentAction.SUBMIT,
+        order_id=open_.order_id,
+        trade_id=trade_id,
+        leg=Leg.ENTRY,
+        kind=OrderKind.MARKETABLE,
+        side=open_.side,
+        size=open_.size,
+        submit_ts_ns=open_.ts_ns,
+        oco_group_id=oco,
+    )
+    exit_intent = OrderIntent(
+        action=IntentAction.SUBMIT,
+        order_id=close.order_id,
+        trade_id=trade_id,
+        leg=Leg.EXIT,
+        kind=OrderKind.MARKETABLE,
+        side=close.side,
+        size=close.size,
+        submit_ts_ns=close.ts_ns,
+        oco_group_id=oco,
+    )
+    real_fills = (
+        RealFill(
+            order_id=open_.order_id,
+            leg=Leg.ENTRY,
+            side=open_.side,
+            size=open_.size,
+            price_dbn=open_.price_dbn,
+            ts_ns=open_.ts_ns,
+            fidelity="broker_fill",
+        ),
+        RealFill(
+            order_id=close.order_id,
+            leg=Leg.EXIT,
+            side=close.side,
+            size=close.size,
+            price_dbn=close.price_dbn,
+            ts_ns=close.ts_ns,
+            fidelity="broker_fill",
+        ),
+    )
+    return ReconstructedTrade(
+        trade_id=trade_id,
+        intents=(entry_intent, exit_intent),
+        real_fills=real_fills,
+        fidelity="broker_fill",
+    )
+
+
+def _parse_projectx_fill(row: Mapping[str, object]) -> _PxFill:
+    row_repr = repr(dict(row))
+    for key in (
+        "creationTimestamp",
+        "orderId",
+        "contractId",
+        "side",
+        "size",
+        "price",
+        "profitAndLoss",
+    ):
+        if key not in row:
+            raise PartAError(f"ProjectX fill missing {key!r}: {row_repr}")
+    if row.get("voided"):
+        raise PartAError(
+            f"voided ProjectX fill {row_repr} — a voided fill is not a real "
+            f"fill and cannot be paired (fail-closed, never silently dropped)"
+        )
+    order_id = _field(row, "orderId")
+    if not order_id:
+        raise PartAError(f"ProjectX fill has no orderId: {row_repr}")
+    contract_id = _field(row, "contractId")
+    if not contract_id:
+        raise PartAError(f"ProjectX fill has no contractId: {row_repr}")
+    return _PxFill(
+        ts_ns=_parse_ts_ns(
+            _field(row, "creationTimestamp"),
+            field_name="creationTimestamp",
+            row_repr=row_repr,
+        ),
+        order_id=order_id,
+        contract_id=contract_id,
+        side=_projectx_side(row.get("side"), row_repr),
+        size=_int_size(row.get("size"), field_name="size", row_repr=row_repr),
+        price_dbn=_px_to_dbn(row.get("price"), field_name="price", row_repr=row_repr),
+        is_open=row.get("profitAndLoss") is None,
+        row_repr=row_repr,
+    )
+
+
+def reconstruct_projectx_fills(
+    fills: Iterable[Mapping[str, object]],
+) -> list[ReconstructedTrade]:
+    """Reconstruct yank trades from ``data/mim_nb/projectx_fills.json`` entries.
+
+    Each entry is a mapping with at least ``creationTimestamp, orderId,
+    contractId, side, size, price, profitAndLoss`` (extra keys — ``id``,
+    ``accountId``, ``fees``, ``commissions`` — are ignored). Fills are sorted by
+    ``creationTimestamp`` (stable: a timestamp tie keeps input order) and walked
+    once; an **opening** fill (``profitAndLoss is None``) is held per
+    ``contractId`` and paired with the next **closing** fill (``profitAndLoss``
+    set) on that contract. Each pair becomes one
+    :class:`ReconstructedTrade`: two ``marketable`` legs — the entry submitted at
+    the opening fill's ts, the exit at the closing fill's ts — sharing one
+    ``oco_group_id``, ``trade_id = f"yank-{opening orderId}"``, both
+    :class:`RealFill`\\ s ``fidelity="broker_fill"`` (price and ts are the
+    broker's own). ``reconstruct_projectx_fills([]) == []``.
+
+    A **trailing unpaired opening fill** (the bot is still holding) is dropped,
+    counted and logged — there is nothing to pair it with, and half a round trip
+    cannot be graded.
+
+    Raises :class:`PartAError` (naming the fill) for: a missing required key; a
+    ``voided`` fill; an empty ``orderId`` / ``contractId``; a bad ``side`` token;
+    a non-positive / unparseable ``size`` / ``price`` / ``creationTimestamp``; a
+    **closing** fill with no opening fill pending on its contract; a second
+    opening fill on a contract that already has one pending (an add-to-position
+    lifecycle Part A does not model); a close at or before its open; a close on
+    the same side as its open; or two round trips that would share a
+    ``trade_id``.
+    """
+    ordered = sorted(
+        (_parse_projectx_fill(row) for row in fills), key=lambda f: f.ts_ns
+    )
+    pending: dict[str, _PxFill] = {}
+    trades: list[ReconstructedTrade] = []
+    seen_ids: set[str] = set()
+    for fill in ordered:
+        if fill.is_open:
+            held = pending.get(fill.contract_id)
+            if held is not None:
+                raise PartAError(
+                    f"ProjectX opening fill {fill.order_id!r} on "
+                    f"{fill.contract_id!r} while opening fill "
+                    f"{held.order_id!r} is still unclosed (add-to-position "
+                    f"lifecycle is not modelled): {fill.row_repr}"
+                )
+            pending[fill.contract_id] = fill
+            continue
+        opened = pending.pop(fill.contract_id, None)
+        if opened is None:
+            raise PartAError(
+                f"ProjectX closing fill {fill.order_id!r} has no preceding "
+                f"opening fill on {fill.contract_id!r}: {fill.row_repr}"
+            )
+        trade = _build_projectx_trade(opened, fill)
+        if trade.trade_id in seen_ids:
+            raise PartAError(
+                f"duplicate ProjectX trade_id {trade.trade_id!r} — two round "
+                f"trips opened on the same orderId"
+            )
+        seen_ids.add(trade.trade_id)
+        trades.append(trade)
+
+    for held in pending.values():
+        logger.warning(
+            "projectx: dropping unpaired opening fill %s on %s at %d — no "
+            "closing fill, nothing to grade",
+            held.order_id,
+            held.contract_id,
+            held.ts_ns,
+        )
+    if pending:
+        logger.warning(
+            "projectx: %d unpaired opening fill(s) dropped, %d round trip(s) "
+            "reconstructed",
+            len(pending),
+            len(trades),
+        )
+    return trades
+
+
+# ---------------------------------------------------------------------------
+# per-leg split — one pseudo-trade per RealFill (window routing)
+# ---------------------------------------------------------------------------
+
+
+def split_legs(trade: ReconstructedTrade) -> list[ReconstructedTrade]:
+    """Split ``trade`` into one pseudo-trade per :class:`RealFill`.
+
+    Part A grades **fills**, and each fill is an independent marketable order
+    hours from its sibling — a mim-nb entry near 14:00 UTC and its 20:00 EOD
+    exit cannot both sit inside one ±90-min MBO window. Each returned
+    pseudo-trade carries exactly one :class:`RealFill` and only that leg's
+    :class:`~src.ticksim.orders.OrderIntent`, so its stamp span collapses to
+    (essentially) a point and the caller's window routing resolves it unchanged.
+
+    Everything graded is carried over **verbatim** — ``order_id``, ``leg``,
+    ``side``, ``size``, the ``RealFill`` price / ts / fidelity, the intent's
+    ``kind`` / ``submit_ts_ns`` / ``oco_group_id`` and the trade's ``fidelity``.
+    The one change is identity: ``trade_id`` becomes
+    ``f"{parent}#{leg.name}"`` (e.g. ``mimnb-3402786736#ENTRY``) on both the
+    pseudo-trade and its intent — ``sim`` stamps outcomes with the intent's
+    ``trade_id`` and :func:`compare_fills` joins on it, so the two must agree.
+    The parent prefix is preserved so a caller's ``trade_id``-prefix trader
+    classification still works.
+
+    Consequence, stated explicitly (settled design question (a)): a one-leg
+    pseudo-trade carries no sibling, so the AD-25 leg-aware OCO cascade never
+    fires during Part A. That is sound **here and only here** — Part A's
+    reconstruction emits exactly two *marketable* legs hours apart with no queue
+    interaction, so the cascade is already inert for them (AD-17 keeps the
+    replay orders-only; no outcome feeds back). It is not a licence to weaken
+    AD-25 anywhere else.
+
+    Raises:
+        PartAError: a :class:`RealFill` with no matching intent (also caught by
+            ``ReconstructedTrade.__post_init__``), or two fills on the same leg,
+            which would produce a duplicate ``trade_id`` and double-count.
+    """
+    by_key = {(intent.order_id, intent.leg): intent for intent in trade.intents}
+    legs: list[ReconstructedTrade] = []
+    seen: set[str] = set()
+    for real in trade.real_fills:
+        intent = by_key.get((real.order_id, real.leg))
+        if intent is None:  # pragma: no cover - __post_init__ guarantees a match
+            raise PartAError(
+                f"cannot split trade {trade.trade_id!r}: real fill "
+                f"{(real.order_id, real.leg.value)!r} has no matching intent"
+            )
+        leg_trade_id = f"{trade.trade_id}#{real.leg.name}"
+        if leg_trade_id in seen:
+            raise PartAError(
+                f"cannot split trade {trade.trade_id!r}: two real fills on the "
+                f"{real.leg.value} leg would share pseudo-trade_id "
+                f"{leg_trade_id!r} (its errors would be counted twice)"
+            )
+        seen.add(leg_trade_id)
+        legs.append(
+            ReconstructedTrade(
+                trade_id=leg_trade_id,
+                intents=(intent.model_copy(update={"trade_id": leg_trade_id}),),
+                real_fills=(real,),
+                fidelity=trade.fidelity,
+            )
+        )
+    return legs
+
+
+# ---------------------------------------------------------------------------
 # yank reconstruction — strictly 2 marketable legs from a trades.db row
 # ---------------------------------------------------------------------------
 
@@ -784,6 +1083,11 @@ def _load_metadata(raw_meta: object, row_repr: str) -> Mapping[str, object]:
 
 def reconstruct_trades_db_row(row: Mapping[str, object]) -> ReconstructedTrade:
     """Reconstruct one yank trade from a ``trades.db`` ``trades`` row.
+
+    **Not a ``parity-gate`` Part A source.** A ``trades.db`` timestamp is a bar
+    stamp, not a fill time, so the simulator would price the wrong minute; the
+    gate feeds Part A from ``orders.csv`` + ``projectx_fills.json`` only. This
+    function is kept for other callers and for provenance.
 
     Expected keys: ``timestamp`` (entry ts, tz-aware or naive-UTC ISO),
     ``direction`` (``S`` / ``L`` / ``SHORT`` / ``LONG`` or a numeric token),

@@ -21,10 +21,11 @@ run :class:`~src.ticksim.sim.Manifest` JSON files from a prior ``PRIMARY`` and
 :func:`~src.ticksim.report.build_report`, and writes the §2.3 / AD-14 three-way
 P&L (:meth:`~src.ticksim.report.ThreeWayReport.to_dict`) as pretty JSON.
 
-``parity-gate`` reconstructs the live bots' orders (mim-nb from
-``data/mim_nb/orders.csv`` via ``csv.DictReader``, yank from ``data/trades.db``
-rows on/after 2026-06-17 via ``sqlite3``), reads a ``--windows`` JSON, builds the
-ts-clipped front-month ``source_for`` callable, and hands all of it to
+``parity-gate`` reconstructs the live bots' orders from the two broker-accurate
+sources only -- mim-nb from ``data/mim_nb/orders.csv`` via ``csv.DictReader``,
+yank from the ProjectX fill export ``data/mim_nb/projectx_fills.json`` -- reads a
+``--windows`` JSON, builds the ts-clipped front-month ``source_for`` callable,
+and hands all of it to
 :func:`~src.ticksim.parity.gate_cli.run_parity_gate` (the pure §A8.2
 orchestrator). It writes the ``gate.build_amendment_stub`` text to ``--out`` as a
 **standalone** ``.md`` (the analyst appends it to the seal -- AD-26). Exit ``0``
@@ -35,7 +36,7 @@ Dependencies (spine AD-7): ``.sim`` / ``.events`` / ``.orders`` / ``.config`` /
 ``.book`` (for :class:`~src.ticksim.book.BookInconsistency` -- an analyst-facing
 simulator fault this boundary catches) / ``.report`` (the AD-14 money layer the
 ``report`` sub-command wraps) / ``.parity`` (``parity.gate_cli`` +
-``parity.part_a`` for the reconstruction helpers) + stdlib (``csv`` / ``sqlite3``
+``parity.part_a`` for the reconstruction helpers) + stdlib (``csv`` / ``json``
 for the ``parity-gate`` reconstruction). No ``datetime`` -- a ``--degraded-day``
 is carried through to the manifest as the exact ``str`` token the analyst typed
 (spine AD-13). Relative imports only (``mypy --strict`` duplicate-module-errors
@@ -51,7 +52,6 @@ import logging
 import math
 import os
 import re
-import sqlite3
 import sys
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
@@ -78,7 +78,8 @@ from .parity.part_a import (
     PartAError,
     ReconstructedTrade,
     reconstruct_mim_nb,
-    reconstruct_trades_db_row,
+    reconstruct_projectx_fills,
+    split_legs,
 )
 from .report import ModelPnL, ReportError, ThreeWayReport, build_report
 from .sim import IntentLogError, InvariantViolation, Manifest, simulate
@@ -678,15 +679,8 @@ def _print_report_summary(report: ThreeWayReport, out_path: Path) -> None:
 # the `parity-gate` sub-command
 # --------------------------------------------------------------------------- #
 
-_PART_A_DB_SINCE = "2026-06-17"
-
-_MIM_NB_DB_FALLBACK_PROVENANCE = (
-    "<!-- parity-gate provenance -->\n"
-    "> **Provenance note (mim-nb):** `data/mim_nb/orders.csv` was absent -- the "
-    "mim-nb trades in this run were reconstructed from `data/trades.db` rows "
-    "(2-leg market reconstruction, no protective-stop leg, `bar_reconstructed` "
-    "fidelity), not from the authoritative order-lifecycle CSV.\n\n"
-)
+_ORDERS_CSV_SOURCE = "orders.csv"
+_PROJECTX_SOURCE = "projectx"
 
 
 @dataclass(frozen=True)
@@ -726,7 +720,7 @@ def _cmd_parity_gate(args: argparse.Namespace) -> int:
 
 def _run_parity_gate(args: argparse.Namespace) -> tuple[int, GateRun, Path]:
     orders_csv = Path(args.orders_csv)
-    trades_db = Path(args.trades_db)
+    projectx_fills = Path(args.projectx_fills)
     out_path = Path(args.out)
     config_name: str = args.config
     cfg: SimConfig = PRIMARY if config_name == "primary" else OPTIMISTIC
@@ -742,7 +736,9 @@ def _run_parity_gate(args: argparse.Namespace) -> tuple[int, GateRun, Path]:
         )
         for key, entry in windows_raw.items()
     }
-    trades, provenance = _reconstruct_part_a_trades(orders_csv, trades_db)
+    trades, provenance = _reconstruct_part_a_trades(
+        orders_csv, projectx_fills, projectx_yank_only=bool(args.projectx_yank_only)
+    )
     source_for = _source_for_factory(windows_raw)
 
     logger.info(
@@ -763,7 +759,6 @@ def _run_parity_gate(args: argparse.Namespace) -> tuple[int, GateRun, Path]:
             synthetic_n=int(args.synthetic_n),
             amendment_number=int(args.amendment_number),
             cycle_number=int(args.cycle_number),
-            skip_uncovered=bool(args.skip_uncovered),
             config=cfg,
             sha=args.sha,
             date=args.date,
@@ -793,7 +788,9 @@ def _run_parity_gate(args: argparse.Namespace) -> tuple[int, GateRun, Path]:
 
     document = run.stub if run.stub.endswith("\n") else run.stub + "\n"
     if provenance is not None:
-        document = provenance + document
+        # Appended, never prepended: the analyst appends this file to the seal
+        # and the `# Amendment N` heading must stay its first line.
+        document = document + provenance
     _atomic_write_one(out_path, document)
 
     rc = 1 if run.verdict.verdict != "PASS" else (3 if run.integrity_flagged else 0)
@@ -921,23 +918,39 @@ def _source_for_factory(
 
 
 def _reconstruct_part_a_trades(
-    orders_csv: Path, trades_db: Path
+    orders_csv: Path, projectx_fills: Path, *, projectx_yank_only: bool = False
 ) -> tuple[list[ReconstructedTrade], str | None]:
-    """The Part A trade set: mim-nb from ``orders.csv`` (CHECKPOINT 1c -- the CSV
-    is authoritative; the DB's mim-nb rows are a fallback only when the CSV is
-    absent), yank always from ``trades.db`` rows on/after 2026-06-17.
+    """The Part A trade set, from the two **broker-accurate** sources only.
 
-    Returns ``(trades, provenance)`` where ``provenance`` is a one-line Markdown
-    note (else ``None``) that the CLI prepends to the written stub when >= 1
-    mim-nb trade came from the lower-fidelity DB fallback.
+    * mim-nb -- ``orders.csv``, the authoritative order-lifecycle ledger
+      (CHECKPOINT 1c).
+    * yank -- ``projectx_fills.json``, the broker's own fill export, minus every
+      fill whose ``orderId`` already appears in ``orders.csv`` (those are mim-nb
+      fills the CSV reconstruction already scored -- counting them twice would
+      inflate N and double-weight mim-nb).
+
+    ``data/trades.db`` is **not** a source here: its timestamps are bar stamps,
+    not fill times (its 2026-06-25 mim-nb row reads 19:34 @ 29318.50 where
+    ``orders.csv`` has 14:00 @ 29359.5), so the simulator would price the wrong
+    minute.
+
+    An absent source contributes nothing and is logged -- with both absent the
+    trade set is empty and Part A FAILs on its N floor, which is the honest
+    outcome (never a silent pass on no data).
+
+    Returns ``(trades, provenance)`` where ``provenance`` is a Markdown note the
+    CLI appends to the written stub, recording each scored **leg**'s source
+    (``orders.csv`` / ``projectx``) by its post-split ``trade_id``. It is
+    ``None`` only when there is nothing to record.
 
     Raises:
-        _CliError: an unreadable CSV / DB, or a reconstruction ``PartAError``
-            (naming the offending row).
+        _CliError: an unreadable / malformed source file, or a reconstruction
+            ``PartAError`` (naming the offending row).
     """
     trades: list[ReconstructedTrade] = []
-    provenance: str | None = None
+    source_of: dict[str, str] = {}
 
+    csv_order_ids: set[str] = set()
     if orders_csv.is_file():
         try:
             with orders_csv.open(encoding="utf-8-sig", newline="") as handle:
@@ -946,70 +959,140 @@ def _reconstruct_part_a_trades(
                 ]
         except (OSError, UnicodeDecodeError) as exc:
             raise _CliError(f"cannot read orders CSV {orders_csv}: {exc}") from exc
+        csv_order_ids = {
+            str(row.get("order_id") or "").strip()
+            for row in rows
+            if str(row.get("order_id") or "").strip()
+        }
         try:
-            trades.extend(reconstruct_mim_nb(rows))
+            mim_trades = reconstruct_mim_nb(rows)
         except PartAError as exc:
             raise _CliError(
                 f"mim-nb reconstruction from {orders_csv} failed: {exc}"
             ) from exc
+        _record_source(source_of, mim_trades, _ORDERS_CSV_SOURCE)
+        trades.extend(mim_trades)
     else:
         logger.warning(
-            "orders CSV %s absent -- falling back to trades.db mim-nb rows "
-            "(no bracket legs, bar_reconstructed fidelity)",
+            "orders CSV %s absent -- no mim-nb trades in this Part A sample",
             orders_csv,
         )
-        mim_db_trades = [
-            _reconstruct_db_row(row, trades_db)
-            for row in _db_rows(trades_db, "trader-mim-nb", since=_PART_A_DB_SINCE)
+        if projectx_fills.is_file() and not projectx_yank_only:
+            # A ProjectX fill carries no trader field: both bots trade the same
+            # contractId on the same accountId, so `orders.csv` is the ONLY
+            # thing that separates them. Without it every mim-nb fill in the
+            # export is relabelled `yank-*`, and because the pairing walks
+            # open->close per contractId the two bots' fills interleave and can
+            # cross-pair into fabricated round trips. On the real export that is
+            # silent: 14 fills reconstruct into 7 "yank" trades, 5 of them
+            # actually mim-nb, and the stub's per-trader breakdown is simply
+            # wrong. Fail closed rather than mislabel a sealed artifact -- the
+            # caller must assert the export is yank-only to proceed.
+            raise _CliError(
+                f"--projectx-fills {projectx_fills} was given but --orders-csv "
+                f"{orders_csv} is absent. ProjectX fills carry no trader field "
+                f"(same contractId, same accountId for both bots), so orders.csv "
+                f"is the only way to tell mim-nb fills from yank's; without it "
+                f"every mim-nb fill would be relabelled 'yank-*' and the two "
+                f"bots' fills could cross-pair. Supply the orders CSV, or pass "
+                f"--projectx-yank-only to assert this export holds no mim-nb "
+                f"fills."
+            )
+
+    if projectx_fills.is_file():
+        fills = _read_projectx_fills(projectx_fills)
+        # An `orderId` present in orders.csv is a mim-nb order: already
+        # reconstructed above, from the richer lifecycle ledger.
+        yank_fills = [
+            fill
+            for fill in fills
+            if str(fill.get("orderId") or "").strip() not in csv_order_ids
         ]
-        if mim_db_trades:
-            provenance = _MIM_NB_DB_FALLBACK_PROVENANCE
-        trades.extend(mim_db_trades)
+        logger.info(
+            "projectx: %d of %d fills are yank (orderId not in %s)",
+            len(yank_fills),
+            len(fills),
+            orders_csv,
+        )
+        try:
+            yank_trades = reconstruct_projectx_fills(yank_fills)
+        except PartAError as exc:
+            raise _CliError(
+                f"yank reconstruction from {projectx_fills} failed: {exc}"
+            ) from exc
+        _record_source(source_of, yank_trades, _PROJECTX_SOURCE)
+        trades.extend(yank_trades)
+    else:
+        logger.warning(
+            "ProjectX fills %s absent -- no yank trades in this Part A sample",
+            projectx_fills,
+        )
 
-    for row in _db_rows(trades_db, "trader-yank", since=_PART_A_DB_SINCE):
-        trades.append(_reconstruct_db_row(row, trades_db))
-
-    return trades, provenance
+    return trades, _format_source_provenance(source_of)
 
 
-def _reconstruct_db_row(row: dict[str, object], trades_db: Path) -> ReconstructedTrade:
-    try:
-        return reconstruct_trades_db_row(row)
-    except PartAError as exc:
-        raise _CliError(
-            f"trades.db reconstruction ({trades_db}) failed: {exc}"
-        ) from exc
+def _record_source(
+    source_of: dict[str, str], trades: Sequence[ReconstructedTrade], source: str
+) -> None:
+    """Record ``source`` against each post-split leg ``trade_id`` of ``trades``.
+
+    ``split_legs`` is the authority on the leg id (``gate_cli`` applies the very
+    same call before routing), so the note cannot drift from what is scored.
+    """
+    for trade in trades:
+        for leg in split_legs(trade):
+            source_of[leg.trade_id] = source
 
 
-def _db_rows(trades_db: Path, trader_id: str, *, since: str) -> list[dict[str, object]]:
-    """Rows of ``trades_db``'s ``trades`` table for ``trader_id`` with
-    ``timestamp >= since`` (NULL timestamps excluded, not mis-compared), ordered
-    ``timestamp, id`` so the reconstructed stub is byte-deterministic across runs.
-    Each row is a plain ``dict`` via a :class:`sqlite3.Row` row factory.
+def _format_source_provenance(source_of: dict[str, str]) -> str | None:
+    """The Markdown provenance note naming every scored leg's fill source."""
+    if not source_of:
+        return None
+    lines = [
+        "<!-- parity-gate provenance -->",
+        "## Part A fill sources",
+        "",
+        "Every graded leg above comes from a broker-accurate source; "
+        "`data/trades.db` is not a Part A source (its timestamps are bar "
+        "stamps, not fill times).",
+        "",
+    ]
+    for source in (_ORDERS_CSV_SOURCE, _PROJECTX_SOURCE):
+        ids = sorted(key for key, value in source_of.items() if value == source)
+        if not ids:
+            continue
+        lines.append(f"- `{source}` ({len(ids)} legs): {', '.join(ids)}")
+    return "\n".join(lines) + "\n"
+
+
+def _read_projectx_fills(path: Path) -> list[dict[str, object]]:
+    """Read the ProjectX fill export: a JSON array of fill objects.
 
     Raises:
-        _CliError: the DB file is missing, or ``sqlite3`` raised (unreadable, no
-            ``trades`` table).
+        _CliError: unreadable / not UTF-8 / not JSON / not a JSON array / an
+            element that is not a JSON object.
     """
-    if not trades_db.is_file():
-        raise _CliError(f"no such trades DB: {trades_db}")
-    query = (
-        "SELECT * FROM trades WHERE trader_id = ? AND timestamp IS NOT NULL "
-        "AND timestamp >= ? ORDER BY timestamp, id"
-    )
-    params: list[object] = [trader_id, since]
     try:
-        connection = sqlite3.connect(str(trades_db))
-    except sqlite3.Error as exc:
-        raise _CliError(f"cannot open trades DB {trades_db}: {exc}") from exc
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _CliError(f"cannot read ProjectX fills {path}: {exc}") from exc
     try:
-        connection.row_factory = sqlite3.Row
-        cursor = connection.execute(query, params)
-        return [{name: row[name] for name in row.keys()} for row in cursor.fetchall()]
-    except sqlite3.Error as exc:
-        raise _CliError(f"trades DB {trades_db} query failed: {exc}") from exc
-    finally:
-        connection.close()
+        parsed: object = json.loads(raw)
+    except ValueError as exc:
+        raise _CliError(f"ProjectX fills {path}: not valid JSON ({exc})") from exc
+    if not isinstance(parsed, list):
+        raise _CliError(
+            f"ProjectX fills {path}: expected a JSON array, got "
+            f"{type(parsed).__name__}"
+        )
+    fills: list[dict[str, object]] = []
+    for index, item in enumerate(parsed):
+        if not isinstance(item, dict):
+            raise _CliError(
+                f"ProjectX fills {path}: element {index} is not a JSON object"
+            )
+        fills.append(dict(item))
+    return fills
 
 
 def _validate_parity_gate_args(
@@ -1023,9 +1106,9 @@ def _validate_parity_gate_args(
     strictness was the root of the ``--synthetic-window`` exit-code
     inconsistency -- round 1). Checks: ``--amendment-number`` / ``--cycle-number``
     ``> 0``; ``--out`` names a file, does not collide with any input
-    (``--orders-csv`` / ``--trades-db`` / ``--windows`` / any window ``.dbn.zst``),
-    and does not already exist unless ``--force``; ``--synthetic-window`` is a key
-    in ``--windows``.
+    (``--orders-csv`` / ``--projectx-fills`` / ``--windows`` / any window
+    ``.dbn.zst``), and does not already exist unless ``--force``;
+    ``--synthetic-window`` is a key in ``--windows``.
     """
     if int(args.amendment_number) <= 0:
         parser.error("--amendment-number must be > 0 (analyst-owned; AD-26)")
@@ -1038,7 +1121,7 @@ def _validate_parity_gate_args(
     out_resolved = Path(args.out).resolve()
     for label, value in (
         ("--orders-csv", args.orders_csv),
-        ("--trades-db", args.trades_db),
+        ("--projectx-fills", args.projectx_fills),
         ("--windows", args.windows),
     ):
         if Path(value).resolve() == out_resolved:
@@ -1232,10 +1315,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "parity-gate",
         help="run the §A8.2 two-part parity gate and write the amendment stub",
         description=(
-            "Reconstruct the live bots' orders (mim-nb from "
-            "data/mim_nb/orders.csv, yank from data/trades.db rows on/after "
-            "2026-06-17), run Part A real-fill calibration over their MBO "
-            "windows, a >=1000-order Part B invariant battery over one "
+            "Reconstruct the live bots' orders from the two broker-accurate "
+            "sources (mim-nb from data/mim_nb/orders.csv, yank from "
+            "data/mim_nb/projectx_fills.json), split every trade into one "
+            "pseudo-trade per real fill, run Part A real-fill calibration over "
+            "their MBO windows, a >=1000-order Part B invariant battery over one "
             "synthetic window, the seal-5 integrity preflight per window, then "
             "gate.evaluate + build_amendment_stub. Writes a STANDALONE "
             "amendment .md (the analyst appends it to the seal -- AD-26). Exit "
@@ -1253,18 +1337,20 @@ def _build_parser() -> argparse.ArgumentParser:
         default="data/mim_nb/orders.csv",
         metavar="PATH",
         help=(
-            "mim-nb order-lifecycle CSV (default: data/mim_nb/orders.csv); "
-            "authoritative for mim-nb -- the DB's mim-nb rows are used only if "
-            "this file is absent"
+            "mim-nb order-lifecycle CSV (default: data/mim_nb/orders.csv); the "
+            "authoritative mim-nb fill source -- absent, this run has no mim-nb "
+            "legs"
         ),
     )
     gp.add_argument(
-        "--trades-db",
-        default="data/trades.db",
+        "--projectx-fills",
+        default="data/mim_nb/projectx_fills.json",
         metavar="PATH",
         help=(
-            "trades.db (default: data/trades.db); yank rows on/after "
-            "2026-06-17 always, mim-nb rows only when --orders-csv is absent"
+            "ProjectX broker fill export (default: "
+            "data/mim_nb/projectx_fills.json); the yank fill source -- fills "
+            "whose orderId is already in --orders-csv are mim-nb's and are "
+            "skipped"
         ),
     )
     gp.add_argument(
@@ -1273,7 +1359,7 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help=(
             "window JSON: {key: {dbn, instrument_id, lo_ns, hi_ns, "
-            "degraded_days?}}; a trade is routed to the entry whose "
+            "degraded_days?}}; each split leg is routed to the entry whose "
             "[lo_ns, hi_ns) fully contains its stamp span"
         ),
     )
@@ -1339,11 +1425,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="amendment stub .md output -- a NEW standalone file (atomic write)",
     )
     gp.add_argument(
-        "--skip-uncovered",
+        "--projectx-yank-only",
         action="store_true",
-        help="drop Part A trades whose full span is not inside any --windows "
-        "entry (their MBO window was never purchased) instead of aborting; the "
-        "dropped ids are logged and recorded in the stub",
+        help="assert the --projectx-fills export contains NO mim-nb fills, "
+        "permitting a run without --orders-csv (a ProjectX fill carries no "
+        "trader field, so orders.csv is normally what separates the bots)",
     )
     gp.add_argument(
         "--force",

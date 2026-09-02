@@ -12,18 +12,20 @@ Every §A8.2 building block is built and merged:
 
 Nothing wired them into the one call an analyst makes to get a verdict + stub.
 :func:`run_parity_gate` is that wiring -- a **pure orchestrator**: it opens no
-``.dbn.zst`` path, touches no ``data/trades.db`` / ``data/mim_nb/`` file and
-imports no ``databento``. The CLI (``cli.py parity-gate``) does all file / DB I/O
-and injects ``source_for`` (a ``WindowKey -> BookEventSource`` callable that
+``.dbn.zst`` path, touches no ``data/mim_nb/`` file and imports no
+``databento``. The CLI (``cli.py parity-gate``) does all file I/O and injects ``source_for`` (a ``WindowKey -> BookEventSource`` callable that
 already did the front-month filter + the ``.dbn.zst`` open + the ts-clip) and the
 reconstructed trades.
 
 Steps, in order (spec Always):
 
-1. **Part A** -- ``part_a_runner.run_part_a`` over the reconstructed trades, each
-   trade routed to its window's source by ``_window_of`` (the trade's full stamp
-   span -- every intent ``submit_ts_ns`` and every ``RealFill.ts_ns`` -- must lie
-   inside one window's ``[lo_ns, hi_ns)``; CHECKPOINT 1d).
+1. **Part A** -- every reconstructed trade is first split into one pseudo-trade
+   per real fill by ``part_a.split_legs`` (Part A grades *fills*, and a mim-nb
+   entry and its EOD exit are ~6 h apart -- no +/-90-min window holds both), then
+   ``part_a_runner.run_part_a`` over the split legs, each leg routed to its
+   window's source by ``_window_of`` (the leg's stamp span -- its intent
+   ``submit_ts_ns`` and its ``RealFill.ts_ns`` -- must lie inside one window's
+   ``[lo_ns, hi_ns)``; CHECKPOINT 1d). A leg no window covers fails closed.
 2. **Part B** -- ``generate_synthetic_orders`` over the one dense
    ``synthetic_window`` (CHECKPOINT 1b), then ``run_part_b`` over the same
    source.
@@ -57,7 +59,6 @@ relative form only. No runtime ``config`` / ``orders`` / ``sim`` / ``book`` /
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -65,15 +66,13 @@ from typing import TYPE_CHECKING
 from ..events import BookEventSource
 from .gate import GateError, GateVerdict, build_amendment_stub, evaluate
 from .integrity import IntegrityReport, format_integrity, preflight_integrity
-from .part_a import PartAError, PartAResult, ReconstructedTrade
+from .part_a import PartAError, PartAResult, ReconstructedTrade, split_legs
 from .part_a_runner import run_part_a
 from .part_b import PartBError, PartBResult, run_part_b
 from .synthetic import SyntheticError, generate_synthetic_orders
 
 if TYPE_CHECKING:  # type-only -- not a runtime dependency edge (imports-test carve-out)
     from ..config import SimConfig
-
-logger = logging.getLogger(__name__)
 
 __all__ = [
     "WindowKey",
@@ -98,13 +97,14 @@ class GateCliError(Exception):
     """The gate orchestrator cannot route a trade or a window.
 
     Raised for: ``amendment_number <= 0``; ``synthetic_window`` absent from
-    ``windows``; a reconstructed trade whose full stamp span (every intent
-    ``submit_ts_ns`` and every ``RealFill.ts_ns``) is not fully inside exactly one
-    ``windows`` entry's ``[lo_ns, hi_ns)`` (CHECKPOINT 1d -- there is no second
-    mapping file). Distinct from a :class:`~src.ticksim.parity.gate.GateError` (a
-    bad SHA / template break) or a :class:`~src.ticksim.parity.part_a.PartAError`
-    (a window-book data fault) -- those propagate from the sequenced modules
-    unchanged.
+    ``windows``; a split leg whose stamp span (its intent ``submit_ts_ns`` and
+    its ``RealFill.ts_ns``) is not fully inside exactly one ``windows`` entry's
+    ``[lo_ns, hi_ns)`` (CHECKPOINT 1d -- there is no second mapping file; a leg
+    no purchased window covers fails closed, naming the leg, because silently
+    dropping it would shrink Part A's N without a trace). Distinct from a
+    :class:`~src.ticksim.parity.gate.GateError` (a bad SHA / template break) or a
+    :class:`~src.ticksim.parity.part_a.PartAError` (a window-book data fault) --
+    those propagate from the sequenced modules unchanged.
     """
 
 
@@ -142,12 +142,6 @@ class GateRun:
     verdict: GateVerdict
     stub: str
     integrity_flagged: bool
-    skipped_uncovered: tuple[str, ...] = ()
-    """trade_ids dropped because no purchased window contains their full span.
-
-    Empty unless ``skip_uncovered=True``. These trades are **not** scored, so
-    Part A's N excludes them -- the count and the ids are surfaced in the stub so
-    a reader can see the sample is a coverage subset, never a silent filter."""
 
 
 _MIM_NB_TRADE_ID_PREFIXES = ("mimnb-", "trader-mim-nb-")
@@ -159,6 +153,10 @@ def _trader_of(trade: ReconstructedTrade) -> str:
     ``reconstruct_trades_db_row``), else ``"trader-yank"`` (spec Always). Feeds
     ``build_amendment_stub``'s per-trader breakdown -- without the second prefix a
     CSV-absent run labels every mim-nb trade ``trader-yank``.
+
+    A ``split_legs`` pseudo-trade keeps its parent's prefix and only *appends*
+    ``"#ENTRY"`` / ``"#EXIT"``, so the prefix match classifies a split leg
+    exactly as it classified its parent.
     """
     return (
         "trader-mim-nb"
@@ -169,9 +167,10 @@ def _trader_of(trade: ReconstructedTrade) -> str:
 
 def _trade_span(trade: ReconstructedTrade) -> tuple[int, int]:
     """``(min, max)`` over every intent ``submit_ts_ns`` and every
-    ``RealFill.ts_ns`` of ``trade`` -- the full window the runner needs folded
-    (the exit leg / real fill ts is later than the entry submit for a
-    mim-nb-reconstructed trade)."""
+    ``RealFill.ts_ns`` of ``trade`` -- the full window the runner needs folded.
+    On a ``split_legs`` pseudo-trade that is one intent + one fill, so the span
+    is the leg's submit-to-fill moment (a point, to within the broker's
+    acknowledgement latency)."""
     stamps = [intent.submit_ts_ns for intent in trade.intents]
     stamps.extend(fill.ts_ns for fill in trade.real_fills)
     return min(stamps), max(stamps)
@@ -182,11 +181,12 @@ def _window_of(
 ) -> WindowKey:
     """The window key whose ``[lo_ns, hi_ns)`` fully contains ``trade``'s span.
 
-    Matches on the **full** stamp span (:func:`_trade_span`), not just the entry
-    ts: a trade whose exit leg / real fill ts pokes past ``hi_ns`` would have its
-    book truncated by the CLI's ``_ClippedSource`` under ``run_part_a``'s exit-leg
-    pricing -> a spurious miss. Zero or more than one match ->
-    :class:`GateCliError` naming the trade (CHECKPOINT 1d: fail closed, never
+    Matches on the **full** stamp span (:func:`_trade_span`), not just the submit
+    ts: a leg whose real fill ts pokes past ``hi_ns`` would have its book
+    truncated by the CLI's ``_ClippedSource`` under ``run_part_a``'s miss pricing
+    -> a spurious miss. Callers route ``split_legs`` pseudo-trades, so ``trade``
+    is one leg and its span is a point. Zero or more than one match ->
+    :class:`GateCliError` naming the leg (CHECKPOINT 1d: fail closed, never
     guess).
     """
     span_lo, span_hi = _trade_span(trade)
@@ -197,7 +197,7 @@ def _window_of(
     ]
     if len(matches) != 1:
         raise GateCliError(
-            f"trade {trade.trade_id!r} stamp span [{span_lo}, {span_hi}] is "
+            f"leg {trade.trade_id!r} stamp span [{span_lo}, {span_hi}] is "
             f"contained by {len(matches)} of {len(windows)} windows "
             f"({matches!r}) -- expected exactly 1 [lo_ns, hi_ns) range in "
             f"--windows"
@@ -246,7 +246,6 @@ def run_parity_gate(
     synthetic_n: int,
     amendment_number: int,
     cycle_number: int,
-    skip_uncovered: bool = False,
     config: SimConfig | None = None,
     sha: str | None = None,
     date: str | None = None,
@@ -255,16 +254,18 @@ def run_parity_gate(
 
     Args:
         part_a_trades: the reconstructed live-bot trades to calibrate (Part A).
-            May be empty (Part A then FAILs on its N floor).
-        windows: ``window key -> WindowSpec``. Routes each trade to a source and
-            bounds the ``synthetic_window`` draw. ``synthetic_window`` must be a
-            key here.
+            Each is split into one pseudo-trade per real fill before routing, so
+            Part A's ``n`` counts scored **legs**. May be empty (Part A then
+            FAILs on its N floor).
+        windows: ``window key -> WindowSpec``. Routes each split leg to a source
+            and bounds the ``synthetic_window`` draw. ``synthetic_window`` must
+            be a key here.
         synthetic_window: the one dense RTH window Part B's orders are generated
             over (CHECKPOINT 1b).
         source_for: ``WindowKey -> BookEventSource`` -- a single-instrument,
             re-iterable, ts-clipped source (front-month filtering + the
             ``.dbn.zst`` open are the CLI's job). It is called many times --
-            ``run_part_a`` calls it once per trade and again per unfilled leg,
+            ``run_part_a`` calls it once per split leg and again per unfilled leg,
             Part B once, integrity once per distinct window -- so the CLI
             memoises it per key.
         synthetic_seed: the sole Part B entropy source (spine AD-11).
@@ -287,7 +288,7 @@ def run_parity_gate(
 
     Raises:
         GateCliError: ``amendment_number <= 0``; ``synthetic_window`` absent from
-            ``windows``; a trade whose span is not inside exactly one window.
+            ``windows``; a split leg whose span is not inside exactly one window.
         PartAError / SyntheticError / PartBError / GateError: propagated verbatim
             from the sequenced modules (a window-book fault, a too-sparse
             synthetic window, a structural Part B fault, a bad SHA / template
@@ -306,37 +307,28 @@ def run_parity_gate(
         )
 
     # --- step 1: Part A --------------------------------------------------- #
-    trade_window: dict[str, WindowKey] = {}
-    skipped: list[str] = []
+    # One pseudo-trade per real fill: Part A grades fills, and a trade's two
+    # marketable legs are hours apart -- no +/-90-min window contains both, so a
+    # whole-trade span routes nowhere. Splitting changes routing only; every
+    # graded value rides along verbatim (``part_a.split_legs``).
+    part_a_legs: list[ReconstructedTrade] = []
     for trade in part_a_trades:
-        try:
-            trade_window[trade.trade_id] = _window_of(trade, windows)
-        except GateCliError:
-            if not skip_uncovered:
-                raise
-            # The MBO window covering this trade's span was never purchased, so
-            # its fills cannot be scored at all. Dropping it is a DATA-COVERAGE
-            # limit, not a filter on outcome -- but it does bias the sample if
-            # the uncovered trades differ systematically (mim-nb's long EOD holds
-            # are exactly such a class), so every id is recorded and surfaced.
-            skipped.append(trade.trade_id)
-    if skipped:
-        logger.warning(
-            "parity-gate: %d of %d Part A trades dropped -- no purchased window "
-            "contains their full span: %s",
-            len(skipped),
-            len(part_a_trades),
-            ", ".join(sorted(skipped)),
-        )
-    part_a_trades = [t for t in part_a_trades if t.trade_id in trade_window]
+        part_a_legs.extend(split_legs(trade))
+
+    # Fail closed, per leg: a leg no purchased window covers raises (naming the
+    # leg) rather than being dropped -- a silent drop would shrink N with no
+    # trace in the stub.
+    leg_window: dict[str, WindowKey] = {
+        leg.trade_id: _window_of(leg, windows) for leg in part_a_legs
+    }
 
     def _trade_source(trade: ReconstructedTrade) -> BookEventSource:
-        return source_for(trade_window[trade.trade_id])
+        return source_for(leg_window[trade.trade_id])
 
     if config is None:
-        part_a_result = run_part_a(part_a_trades, _trade_source)
+        part_a_result = run_part_a(part_a_legs, _trade_source)
     else:
-        part_a_result = run_part_a(part_a_trades, _trade_source, config=config)
+        part_a_result = run_part_a(part_a_legs, _trade_source, config=config)
 
     # --- step 2: Part B ------------------------------------------------- #
     synth_spec = windows[synthetic_window]
@@ -354,9 +346,7 @@ def run_parity_gate(
         part_b_result = run_part_b(intents, synth_source, config=config)
 
     # --- step 3: integrity, every distinct window touched --------------- #
-    all_windows: list[WindowKey] = sorted(
-        set(trade_window.values()) | {synthetic_window}
-    )
+    all_windows: list[WindowKey] = sorted(set(leg_window.values()) | {synthetic_window})
     integrity_reports: list[tuple[WindowKey, IntegrityReport]] = []
     for key in all_windows:
         report = preflight_integrity(
@@ -371,7 +361,7 @@ def run_parity_gate(
 
     # --- step 4: verdict + stub --------------------------------------- #
     verdict = evaluate(part_a_result, part_b_result)
-    trader_by_trade_id = {trade.trade_id: _trader_of(trade) for trade in part_a_trades}
+    trader_by_trade_id = {leg.trade_id: _trader_of(leg) for leg in part_a_legs}
     stub = build_amendment_stub(
         part_a_result,
         part_b_result,
@@ -390,5 +380,4 @@ def run_parity_gate(
         verdict=verdict,
         stub=stub,
         integrity_flagged=integrity_flagged,
-        skipped_uncovered=tuple(sorted(skipped)),
     )

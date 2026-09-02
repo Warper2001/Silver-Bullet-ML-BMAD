@@ -83,14 +83,15 @@ the ``str`` type -- ``gate`` is not imported here). It never imports ``sim`` /
 
 ``gate_cli.py`` (the prereg §A8.2 / spine AD-26 capstone orchestrator,
 ``run_parity_gate``) is the one call that wires every §A8.2 block together: it
-runs ``part_a_runner.run_part_a`` over the reconstructed live-bot trades (each
-routed to its window by an entry-timestamp ``[lo_ns, hi_ns)`` match),
+splits every reconstructed live-bot trade into one pseudo-trade per real fill
+(``part_a.split_legs``) and runs ``part_a_runner.run_part_a`` over those legs
+(each routed to its window by a stamp-span ``[lo_ns, hi_ns)`` match),
 ``synthetic.generate_synthetic_orders`` + ``part_b.run_part_b`` over the one
 dense synthetic window, ``integrity.preflight_integrity`` per distinct window
 touched, then ``gate.evaluate`` + ``gate.build_amendment_stub``. It is a **pure
 orchestrator** -- the CLI injects ``source_for`` (front-month filter + ``.dbn.zst``
 open + ts-clip) and the reconstructed trades, so ``gate_cli`` opens no
-``.dbn.zst``, touches no ``data/trades.db`` / ``data/mim_nb/``, and imports no
+``.dbn.zst``, touches no ``data/mim_nb/`` file, and imports no
 ``databento`` / ``sim`` / ``book`` / ``config`` / ``orders``. A ``FLAGGED``
 integrity report sets ``GateRun.integrity_flagged`` and makes the stub's
 integrity section loud but does **not** change the verdict (AD-26).

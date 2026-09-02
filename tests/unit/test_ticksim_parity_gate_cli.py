@@ -316,6 +316,83 @@ def test_integrity_string_joins_per_window_subheadings() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# per-leg routing (spec: Part A grades fills, each fill routes on its own)
+# --------------------------------------------------------------------------- #
+
+
+def test_part_a_n_counts_legs_not_trades() -> None:
+    trades = passing_trades(B)
+    run = run_parity_gate(
+        trades,
+        one_window(),
+        "w0",
+        source_of({"w0": clean_events(B)}),
+        synthetic_seed=0,
+        synthetic_n=1000,
+        amendment_number=1,
+        cycle_number=1,
+    )
+    assert run.part_a.stats.n == 2 * len(trades)
+    assert {e.trade_id for e in run.part_a.errors} == {
+        f"{t.trade_id}#{leg}" for t in trades for leg in ("ENTRY", "EXIT")
+    }
+
+
+def test_legs_of_one_trade_route_to_different_windows() -> None:
+    """The whole point of the split: an entry and an exit hours apart live in
+    two different +/-90-min captures, which no whole-trade span could match."""
+    windows = {
+        "wA": WindowSpec(lo_ns=B, hi_ns=B + W),
+        "wB": WindowSpec(lo_ns=B + 2 * W, hi_ns=B + 3 * W),
+    }
+    trade = make_trade(
+        trade_id="yank-split",
+        entry_submit=B + 1_000_000,
+        exit_submit=B + 2 * W + 1_000_000,
+    )
+    run = run_parity_gate(
+        [trade],
+        windows,
+        "wA",
+        source_of({"wA": clean_events(B), "wB": clean_events(B + 2 * W)}),
+        synthetic_seed=0,
+        synthetic_n=1000,
+        amendment_number=1,
+        cycle_number=1,
+    )
+    assert run.part_a.stats.n == 2  # both legs scored
+    # each leg really filled in ITS OWN window -- not a miss priced from a
+    # truncated book
+    assert [e.miss_reason for e in run.part_a.errors] == [None, None]
+    assert [e.signed_error_ticks for e in run.part_a.errors] == [0.0, 0.0]
+    # both windows were touched -> both get an integrity report
+    assert [key for key, _ in run.integrity_reports] == ["wA", "wB"]
+    assert "| trader-yank |" in run.stub
+
+
+def test_leg_with_no_covering_window_fails_closed_naming_the_leg() -> None:
+    """Settled design question (c): never silently dropped -- a dropped leg would
+    shrink Part A's N with no trace in the stub."""
+    windows = {"wA": WindowSpec(lo_ns=B, hi_ns=B + W)}
+    trade = make_trade(
+        trade_id="yank-split",
+        entry_submit=B + 1_000_000,
+        exit_submit=B + 5 * W,  # no purchased window covers the exit
+    )
+    with pytest.raises(GateCliError, match=r"leg 'yank-split#EXIT'"):
+        run_parity_gate(
+            [trade],
+            windows,
+            "wA",
+            source_of({"wA": clean_events(B)}),
+            synthetic_seed=0,
+            synthetic_n=1000,
+            amendment_number=1,
+            cycle_number=1,
+        )
+
+
+# --------------------------------------------------------------------------- #
 # _trader_of
 # --------------------------------------------------------------------------- #
 
@@ -328,6 +405,10 @@ def test_integrity_string_joins_per_window_subheadings() -> None:
         ("trader-mim-nb-2900", "trader-mim-nb"),  # DB-fallback prefix
         ("trader-yank-2900", "trader-yank"),
         ("yank-17", "trader-yank"),
+        # a split leg keeps its parent's prefix -- the suffix must not reclassify
+        ("mimnb-abc123#ENTRY", "trader-mim-nb"),
+        ("mimnb-abc123#EXIT", "trader-mim-nb"),
+        ("yank-17#ENTRY", "trader-yank"),
     ],
 )
 def test_trader_of(trade_id: str, expected: str) -> None:

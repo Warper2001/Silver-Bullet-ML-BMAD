@@ -7,3 +7,5 @@ thursday,symbol,dir,entry_t,entry_px,exit_t,exit_px,qty,ret_bps,pnl_usd,reason,l
 2026-07-16,METN26,short,00:04,1924.5,23:05,1869.5,34,285.79,187.0,scheduled_exit,42.934,-0.805,eb6abc146daa4ad5
 2026-07-23,MBTN26,short,00:03,66125.0,23:05,65240.0,1,133.84,88.5,scheduled_exit,22.653,5.518,817aa76f9d1b6106
 2026-07-23,METN26,short,00:03,1934.0,23:05,1882.5,34,266.29,175.1,scheduled_exit,22.653,5.518,58a092a9488e4c3b
+2026-08-27,MBTU26,short,00:03,79315.0,06:49,79130.0,1,23.32,18.5,shutdown,,,a6c48c09246a3d54
+2026-08-27,METU26,short,00:03,2516.0,06:49,2501.5,32,57.63,46.4,shutdown,,,c3854060a71110ce

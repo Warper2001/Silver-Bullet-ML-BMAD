@@ -39,13 +39,23 @@ Reconstruction shape (human decision, spec loopback 1):
 * **mim-nb** — minimal 2-leg replay. The ``data/mim_nb/orders.csv`` lifecycle is
   walked in timestamp order to identify each trade's **entry** market order
   (``otype 2`` PLACE→FILL) and its **exit** market order (a later ``otype 2``
-  PLACE→FILL). Exactly two :class:`~src.ticksim.orders.OrderIntent`\\ s are
-  emitted per trade — a ``marketable`` entry and a ``marketable`` exit sharing
-  one ``oco_group_id``. The ``otype 4`` protective stop is parsed to follow the
-  lifecycle but **never emitted** (it is always cancelled before the exit and
-  never fills in the real ledger; resting-stop queue behaviour is Part B). A
-  single FILL per leg is assumed — a second FILL on one ``order_id`` raises,
-  matching the single-``RealFill``-per-leg assumption in :func:`compare_fills`.
+  PLACE→FILL). Two :class:`~src.ticksim.orders.OrderIntent`\\ s are emitted per
+  trade — a ``marketable`` entry and a ``marketable`` exit sharing one
+  ``oco_group_id``. A **market** leg's :class:`RealFill` is timed by its **PLACE
+  ts**, not its FILL-row ts: the bot polls ``/Trade/search`` to detect fills, so
+  every market order's FILL row is logged ~3 s after the true execution, while
+  the PLACE ts is the execution instant to ~50 ms (confirmed against 10
+  ProjectX-matched legs — §A8.2 cycle 2). The FILL row still supplies the fill
+  **price** and **size** and confirms the fill happened.
+
+  The ``otype 4`` protective stop is normally cancelled before the exit. When it
+  instead **fires** (a real stop-out exit fill, e.g. 2026-08-28), that FILL is
+  the trade's exit leg — timed from a caller-supplied ``stop_out_exit_ts``
+  mapping (the broker's own ``creationTimestamp``, since ``orders.csv`` has no
+  submit anchor near the trigger). A fired stop with **no** entry in that map is
+  dropped with a logged reason and the trade keeps its entry leg alone. A single
+  FILL per leg is assumed — a second FILL on one ``order_id`` raises, matching
+  the single-``RealFill``-per-leg assumption in :func:`compare_fills`.
 * **yank (broker-accurate)** — strictly 2 marketable legs per ProjectX round
   trip in ``data/mim_nb/projectx_fills.json``: an opening fill
   (``profitAndLoss is None``) paired to the next closing fill (``profitAndLoss``
@@ -156,7 +166,8 @@ class PartAError(Exception):
     """A real order record had an unexpected shape (fail-closed; spine AD-17).
 
     Raised — naming the offending row — for any lifecycle Part A does not model:
-    a non-market entry, a fired protective stop, a ``REPLACE`` / ``MODIFY``
+    a non-market entry, an ``otype 4`` protective-stop FILL while no position is
+    live (a placed stop that fires outside ``ACTIVE``), a ``REPLACE`` / ``MODIFY``
     event, a truncated ledger, a causally corrupt bracket, a same-side round
     trip, a ``FILL`` row flagged rejected, an unparseable price / timestamp /
     size, or a missing / duplicate / side-mismatched
@@ -433,18 +444,56 @@ class _PendingLeg:
     fill_size: int | None = None
 
 
-def _build_mim_trade(entry: _PendingLeg, exit_: _PendingLeg) -> ReconstructedTrade:
+def _require_filled(leg: _PendingLeg) -> None:
     if (
-        entry.fill_px_dbn is None
-        or entry.fill_ts_ns is None
-        or entry.fill_size is None
-        or exit_.fill_px_dbn is None
-        or exit_.fill_ts_ns is None
-        or exit_.fill_size is None
+        leg.fill_px_dbn is None or leg.fill_ts_ns is None or leg.fill_size is None
     ):  # pragma: no cover - guarded by the caller's state machine
         raise PartAError(
-            f"mim-nb trade {entry.order_id!r} reached build with an unfilled leg"
+            f"mim-nb trade {leg.order_id!r} reached build with an unfilled leg"
         )
+
+
+def _mim_leg(
+    pending: _PendingLeg, leg: Leg, *, trade_id: str, oco: str
+) -> tuple[OrderIntent, RealFill]:
+    """One marketable mim-nb leg's :class:`~src.ticksim.orders.OrderIntent` + its
+    :class:`RealFill`.
+
+    ``RealFill.ts_ns`` is ``pending.ts_ns`` — the leg's **PLACE ts** for a
+    market leg (§A8.2 cycle 2: the bot polls ``/Trade/search`` so the FILL row is
+    ~3 s poll-late; the PLACE ts is the execution instant to ~50 ms), or the
+    caller-supplied broker fill ts for a fired otype-4 stop-out exit (whose
+    ``pending`` is built with ``ts_ns`` set to that value). ``pending.fill_*``
+    still supplies the fill price / size and is the "did it fill" witness.
+    """
+    _require_filled(pending)
+    assert pending.fill_px_dbn is not None and pending.fill_size is not None
+    intent = OrderIntent(
+        action=IntentAction.SUBMIT,
+        order_id=pending.order_id,
+        trade_id=trade_id,
+        leg=leg,
+        kind=OrderKind.MARKETABLE,
+        side=pending.side,
+        size=pending.size,
+        submit_ts_ns=pending.ts_ns,
+        oco_group_id=oco,
+    )
+    fill = RealFill(
+        order_id=pending.order_id,
+        leg=leg,
+        side=pending.side,
+        size=pending.fill_size,
+        price_dbn=pending.fill_px_dbn,
+        ts_ns=pending.ts_ns,
+        fidelity="broker_fill",
+    )
+    return intent, fill
+
+
+def _build_mim_trade(entry: _PendingLeg, exit_: _PendingLeg) -> ReconstructedTrade:
+    _require_filled(entry)
+    _require_filled(exit_)
     if exit_.ts_ns <= entry.ts_ns:
         raise PartAError(
             f"mim-nb exit intent ts {exit_.ts_ns} <= entry intent ts "
@@ -459,58 +508,43 @@ def _build_mim_trade(entry: _PendingLeg, exit_: _PendingLeg) -> ReconstructedTra
         )
     trade_id = f"mimnb-{entry.order_id}"
     oco = f"{trade_id}-oco"
-    entry_intent = OrderIntent(
-        action=IntentAction.SUBMIT,
-        order_id=entry.order_id,
-        trade_id=trade_id,
-        leg=Leg.ENTRY,
-        kind=OrderKind.MARKETABLE,
-        side=entry.side,
-        size=entry.size,
-        submit_ts_ns=entry.ts_ns,
-        oco_group_id=oco,
-    )
-    exit_intent = OrderIntent(
-        action=IntentAction.SUBMIT,
-        order_id=exit_.order_id,
-        trade_id=trade_id,
-        leg=Leg.EXIT,
-        kind=OrderKind.MARKETABLE,
-        side=exit_.side,
-        size=exit_.size,
-        submit_ts_ns=exit_.ts_ns,
-        oco_group_id=oco,
-    )
-    real_fills = (
-        RealFill(
-            order_id=entry.order_id,
-            leg=Leg.ENTRY,
-            side=entry.side,
-            size=entry.fill_size,
-            price_dbn=entry.fill_px_dbn,
-            ts_ns=entry.fill_ts_ns,
-            fidelity="broker_fill",
-        ),
-        RealFill(
-            order_id=exit_.order_id,
-            leg=Leg.EXIT,
-            side=exit_.side,
-            size=exit_.fill_size,
-            price_dbn=exit_.fill_px_dbn,
-            ts_ns=exit_.fill_ts_ns,
-            fidelity="broker_fill",
-        ),
-    )
+    entry_intent, entry_fill = _mim_leg(entry, Leg.ENTRY, trade_id=trade_id, oco=oco)
+    exit_intent, exit_fill = _mim_leg(exit_, Leg.EXIT, trade_id=trade_id, oco=oco)
     return ReconstructedTrade(
         trade_id=trade_id,
         intents=(entry_intent, exit_intent),
-        real_fills=real_fills,
+        real_fills=(entry_fill, exit_fill),
+        fidelity="broker_fill",
+    )
+
+
+def _build_mim_entry_only(entry: _PendingLeg) -> ReconstructedTrade:
+    """The ENTRY leg alone — for a fired otype-4 stop-out exit with no
+    caller-supplied true fill ts.
+
+    ``orders.csv`` has no submit anchor near the trigger and the FILL row's ts is
+    the same ~3 s poll-late signal, so the exit fill cannot be timed and is
+    dropped (reason logged + collected by :func:`reconstruct_mim_nb`). The entry
+    leg is still a real, timeable fill and is kept so Part A is not silently
+    restricted to the trades whose exit *is* timeable.
+    """
+    _require_filled(entry)
+    trade_id = f"mimnb-{entry.order_id}"
+    oco = f"{trade_id}-oco"
+    entry_intent, entry_fill = _mim_leg(entry, Leg.ENTRY, trade_id=trade_id, oco=oco)
+    return ReconstructedTrade(
+        trade_id=trade_id,
+        intents=(entry_intent,),
+        real_fills=(entry_fill,),
         fidelity="broker_fill",
     )
 
 
 def reconstruct_mim_nb(
     rows: Iterable[Mapping[str, object]],
+    *,
+    stop_out_exit_ts: Mapping[str, int] | None = None,
+    dropped_stop_out_exits: list[str] | None = None,
 ) -> list[ReconstructedTrade]:
     """Reconstruct mim-nb trades from ``data/mim_nb/orders.csv`` rows.
 
@@ -522,12 +556,36 @@ def reconstruct_mim_nb(
     in ledger order. ``reconstruct_mim_nb([]) == []``. A single FILL per leg is
     assumed — a second FILL on one ``order_id`` raises.
 
+    **A market leg is timed by its PLACE ts** (§A8.2 cycle 2): the bot polls
+    ``/Trade/search`` so the FILL row is logged ~3 s after the true execution,
+    while the PLACE ts is the execution instant to ~50 ms. ``RealFill.ts_ns ==
+    intent.submit_ts_ns`` for every market leg. The FILL row still supplies the
+    fill price / size.
+
+    **A fired otype-4 protective stop is the trade's exit leg.** On an otype-4
+    FILL while ``ACTIVE``: if ``stop_out_exit_ts`` carries the exit ``order_id``,
+    a normal 2-leg trade is built via :func:`_build_mim_trade` with the exit
+    ``RealFill.ts_ns`` (and its intent ``submit_ts_ns``) set to that value — the
+    broker's own execution instant, since ``orders.csv`` has no submit anchor
+    near the trigger and the FILL-row ts is the same poll-late signal. Price and
+    size still come from the FILL row and every :func:`_build_mim_trade`
+    validation is kept. If the map has **no** entry for that ``order_id``, only
+    the entry leg is emitted, ``logger.warning`` fires and the reason is appended
+    to ``dropped_stop_out_exits`` (when a list is supplied). ``stop_out_exit_ts``
+    is a plain ``Mapping[str, int]`` — this function never opens
+    ``projectx_fills.json`` itself (spec Always: pure function of its arguments).
+
     Raises :class:`PartAError` (naming the row) for: a ``REPLACE`` / ``MODIFY``
     event; a ``FILL`` row flagged ``outcome == "REJECTED"`` (contradiction); a
-    non-market PLACE (``otype`` not ``2`` or ``4``); a FILL on the ``otype 4``
-    protective stop; a FILL / PLACE / CANCEL that does not fit the lifecycle; an
+    non-market PLACE (``otype`` not ``2`` or ``4``); a **placed** otype-4 stop
+    that FILLs while no position is live (outside ``ACTIVE`` — fail-closed, not in
+    the real sample); a FILL / PLACE / CANCEL that does not fit the lifecycle; an
     exit leg not the opposite side of its entry; a row with no ``order_id``; a
     ledger that ends mid-trade (entry filled, exit not).
+
+    An otype-4 FILL whose ``order_id`` was **never** placed anywhere in the
+    ledger (the real 2026-07-29 ``order_id='111'`` row) is unattributable — it is
+    logged and skipped, never guessed at.
 
     Pure ``event == "REJECTED"`` rows and ``order_id == "FAIL"`` placeholder
     rows are dropped silently (not orders).
@@ -656,19 +714,35 @@ def reconstruct_mim_nb(
                 )
         elif r.event == "FILL":
             if r.otype == _MIM_STOP_OTYPE or r.order_id in stop_order_ids:
-                # The protective stop FIRED. The pre-2026-09-01 code raised here,
-                # on the assumption (spec Reconstruction shape) that the stop "is
-                # always cancelled before the exit and never fills in the real
-                # ledger". The real ledger falsifies that: 2026-07-29 and
-                # 2026-08-28 both carry an otype-4 FILL with a `pnl=` detail.
-                #
-                # A stop-out is a real exit fill and must be scored, not
-                # discarded. It is modelled the same way the cat-stop flatten is:
-                # a marketable exit submitted at the moment the stop triggered
-                # (the fill ts), which is the correct comparison point -- using
-                # the stop's original resting PLACE ts would have the simulator
-                # fill at entry time.
+                # The protective otype-4 stop FIRED -- a real stop-out exit fill
+                # (the only fired stop in the real sample is 2026-08-28, oid
+                # 3463323140). It is the trade's exit leg. `orders.csv` has no
+                # submit anchor near the trigger (the stop was placed ~1 h
+                # earlier) and its FILL-row ts is the same ~3 s poll-late signal,
+                # so the exit is timed from `stop_out_exit_ts` -- the broker's
+                # own execution instant -- when the caller supplies it, and
+                # dropped (entry leg kept) otherwise.
                 if state == "ACTIVE" and entry is not None:
+                    supplied_ts = (
+                        None
+                        if stop_out_exit_ts is None
+                        else stop_out_exit_ts.get(r.order_id)
+                    )
+                    if supplied_ts is None:
+                        reason = (
+                            f"mim-nb stop-out exit {r.order_id!r} (trade "
+                            f"mimnb-{entry.order_id}) dropped, not graded: no "
+                            f"stop_out_exit_ts entry -- orders.csv has no submit "
+                            f"anchor near the trigger and the FILL-row ts "
+                            f"({r.ts_ns}) is ~3 s poll-late"
+                        )
+                        logger.warning("%s", reason)
+                        if dropped_stop_out_exits is not None:
+                            dropped_stop_out_exits.append(reason)
+                        trades.append(_build_mim_entry_only(entry))
+                        entry = exit_ = None
+                        state = "FLAT"
+                        continue
                     stop_px = _px_to_dbn(
                         r.price_raw, field_name="price", row_repr=r.row_repr
                     )
@@ -677,25 +751,33 @@ def reconstruct_mim_nb(
                     )
                     stop_leg = _PendingLeg(
                         order_id=r.order_id,
-                        ts_ns=r.ts_ns,
+                        ts_ns=supplied_ts,
                         side=_mim_side(r.side, r.row_repr),
                         size=stop_size,
                     )
                     stop_leg.fill_px_dbn = stop_px
+                    # kept only as the "did it fill" witness for `_build_mim_trade`
                     stop_leg.fill_ts_ns = r.ts_ns
                     stop_leg.fill_size = stop_size
                     trades.append(_build_mim_trade(entry, stop_leg))
                     entry = exit_ = None
                     state = "FLAT"
                     continue
-                # An otype-4 FILL with no live position -- e.g. the 2026-07-29
-                # `order_id='111'` row, which has no PLACE anywhere in the
-                # ledger. It cannot be attributed to a trade, so it is reported
+                if r.order_id in stop_order_ids:
+                    # A placed stop that FILLs outside ACTIVE -- fail-closed. Not
+                    # in the real sample (a fired stop always follows its filled
+                    # entry).
+                    raise PartAError(
+                        f"otype-4 protective-stop FILL for {r.order_id!r} while "
+                        f"{state} (no live position) in mim-nb row {r.row_repr}"
+                    )
+                # An otype-4 FILL whose order_id was never placed anywhere -- the
+                # real 2026-07-29 `order_id='111'` row. Unattributable: reported
                 # and skipped rather than guessed at.
                 abandoned += 1
                 logger.warning(
-                    "mim-nb: unattributable stop FILL on %s (state=%s, no live "
-                    "position) -- skipping row %s",
+                    "mim-nb: unattributable stop FILL on %s (state=%s, no PLACE "
+                    "in the ledger) -- skipping row %s",
                     r.order_id,
                     state,
                     r.row_repr,

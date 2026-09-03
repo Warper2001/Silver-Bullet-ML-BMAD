@@ -64,7 +64,7 @@ from pydantic import BaseModel
 from .book import BookInconsistency
 from .config import OPTIMISTIC, PART_B_MIN_ORDERS, PRIMARY, SimConfig
 from .events import BookEvent, BookEventSource, DbnMboSource
-from .orders import OrderIntent, OrderOutcome, OrderStateError
+from .orders import Leg, OrderIntent, OrderOutcome, OrderStateError
 from .parity.gate_cli import (
     GateCliError,
     GateError,
@@ -77,6 +77,7 @@ from .parity.gate_cli import (
 from .parity.part_a import (
     PartAError,
     ReconstructedTrade,
+    _parse_ts_ns,
     reconstruct_mim_nb,
     reconstruct_projectx_fills,
     split_legs,
@@ -940,8 +941,16 @@ def _reconstruct_part_a_trades(
 
     Returns ``(trades, provenance)`` where ``provenance`` is a Markdown note the
     CLI appends to the written stub, recording each scored **leg**'s source
-    (``orders.csv`` / ``projectx``) by its post-split ``trade_id``. It is
+    (``orders.csv`` / ``projectx``) by its post-split ``trade_id``, plus a note
+    that a mim-nb market leg is timed by its PLACE ts, the broker-timed stop-out
+    exit legs, and any stop-out exit dropped for want of a broker fill ts. It is
     ``None`` only when there is nothing to record.
+
+    ``projectx_fills.json`` also supplies ``stop_out_exit_ts`` -- ``{orderId:
+    creationTimestamp_ns}`` for every fill -- so ``reconstruct_mim_nb`` can time a
+    fired otype-4 stop-out exit from the broker's own execution instant
+    (``orders.csv`` logs only the ~3 s poll-late FILL row). The reconstruction is
+    a pure function of that plain mapping; it never opens the JSON itself.
 
     Raises:
         _CliError: an unreadable / malformed source file, or a reconstruction
@@ -949,6 +958,14 @@ def _reconstruct_part_a_trades(
     """
     trades: list[ReconstructedTrade] = []
     source_of: dict[str, str] = {}
+    stop_out_timed_legs: list[str] = []
+    dropped_stop_out_exits: list[str] = []
+    mim_leg_present = False
+
+    px_fills: list[dict[str, object]] | None = (
+        _read_projectx_fills(projectx_fills) if projectx_fills.is_file() else None
+    )
+    stop_out_exit_ts = _stop_out_exit_ts(px_fills or [])
 
     csv_order_ids: set[str] = set()
     if orders_csv.is_file():
@@ -964,13 +981,30 @@ def _reconstruct_part_a_trades(
             for row in rows
             if str(row.get("order_id") or "").strip()
         }
+        stop_place_ids = {
+            str(row.get("order_id") or "").strip()
+            for row in rows
+            if str(row.get("event") or "").strip().upper() == "PLACE"
+            and str(row.get("otype") or "").strip() == "4"
+            and str(row.get("order_id") or "").strip()
+        }
         try:
-            mim_trades = reconstruct_mim_nb(rows)
+            mim_trades = reconstruct_mim_nb(
+                rows,
+                stop_out_exit_ts=stop_out_exit_ts,
+                dropped_stop_out_exits=dropped_stop_out_exits,
+            )
         except PartAError as exc:
             raise _CliError(
                 f"mim-nb reconstruction from {orders_csv} failed: {exc}"
             ) from exc
         _record_source(source_of, mim_trades, _ORDERS_CSV_SOURCE)
+        for trade in mim_trades:
+            for leg in split_legs(trade):
+                mim_leg_present = True
+                fill = leg.real_fills[0]
+                if fill.leg is Leg.EXIT and fill.order_id in stop_place_ids:
+                    stop_out_timed_legs.append(leg.trade_id)
         trades.extend(mim_trades)
     else:
         logger.warning(
@@ -999,19 +1033,18 @@ def _reconstruct_part_a_trades(
                 f"fills."
             )
 
-    if projectx_fills.is_file():
-        fills = _read_projectx_fills(projectx_fills)
+    if px_fills is not None:
         # An `orderId` present in orders.csv is a mim-nb order: already
         # reconstructed above, from the richer lifecycle ledger.
         yank_fills = [
             fill
-            for fill in fills
+            for fill in px_fills
             if str(fill.get("orderId") or "").strip() not in csv_order_ids
         ]
         logger.info(
             "projectx: %d of %d fills are yank (orderId not in %s)",
             len(yank_fills),
-            len(fills),
+            len(px_fills),
             orders_csv,
         )
         try:
@@ -1028,7 +1061,40 @@ def _reconstruct_part_a_trades(
             projectx_fills,
         )
 
-    return trades, _format_source_provenance(source_of)
+    provenance = _format_source_provenance(
+        source_of,
+        mim_leg_present=mim_leg_present,
+        stop_out_timed_legs=stop_out_timed_legs,
+        dropped_stop_out_exits=dropped_stop_out_exits,
+    )
+    return trades, provenance
+
+
+def _stop_out_exit_ts(fills: Sequence[dict[str, object]]) -> dict[str, int]:
+    """``{orderId: creationTimestamp_ns}`` for every ProjectX fill.
+
+    The true execution instant of a fired otype-4 mim-nb stop-out exit --
+    ``orders.csv`` logs only the ~3 s poll-late FILL row. Handed to
+    ``reconstruct_mim_nb`` as a plain ``Mapping[str, int]`` (spec Always: the
+    reconstruction is a pure function of its inputs, no ``projectx_fills.json``
+    coupling). A fill with no ``orderId`` / no ``creationTimestamp`` is skipped;
+    an unparseable ``creationTimestamp`` raises (fail-closed).
+    """
+    out: dict[str, int] = {}
+    for fill in fills:
+        order_id = str(fill.get("orderId") or "").strip()
+        raw = fill.get("creationTimestamp")
+        if not order_id or raw is None or not str(raw).strip():
+            continue
+        try:
+            out[order_id] = _parse_ts_ns(
+                str(raw), field_name="creationTimestamp", row_repr=repr(dict(fill))
+            )
+        except PartAError as exc:
+            raise _CliError(
+                f"ProjectX fill has an unparseable timestamp: {exc}"
+            ) from exc
+    return out
 
 
 def _record_source(
@@ -1044,9 +1110,22 @@ def _record_source(
             source_of[leg.trade_id] = source
 
 
-def _format_source_provenance(source_of: dict[str, str]) -> str | None:
-    """The Markdown provenance note naming every scored leg's fill source."""
-    if not source_of:
+def _format_source_provenance(
+    source_of: dict[str, str],
+    *,
+    mim_leg_present: bool,
+    stop_out_timed_legs: Sequence[str],
+    dropped_stop_out_exits: Sequence[str],
+) -> str | None:
+    """The Markdown provenance note naming every scored leg's fill source.
+
+    Adds, when applicable: the "mim-nb market leg timed by PLACE ts" sentence
+    (only when ≥1 mim-nb leg is present -- §A8.2 cycle 2); a "Stop-out exit legs
+    timed from broker records" line listing any ProjectX-timed otype-4 stop-out
+    exit legs; and a "Dropped, not graded" block for any stop-out exit that had
+    no broker fill ts to time it.
+    """
+    if not source_of and not dropped_stop_out_exits:
         return None
     lines = [
         "<!-- parity-gate provenance -->",
@@ -1057,11 +1136,30 @@ def _format_source_provenance(source_of: dict[str, str]) -> str | None:
         "stamps, not fill times).",
         "",
     ]
+    if mim_leg_present:
+        lines += [
+            "A mim-nb **market** leg is timed by its PLACE ts, not its FILL-row "
+            "ts: the bot polls `/Trade/search` so the FILL row is logged ~3 s "
+            "after the true execution, while the PLACE ts is the execution "
+            "instant to ~50 ms (§A8.2 cycle 2). `RealFill.ts_ns == "
+            "intent.submit_ts_ns` for every mim-nb market leg.",
+            "",
+        ]
     for source in (_ORDERS_CSV_SOURCE, _PROJECTX_SOURCE):
         ids = sorted(key for key, value in source_of.items() if value == source)
         if not ids:
             continue
         lines.append(f"- `{source}` ({len(ids)} legs): {', '.join(ids)}")
+    if stop_out_timed_legs:
+        lines.append(
+            f"- Stop-out exit legs timed from broker records "
+            f"(`projectx_fills.json` `creationTimestamp`) "
+            f"({len(stop_out_timed_legs)} legs): "
+            f"{', '.join(sorted(stop_out_timed_legs))}"
+        )
+    if dropped_stop_out_exits:
+        lines += ["", "### Dropped, not graded", ""]
+        lines += [f"- {reason}" for reason in dropped_stop_out_exits]
     return "\n".join(lines) + "\n"
 
 

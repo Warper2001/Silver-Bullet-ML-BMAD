@@ -607,6 +607,53 @@ def test_mixed_projectx_export_is_split_by_orders_csv(
     assert "yank-e1" not in text
 
 
+def test_stop_out_exit_timed_from_broker_record_reaches_the_stub(
+    tmp_path: Path,
+    patched_source,
+    low_floors: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A mim-nb round trip whose exit is a FIRED otype-4 stop: the stub's Part A
+    fill-sources section names the stop-out exit leg as timed from a broker
+    record, and carries the "market leg timed by PLACE ts" note (§A8.2 cycle 2,
+    verification-gap R1)."""
+    patched_source(clean_events())
+    dbn = _dbn_file(tmp_path)
+    windows = _windows_json(tmp_path, dbn)
+    out = tmp_path / "amendment.md"
+
+    stop_fill_iso = _iso_at(1800)  # +30 min, inside the window
+    orders = tmp_path / "orders.csv"
+    orders.write_text(
+        "ts_utc,event,order_id,otype,side,size,price\n"
+        f"{ENTRY_ISO},PLACE,e1,2,0,1,{ASK_PX / 1e9:.2f}\n"
+        f"{ENTRY_ISO},PLACE,s1,4,1,1,{BID_PX / 1e9:.2f}\n"
+        f"{_iso_at(3)},FILL,e1,2,0,1,{ASK_PX / 1e9:.2f}\n"
+        f"{stop_fill_iso},FILL,s1,4,1,1,{BID_PX / 1e9:.2f}\n"
+    )
+    # ProjectX carries the true execution instant of the stop-out (orderId s1);
+    # both orderIds are in orders.csv, so neither is (double-)counted as yank.
+    projectx = _projectx_json(
+        tmp_path,
+        fills=[
+            _px_fill(order_id="e1", at_seconds=0, side=0, price_dbn=ASK_PX, pnl=None),
+            _px_fill(
+                order_id="s1", at_seconds=1798, side=1, price_dbn=BID_PX, pnl=-100.0
+            ),
+        ],
+    )
+
+    rc = cli.main(_argv(windows, out, projectx, orders_csv=orders))
+    captured = capsys.readouterr()
+    assert rc in (0, 3), captured
+    text = out.read_text()
+    assert "## Part A fill sources" in text
+    assert "market** leg is timed by its PLACE ts" in text
+    assert "Stop-out exit legs timed from broker records" in text
+    assert "mimnb-e1#EXIT" in text
+    assert "| trader-yank |" not in text  # every ProjectX fill was a mim-nb order
+
+
 def test_both_sources_absent_fails_on_the_n_floor(
     tmp_path: Path,
     patched_source,

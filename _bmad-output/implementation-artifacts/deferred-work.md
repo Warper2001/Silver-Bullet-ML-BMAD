@@ -705,3 +705,12 @@ invariant-2 bug fixed in 41b442b only manifested when price ran away during the
 while blind to that entire defect class. ~7 min of one-time cost for materially
 more book-state diversity is the right trade. Still worth pointing at a slice
 that spans a real move (an RTH open or a data release), not a quiet drift.
+
+## Deferred: provenance note wording on an all-dropped Part A sample (2026-09-03)
+
+- source_spec: `spec-ticksim-mimnb-place-timing.md`
+  summary: `cli._format_source_provenance` emits "Every graded leg above comes from a
+  broker-accurate source" even when `source_of` is empty and only `dropped_stop_out_exits`
+  is non-empty. Unreachable in practice — a Part A sample of only dropped stop-out legs
+  cannot happen (N would fail `PART_A_MIN_N`). Cosmetic; gate the sentence on `source_of`.
+  evidence: review round 2, inline (2026-09-03).

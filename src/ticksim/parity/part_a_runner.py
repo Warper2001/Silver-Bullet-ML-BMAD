@@ -149,8 +149,10 @@ def run_part_a(
 def _window_span(trade: ReconstructedTrade) -> tuple[int, int]:
     """``(lo, hi)`` spanning every intent ``submit_ts_ns`` and every
     ``RealFill.ts_ns`` of ``trade`` (spec Always: per-trade window interval).
-    The ``RealFill.ts_ns`` term is load-bearing for mim-nb-reconstructed trades,
-    whose fill ts is later than the submit ts."""
+    Folded over both stamp families for safety; for a Part A leg the two now
+    coincide -- a mim-nb market leg is timed by its PLACE ts, which is also its
+    ``RealFill.ts_ns`` (§A8.2 cycle 2), and a broker-fill / stop-out leg shares
+    one broker ts across its intent and its fill."""
     stamps = [intent.submit_ts_ns for intent in trade.intents]
     stamps.extend(real.ts_ns for real in trade.real_fills)
     return min(stamps), max(stamps)

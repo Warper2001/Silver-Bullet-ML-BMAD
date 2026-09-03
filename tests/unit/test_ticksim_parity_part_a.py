@@ -207,27 +207,77 @@ class TestReconstructMimNb:
         with pytest.raises(PartAError, match="non-market"):
             reconstruct_mim_nb(rows)
 
-    def test_protective_stop_fill_is_scored_as_the_exit(self) -> None:
-        """A fired stop is a REAL exit fill and must be scored (2026-09-01).
+    def test_mim_nb_market_leg_realfill_ts_equals_place_ts(self) -> None:
+        """§A8.2 cycle 2: a market leg's `RealFill.ts_ns` is its PLACE ts (==
+        its intent `submit_ts_ns`), not the ~3 s poll-late FILL-row ts."""
+        trade = reconstruct_mim_nb(standard_mim_lifecycle())[0]
+        entry_intent, exit_intent = trade.intents
+        entry_fill, exit_fill = trade.real_fills
+        assert entry_fill.ts_ns == _parse_ts_ns(
+            T0, field_name="t", row_repr=""
+        )  # the PLACE ts, not T1 (the FILL row)
+        assert exit_fill.ts_ns == _parse_ts_ns(T3, field_name="t", row_repr="")
+        assert entry_fill.ts_ns == entry_intent.submit_ts_ns
+        assert exit_fill.ts_ns == exit_intent.submit_ts_ns
 
-        The original code raised here, on the spec's assumption that the stop
-        "never fills in the real ledger". `data/mim_nb/orders.csv` falsifies
-        that: 2026-07-29 and 2026-08-28 both carry an otype-4 FILL with a
-        `pnl=` detail. Discarding those would silently drop real stop-out
-        exits from Part A's sample.
-        """
+    def test_stop_out_exit_scored_from_supplied_ts(self) -> None:
+        """A fired otype-4 stop-out FILL while ACTIVE is the exit leg, timed
+        from the caller-supplied `stop_out_exit_ts` (the broker's execution
+        instant); price / size still come from the FILL row."""
         rows = [
             mrow(T0, "PLACE", "E1", "2", side="0"),
             mrow(T0, "PLACE", "S1", "4", side="1", price="19990.00"),
             mrow(T1, "FILL", "E1", "2", side="0", price=ENTRY_PX),
-            mrow(T3, "FILL", "S1", "4", side="1", price="19990.00"),
+            mrow(T4, "FILL", "S1", "4", side="1", price="19990.00"),
         ]
-        trades = reconstruct_mim_nb(rows)
+        broker_ts = _parse_ts_ns(T3, field_name="t", row_repr="")
+        dropped: list[str] = []
+        trades = reconstruct_mim_nb(
+            rows, stop_out_exit_ts={"S1": broker_ts}, dropped_stop_out_exits=dropped
+        )
+        assert dropped == []
         assert len(trades) == 1
+        assert len(trades[0].intents) == 2
+        exit_intent = trades[0].intents[-1]
         exit_fill = trades[0].real_fills[-1]
         assert exit_fill.order_id == "S1"
         assert exit_fill.leg is Leg.EXIT
-        assert exit_fill.price_dbn == 19990_000_000_000
+        assert exit_fill.side is Side.SELL
+        assert exit_fill.price_dbn == 19990_000_000_000  # from the FILL row
+        assert exit_fill.ts_ns == broker_ts  # NOT T4 (the FILL-row ts)
+        assert exit_intent.submit_ts_ns == broker_ts
+
+    def test_stop_out_exit_dropped_when_no_ts(self) -> None:
+        """A fired otype-4 stop-out FILL with no entry in `stop_out_exit_ts`:
+        the exit leg is dropped (can't be timed), the entry leg is kept, and the
+        drop reason is collected."""
+        rows = [
+            mrow(T0, "PLACE", "E1", "2", side="0"),
+            mrow(T0, "PLACE", "S1", "4", side="1", price="19990.00"),
+            mrow(T1, "FILL", "E1", "2", side="0", price=ENTRY_PX),
+            mrow(T4, "FILL", "S1", "4", side="1", price="19990.00"),
+        ]
+        dropped: list[str] = []
+        trades = reconstruct_mim_nb(
+            rows, stop_out_exit_ts={}, dropped_stop_out_exits=dropped
+        )
+        assert len(trades) == 1
+        assert len(trades[0].intents) == 1
+        assert len(trades[0].real_fills) == 1
+        assert trades[0].real_fills[0].leg is Leg.ENTRY
+        assert len(dropped) == 1
+        assert "S1" in dropped[0] and "dropped, not graded" in dropped[0]
+
+    def test_otype4_fill_in_wrong_state_raises(self) -> None:
+        """A placed otype-4 stop that FILLs outside ACTIVE (here: before its
+        entry filled) is fail-closed -- not seen in the real sample."""
+        rows = [
+            mrow(T0, "PLACE", "E1", "2", side="0"),
+            mrow(T0, "PLACE", "S1", "4", side="1", price="19990.00"),
+            mrow(T1, "FILL", "S1", "4", side="1", price="19990.00"),
+        ]
+        with pytest.raises(PartAError, match="otype-4 protective-stop FILL"):
+            reconstruct_mim_nb(rows, stop_out_exit_ts={"S1": 1})
 
     def test_unattributable_stop_fill_is_skipped_not_raised(self) -> None:
         """An otype-4 FILL with no live position (the real 2026-07-29

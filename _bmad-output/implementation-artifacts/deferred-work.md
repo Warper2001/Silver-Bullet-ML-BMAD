@@ -714,3 +714,31 @@ that spans a real move (an RTH open or a data release), not a quiet drift.
   is non-empty. Unreachable in practice — a Part A sample of only dropped stop-out legs
   cannot happen (N would fail `PART_A_MIN_N`). Cosmetic; gate the sentence on `source_of`.
   evidence: review round 2, inline (2026-09-03).
+
+## Deferred: §A8.2 cycle-2 stop-out edge cases (review round 2, 2026-09-03)
+
+- source_spec: `spec-ticksim-mimnb-place-timing.md`
+  Future-robustness on otype-4 stop-out shapes ABSENT from the real parity sample. The
+  cycle-2 gate ran clean against the real data (36 legs, 0 missed, one fired stop-out, timed
+  from ProjectX). Not blocking; fix opportunistically.
+  * A duplicate/stray otype-4 FILL for a *placed* stop id while state is FLAT/EXIT_PENDING
+    (post-trade) now `raise`s `PartAError`, aborting all of Part A -- pre-diff it was
+    `abandoned += 1; continue`. The frozen I/O matrix says "raise" for a non-ACTIVE otype-4
+    FILL; the edge-case reviewer argues the tolerant skip is safer for a *duplicate* of an
+    already-consumed stop. Touches the frozen block -- amend if a real ledger ever hits it.
+  * A partial stop fill (otype-4 FILL `size` != entry `size`) is graded as a clean 2-leg
+    trade. Should raise or drop-with-reason. Not in the sample.
+  * `_stop_out_exit_ts` last-wins on two ProjectX fills sharing one `orderId` (partial
+    stop-out). Consider `min()` or a conflict raise.
+  * An orphan otype-4 FILL (no PLACE anywhere) that lands while ACTIVE *and* whose id is in
+    `stop_out_exit_ts` would be greedily paired as the exit. Cannot occur on the real data
+    (`111` is not in ProjectX). Move the "was it placed?" check ahead of the ACTIVE block.
+  * `_PendingLeg.fill_ts_ns` is now write-only for market legs (read only by
+    `_require_filled`'s None-check) -- replace with an explicit `filled: bool`.
+  * `stop_out_timed_legs` is re-derived in the CLI by re-checking `order_id in stop_place_ids`
+    rather than reported by `reconstruct_mim_nb`. A symmetric `timed_stop_out_exits` out-param
+    (mirroring `dropped_stop_out_exits`) would make the provenance line authoritative.
+  * `tools/ticksim_part_a_coverage_probe.py` imports private helpers and hardcodes main-repo
+    paths in its usage string; it is a throwaway verification tool, not a committed gate
+    artifact.
+  evidence: review round 2, all three reviewer lenses (2026-09-03).

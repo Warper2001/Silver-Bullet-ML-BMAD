@@ -728,13 +728,25 @@ def reconstruct_mim_nb(
                         if stop_out_exit_ts is None
                         else stop_out_exit_ts.get(r.order_id)
                     )
-                    if supplied_ts is None:
+                    # A supplied ts at or before the entry's own PLACE ts is a
+                    # bad broker record (clock skew / a mis-matched fill). Treat
+                    # it as "no usable ts" rather than let `_build_mim_trade`'s
+                    # causal check raise and abort the whole reconstruction
+                    # (review round 2 -- one bad value must not cost the other
+                    # 30+ scoreable legs).
+                    ts_unusable = supplied_ts is None or supplied_ts <= entry.ts_ns
+                    if ts_unusable:
+                        why = (
+                            "no stop_out_exit_ts entry"
+                            if supplied_ts is None
+                            else f"supplied ts {supplied_ts} <= entry PLACE ts "
+                            f"{entry.ts_ns}"
+                        )
                         reason = (
                             f"mim-nb stop-out exit {r.order_id!r} (trade "
-                            f"mimnb-{entry.order_id}) dropped, not graded: no "
-                            f"stop_out_exit_ts entry -- orders.csv has no submit "
-                            f"anchor near the trigger and the FILL-row ts "
-                            f"({r.ts_ns}) is ~3 s poll-late"
+                            f"mimnb-{entry.order_id}) dropped, not graded: {why} "
+                            f"-- orders.csv has no submit anchor near the trigger "
+                            f"and the FILL-row ts ({r.ts_ns}) is ~3 s poll-late"
                         )
                         logger.warning("%s", reason)
                         if dropped_stop_out_exits is not None:
@@ -743,6 +755,7 @@ def reconstruct_mim_nb(
                         entry = exit_ = None
                         state = "FLAT"
                         continue
+                    assert supplied_ts is not None  # narrowed by `ts_unusable`
                     stop_px = _px_to_dbn(
                         r.price_raw, field_name="price", row_repr=r.row_repr
                     )
@@ -772,8 +785,14 @@ def reconstruct_mim_nb(
                         f"{state} (no live position) in mim-nb row {r.row_repr}"
                     )
                 # An otype-4 FILL whose order_id was never placed anywhere -- the
-                # real 2026-07-29 `order_id='111'` row. Unattributable: reported
-                # and skipped rather than guessed at.
+                # real 2026-07-29 `order_id='111'` row. It is not a market fill:
+                # its price is 29748.25 on a day MNQ traded ~27,700 (trades.csv /
+                # trades.db / mim_nb_live open_d=27914.75) -- a ~2,000-pt gap that
+                # cannot be a real execution -- with a synthetic 3-digit id (real
+                # ids are 10 digits) and a round pnl ~= the cat-stop cost. A
+                # bookkeeping row from a buffer-blocked session; the real 07-29
+                # trade is reconstructed as mimnb-3337022957. Unattributable:
+                # reported and skipped rather than guessed at.
                 abandoned += 1
                 logger.warning(
                     "mim-nb: unattributable stop FILL on %s (state=%s, no PLACE "

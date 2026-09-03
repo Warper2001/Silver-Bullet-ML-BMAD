@@ -1077,12 +1077,17 @@ def _stop_out_exit_ts(fills: Sequence[dict[str, object]]) -> dict[str, int]:
     ``orders.csv`` logs only the ~3 s poll-late FILL row. Handed to
     ``reconstruct_mim_nb`` as a plain ``Mapping[str, int]`` (spec Always: the
     reconstruction is a pure function of its inputs, no ``projectx_fills.json``
-    coupling). A fill with no ``orderId`` / no ``creationTimestamp`` is skipped;
-    an unparseable ``creationTimestamp`` raises (fail-closed).
+    coupling). A ``voided`` fill, or one with no ``orderId`` / no
+    ``creationTimestamp``, is skipped (a voided fill must not time a leg, matching
+    ``part_a._parse_projectx_fill``); an unparseable ``creationTimestamp`` raises
+    (fail-closed).
     """
     out: dict[str, int] = {}
     for fill in fills:
-        order_id = str(fill.get("orderId") or "").strip()
+        if fill.get("voided"):
+            continue
+        order_id = str(fill.get("orderId") if fill.get("orderId") is not None else "")
+        order_id = order_id.strip()
         raw = fill.get("creationTimestamp")
         if not order_id or raw is None or not str(raw).strip():
             continue

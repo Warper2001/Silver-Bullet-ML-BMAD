@@ -654,6 +654,67 @@ def test_stop_out_exit_timed_from_broker_record_reaches_the_stub(
     assert "| trader-yank |" not in text  # every ProjectX fill was a mim-nb order
 
 
+def test_stop_out_exit_dropped_when_no_broker_ts_reaches_the_stub(
+    tmp_path: Path,
+    patched_source,
+    low_floors: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The DROP branch (sibling of the timed branch above): a fired otype-4 stop
+    whose orderId is NOT in the ProjectX export. The stub must disclose the
+    dropped exit leg -- a sealed artifact silently omitting an un-graded real
+    fill is the "restrict-to-favorable-subset without disclosure" failure the
+    design is written to prevent (review round 2)."""
+    patched_source(clean_events())
+    dbn = _dbn_file(tmp_path)
+    windows = _windows_json(tmp_path, dbn)
+    out = tmp_path / "amendment.md"
+
+    orders = tmp_path / "orders.csv"
+    orders.write_text(
+        "ts_utc,event,order_id,otype,side,size,price\n"
+        f"{ENTRY_ISO},PLACE,e1,2,0,1,{ASK_PX / 1e9:.2f}\n"
+        f"{ENTRY_ISO},PLACE,s1,4,1,1,{BID_PX / 1e9:.2f}\n"
+        f"{_iso_at(3)},FILL,e1,2,0,1,{ASK_PX / 1e9:.2f}\n"
+        f"{_iso_at(1800)},FILL,s1,4,1,1,{BID_PX / 1e9:.2f}\n"
+    )
+    # ProjectX has the entry but NOT the stop-out order id -> no ts for s1.
+    projectx = _projectx_json(
+        tmp_path,
+        fills=[
+            _px_fill(order_id="e1", at_seconds=0, side=0, price_dbn=ASK_PX, pnl=None)
+        ],
+    )
+
+    rc = cli.main(_argv(windows, out, projectx, orders_csv=orders))
+    captured = capsys.readouterr()
+    assert rc in (0, 1, 3), captured
+    text = out.read_text()
+    assert "Dropped, not graded" in text
+    assert "s1" in text and "mimnb-e1" in text  # the trade + dropped exit named
+    assert "mimnb-e1#ENTRY" in text  # entry leg kept and still graded
+
+
+def test_yank_only_run_omits_the_mim_nb_timing_sentence(
+    tmp_path: Path,
+    patched_source,
+    low_floors: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Matrix row 6: a yank-only Part A sample must NOT carry the "mim-nb market
+    leg timed by its PLACE ts" sentence in the sealed stub (review round 2)."""
+    patched_source(clean_events())
+    dbn = _dbn_file(tmp_path)
+    windows = _windows_json(tmp_path, dbn)
+    out = tmp_path / "amendment.md"
+    # No orders.csv -> only yank legs from ProjectX.
+    rc = cli.main(_argv(windows, out, _projectx_json(tmp_path)))
+    assert rc in (0, 1, 3), capsys.readouterr()
+    text = out.read_text()
+    assert "timed by its PLACE ts" not in text
+    assert "| trader-yank |" in text
+
+
 def test_both_sources_absent_fails_on_the_n_floor(
     tmp_path: Path,
     patched_source,

@@ -781,3 +781,60 @@ At the measured 0.50 GB/h: **~86 h × 0.5 GB/h × $1.80 = ~$77** for the 28 wind
 ## A9.7 Next
 
 Build the §2 simulator **via the BMAD method** (`bmad-architecture` → `bmad-build` → `bmad-review`; project standing rule 2026-08-29). Then pull the remaining 25 Tranche-1 windows, run the two-part parity gate (§A8.2), append the result.
+
+# Amendment 10 — Parity gate result, cycle 1 (2026-09-03)
+
+Append-only. Original sealed text unedited. First real run of the §A8.2 gate, on the completed Tranche-1 window map (38 windows: 28 base + 10 top-up, `_bmad-output/parity/gate_windows.json`) against simulator commit `f2769ee`.
+
+**Verdict: FAIL.** Part B PASS. Part A FAIL — N=36 (32 `trader-mim-nb` + 4 `trader-yank`, ≥ the N≥28 floor): MAE 8.0556 ticks (tol 1.0), p90 13.5000 (tol 2.0), signed bias −1.7222 (tol ±0.25). Per-trader: mim-nb MAE 8.6562 / bias −1.9688 (32 legs); yank MAE 3.2500 / bias +0.2500 (4 legs, control). Part B: 1000 synthetic orders, 1188 fill events, zero invariant violations across all six labels.
+
+Root cause, established by two follow-up diagnostics (book-vs-tape agreement check; `mim_nb_live.log` correlation): the reconstructed book and the real CME trade tape **agree** at every fill instant (MAE 14.0 vs 15.4 ticks, both ~14 ticks off the *recorded* mim-nb fill price) — a wrong book would disagree with the tape, so the book is not the defect. The defect is `orders.csv`'s FILL-row timestamp: mim-nb polls `/Trade/search` to detect fills and logs the FILL row when that poll returns, ~3.1s after the true PLACE instant on every market order. ProjectX `creationTimestamp` cross-reference (n=10, 2026-08-13+) confirms the true execution instant is the PLACE timestamp to within ~50ms — book-BBO-vs-fill MAE drops from 12.6 ticks (orders.csv FILL ts) to 1.5 ticks (ProjectX ts) on the same 10 fills, same book.
+
+Full raw gate output (per-window integrity flags, coverage notes, fill-source manifest): `_bmad-output/parity/amendment_10_parity_gate_cycle1.md` (this run's CLI artifact, preserved verbatim).
+
+Cycle 1 of 3 (§4 clock).
+
+# Amendment 11 — Parity gate result, cycle 2 (2026-09-03)
+
+Append-only. Original sealed text unedited. Re-run after the fix implied by Amendment 10's root cause: `reconstruct_mim_nb` now times every mim-nb market leg's `RealFill.ts_ns` by the order's PLACE instant (`intent.submit_ts_ns`), not the FILL-row poll-return; the FILL row still supplies price. The one otype-4 stop-out exit leg (no PLACE-equivalent trigger instant) is timed from its ProjectX `creationTimestamp` when available, via a caller-supplied mapping the CLI threads in from `projectx_fills.json` — kept in the sample rather than dropped, after a review round flagged dropping it as the project's documented restrict-to-favorable-subset pattern; the leg's own error (2 ticks on ProjectX ts vs 59 ticks on the poll-late `orders.csv` ts) argued for keeping and re-timing it, not for excluding it. Simulator commit `b2c12b3`.
+
+**Verdict: FAIL.** Part B PASS (1000 orders, 1188 fills, zero violations, unchanged). Part A FAIL — same N=36: MAE 6.6111 ticks (tol 1.0), p90 12.0000 (tol 2.0), signed bias **+0.2778** (tol ±0.25). Per-trader: mim-nb MAE 7.0312 / bias −0.3438 (32 legs); yank MAE 3.2500 / bias +0.2500 (4 legs, unchanged — yank never touched the fix, it was never mistimed).
+
+The fix worked exactly as diagnosed: signed bias moved from −1.7222 to +0.2778 — the ~3.1s poll-lag was the dominant source of the *directional* error, and removing it collapsed the bias to within 0.03 ticks of tolerance. **Dispersion did not clear**: MAE fell only 18% (8.06 → 6.61), still 6.6× tolerance; p90 still 6× tolerance. The remaining error is not a timing-source bug — it is investigated in Amendment 12.
+
+Full raw gate output: `_bmad-output/parity/amendment_11_parity_gate_cycle2.md` (this run's CLI artifact, preserved verbatim).
+
+Cycle 2 of 3 (§4 clock).
+
+# Amendment 12 — §4 kill criterion invoked: R3 closed (2026-09-04)
+
+Append-only. Original sealed text unedited. Per §4: *"If the simulator cannot pass §3 within a bounded effort — 3 revision cycles or 15 working days from first parity run, whichever first — the R3 path is abandoned and recorded as such. The specific unmodelled effect that causes the miss is written up (magnitude, direction, why it could not be bounded)."* This amendment is that write-up. **R3 is closed after cycle 2 of the allotted 3** — not because the clock ran out, but because no third-cycle hypothesis survived scrutiny; spending a cycle without a specific, falsifiable change to test would not be a revision, it would be running the clock for its own sake.
+
+## A12.1 What was ruled out
+
+**Not the calibration sample.** §3 (original) and §A8.2 (Amendment 8) are explicit that Part A's job is to reproduce *already-known* real fill prices from whichever live broker trades exist — "it develops and tests no strategy" (line 317) — not to be a representative slice of H1's future trading distribution; H1's own acceptance gate (§5.5/§6, N≥200 walk-forward trades) is unrelated to the parity sample and unaffected by this closure (line 716). The seal's own disclosed representativeness gap is about **order duration** (few genuinely sub-minute orders in a sample dominated by bar-triggered strategies, line 183), not about *time-of-day*. mim-nb's fixed clock-tick schedule is in the sample for the only reason the seal requires: it produced real, verifiable broker fills. Five of those fills landing in high-message-rate windows and missing tolerance is the frozen model's blind spot surfacing on contact with real data, not a sampling artifact — there is no cheaper, non-selective way to re-scope the sample that would change this finding.
+
+**Not the book, not the fill logic, not the timestamp source.** The mechanism diagnostic (`_bmad-output/parity/` job artifacts, reproduced below) replayed each of the 36 fills against the purchased MBO tape at 10ms resolution over a ±1s window around its recorded time, searching for *any* latency offset that reconciles the simulator's fill against the real touch. **34 of 36 legs achieve exact 0-tick reconciliation somewhere in that window; 35 of 36 reach ≤1 tick** (median best-achievable error: 0.0 ticks). This rules out a data or book-construction defect — the correct fill is on the tape, reachable, for essentially every leg.
+
+## A12.2 What could not be bounded
+
+The offset that achieves each leg's best reconciliation is **not a constant**: across the 36 legs it ranges from **−40ms to −990ms**, spanning nearly a full second, with no clustering around any single value including the frozen 250ms. A companion offset sweep (0/25/50/100/250/500/1000/2000ms, applied uniformly to all 36 legs) confirms no single fixed offset works: MAE is minimized at **offset = 0ms (MAE 3.667, p90 9.0, bias +0.111)** — still **3.7× the MAE tolerance** with the *theoretical best-case* single latency constant — and MAE degrades monotonically as the assumed latency grows past that point (250ms: MAE 6.611, matching the real gate to 4 decimals; 2000ms: MAE 13.0). No fixed scalar, at any value, clears tolerance.
+
+The legs with the widest own-market touch-range during their reconciliation window are also the legs the fixed model misses worst: `mimnb-3341188866#ENTRY` (touch range 2500 ticks — a 2026 macro-print spike), `mimnb-3280933244#ENTRY` (278 ticks), `mimnb-3359791379#ENTRY` (208 ticks) — versus a median touch-range of 27.5 ticks across the full sample. The residual concentrates exactly where real MNQ execution risk concentrates: scheduled news releases and the cash-close window, i.e. where **real retail latency itself is least likely to be a fixed constant** — congestion, requoting, and matching-engine load all spike together with market velocity.
+
+This is precisely the effect the seal declined to model, in writing, before any of this data was purchased:
+
+> §2.2, item 2: *"**Variable / bursty latency.** Real retail latency spikes under load exactly when it matters. A fixed 250 ms is optimistic in the tail. Disclosed, not corrected."*
+
+The empirical signed-bias-vs-assumed-latency curve (Amendment 11 → this diagnostic) matches that prediction's shape: bias is small and unstable near the true latency, then grows increasingly negative and saturates as the assumed constant is pushed past it — exactly the pattern a right-tailed, load-dependent latency distribution produces against a fixed point estimate. **Magnitude:** MAE 6.61 ticks at the frozen 250ms primary, vs. 1.0 tolerance (6.6×); best case across any single constant, 3.67 ticks (3.7×). **Direction:** a fixed latency model is systematically too fast in the tail — it assigns queue position and touches the book before real bursty conditions would actually let the order arrive, which is optimistic for the trader exactly when it matters most. **Why it could not be bounded within this seal:** the fix is not a code defect but a modeling choice made and disclosed *before* purchase (§2.1 freezes a single fixed-latency primary by design, for auditability and to avoid a per-event tuning knob); correcting it requires either a conditional/variable latency model or a load-dependent latency distribution, either of which is a new primary model requiring its own pre-registration — not a revision cycle inside this one.
+
+## A12.3 Filed forward, not smuggled in as a save
+
+One reframing idea surfaced in review and is recorded here as a **future, separately pre-registered** direction — explicitly not invoked to rescue cycle 2: split calibration into two market-data-defined regimes (e.g. a pre-declared high-message-rate / high-touch-range flag, computed only from book activity, never from fill error) and report each regime's parity separately, mirroring how degraded trading days are already recorded rather than dropped elsewhere in this project. Any such redefinition must be sealed *before* the next purchase and evaluated on new data — applying it retroactively to the current 36-fill sample would be exactly the restrict-to-favorable-subset pattern this project has already documented and rejected three times.
+
+## A12.4 Disposition
+
+- **R3 (queue-aware offline tick fill simulation for MNQ) is closed.** No tick-resolution strategy study (H1) proceeds on this simulator.
+- Spend to date: **$58.83** of the $125 Databento credit (Tranche-1 windows + the A9 test download). No further purchase is authorized under this seal.
+- Simulator code (`src/ticksim/`), both gate cycles' raw output, and both diagnostics are retained as the publishable record §4 calls for — this *is* the "real and publishable outcome" the seal anticipated: a documented, mechanism-level finding that retail-accessible offline tick simulation, at a fixed-latency primary model, cannot be made faithful enough to trust for MNQ scalping during exactly the windows scalping edges would need to survive.
+- Branch `feat/ticksim-fill-simulator` (and `prereg/ticksim-parity-gate`) stop here; neither merges to `main`.

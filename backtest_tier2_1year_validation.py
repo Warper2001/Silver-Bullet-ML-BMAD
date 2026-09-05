@@ -305,6 +305,14 @@ async def run_backtest(
     # Suppress state persistence writes during replay
     tier2_mod.StatePersistence.save_state = staticmethod(lambda *a, **kw: None)
 
+    # Suppress TRADE-LOG persistence too. TradeLogger.append_trade() writes a
+    # trades.db row (CWD-relative "data/trades.db") AND appends to a
+    # __file__-relative logs/tier2_trade_log.csv that resolves to the main
+    # checkout no matter where the run was launched — so a replay's synthetic
+    # closes were landing on real paths (incident 2026-09-05). Nothing reads
+    # either back mid-run; results come from the returned in-memory list.
+    trader._trade_logger = tier2_mod.TradeLogger(persist=False)
+
     last_h1_ts = None
 
     for bar in bars:

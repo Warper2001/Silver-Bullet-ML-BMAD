@@ -48,4 +48,25 @@ Digging into "what did this bug affect" surfaced a **second, worse-pathed write*
 
 ### Net
 
-The bug is real and the second (CSV) vector makes it worse-pathed than first documented, but its effect on research is a hygiene problem in a gitignored, already-corrupted transient log — not a corruption of any analysis input or any Option's verdict. The upstream fix (injectable `db_path` / a `--no-persist` backtest mode covering *both* the sqlite and CSV writes) is still needed before parallel/CI-style Tier2 backtesting is safe.
+The bug is real and the second (CSV) vector makes it worse-pathed than first documented, but its effect on research is a hygiene problem in a gitignored, already-corrupted transient log — not a corruption of any analysis input or any Option's verdict.
+
+---
+
+## Fix shipped (2026-09-05)
+
+`TradeLogger` gains `__init__(self, persist: bool = True)`; `append_trade()` returns immediately when `persist` is False, gating **both** writes at one point. Default `True` means the **live path is byte-identical** — only callers that opt out change behaviour. `backtest_tier2_1year_validation.run_backtest()` now sets `trader._trade_logger = tier2_mod.TradeLogger(persist=False)`, alongside the state-persistence suppression that was already there (the harness had the intent; it just missed these two writes).
+
+**Verified by direct file evidence, not inference.** A 30+ minute replay (far past the point where trades close — the comparable unpatched run closed 9) left both real targets untouched:
+
+| target | before | after 30+ min replay |
+|---|---|---|
+| `data/trades.db` (CWD-relative) | absent | **still absent** |
+| main `logs/tier2_trade_log.csv` | 7,779 lines, mtime 07:00:50 | **7,779 lines, mtime 07:00:50** |
+
+Without the fix, the first trade close creates/appends both.
+
+**No performance regression — confirmed by control.** The patched replay ran unexpectedly slowly, so the same tiny range was re-run against the **unpatched main-checkout code**: it was equally slow. The slowness is environmental/inherent to this engine on this box, present with and without the change (the patch only *removes* work). 
+
+**Unexplained and recorded as such:** this engine's wall-clock runtime here is not reproducible — an earlier measurement of 133.7s for a 2-month replay could not be reproduced later against byte-identical unpatched code, where even a 2-week replay exceeded 110s. No cause identified; not theorised here. This is almost certainly the same unpredictability that made Option 1b unestimable and led to abandoning it, and it should be profiled before anyone sizes a Tier2 backtest job again.
+
+**Still open:** two other copies of this `TradeLogger` class exist (`src/research/yank_streaming_working.py`, `src/research/btc_combine_streaming.py`) with the same unguarded writes. Only the one on the backtest path (`tier2_streaming_working.py`) is fixed here.

@@ -1,0 +1,140 @@
+{
+  "seal": "XSMOM-1",
+  "per_root": [
+    {
+      "root": "CL",
+      "point_value": 1000.0,
+      "tick_value": 10.0,
+      "median_price": 63.25,
+      "notional_per_contract": 63250.0,
+      "weekly_sigma_usd": 2558.0,
+      "cost_rt_estimate": 15.0,
+      "cost_pct_of_weekly_sigma": 0.59
+    },
+    {
+      "root": "HE",
+      "point_value": 400.0,
+      "tick_value": 10.0,
+      "median_price": 90.15,
+      "notional_per_contract": 36060.0,
+      "weekly_sigma_usd": 912.0,
+      "cost_rt_estimate": 25.0,
+      "cost_pct_of_weekly_sigma": 2.74
+    },
+    {
+      "root": "HG",
+      "point_value": 25000.0,
+      "tick_value": 12.5,
+      "median_price": 4.8495,
+      "notional_per_contract": 121238.0,
+      "weekly_sigma_usd": 6412.0,
+      "cost_rt_estimate": 17.5,
+      "cost_pct_of_weekly_sigma": 0.27
+    },
+    {
+      "root": "HO",
+      "point_value": 42000.0,
+      "tick_value": 4.2,
+      "median_price": 2.292,
+      "notional_per_contract": 96264.0,
+      "weekly_sigma_usd": 3965.0,
+      "cost_rt_estimate": 11.3,
+      "cost_pct_of_weekly_sigma": 0.28
+    },
+    {
+      "root": "LE",
+      "point_value": 400.0,
+      "tick_value": 10.0,
+      "median_price": 215.925,
+      "notional_per_contract": 86370.0,
+      "weekly_sigma_usd": 1757.0,
+      "cost_rt_estimate": 20.0,
+      "cost_pct_of_weekly_sigma": 1.14
+    },
+    {
+      "root": "NG",
+      "point_value": 10000.0,
+      "tick_value": 10.0,
+      "median_price": 3.582,
+      "notional_per_contract": 35820.0,
+      "weekly_sigma_usd": 2694.0,
+      "cost_rt_estimate": 15.0,
+      "cost_pct_of_weekly_sigma": 0.56
+    },
+    {
+      "root": "RB",
+      "point_value": 42000.0,
+      "tick_value": 4.2,
+      "median_price": 2.0548,
+      "notional_per_contract": 86302.0,
+      "weekly_sigma_usd": 2873.0,
+      "cost_rt_estimate": 11.3,
+      "cost_pct_of_weekly_sigma": 0.39
+    },
+    {
+      "root": "ZC",
+      "point_value": 50.0,
+      "tick_value": 12.5,
+      "median_price": 443.25,
+      "notional_per_contract": 22162.0,
+      "weekly_sigma_usd": 508.0,
+      "cost_rt_estimate": 17.5,
+      "cost_pct_of_weekly_sigma": 3.45
+    },
+    {
+      "root": "ZL",
+      "point_value": 600.0,
+      "tick_value": 6.0,
+      "median_price": 49.82,
+      "notional_per_contract": 29892.0,
+      "weekly_sigma_usd": 1081.0,
+      "cost_rt_estimate": 14.0,
+      "cost_pct_of_weekly_sigma": 1.3
+    },
+    {
+      "root": "ZM",
+      "point_value": 100.0,
+      "tick_value": 10.0,
+      "median_price": 296.5,
+      "notional_per_contract": 29650.0,
+      "weekly_sigma_usd": 718.0,
+      "cost_rt_estimate": 20.0,
+      "cost_pct_of_weekly_sigma": 2.78
+    },
+    {
+      "root": "ZS",
+      "point_value": 50.0,
+      "tick_value": 12.5,
+      "median_price": 1045.0,
+      "notional_per_contract": 52250.0,
+      "weekly_sigma_usd": 1163.0,
+      "cost_rt_estimate": 17.5,
+      "cost_pct_of_weekly_sigma": 1.51
+    },
+    {
+      "root": "ZW",
+      "point_value": 50.0,
+      "tick_value": 12.5,
+      "median_price": 536.75,
+      "notional_per_contract": 26838.0,
+      "weekly_sigma_usd": 748.0,
+      "cost_rt_estimate": 23.75,
+      "cost_pct_of_weekly_sigma": 3.17
+    }
+  ],
+  "binding_root": "HG",
+  "min_account_top3_usd": 1387128.0,
+  "min_account_rank_weighted_usd": 5548511.0,
+  "vol_target": 0.1,
+  "cost_drag_sharpe_k8": 0.084,
+  "cost_drag_pct_of_theta_plaus": 16.8,
+  "would_exclude_at_2p5pct": [
+    "HE",
+    "ZM",
+    "ZW",
+    "ZC"
+  ],
+  "exclusion_applied": false,
+  "execution_label": "theoretical",
+  "note": "All roots full-size; no micros. Pre-outcome: no signal or returns alignment used."
+}

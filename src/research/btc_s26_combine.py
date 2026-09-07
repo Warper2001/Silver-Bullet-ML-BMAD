@@ -242,7 +242,27 @@ class S26CombineTrader:
             if n_bars >= MIN_PROBE_BARS:
                 logger.info("roll probe: %s printed %d bars in %dh", sym, n_bars, PROBE_WINDOW_H)
                 if sym == self.symbol:
-                    logger.info("roll check (%s): %s is still live", reason, sym)
+                    # Confirmed-live but still frozen: the poll loop's `since` is
+                    # `self.last_ts`, and TradeStation 404s (not 200+empty) a
+                    # firstdate with zero bars strictly after it -- exactly what
+                    # happens once the poll catches up to the most recent bar.
+                    # Every subsequent poll re-asks the identical doomed query
+                    # forever, since a non-200 response never reaches the code
+                    # that would advance last_ts (measured 2026-08-21:
+                    # firstdate=<last bar's own timestamp> -> 404 "No data
+                    # available"; firstdate a few minutes earlier -> 200,
+                    # including that same bar). This probe just proved real
+                    # bars exist within PROBE_WINDOW_H hours, so reset the same
+                    # way an actual roll does two lines below -- both last_ts
+                    # AND bars, not last_ts alone: since the dedupe check is
+                    # `not self.last_ts or ts > self.last_ts`, clearing last_ts
+                    # without clearing bars would re-append every bar in the
+                    # next wide (now-10h) poll as "new", duplicating whatever
+                    # self.bars already held.
+                    logger.warning("roll check (%s): %s is still live but frozen at last_ts -- resetting to unstick the poll", reason, sym)
+                    self.bars, self.last_ts = [], None
+                    self.consecutive_empty_polls = 0
+                    self._stale_alert_fired = False
                     return False
                 logger.warning("AUTOROLL: %s → %s (%s)", self.symbol, sym, reason)
                 self.symbol = sym

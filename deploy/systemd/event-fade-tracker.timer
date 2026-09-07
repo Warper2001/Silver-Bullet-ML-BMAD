@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily run of the MNQ event-fade prospective tracker
+Documentation=file:///root/Silver-Bullet-ML-BMAD/_bmad-output/preregistration_event_fade_prospective.md
+
+[Timer]
+# 22:30 UTC -- after the US cash session closes, so any same-day tier-1 event
+# has complete 1-minute bars for the full K+M window before it is scored.
+OnCalendar=*-*-* 22:30:00
+Persistent=true
+Unit=event-fade-tracker.service
+
+[Install]
+WantedBy=timers.target

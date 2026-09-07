@@ -1,0 +1,22 @@
+[Unit]
+# Prospective MNQ econ-event fade/trend tracker.
+# Seal: _bmad-output/preregistration_event_fade_prospective.md (2026-09-02)
+# Observation only -- scores events into a paper ledger, executes nothing.
+#
+# A non-zero exit is DELIBERATE and meaningful: it means the event calendar has
+# no forward FOMC/CPI coverage, so the tracker would otherwise run clean while
+# measuring nothing. Check `systemctl status event-fade-tracker.service`.
+Description=MNQ event-fade prospective tracker (paper, observation only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python tools/event_fade_tracker.py
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/event_fade_tracker.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/event_fade_tracker.log
+
+[Install]
+WantedBy=multi-user.target

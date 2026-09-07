@@ -1,0 +1,15 @@
+[Unit]
+Description=EVFADE-FOMC prospective accrual tracker (research only — reads market data read-only, places no orders)
+Documentation=file:///root/Silver-Bullet-ML-BMAD/_bmad-output/preregistration_evfade_fomc_prospective.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python /root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/evfade_fomc_prospective.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/evfade_fomc_prospective.log
+
+[Install]
+WantedBy=multi-user.target

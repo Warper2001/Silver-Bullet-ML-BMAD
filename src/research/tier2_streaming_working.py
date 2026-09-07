@@ -272,6 +272,16 @@ class TradeLogger:
 
     Single-writer pattern: only this class appends to tier2_trade_log.csv.
     Header written only when file is empty (f.tell() == 0) — avoids TOCTOU race (AC#2).
+
+    ``persist`` (default True — live behaviour unchanged) gates BOTH side-effect
+    writes: the trades.db row and the CSV append. Backtests must construct this
+    with ``persist=False``: a replay closes hundreds of synthetic trades, and
+    both writes land on real paths — trades.db at a CWD-relative "data/trades.db"
+    and the CSV at a ``__file__``-relative logs/ path that resolves to the main
+    checkout regardless of where the run was launched. Backtest results come from
+    the in-memory list ``run_backtest`` returns (nothing reads these back
+    mid-run), so skipping them changes no result. See
+    _bmad-output/incident_option1b_trade_db_writes_20260905.md.
     """
 
     _LOG_PATH = Path(__file__).parent.parent.parent / "logs" / "tier2_trade_log.csv"
@@ -282,7 +292,12 @@ class TradeLogger:
         "vol_regime_pct", "contracts",
     ]
 
+    def __init__(self, persist: bool = True) -> None:
+        self._persist = persist
+
     def append_trade(self, record: TradeRecord) -> None:
+        if not self._persist:
+            return
         import csv as _csv
         # Log to DB
         from src.monitoring.trade_db import TradeDatabase

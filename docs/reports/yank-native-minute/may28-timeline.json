@@ -1,0 +1,463 @@
+{
+  "cases": [
+    {
+      "arms": [
+        "ml050",
+        "no-ml"
+      ],
+      "arrival_ns": 1748458380000000000,
+      "at_limit_volume": 232,
+      "at_or_above_trade_count": 14408,
+      "contracts": 5,
+      "delay_ms": 0,
+      "end_ns": 1748459340000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 16246690,
+        "first_stop_since_arrival": 16246690,
+        "first_through": 15715570,
+        "first_touch": 15715565
+      },
+      "limit_nanos": 21463000000000,
+      "modeled_exit_time": "2025-05-28T19:08:00+00:00",
+      "modeled_fill_time": "2025-05-28T18:57:00+00:00",
+      "signal_time": "2025-05-28T18:52:00+00:00",
+      "stop_nanos": 21511500000000,
+      "strictly_above_volume": 26800,
+      "target_nanos": 21269000000000
+    },
+    {
+      "arms": [
+        "ml050",
+        "no-ml"
+      ],
+      "arrival_ns": 1748458380100000000,
+      "at_limit_volume": 232,
+      "at_or_above_trade_count": 14408,
+      "contracts": 5,
+      "delay_ms": 100,
+      "end_ns": 1748459340000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 16246690,
+        "first_stop_since_arrival": 16246690,
+        "first_through": 15715570,
+        "first_touch": 15715565
+      },
+      "limit_nanos": 21463000000000,
+      "modeled_exit_time": "2025-05-28T19:08:00+00:00",
+      "modeled_fill_time": "2025-05-28T18:57:00+00:00",
+      "signal_time": "2025-05-28T18:52:00+00:00",
+      "stop_nanos": 21511500000000,
+      "strictly_above_volume": 26800,
+      "target_nanos": 21269000000000
+    },
+    {
+      "arms": [
+        "ml050",
+        "no-ml"
+      ],
+      "arrival_ns": 1748458380500000000,
+      "at_limit_volume": 232,
+      "at_or_above_trade_count": 14408,
+      "contracts": 5,
+      "delay_ms": 500,
+      "end_ns": 1748459340000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 16246690,
+        "first_stop_since_arrival": 16246690,
+        "first_through": 15715570,
+        "first_touch": 15715565
+      },
+      "limit_nanos": 21463000000000,
+      "modeled_exit_time": "2025-05-28T19:08:00+00:00",
+      "modeled_fill_time": "2025-05-28T18:57:00+00:00",
+      "signal_time": "2025-05-28T18:52:00+00:00",
+      "stop_nanos": 21511500000000,
+      "strictly_above_volume": 26800,
+      "target_nanos": 21269000000000
+    },
+    {
+      "arms": [
+        "ml050"
+      ],
+      "arrival_ns": 1748462520000000000,
+      "at_limit_volume": 28,
+      "at_or_above_trade_count": 7234,
+      "contracts": 5,
+      "delay_ms": 0,
+      "end_ns": 1748463540000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 19538007,
+        "first_stop_since_arrival": 19538007,
+        "first_through": 19322753,
+        "first_touch": 19322750
+      },
+      "limit_nanos": 21359750000000,
+      "modeled_exit_time": "2025-05-28T20:18:00+00:00",
+      "modeled_fill_time": "2025-05-28T20:02:00+00:00",
+      "signal_time": "2025-05-28T20:01:00+00:00",
+      "stop_nanos": 21397750000000,
+      "strictly_above_volume": 11963,
+      "target_nanos": 21207750000000
+    },
+    {
+      "arms": [
+        "ml050"
+      ],
+      "arrival_ns": 1748462520100000000,
+      "at_limit_volume": 28,
+      "at_or_above_trade_count": 7234,
+      "contracts": 5,
+      "delay_ms": 100,
+      "end_ns": 1748463540000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 19538007,
+        "first_stop_since_arrival": 19538007,
+        "first_through": 19322753,
+        "first_touch": 19322750
+      },
+      "limit_nanos": 21359750000000,
+      "modeled_exit_time": "2025-05-28T20:18:00+00:00",
+      "modeled_fill_time": "2025-05-28T20:02:00+00:00",
+      "signal_time": "2025-05-28T20:01:00+00:00",
+      "stop_nanos": 21397750000000,
+      "strictly_above_volume": 11963,
+      "target_nanos": 21207750000000
+    },
+    {
+      "arms": [
+        "ml050"
+      ],
+      "arrival_ns": 1748462520500000000,
+      "at_limit_volume": 28,
+      "at_or_above_trade_count": 7234,
+      "contracts": 5,
+      "delay_ms": 500,
+      "end_ns": 1748463540000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 19538007,
+        "first_stop_since_arrival": 19538007,
+        "first_through": 19322753,
+        "first_touch": 19322750
+      },
+      "limit_nanos": 21359750000000,
+      "modeled_exit_time": "2025-05-28T20:18:00+00:00",
+      "modeled_fill_time": "2025-05-28T20:02:00+00:00",
+      "signal_time": "2025-05-28T20:01:00+00:00",
+      "stop_nanos": 21397750000000,
+      "strictly_above_volume": 11963,
+      "target_nanos": 21207750000000
+    },
+    {
+      "arms": [
+        "no-ml"
+      ],
+      "arrival_ns": 1748461920000000000,
+      "at_limit_volume": 12,
+      "at_or_above_trade_count": 1982,
+      "contracts": 5,
+      "delay_ms": 0,
+      "end_ns": 1748463720000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 19652120,
+        "first_stop_since_arrival": 19652120,
+        "first_through": 19638105,
+        "first_touch": 19638095
+      },
+      "limit_nanos": 21408000000000,
+      "modeled_exit_time": "2025-05-28T20:21:00+00:00",
+      "modeled_fill_time": "2025-05-28T20:21:00+00:00",
+      "signal_time": "2025-05-28T19:51:00+00:00",
+      "stop_nanos": 21440500000000,
+      "strictly_above_volume": 2947,
+      "target_nanos": 21278000000000
+    },
+    {
+      "arms": [
+        "no-ml"
+      ],
+      "arrival_ns": 1748461920100000000,
+      "at_limit_volume": 12,
+      "at_or_above_trade_count": 1982,
+      "contracts": 5,
+      "delay_ms": 100,
+      "end_ns": 1748463720000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 19652120,
+        "first_stop_since_arrival": 19652120,
+        "first_through": 19638105,
+        "first_touch": 19638095
+      },
+      "limit_nanos": 21408000000000,
+      "modeled_exit_time": "2025-05-28T20:21:00+00:00",
+      "modeled_fill_time": "2025-05-28T20:21:00+00:00",
+      "signal_time": "2025-05-28T19:51:00+00:00",
+      "stop_nanos": 21440500000000,
+      "strictly_above_volume": 2947,
+      "target_nanos": 21278000000000
+    },
+    {
+      "arms": [
+        "no-ml"
+      ],
+      "arrival_ns": 1748461920500000000,
+      "at_limit_volume": 12,
+      "at_or_above_trade_count": 1982,
+      "contracts": 5,
+      "delay_ms": 500,
+      "end_ns": 1748463720000000000,
+      "entry_evidence": "TRADE_THROUGH_SUPPORT",
+      "entry_stop_ordering": "THROUGH_PRECEDES_STOP_IN_CAPTURE_AND_NATIVE_ORDER",
+      "exchange_clock_entry_precedes_stop": true,
+      "hits": {
+        "first_stop_at_or_after_through": 19652120,
+        "first_stop_since_arrival": 19652120,
+        "first_through": 19638105,
+        "first_touch": 19638095
+      },
+      "limit_nanos": 21408000000000,
+      "modeled_exit_time": "2025-05-28T20:21:00+00:00",
+      "modeled_fill_time": "2025-05-28T20:21:00+00:00",
+      "signal_time": "2025-05-28T19:51:00+00:00",
+      "stop_nanos": 21440500000000,
+      "strictly_above_volume": 2947,
+      "target_nanos": 21278000000000
+    }
+  ],
+  "event_endpoints": [
+    {
+      "action": "C",
+      "flags": 128,
+      "price_nanos": 21463250000000,
+      "raw_hex": "0ea001008303810269b36243dfc5431839f50d303e0600008058644d8513000001000000800843418b8b6b43dfc543180b3f0000b649cf05",
+      "record_index": 15715595,
+      "sequence": 97470902,
+      "size": 1,
+      "ts_event_ns": 1748458643048805225,
+      "ts_recv_ns": 1748458643049384843
+    },
+    {
+      "action": "C",
+      "flags": 128,
+      "price_nanos": 21511500000000,
+      "raw_hex": "0ea0010083038102f30549ab79c64318d3b31a303e06000000eb5089901300000100000080084341a3d24dab79c64318c535000069f5e205",
+      "record_index": 16246695,
+      "sequence": 98760041,
+      "size": 1,
+      "ts_event_ns": 1748459306216916467,
+      "ts_recv_ns": 1748459306217231011
+    },
+    {
+      "action": "N",
+      "flags": 128,
+      "price_nanos": 9223372036854775807,
+      "raw_hex": "0ea00100830381028d0b6b066cc943180000000000000000ffffffffffffff7f0000000080084e4eb79f78066cc943187a2f000041e75906",
+      "record_index": 19322814,
+      "sequence": 106555201,
+      "size": 0,
+      "ts_event_ns": 1748462546151213965,
+      "ts_recv_ns": 1748462546152103863
+    },
+    {
+      "action": "C",
+      "flags": 128,
+      "price_nanos": 21397750000000,
+      "raw_hex": "0ea001008303810237d0f29247ca43185ad06b303e06000080a9490d7613000001000000800843412d1df79247ca43188f300000c1c46106",
+      "record_index": 19538016,
+      "sequence": 107070657,
+      "size": 1,
+      "ts_event_ns": 1748463489106759735,
+      "ts_recv_ns": 1748463489107041581
+    },
+    {
+      "action": "C",
+      "flags": 128,
+      "price_nanos": 21408500000000,
+      "raw_hex": "0ea00100830381028bea71de75ca4318ccf56e303e06000000a5098e78130000010000008008434193ab7dde75ca4318ec330000684a6606",
+      "record_index": 19638126,
+      "sequence": 107367016,
+      "size": 1,
+      "ts_event_ns": 1748463687941876363,
+      "ts_recv_ns": 1748463687942646675
+    },
+    {
+      "action": "C",
+      "flags": 128,
+      "price_nanos": 21440750000000,
+      "raw_hex": "0ea0010083038102b12689b178ca4318bf9953303e060000809749108013000001000000800843417b6e93b178ca4318312f000039d46606",
+      "record_index": 19652122,
+      "sequence": 107402297,
+      "size": 1,
+      "ts_event_ns": 1748463700073326257,
+      "ts_recv_ns": 1748463700073999995
+    }
+  ],
+  "native_file": "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst",
+  "native_sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+  "official_decoder_reference_checks": 15,
+  "records_scanned": 22081340,
+  "references": [
+    {
+      "action": "T",
+      "event_end_record": 15715595,
+      "event_start_record": 15715565,
+      "flags": 0,
+      "price_nanos": 21463000000000,
+      "raw_hex": "0ea001008303810269b36243dfc543182f540e303e06000000a67d3e85130000010000000008544298876843dfc5431834370000b049cf05",
+      "record_index": 15715565,
+      "sequence": 97470896,
+      "size": 1,
+      "ts_event_ns": 1748458643048805225,
+      "ts_event_utc": "2025-05-28T18:57:23.048805225Z",
+      "ts_recv_ns": 1748458643049187224,
+      "ts_recv_utc": "2025-05-28T18:57:23.049187224Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 15715595,
+      "event_start_record": 15715565,
+      "flags": 0,
+      "price_nanos": 21463250000000,
+      "raw_hex": "0ea001008303810269b36243dfc54318d6a3ed2f3e0600008058644d851300000100000000085442d5ba6843dfc54318c02d0000b149cf05",
+      "record_index": 15715570,
+      "sequence": 97470897,
+      "size": 1,
+      "ts_event_ns": 1748458643048805225,
+      "ts_event_utc": "2025-05-28T18:57:23.048805225Z",
+      "ts_recv_ns": 1748458643049200341,
+      "ts_recv_utc": "2025-05-28T18:57:23.049200341Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 16246695,
+      "event_start_record": 16246690,
+      "flags": 0,
+      "price_nanos": 21511500000000,
+      "raw_hex": "0ea0010083038102f30549ab79c6431818b91a303e06000000eb5089901300000100000000085442136f4dab79c643188135000068f5e205",
+      "record_index": 16246690,
+      "sequence": 98760040,
+      "size": 1,
+      "ts_event_ns": 1748459306216916467,
+      "ts_event_utc": "2025-05-28T19:08:26.216916467Z",
+      "ts_recv_ns": 1748459306217205523,
+      "ts_recv_utc": "2025-05-28T19:08:26.217205523Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 19322814,
+      "event_start_record": 19322748,
+      "flags": 0,
+      "price_nanos": 21359750000000,
+      "raw_hex": "0ea00100830381028d0b6b066cc943183df766303e06000080ad4f346d130000020000000008544234a273066cc943185d3700003be75906",
+      "record_index": 19322750,
+      "sequence": 106555195,
+      "size": 2,
+      "ts_event_ns": 1748462546151213965,
+      "ts_event_utc": "2025-05-28T20:02:26.151213965Z",
+      "ts_recv_ns": 1748462546151776820,
+      "ts_recv_utc": "2025-05-28T20:02:26.151776820Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 19322814,
+      "event_start_record": 19322748,
+      "flags": 0,
+      "price_nanos": 21360000000000,
+      "raw_hex": "0ea00100830381028d0b6b066cc9431807c166303e060000006036436d130000090000000008544285d673066cc94318743000003ce75906",
+      "record_index": 19322753,
+      "sequence": 106555196,
+      "size": 9,
+      "ts_event_ns": 1748462546151213965,
+      "ts_event_utc": "2025-05-28T20:02:26.151213965Z",
+      "ts_recv_ns": 1748462546151790213,
+      "ts_recv_utc": "2025-05-28T20:02:26.151790213Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 19538016,
+      "event_start_record": 19538007,
+      "flags": 0,
+      "price_nanos": 21397750000000,
+      "raw_hex": "0ea001008303810237d0f29247ca4318d4d96b303e06000080a9490d761300000200000000085442b6e8f69247ca43188c360000c0c46106",
+      "record_index": 19538007,
+      "sequence": 107070656,
+      "size": 2,
+      "ts_event_ns": 1748463489106759735,
+      "ts_event_utc": "2025-05-28T20:18:09.106759735Z",
+      "ts_recv_ns": 1748463489107028150,
+      "ts_recv_utc": "2025-05-28T20:18:09.107028150Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 19638126,
+      "event_start_record": 19638095,
+      "flags": 0,
+      "price_nanos": 21408000000000,
+      "raw_hex": "0ea00100830381028bea71de75ca4318fcf76e303e06000000403c707813000008000000000854422bb57cde75ca431870360000654a6606",
+      "record_index": 19638095,
+      "sequence": 107367013,
+      "size": 8,
+      "ts_event_ns": 1748463687941876363,
+      "ts_event_utc": "2025-05-28T20:21:27.941876363Z",
+      "ts_recv_ns": 1748463687942583595,
+      "ts_recv_utc": "2025-05-28T20:21:27.942583595Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 19638126,
+      "event_start_record": 19638095,
+      "flags": 0,
+      "price_nanos": 21408250000000,
+      "raw_hex": "0ea00100830381028bea71de75ca431814d36e303e06000080f2227f7813000001000000000854426af97cde75ca4318b5300000664a6606",
+      "record_index": 19638105,
+      "sequence": 107367014,
+      "size": 1,
+      "ts_event_ns": 1748463687941876363,
+      "ts_event_utc": "2025-05-28T20:21:27.941876363Z",
+      "ts_recv_ns": 1748463687942601066,
+      "ts_recv_utc": "2025-05-28T20:21:27.942601066Z"
+    },
+    {
+      "action": "T",
+      "event_end_record": 19652122,
+      "event_start_record": 19652120,
+      "flags": 0,
+      "price_nanos": 21440750000000,
+      "raw_hex": "0ea0010083038102b12689b178ca4318cc506f303e06000080974910801300000100000000085442183593b178ca4318393c000038d46606",
+      "record_index": 19652120,
+      "sequence": 107402296,
+      "size": 1,
+      "ts_event_ns": 1748463700073326257,
+      "ts_event_utc": "2025-05-28T20:21:40.073326257Z",
+      "ts_recv_ns": 1748463700073985304,
+      "ts_recv_utc": "2025-05-28T20:21:40.073985304Z"
+    }
+  ],
+  "replay_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+  "research_status": "HOLD_VALIDATION",
+  "scope": "Trade-print timeline from signal completion through modeled exit minute; no book/queue reconstruction or revised PNL",
+  "script_sha256": "63a4cb1572c22f6efccbcba29f350e1d580cd9fbca36b51aab93b0cc7eb14616"
+}

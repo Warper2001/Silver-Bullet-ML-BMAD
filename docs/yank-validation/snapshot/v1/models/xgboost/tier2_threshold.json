@@ -1,0 +1,14 @@
+{
+  "threshold": 0.5,
+  "validated_date": "2026-05-16",
+  "val_tail_months": [
+    "2025-11",
+    "2025-12"
+  ],
+  "gate_criteria": {
+    "val_pf_min": 1.2,
+    "threshold_min": 0.45,
+    "min_filter_ratio": 0.25
+  },
+  "note": "Written by validate_tier2_promotion.py \u2014 all gate criteria passed"
+}

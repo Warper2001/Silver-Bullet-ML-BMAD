@@ -1,0 +1,95 @@
+{
+  "baseline_commit": "ceac044a5ec4e34435e99534ccbcb9d629185b23",
+  "decision": "HOLD_VALIDATION",
+  "files": {
+    "models/xgboost/lr_regime_config.json": {
+      "bytes": 399,
+      "sha256": "6410625050fe90846fcd2543b426b7bf20d118d36a487a030bafb3eca25a5a24",
+      "source": "/root/Silver-Bullet-ML-BMAD/models/xgboost/lr_regime_config.json"
+    },
+    "models/xgboost/tier2_meta_labeling_model.pkl": {
+      "bytes": 2449,
+      "sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2",
+      "source": "/root/Silver-Bullet-ML-BMAD/models/xgboost/tier2_meta_labeling_model.pkl"
+    },
+    "models/xgboost/tier2_threshold.json": {
+      "bytes": 303,
+      "sha256": "f15753530508e2fe73f8f22dfdf7f87bd37647e190caa98e1624e58a5ef04e7e",
+      "source": "/root/Silver-Bullet-ML-BMAD/models/xgboost/tier2_threshold.json"
+    },
+    "src/data/models.py": {
+      "bytes": 16997,
+      "sha256": "3126779a590ae05f5f773441cce08c1c9d0b94caf842be7d7970232741abbaf8",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/data/models.py"
+    },
+    "src/ml/regime_detection/lr_channel_detector.py": {
+      "bytes": 4015,
+      "sha256": "4e1cfd702d658481c42e0cdf1c799939900afaa09fd3b13a1e20e2933f4b06f6",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/ml/regime_detection/lr_channel_detector.py"
+    },
+    "src/research/config_loader.py": {
+      "bytes": 1592,
+      "sha256": "b290e3f10337573f0982dde22f833d6256e903a291c488a1dc24cfbc1f6f1a92",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/config_loader.py"
+    },
+    "src/research/lr_channel.py": {
+      "bytes": 6788,
+      "sha256": "8dd63fc3ee087ab86ddc259b0b944c6292500da92a9fa3ffda2fc17f9f2710ef",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/lr_channel.py"
+    },
+    "src/research/projectx_bars.py": {
+      "bytes": 5837,
+      "sha256": "0be46177fc2775cdcf4e9e3b5c4dbd41a2f0e8601af6b9d5e1f5bb8d0e52f678",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/projectx_bars.py"
+    },
+    "src/research/projectx_client.py": {
+      "bytes": 16866,
+      "sha256": "401e4515befe4148e1c40bb06486e886a7f7a0965d25b4125c5b8192704ff90d",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/projectx_client.py"
+    },
+    "src/research/shadow_parity.py": {
+      "bytes": 4382,
+      "sha256": "5bf94bd3174a3fc491bdc16d513e6ff0a2e73649c7cc1cc6c536ac50c7ec931f",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/shadow_parity.py"
+    },
+    "src/research/strategy_core.py": {
+      "bytes": 37687,
+      "sha256": "96e087d8154a99b31da9a7f0239da9dbf49129126cb4553da5d8543870931201",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/strategy_core.py"
+    },
+    "src/research/ts_sim_mirror.py": {
+      "bytes": 24311,
+      "sha256": "a0d5f6b109fc1bdf562d78e9b5f7e38582b1b791f03b3f891546bde96df3f7ad",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/ts_sim_mirror.py"
+    },
+    "src/research/yank_streaming_working.py": {
+      "bytes": 111823,
+      "sha256": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67",
+      "source": "/root/Silver-Bullet-ML-BMAD/src/research/yank_streaming_working.py"
+    },
+    "strategy_config.yaml": {
+      "bytes": 1214,
+      "sha256": "293c9d23c69f667564954e30bbb6360ca8af658288978ffa62de1b3c21391abb",
+      "source": "/root/Silver-Bullet-ML-BMAD/strategy_config.yaml"
+    },
+    "trader-yank.service": {
+      "bytes": 2416,
+      "sha256": "1acfb8632a6cd612456ce602b55402a899f194b84dea5e5a790157a8b7c6fa37",
+      "source": "/etc/systemd/system/trader-yank.service"
+    }
+  },
+  "main_head": "27e4e1e0c0415bb4514822a6b17193369bff9d85",
+  "main_status": " M src/research/yank_streaming_working.py\n?? .agents/skills/bmad-advanced-elicitation/assets/\n?? .agents/skills/bmad-advanced-elicitation/customize.toml\n?? .agents/skills/bmad-advanced-elicitation/scripts/\n?? .agents/skills/bmad-build-auto/\n?? .agents/skills/bmad-build/\n?? .agents/skills/bmad-code-review/references/\n?? .agents/skills/bmad-code-review/review-prompts/\n?? .agents/skills/bmad-deep-recon/\n?? .agents/skills/bmad-party-mode/scripts/tests/test_resolve_party.py\n?? .agents/skills/bmad-project-context/\n?? .agents/skills/bmad-retrospective/references/\n?? .agents/skills/bmad-retrospective/scripts/\n?? .agents/skills/bmad-review/\n?? .agents/skills/bmad-spec/assets/stories-schema.md\n?? .agents/skills/bmad-sprint-planning/references/\n?? .agents/skills/bmad-sprint-planning/scripts/\n?? .agents/skills/bmad-walkthrough/\n?? .venv-research/\n?? TradingViewCustom/\n?? data/commodity_curve/\n?? data/macro/fomc_calendar_forward.csv\n?? data/tick/\n?? data/trades.db.pre-provenance.20260902T130316Z.bak\n?? data/yank/\n?? docs/commodity-curve-calendar-audit-2025-20260907.md\n?? docs/commodity-curve-contract-date-gaps-20260907.md\n?? docs/commodity-curve-data-acquisition-20260907.md\n?? docs/commodity-curve-databento-fields-inquiry-20260907.md\n?? docs/commodity-curve-databento-support-draft-20260907.md\n?? docs/commodity-curve-deferred-evidence-20260907.md\n?? docs/commodity-curve-holiday-file-evidence-20260907.md\n?? docs/commodity-curve-pilot-acceptance-20260907.md\n?? docs/commodity-curve-send-time-audit-20260907.md\n?? docs/commodity-curve-settlement-audit-2025-20260907.md\n?? docs/commodity-curve-unit-audit-2025-20260907.md\n?? docs/commodity-curve-usda-date-evidence-20260907.md\n?? docs/reports/\n?? docs/tradestation-curve-acquisition.md\n?? docs/tradestation-curve-feasibility-2025.md\n?? docs/tradestation-curve-metadata-sources.md\n?? docs/tradestation-curve-v3-readiness.md\n?? evfade_fomc_prospective_tracker.py\n?? src/cli/acquire_tradestation_curve.py\n?? src/data/tradestation_curve_batch.py\n?? tests/unit/test_tradestation_curve_batch.py\n?? yank_shadow_logger_fix.patch\n",
+  "process_loaded_identity": "UNVERIFIED",
+  "versions": {
+    "PyYAML": "6.0.3",
+    "databento-dbn": "0.68.0",
+    "httpx": "0.28.1",
+    "joblib": "1.5.3",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "pydantic": "2.12.5",
+    "pytz": "2026.1.post1",
+    "scikit-learn": "1.8.0"
+  }
+}

@@ -1,0 +1,44 @@
+[Unit]
+Description=YANK MNQ Tier2 — LIVE on Topstep 50K combine (acct 26556101, 2ct) alongside MIM-NB
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+# Phase D cutover 2026-06-17: YANK joins the joint combine (sealed prereg
+# yank-mim-joint-combine-deploy). PROJECTX_ACCOUNT_ID -> ProjectX execution;
+# YANK_CONTRACTS=2 is the vol-balanced size. Removing these reverts to SIM paper.
+# 2026-08-13 combine reset: 23884932 retired (MLL breach 07-06) -> 26556101.
+Environment=PROJECTX_ACCOUNT_ID=26556101
+Environment=YANK_CONTRACTS=2
+# Active front month. YANK has NO autoroll (unlike MIM-NB) — update manually at the
+# quarterly roll (~2026-09-11 -> MNQZ26) or orders will reject like the 06-16 MIM incident.
+Environment=SYMBOL=MNQU26
+# Stage-1 ProjectX data-feed migration (shadow): fetch+log ProjectX bars in parallel
+# while TradeStation stays the SIGNAL source. Observation only; remove to disable.
+Environment=YANK_DATA_SHADOW=1
+# Best-effort TradeStation SIM order mirror (2026-06-18). Copies every combine order
+# to TS SIM (acct SIM2797251F) on an isolated worker task — CANNOT delay/block/crash
+# the authoritative ProjectX path. Remove to disable. See src/research/ts_sim_mirror.py.
+Environment=YANK_MIRROR_TS_SIM=1
+Environment=SIM_INVVOL=1
+# Gap-ceiling denomination fix (2026-08-19, prereg Amendment 1, PR #44/#45). §5 gate
+# PASSED (G1 99.116%, G2 0/7014, G3 0.0% shift, G4 0.0% empty) and Alex authorized
+# deployment. YANK-only: strategy_config.yaml is shared with s26/s26-combine, so this
+# is NOT set there — see yank_streaming_working.py::_build_strategy_config. Removing
+# this reverts to the old $60 absolute ceiling (empty whenever H1 ATR > 120pt).
+Environment=YANK_MAX_GAP_ATR_RATIO=0.426
+# Temporary diagnostic (2026-08-21, Alex request): DEBUG-level feature-vector logging
+# (gap size, ATR, vol ratio, etc. per bar) to observe FVG gap sizes live. Remove this
+# line to return to normal INFO logging — not intended as a permanent config change.
+Environment=TIER2_DEBUG=1
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/yank_streaming_working.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log
+
+[Install]
+WantedBy=multi-user.target

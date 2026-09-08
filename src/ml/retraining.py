@@ -918,7 +918,6 @@ class AsyncRetrainingTask:
         """
         # IMPLEMENTED: Load actual dollar bars data
         from pathlib import Path
-        from sklearn.model_selection import train_test_split
 
         data_dir = Path("data/processed/dollar_bars/1_minute")
 
@@ -940,6 +939,8 @@ class AsyncRetrainingTask:
             # Load dollar bars
             df = pd.read_csv(latest_file)
             df["timestamp"] = pd.to_datetime(df["timestamp"])
+            # Row order must BE time order: the split below is positional.
+            df = df.sort_values("timestamp").reset_index(drop=True)
 
             # Filter to recent data if needed (last 3 months by default)
             if self.last_retraining_time is not None:
@@ -985,18 +986,54 @@ class AsyncRetrainingTask:
 
             logger.info(f"Selected {len(feature_columns)} features ({len(features_df_numeric.columns)} numeric)")
 
-            # Create labels (binary classification: 1 if close > open, else 0)
-            # This is a simplified label - in production, use actual trade outcomes
+            # ---------------------------------------------------------------
+            # !! TARGET LEAKAGE -- MEASURED, NOT SUSPECTED. DO NOT TRAIN ON THIS
+            # !! LABEL AND BELIEVE THE RESULT.
+            #
+            # The label below is `close > open` for the SAME bar the features
+            # are computed from, and the feature set contains `returns`, the
+            # close-to-close return. On MNQ dollar bars (2024-01, n=3,443) a
+            # single feature separates this label almost perfectly:
+            #
+            #     returns          ROC AUC 0.9997   <-- the label, restated
+            #     close_position   ROC AUC 0.9368
+            #
+            # (`open_t == close_{t-1}` exactly for only 31.4% of bars, but
+            # close_{t-1} is near open_t throughout, so sign(close_t -
+            # close_{t-1}) tracks sign(close_t - open_t) almost everywhere.)
+            #
+            # A model trained here reports near-perfect accuracy and has
+            # learned nothing. Fixing the train/test split does NOT fix this;
+            # the label needs replacing with a FORWARD-looking outcome (the
+            # docstring's "actual trade outcomes"), and the same-bar features
+            # -- returns, close_position, stoch_k, roc -- need auditing against
+            # whatever replaces it.
+            #
+            # Measured 2026-09-08. See _bmad-output/validation_research_stack_20260908.md
+            # ---------------------------------------------------------------
             features_df_numeric["target"] = (df["close"] > df["open"]).astype(int)
+            logger.warning(
+                "retraining target is `close > open` on the same bar as its "
+                "features; `returns` predicts it at AUC 0.9997. Any model "
+                "trained here is fitting the label to itself. See the comment "
+                "at this line before using these metrics."
+            )
 
             # Prepare features and labels
             X = features_df_numeric.drop(columns=["target"]).values
             y = features_df_numeric["target"].values
 
-            # Split into train/test (80/20 split)
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42, stratify=y
-            )
+            # TEMPORAL 80/20 split. This was previously
+            #   train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+            # which SHUFFLES by default: a random split of a time series puts
+            # each test row's temporal near-twin in the training set. Measured
+            # on this repo's own data, that inflates ROC AUC by +0.16 (logistic)
+            # to +0.24 (random forest) over a leak-free split, and by +0.34 on a
+            # synthetic control whose true AUC is 0.5 by construction.
+            # See tools/validation/cv_leakage_probe.py.
+            split = int(len(X) * 0.8)
+            X_train, X_test = X[:split], X[split:]
+            y_train, y_test = y[:split], y[split:]
 
             logger.info(
                 f"Training data split: {len(X_train)} train samples, "

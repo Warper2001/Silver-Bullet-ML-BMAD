@@ -31,6 +31,29 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ml.regime_detection import HMMRegimeDetector, HMMFeatureEngineer
 
+
+def temporal_split(X, y, test_size=0.2):
+    """Chronological train/validation split -- train on the past, validate on
+    the future.
+
+    Replaces `train_test_split(X, y, random_state=42, stratify=y)`, which
+    SHUFFLES by default. A random split of a time series puts each validation
+    row's temporal near-twin into the training set; measured on this repo's own
+    data that inflates ROC AUC by +0.16 (logistic) to +0.24 (random forest),
+    and on a synthetic control whose TRUE AUC is 0.5 by construction it
+    fabricates +0.34. See tools/validation/cv_leakage_probe.py.
+
+    The data here is indexed by timestamp upstream, so sorting the index gives
+    true chronological order. Sorting here rather than trusting the caller: an
+    upstream change that stops preserving order would otherwise turn this back
+    into a random split silently.
+    """
+    order = X.index.sort_values()
+    X, y = X.loc[order], y.loc[order]
+    split = int(len(X) * (1.0 - test_size))
+    return X.iloc[:split], X.iloc[split:], y.iloc[:split], y.iloc[split:]
+
+
 # Setup logging
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
@@ -261,7 +284,6 @@ def train_regime_specific_model(
     Returns:
         Training results
     """
-    from sklearn.model_selection import train_test_split
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
     import xgboost as xgb
 
@@ -283,12 +305,10 @@ def train_regime_specific_model(
     X = regime_data[feature_cols]
     y = regime_data['label']
 
-    # Split data
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    # Split data chronologically (see temporal_split docstring)
+    X_train, X_val, y_train, y_val = temporal_split(X, y, test_size=0.2)
 
-    logger.info(f"Train: {len(X_train)}, Val: {len(X_val)}")
+    logger.info(f"Train: {len(X_train)}, Val: {len(X_val)} (temporal split)")
 
     # Train XGBoost
     model = xgb.XGBClassifier(
@@ -355,7 +375,6 @@ def train_generic_model(train_data: pd.DataFrame) -> dict:
     Returns:
         Training results
     """
-    from sklearn.model_selection import train_test_split
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
     import xgboost as xgb
 
@@ -368,12 +387,10 @@ def train_generic_model(train_data: pd.DataFrame) -> dict:
     X = train_data[feature_cols]
     y = train_data['label']
 
-    # Split data
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    # Split data chronologically (see temporal_split docstring)
+    X_train, X_val, y_train, y_val = temporal_split(X, y, test_size=0.2)
 
-    logger.info(f"Train: {len(X_train)}, Val: {len(X_val)}")
+    logger.info(f"Train: {len(X_train)}, Val: {len(X_val)} (temporal split)")
 
     # Train XGBoost
     model = xgb.XGBClassifier(

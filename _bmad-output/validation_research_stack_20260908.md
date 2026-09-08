@@ -305,3 +305,90 @@ $V tools/validation/deflated_sharpe.py --grid data/reports/grid_sl_tp_ml_2026061
       --sr-col ir --t-col n_oos --select "sl=2.0,tp=8.0,threshold=0.5" --min-t 100
 $V tools/validation/live_track_record.py --min-trades 5
 ```
+
+---
+
+## 9. `retraining.py:990` target leakage — confirmed — and the CV fixes
+
+### 9.1 The target IS leaking. Measured, not suspected.
+
+`src/ml/retraining.py` labelled each bar `close > open` and trained on a feature
+set built from that same bar. Measured on real MNQ dollar bars
+(`MNQ_dollar_bars_202401.h5`, n=3,443, 47 features, positive rate 0.510),
+single-feature ROC AUC against that label:
+
+| feature | AUC | |
+|---|---|---|
+| `returns` | **0.9997** | the label, restated |
+| `close_position` | **0.9368** | (close−low)/(high−low) |
+| `stoch_k` | 0.7348 | |
+| `roc` | 0.7059 | |
+| `price_momentum_5` | 0.7059 | |
+
+`returns` is the close-to-close return. `open_t == close_{t−1}` exactly for only
+**31.4%** of dollar bars — weaker than assumed, which is why this was measured
+rather than argued — but `close_{t−1}` sits near `open_t` throughout, so
+`sign(close_t − close_{t−1})` tracks `sign(close_t − open_t)` almost everywhere.
+The result is a label a single feature reproduces at AUC 0.9997.
+
+**A model trained here reports near-perfect accuracy and has learned nothing,
+and no CV scheme fixes that.** Repairing the split without repairing the label
+would have made the module *look* sound while staying meaningless.
+
+The label was **not** silently redefined — choosing a forward-looking outcome is
+a research decision. Instead the line now carries a measured warning comment and
+emits a `logger.warning` at runtime, so the module cannot be trained and
+believed by accident. Replacing it with a genuine forward outcome (the
+docstring's own "actual trade outcomes") also requires auditing the same-bar
+features — `returns`, `close_position`, `stoch_k`, `roc` — against whatever
+replaces it.
+
+### 9.2 CV fixes — 16 call sites across 6 files
+
+| file | shuffled splits | integer-cv | now |
+|---|---|---|---|
+| `src/ml/retraining.py` | 1 | — | positional temporal split, after an explicit `sort_values("timestamp")` |
+| `scripts/train_premium_regime_models.py` | 1 | — | temporal split; sorts by timestamp when present, warns when absent |
+| `scripts/train_regime_specific_models.py` | 2 | — | shared `temporal_split()` helper (data is timestamp-indexed upstream) |
+| `scripts/train_regime_models_real_labels.py` | 2 | 2 | `temporal_split()` + `TimeSeriesSplit` |
+| `scripts/tune_regime_1_quick.py` | 1 | 1 | `temporal_split()` + `TimeSeriesSplit` |
+| `scripts/tune_regime_1_model.py` | 1 | 4 + `GridSearchCV(cv=3)` | `temporal_split()` + `TimeSeriesSplit` throughout |
+
+A repo-wide grep now returns **zero** live `train_test_split(` calls and zero
+integer `cv=` on `cross_val_score`/`GridSearchCV` outside the validation tools.
+All six files byte-compile.
+
+Two honest limitations, recorded in the code:
+
+- **The regime datasets carry no timestamp column at all.** The helpers sort on
+  the preserved integer index from the upstream extraction, which is
+  chronological *there*. That is strictly better than shuffling, but it is an
+  assumption that cannot be verified from the file. The real fix is to persist a
+  timestamp.
+- **Those datasets contain `is_augmented` synthetic rows.** An augmented row and
+  the real row it derives from are near-duplicates, so if they land on opposite
+  sides of *any* split that is leakage no split scheme can repair. Flagged in
+  the code; drop augmented rows from the test side before trusting a score.
+
+### 9.3 Regression test
+
+`tools/validation/test_temporal_splits.py` asserts, for every patched script,
+that the split is correctly sized, disjoint, X/y-aligned, and that **train
+strictly precedes test** — feeding a deliberately shuffled index so that a
+helper which trusts caller ordering fails. It caught exactly that in
+`train_regime_specific_models.py`, whose helper was assuming sorted input; it
+now sorts like the others.
+
+```bash
+.venv-research/bin/python tools/validation/test_temporal_splits.py   # ALL HELPER TESTS PASSED
+```
+
+### 9.4 Left alone deliberately — needs your call
+
+`run_mnq_s26_pipeline.py:191` uses
+`CalibratedClassifierCV(estimator=clf, method="sigmoid", cv=5)`, which resolves
+to StratifiedKFold — the calibration map is fitted on folds containing future
+data. **Not changed**, because S26 is a running strategy (`trader-s26`,
+`trader-s26-combine`) and altering calibration changes a deployed model's
+probability outputs. It affects probability calibration rather than ranking, so
+it is a smaller effect than a leaky train/test split, but it is real.

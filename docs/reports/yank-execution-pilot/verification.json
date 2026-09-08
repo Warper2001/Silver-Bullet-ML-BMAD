@@ -1,0 +1,24 @@
+{
+  "arm_order_count": 8,
+  "byte_identical": true,
+  "canonical_artifact_sha256": {
+    "artifacts.json": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+    "event-extracts.jsonl": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+    "reconciliation.jsonl": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+    "report.json": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+    "report.md": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22"
+  },
+  "case_count": 5,
+  "conditional_findings": 30,
+  "existing_replay_accounting_policy_tests_passed": 133,
+  "independent_capture_reconciliation_matches": true,
+  "independent_may28_trade_refs_match": true,
+  "new_audit_tests_passed": 48,
+  "outcomes": {
+    "supported": 11,
+    "unassessable": 19
+  },
+  "parsed_mbo_records": 237146989,
+  "research_status": "HOLD_VALIDATION",
+  "unchanged_pinned_archives_bars_and_manifests": true
+}

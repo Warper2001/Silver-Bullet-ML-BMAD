@@ -30,6 +30,7 @@ rich = "^13.7.0"
 tenacity = "^8.2.0"
 
 [tool.poetry.scripts]
+check_yank_execution_pilot = "src.cli.check_yank_execution_pilot:main"
 check-yank-native-minute = "src.cli.check_yank_native_minute:main"
 validate-data = "src.cli.validate_data:main"
 check_yank_bar_provenance = "src.cli.check_yank_bar_provenance:main"

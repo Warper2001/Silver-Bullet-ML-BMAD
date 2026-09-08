@@ -179,3 +179,129 @@ $V tools/validation/deflated_sharpe.py
 ```
 
 All are read-only: they load CSVs and print. None writes to `data/`, `models/`, or `trades.db`, and none imports from a live trading path.
+
+---
+
+## 8. Follow-up run, 2026-09-08: the live configs and the live records
+
+Two questions from §6, answered with the tools above.
+
+### 8.1 Deflating the grid that chose YANK's live config
+
+`data/reports/grid_sl_tp_ml_20260613.csv` — the SL × TP × ML-threshold sweep that
+selected YANK's sealed configuration. 80 rows, 78 usable. `ir` is per-trade
+Sharpe (`per_trade_sharpe(pnl)` in `grid_search_sl_tp_ml.py`), so `T = n_oos`.
+
+The selected live config is **SL 2.0 / TP 8.0 / threshold 0.50**, named as
+"current live config" in the grid script itself.
+
+| min-T filter | variants N | E[max SR] under null | selected config DSR |
+|---|---|---|---|
+| none | 78 | 0.6400 | **0.0000** |
+| n_oos ≥ 30 | 60 | 0.2371 | **0.0071** |
+| n_oos ≥ 100 | 47 | 0.1476 | **0.0751** |
+
+The `min-T` filter matters: a per-trade Sharpe estimated from 5 observations has
+sampling sd ≈ 0.45, so an unfiltered sweep has a `Var[SR]` dominated by
+estimation noise rather than genuine dispersion between configs, which inflates
+`E[max SR]` and makes the deflation spuriously harsh. The filtered rows are the
+fair comparison. **The conclusion is the same at every threshold.**
+
+**The robust, filter-independent number:**
+
+> The selected live config has a per-trade Sharpe of **0.0204 over 129 trades**,
+> giving **PSR vs zero = 0.5912**.
+
+That is the probability its *true* Sharpe is above zero, using only its own
+backtest and **no multiple-testing correction at all**. 59% is close to a coin
+flip. Deflated for the 47–78 variants actually searched it is 0.08 or below, and
+its Sharpe sits *below* `E[max SR]` under the null of no edge at every filter
+setting — so no length of backtest at this effect size would have established it.
+
+Two things in the shop's favour: the selected config was **not** the grid's
+argmax (the top-Sharpe cells are the tiny ones — the best has `n_oos = 5`), and
+memory already records "wider-SL grid is a 2025 mirage." The instinct was right;
+this puts a number on it.
+
+Caveat: a summary table carries no return series, so skew and kurtosis are
+unavailable and **normality is assumed**. Real trade P&L is fat-tailed and often
+negatively skewed, both of which *reduce* PSR/DSR — so these are an optimistic
+upper bound.
+
+### 8.2 Live track records — `tools/validation/live_track_record.py`
+
+Read-only against `data/trades.db`. Two exclusions come first, and they are the
+bulk of the work:
+
+**Backfilled backtest replays, excluded: 1,877 rows totalling +$103,624.64.**
+
+| trader | rows | pnl |
+|---|---|---|
+| trader-yank | 1,841 | **+101,892.90** |
+| trader-s26 | 17 | +1,076.10 |
+| trader-s27 | 17 | −42.20 |
+| trader-mim-nb | 1 | +740.50 |
+| trader-btc-carry | 1 | −42.66 |
+
+**Anyone summing `pnl` from `trades.db` gets a number that is ~98% backtest.**
+
+**Legacy pre-column rows, excluded:** 8 trader-yank rows from May–Jun 2025
+(−$217.00), NULL mode and NULL symbol, predating YANK's first `realtime` row.
+
+Prospective records that remain (N=1, no selection, so **no deflation applies**):
+
+| trader | mode | trades | days | P&L | Sharpe ann | PSR | PSR (normal) | MinTRL | still needs |
+|---|---|---|---|---|---|---|---|---|---|
+| trader-s26 | paper | 164 | 62 | +2,575.70 | 2.658 | 0.873 | 0.903 | 128 d | 66 d (~0.3 yr) |
+| trader-s26-combine | **live** | 78 | 61 | +1,870.00 | 2.911 | 0.991 | 0.921 | 30 d | — (provisional) |
+| trader-s27 | paper | 40 | 50 | +71.10 | 0.060 | 0.511 | 0.511 | 186,097 d | ~738 yr |
+| trader-gap-fade | sim | 25 | 49 | +1,116.50 | 1.096 | 0.689 | 0.684 | 533 d | 484 d (~1.9 yr) |
+| trader-mim-nb | **live** | 23 | 53 | **−440.00** | −0.472 | 0.415 | 0.415 | ∞ | never at this sign |
+| trader-yank | **live** | 5 | 26 | +259.00 | 1.576 | 0.699 | 0.690 | 250 d | 224 d (~0.9 yr) |
+
+**Not one strategy has an established live track record.** The only record
+clearing PSR 0.95 is `trader-s26-combine`, and it is **provisional**: 61 days,
+and the verdict flips to 0.921 when normality is imposed instead of its
+*estimated* skew of 5.01 and kurtosis of 34.9 — moments that cannot be measured
+from 61 observations. Declaring it established would be the same error this work
+exists to prevent.
+
+Specifics worth acting on:
+
+- **YANK's live ledger record is 5 trades, +$259, over 26 business days** (from
+  2026-07-13; the −$212 first trade matches the documented 07-13 halt). Its
+  apparent +$101,893 is entirely backfilled backtest. It needs ~224 more trading
+  days to establish a Sharpe of this size. **If YANK's authoritative live record
+  lives somewhere other than `trades.db`, point me at it** — `data/yank/` holds
+  only a Databento pilot, so on current evidence `trades.db` is it.
+- **MIM-NB's live record is negative**: −$440 over 23 trades, Sharpe −0.472. This
+  is consistent with the documented 2026-07-07 parity failure (sealed engine
+  +$490 vs live −$1,657 on the same bars), which was never resolved.
+- **gap-fade** is the healthiest paper record but still needs ~1.9 more years at
+  its current 0.5 trades/day to clear the bar. Its promotion gate (N≥30 live +
+  30 days) is a much weaker test than statistical significance.
+
+### 8.3 Three bugs found in this tooling while running it
+
+Recorded because each would have produced a confident wrong answer:
+
+1. **pandas ≥ 2 infers a datetime format from the first row.** `trades.db` mixes
+   `...T13:30:00+00:00` with `...T18:00:03.542998+00:00`; with `errors="coerce"`
+   this silently coerced 23 of trader-mim-nb's 24 rows to `NaT`, dropping the
+   strategy from the results entirely. Fixed with `format="ISO8601"` plus a loud
+   warning on any unparseable row.
+2. **NULL `write_mode` meant two opposite things.** Recent live writes *and*
+   legacy 2025 rows. Treating all NULLs as live gave YANK 13 trades over 334
+   days instead of 5 over 26. Fixed by classifying NULLs against each trader's
+   first explicit `realtime` timestamp.
+3. **`Var[SR]` contaminated by tiny cells** in the grid — see §8.1's `--min-t`.
+
+### 8.4 Reproduce
+
+```bash
+V=/root/Silver-Bullet-ML-BMAD/.venv-research/bin/python
+
+$V tools/validation/deflated_sharpe.py --grid data/reports/grid_sl_tp_ml_20260613.csv \
+      --sr-col ir --t-col n_oos --select "sl=2.0,tp=8.0,threshold=0.5" --min-t 100
+$V tools/validation/live_track_record.py --min-trades 5
+```

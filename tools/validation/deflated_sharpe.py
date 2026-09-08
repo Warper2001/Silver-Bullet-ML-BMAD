@@ -258,13 +258,121 @@ def apply_to_family(pattern: str, exclude=("fullyear",)) -> int:
     return 0
 
 
+def deflate_grid(csv: str, sr_col: str, t_col: str, select: str | None,
+                 min_t: int = 1) -> int:
+    """Deflate a parameter-sweep summary table.
+
+    Needs one row per variant with a per-observation Sharpe and an observation
+    count. Because a summary table carries no return series, skew and kurtosis
+    are unavailable and NORMALITY IS ASSUMED (g3=0, g4=3). Real trade P&L is
+    fat-tailed and usually negatively skewed, both of which REDUCE PSR/DSR --
+    so the numbers below are an OPTIMISTIC upper bound. A config that fails
+    here fails harder with its real moments.
+    """
+    df = pd.read_csv(csv)
+    for c in (sr_col, t_col):
+        if c not in df.columns:
+            sys.exit(f"ERROR: column {c!r} not in {csv}. Have: {list(df.columns)}")
+    raw = len(df)
+    df = df[np.isfinite(df[sr_col]) & (df[t_col] > 1)].reset_index(drop=True)
+
+    # Bailey/Lopez de Prado assume the trials are comparable. A per-observation
+    # Sharpe estimated from 5 observations has sampling sd ~ 1/sqrt(5) = 0.45,
+    # so a sweep containing tiny cells has a Var[SR] dominated by ESTIMATION
+    # NOISE rather than genuine dispersion between configurations -- which
+    # inflates E[max SR] and makes the deflation spuriously harsh. Filtering to
+    # a common minimum sample keeps the family comparable.
+    if min_t > 1:
+        before = len(df)
+        df = df[df[t_col] >= min_t].reset_index(drop=True)
+        print(f"  [min-T filter] kept {len(df)} of {before} variants with "
+              f"{t_col} >= {min_t}\n")
+        if len(df) < 2:
+            sys.exit(f"ERROR: only {len(df)} variants survive {t_col} >= {min_t}.")
+    n_trials = len(df)
+    if raw != n_trials:
+        print(f"  ({raw - n_trials} of {raw} rows dropped: non-finite Sharpe, "
+              f"{t_col} <= 1, or below --min-t)\n")
+    srs = df[sr_col].to_numpy(float)
+    var_sr = float(np.var(srs, ddof=1))
+    sr0 = expected_max_sharpe(var_sr, n_trials)
+
+    print(f"Grid: {csv}")
+    print(f"  variants searched (N)      : {n_trials}")
+    print(f"  Sharpe column              : {sr_col!r} (per observation)")
+    print(f"  observation-count column   : {t_col!r}")
+    print(f"  Var[SR] across variants    : {var_sr:.6e}   sd = {np.sqrt(var_sr):.5f}")
+    print(f"  E[max SR] under the null   : {sr0:.5f} per observation")
+    print("  NOTE: normality assumed (no return series in a summary table) ->")
+    print("        these PSR/DSR values are an OPTIMISTIC upper bound.\n")
+
+    def row_stats(r):
+        sr, T = float(r[sr_col]), int(r[t_col])
+        return {
+            "sr_per_obs": sr, "T": T,
+            "psr_vs_zero": probabilistic_sharpe(sr, 0.0, 3.0, T, 0.0),
+            "dsr": probabilistic_sharpe(sr, 0.0, 3.0, T, sr0),
+        }
+
+    best_i = int(np.argmax(srs))
+    targets = [("BEST variant in the grid", df.iloc[best_i])]
+
+    if select:
+        crit = {}
+        for part in select.split(","):
+            k, v = part.split("=")
+            crit[k.strip()] = float(v)
+        mask = np.ones(len(df), bool)
+        for k, v in crit.items():
+            if k not in df.columns:
+                sys.exit(f"ERROR: select column {k!r} not in {csv}")
+            mask &= np.isclose(df[k].to_numpy(float), v)
+        if mask.sum() == 0:
+            sys.exit(f"ERROR: no row matches {select}")
+        for _, r in df[mask].iterrows():
+            targets.append((f"SELECTED config ({select})", r))
+
+    for title, r in targets:
+        st = row_stats(r)
+        desc = "  ".join(f"{c}={r[c]}" for c in df.columns
+                         if c not in (sr_col, t_col) and df[c].dtype != object)
+        print("=" * 70)
+        print(title)
+        print("=" * 70)
+        print(f"  {desc}")
+        print(f"  per-obs Sharpe SR          : {st['sr_per_obs']:.5f}   over T={st['T']}")
+        print(f"  PSR vs zero (ignoring N)   : {st['psr_vs_zero']:.4f}")
+        print(f"  DEFLATED for N={n_trials} trials    : {st['dsr']:.4f}")
+        verdict = ("SURVIVES deflation at 95%" if st["dsr"] > 0.95 else
+                   f"does NOT survive -- consistent with the best of {n_trials} draws")
+        print(f"  -> {verdict}")
+        mtrl = min_track_record_length(st["sr_per_obs"], 0.0, 3.0, sr0)
+        if np.isfinite(mtrl):
+            print(f"  observations needed to beat E[max SR] at 95%: {mtrl:,.0f} "
+                  f"(have {st['T']})")
+        else:
+            print(f"  SR is at or below E[max SR] under the null "
+                  f"({st['sr_per_obs']:.5f} <= {sr0:.5f}) -- no track record length suffices")
+        print()
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--glob", default="data/ml_training/doe_run_0*_history.csv")
+    ap.add_argument("--grid", help="parameter-sweep summary CSV (one row per variant)")
+    ap.add_argument("--sr-col", default="ir", help="per-observation Sharpe column")
+    ap.add_argument("--t-col", default="n_oos", help="observation-count column")
+    ap.add_argument("--select", help="the chosen config, e.g. 'sl=2.0,tp=8.0,threshold=0.5'")
+    ap.add_argument("--min-t", type=int, default=1,
+                    help="drop variants with fewer than this many observations, so the\n"
+                         "trials are comparable and Var[SR] is not dominated by noise")
     args = ap.parse_args()
     if args.self_test:
         return self_test()
+    if args.grid:
+        return deflate_grid(args.grid, args.sr_col, args.t_col, args.select, args.min_t)
     return apply_to_family(args.glob)
 
 

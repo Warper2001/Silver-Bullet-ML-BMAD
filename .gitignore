@@ -230,3 +230,8 @@ data/s26_replay/*
 
 # Local purchased-input provenance lineage
 .local-provenance/
+
+# Reproducible native-minute pilot artifacts; compact reports remain tracked.
+data/yank/native-minute-*/
+!src/research/yank_native_minute/pins.json
+!docs/reports/yank-native-minute/*.json

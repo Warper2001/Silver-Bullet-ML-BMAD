@@ -1,0 +1,194 @@
+{
+  "acquisition_manifest_sha256": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156",
+  "arms": {
+    "ml050": {
+      "explicit_ambiguity_trades": 0,
+      "final_readiness": {
+        "adr_full_history": false,
+        "completed_observed_h1_buckets": 223,
+        "lr_full_history": true,
+        "observed_closes": 13440,
+        "preceding_observed_days": 11,
+        "volatility_full_history": true,
+        "volatility_minimum_history": true,
+        "volatility_positive_atr_observations": 120
+      },
+      "independent_reconciliation": {
+        "cash": "49127.00",
+        "costs": "8",
+        "economic_realized": "-873.00",
+        "equity": "49127.00",
+        "inventory_quantity": 0,
+        "inventory_value": "0.0",
+        "marks_checked": 29,
+        "passed": true,
+        "trades_checked": 2,
+        "unrealized": "0"
+      },
+      "summary": {
+        "bars": 13440,
+        "cash": "49127.00",
+        "classification": "DEVELOPMENT_REPLAY",
+        "completion_status": "COMPLETE",
+        "costs": "8",
+        "economic_realized": "-873.00",
+        "equity": "49127.00",
+        "historical_pnl": -873.0,
+        "inference_holds": [],
+        "lr_historical_identity": "UNVERIFIED_NOT_TRACKED_AT_REFERENCE",
+        "outcome": "REPLAY_COMPLETE",
+        "reconciled": true,
+        "research_status": "HOLD_VALIDATION",
+        "trades": 2
+      },
+      "terminal": {
+        "inventory_value": "0",
+        "mark_available_ns": 1748638800000000000,
+        "mark_interval_end_ns": 1748638800000000000,
+        "mark_price": 21369.0,
+        "mark_time": "2025-05-30T20:59:00+00:00",
+        "quantity": 0,
+        "status": "FLAT",
+        "unrealized": "0"
+      }
+    },
+    "no-ml": {
+      "explicit_ambiguity_trades": 1,
+      "final_readiness": {
+        "adr_full_history": false,
+        "completed_observed_h1_buckets": 223,
+        "lr_full_history": true,
+        "observed_closes": 13440,
+        "preceding_observed_days": 11,
+        "volatility_full_history": true,
+        "volatility_minimum_history": true,
+        "volatility_positive_atr_observations": 120
+      },
+      "independent_reconciliation": {
+        "cash": "49182.0",
+        "costs": "8",
+        "economic_realized": "-818.0",
+        "equity": "49182.0",
+        "inventory_quantity": 0,
+        "inventory_value": "0.0",
+        "marks_checked": 13,
+        "passed": true,
+        "trades_checked": 2,
+        "unrealized": "0"
+      },
+      "summary": {
+        "bars": 13440,
+        "cash": "49182.0",
+        "classification": "DEVELOPMENT_REPLAY",
+        "completion_status": "COMPLETE",
+        "costs": "8",
+        "economic_realized": "-818.0",
+        "equity": "49182.0",
+        "historical_pnl": -818.0,
+        "inference_holds": [],
+        "lr_historical_identity": "UNVERIFIED_NOT_TRACKED_AT_REFERENCE",
+        "outcome": "REPLAY_COMPLETE",
+        "reconciled": true,
+        "research_status": "HOLD_VALIDATION",
+        "trades": 2
+      },
+      "terminal": {
+        "inventory_value": "0",
+        "mark_available_ns": 1748638800000000000,
+        "mark_interval_end_ns": 1748638800000000000,
+        "mark_price": 21369.0,
+        "mark_time": "2025-05-30T20:59:00+00:00",
+        "quantity": 0,
+        "status": "FLAT",
+        "unrealized": "0"
+      }
+    }
+  },
+  "code_sha256": {
+    "pyproject.toml": "98bfaa69ae1a288d10b815f567034426335718488dde61a85964b24ba58ace34",
+    "src/cli/check_yank_native_minute.py": "28decbc42e7e258e451f38a186b2538ebbb160c5c0ab628ed49d31355e65c810",
+    "src/research/yank_native_minute/__init__.py": "203f32f4679669fb54373267ae7f58f326414075eb272ebb402ee392dda307b4",
+    "src/research/yank_native_minute/builder.py": "2bc6b98ae77c4d0a41b6fa9d89ed4daf6c6aaad0879597fa6669efa66663d82c",
+    "src/research/yank_native_minute/pins.json": "95826f072e2feec678a58ef9ca9af69f5f20650673cd25d228abe1187aff2e3b",
+    "src/research/yank_native_minute/replay.py": "04d0fb24466aa5bd46a6461c18227a0a457f85330a98369670918f3fada13843",
+    "src/research/yank_native_minute/runner.py": "d9c47a56c005e8ceab722b9663e317f3b01a722eed7e335a3b9e08f11775a549"
+  },
+  "data_status": "PASS_DATA_CHECKS",
+  "frozen_source_sha256": {
+    "src/research/yank_replay/models.py": "be2f5fd88716cf37b17201a909816e1699aeef8f21b999f369c939bd1030cd62",
+    "src/research/yank_signals/engine.py": "b5eeea6778a21329b40397498e8e40d9fb8b615bd0d211a308651e3c40432e74",
+    "src/research/yank_signals/evidence.py": "30e65e50898c7d668d99e2f2426ee2c5b01728a7c6b58f90d3ffe08b8a25c4e8",
+    "src/research/yank_signals/model.py": "b7039f1b4a1f75c46f728a3b650bc2f4bf9c5e3088ff4f20d0c5fe95e9e4f8ae",
+    "src/research/yank_signals/reference.py": "5757c3ea4285f8c2d3d0879a9eec8899e8bc7842e68061ea217395cde5815c10"
+  },
+  "independent_parent_oracles": {
+    "all_capture_and_exchange_ohlcv_first_last_references": "PASS:26880bars",
+    "all_coverage_rows_and_native_status": "PASS:17280minutes",
+    "raw56byte_trade_digests_and_counts": "PASS:26880bars;7526752prints",
+    "separate_full_event_scan": "PASS:one_delayed_event_matches"
+  },
+  "model_sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2",
+  "native": {
+    "bar_count": 13440,
+    "counts": {
+      "F_records": 12065931,
+      "action_A": 99442117,
+      "action_C": 99375993,
+      "action_F": 12065931,
+      "action_M": 17060496,
+      "action_N": 1675689,
+      "action_R": 11,
+      "action_T": 7526752,
+      "bad_capture_flag_records": 69661,
+      "cross_clock_minute_T_records": 65,
+      "included_T_records": 7526752,
+      "records": 237146989,
+      "snapshot_records": 69660,
+      "zero_size_T_records": 0
+    },
+    "coverage_counts": {
+      "NO_TRADE_MIXED_STATUS": 10,
+      "NO_TRADE_OBSERVED_NONTRADING": 3830,
+      "TRADED": 13440
+    },
+    "coverage_minutes": 17280,
+    "delayed_bar_count": 1
+  },
+  "repeat_build_verification": {
+    "all_bytes_identical": true,
+    "fresh_directories": [
+      "data/yank/native-minute-reviewed-a",
+      "data/yank/native-minute-reviewed-b"
+    ],
+    "identical_canonical_files": 9,
+    "sha256": {
+      "bars.jsonl": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+      "coverage.jsonl": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+      "definitions.json": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+      "delayed-events.json": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+      "exchange-diagnostic.jsonl": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+      "manifest.json": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+      "replay.json": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+      "report.json": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+      "status.json": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930"
+    }
+  },
+  "replay_outcome": "REPLAY_COMPLETE",
+  "research_status": "HOLD_VALIDATION",
+  "runtime": {
+    "packages": {
+      "databento_dbn": "0.68.0",
+      "joblib": "1.5.3",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.8.0",
+      "scipy": "1.17.1",
+      "zstandard": "0.25.0"
+    },
+    "python": "3.12.3"
+  },
+  "tests": {
+    "new_native_minute_tests_passed": 65,
+    "parent_frozen_legacy_tests_passed": 133
+  }
+}

@@ -20,3 +20,5 @@ Two fresh reviewed builds produced nine byte-identical canonical files. All 65 n
 See the [contract and reproduction command](../../yank-native-minute.md) for source documentation, static pins, interval semantics, limitations and output handling.
 
 Follow-up: [May 28 native trade-print timeline](may28-timeline.md) establishes entry-through prints before stop crossings in all three distinct cases, including separate events 12.13 seconds apart within the no-ML 20:21 minute. Hypothetical execution remains unverified; the original modeled results and ambiguity annotations are preserved.
+
+Further evidence: [May 28 displayed-book observations](may28-book.md) show all three short limits were passive at arrivals with 0/100/500 ms additional delay. Same-side displayed quantities and event-boundary references are retained; queue positions and hypothetical fills remain unverified.

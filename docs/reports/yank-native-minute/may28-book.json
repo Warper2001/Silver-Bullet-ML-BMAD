@@ -1,0 +1,507 @@
+{
+  "native_file": "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst",
+  "native_sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+  "observations": [
+    {
+      "book": {
+        "ask_size_at_limit": 6,
+        "best_ask_nanos": 21445750000000,
+        "best_ask_size": 4,
+        "best_bid_nanos": 21445250000000,
+        "best_bid_size": 3,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102eb0f2204a2c54318768f03303e060000003c3649811300000100000080084141a7932304a2c54318c537000059a9be05",
+          "record_index": 15290283,
+          "sequence": 96381273,
+          "ts_event_ns": 1748458379994599403,
+          "ts_recv_ns": 1748458379994698663
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 9053,
+        "short_limit_marketable": false,
+        "spread_nanos": 500000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea0010083038102a18cbe04a2c543187f8f03303e06000000c96e5582130000010000008008414108f4bf04a2c543183e3e000068a9be05",
+        "record_index": 15290284,
+        "sequence": 96381288,
+        "ts_event_ns": 1748458380004854945,
+        "ts_recv_ns": 1748458380004946952
+      },
+      "request": {
+        "arms": [
+          "ml050",
+          "no-ml"
+        ],
+        "contracts": 5,
+        "delay_ms": 0,
+        "kind": "arrival",
+        "limit": 21463000000000,
+        "signal_time": "2025-05-28T18:52:00+00:00",
+        "time_ns": 1748458380000000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 6,
+        "best_ask_nanos": 21445000000000,
+        "best_ask_size": 3,
+        "best_bid_nanos": 21444500000000,
+        "best_bid_size": 6,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea001008303810269e0420aa2c54318339303303e0600008095c67c841300000200000080084141853c440aa2c54318a838000021adbe05",
+          "record_index": 15290807,
+          "sequence": 96382241,
+          "ts_event_ns": 1748458380097413225,
+          "ts_recv_ns": 1748458380097502341
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 9060,
+        "short_limit_marketable": false,
+        "spread_nanos": 500000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea0010083038102b9da830aa2c54318269303303e06000000729b0d811300000100000080084341a60f850aa2c54318c52c00002dadbe05",
+        "record_index": 15290808,
+        "sequence": 96382253,
+        "ts_event_ns": 1748458380101671609,
+        "ts_recv_ns": 1748458380101750694
+      },
+      "request": {
+        "arms": [
+          "ml050",
+          "no-ml"
+        ],
+        "contracts": 5,
+        "delay_ms": 100,
+        "kind": "arrival",
+        "limit": 21463000000000,
+        "signal_time": "2025-05-28T18:52:00+00:00",
+        "time_ns": 1748458380100000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 6,
+        "best_ask_nanos": 21443250000000,
+        "best_ask_size": 1,
+        "best_bid_nanos": 21443000000000,
+        "best_bid_size": 2,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea00100830381020f3b4022a2c54318609e03303e06000000de6596801300000100000080084342356d4122a2c54318132d000066b9be05",
+          "record_index": 15292250,
+          "sequence": 96385382,
+          "ts_event_ns": 1748458380499893007,
+          "ts_recv_ns": 1748458380499971381
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 9022,
+        "short_limit_marketable": false,
+        "spread_nanos": 250000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea001008303810243884122a2c543189b9e03303e06000080904ca58013000001000000800841416ee44222a2c543180c2d000068b9be05",
+        "record_index": 15292251,
+        "sequence": 96385384,
+        "ts_event_ns": 1748458380499978307,
+        "ts_recv_ns": 1748458380500067438
+      },
+      "request": {
+        "arms": [
+          "ml050",
+          "no-ml"
+        ],
+        "contracts": 5,
+        "delay_ms": 500,
+        "kind": "arrival",
+        "limit": 21463000000000,
+        "signal_time": "2025-05-28T18:52:00+00:00",
+        "time_ns": 1748458380500000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 3,
+        "best_ask_nanos": 21463000000000,
+        "best_ask_size": 3,
+        "best_bid_nanos": 21462750000000,
+        "best_bid_size": 2,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102a18c5a43dfc543182c540e303e06000080f3962f8513000001000000800841421dff5b43dfc54318c82b0000ac49cf05",
+          "record_index": 15715564,
+          "sequence": 97470892,
+          "ts_event_ns": 1748458643048271009,
+          "ts_recv_ns": 1748458643048365853
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 9409,
+        "short_limit_marketable": false,
+        "spread_nanos": 250000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea001008303810269b36243dfc543182f540e303e06000000a67d3e85130000010000000008544298876843dfc5431834370000b049cf05",
+        "record_index": 15715565,
+        "sequence": 97470896,
+        "ts_event_ns": 1748458643048805225,
+        "ts_recv_ns": 1748458643049187224
+      },
+      "request": {
+        "arms": [
+          "ml050",
+          "no-ml"
+        ],
+        "contracts": 5,
+        "kind": "before_first_through_event",
+        "limit": 21463000000000,
+        "record_index": 15715565,
+        "signal_time": "2025-05-28T18:52:00+00:00"
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 12,
+        "best_ask_nanos": 21392750000000,
+        "best_ask_size": 1,
+        "best_bid_nanos": 21392500000000,
+        "best_bid_size": 2,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102f13d7a3cdac843185f3654303e06000000055dd47413000001000000800841429da57b3cdac8431821360000b94f3e06",
+          "record_index": 18695535,
+          "sequence": 104746937,
+          "ts_event_ns": 1748461919992954353,
+          "ts_recv_ns": 1748461919993046429
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 8711,
+        "short_limit_marketable": false,
+        "spread_nanos": 250000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea00100830381027b42ee3cdac8431853a152303e060000809dd2ca7213000001000000800843423918f63cdac84318712b0000d04f3e06",
+        "record_index": 18695536,
+        "sequence": 104746960,
+        "ts_event_ns": 1748461920000557691,
+        "ts_recv_ns": 1748461920001071161
+      },
+      "request": {
+        "arms": [
+          "no-ml"
+        ],
+        "contracts": 5,
+        "delay_ms": 0,
+        "kind": "arrival",
+        "limit": 21408000000000,
+        "signal_time": "2025-05-28T19:51:00+00:00",
+        "time_ns": 1748461920000000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 12,
+        "best_ask_nanos": 21392250000000,
+        "best_ask_size": 3,
+        "best_bid_nanos": 21391750000000,
+        "best_bid_size": 3,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea00100830381025543da42dac843182c2253303e060000801c1101751300000200000080084d417e7fdb42dac843188d2c0000f8543e06",
+          "record_index": 18696289,
+          "sequence": 104748280,
+          "ts_event_ns": 1748461920099910485,
+          "ts_recv_ns": 1748461920099991422
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 8631,
+        "short_limit_marketable": false,
+        "spread_nanos": 500000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea001008303810221b6ed42dac84318988450303e06000080099d53721300000100000080084d42e4eaee42dac84318a12b000006553e06",
+        "record_index": 18696290,
+        "sequence": 104748294,
+        "ts_event_ns": 1748461920101185057,
+        "ts_recv_ns": 1748461920101264100
+      },
+      "request": {
+        "arms": [
+          "no-ml"
+        ],
+        "contracts": 5,
+        "delay_ms": 100,
+        "kind": "arrival",
+        "limit": 21408000000000,
+        "signal_time": "2025-05-28T19:51:00+00:00",
+        "time_ns": 1748461920100000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 10,
+        "best_ask_nanos": 21394000000000,
+        "best_ask_size": 1,
+        "best_bid_nanos": 21393750000000,
+        "best_bid_size": 1,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea00100830381026343f459dac843181b3b54303e060000006a2af2741300000100000080084d42e093f559dac84318102d0000345b3e06",
+          "record_index": 18696850,
+          "sequence": 104749876,
+          "ts_event_ns": 1748461920487490403,
+          "ts_recv_ns": 1748461920487576544
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 8691,
+        "short_limit_marketable": false,
+        "spread_nanos": 250000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea0010083038102271c785cdac84318d34054303e06000080e6ab3c7513000001000000800841412c97795cdac8431883350000615b3e06",
+        "record_index": 18696851,
+        "sequence": 104749921,
+        "ts_event_ns": 1748461920529685543,
+        "ts_recv_ns": 1748461920529782572
+      },
+      "request": {
+        "arms": [
+          "no-ml"
+        ],
+        "contracts": 5,
+        "delay_ms": 500,
+        "kind": "arrival",
+        "limit": 21408000000000,
+        "signal_time": "2025-05-28T19:51:00+00:00",
+        "time_ns": 1748461920500000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 4,
+        "best_ask_nanos": 21346500000000,
+        "best_ask_size": 3,
+        "best_bid_nanos": 21345750000000,
+        "best_bid_size": 3,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102f9d92fef65c94318637f66303e06000080d14f2e591300000400000080084142fb9531ef65c94318cf380000a3595906",
+          "record_index": 19308009,
+          "sequence": 106518947,
+          "ts_event_ns": 1748462519991654905,
+          "ts_recv_ns": 1748462519991768571
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 7670,
+        "short_limit_marketable": false,
+        "spread_nanos": 750000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea0010083038102e51cc4ef65c94318417f66303e06000000b98c1e6a1300000100000080084341d666c6ef65c94318612e0000c2595906",
+        "record_index": 19308010,
+        "sequence": 106518978,
+        "ts_event_ns": 1748462520001371365,
+        "ts_recv_ns": 1748462520001521366
+      },
+      "request": {
+        "arms": [
+          "ml050"
+        ],
+        "contracts": 5,
+        "delay_ms": 0,
+        "kind": "arrival",
+        "limit": 21359750000000,
+        "signal_time": "2025-05-28T20:01:00+00:00",
+        "time_ns": 1748462520000000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 4,
+        "best_ask_nanos": 21351750000000,
+        "best_ask_size": 2,
+        "best_bid_nanos": 21351250000000,
+        "best_bid_size": 1,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102d9ed9ff565c94318618d66303e060000809adb866a1300000100000080084142ba47a1f565c94318c22c0000cd605906",
+          "record_index": 19308951,
+          "sequence": 106520781,
+          "ts_event_ns": 1748462520099663321,
+          "ts_recv_ns": 1748462520099751866
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 7554,
+        "short_limit_marketable": false,
+        "spread_nanos": 500000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea0010083038102bb01aaf565c943186b8d66303e06000080099d537213000005000000800841418897abf565c943188f2b0000d3605906",
+        "record_index": 19308952,
+        "sequence": 106520787,
+        "ts_event_ns": 1748462520100323771,
+        "ts_recv_ns": 1748462520100427656
+      },
+      "request": {
+        "arms": [
+          "ml050"
+        ],
+        "contracts": 5,
+        "delay_ms": 100,
+        "kind": "arrival",
+        "limit": 21359750000000,
+        "signal_time": "2025-05-28T20:01:00+00:00",
+        "time_ns": 1748462520100000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 5,
+        "best_ask_nanos": 21352000000000,
+        "best_ask_size": 3,
+        "best_bid_nanos": 21351250000000,
+        "best_bid_size": 2,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102153f480d66c943187b9566303e06000080012c38661300000200000080084142bf8e490d66c9431850330000ad685906",
+          "record_index": 19309779,
+          "sequence": 106522797,
+          "ts_event_ns": 1748462520496570133,
+          "ts_recv_ns": 1748462520496656063
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 7582,
+        "short_limit_marketable": false,
+        "spread_nanos": 750000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea0010083038102e332b40d66c94318bb3762303e060000800d3ead4b13000014000000800843421af9b50d66c943183f3a0000b4685906",
+        "record_index": 19309780,
+        "sequence": 106522804,
+        "ts_event_ns": 1748462520503644899,
+        "ts_recv_ns": 1748462520503761178
+      },
+      "request": {
+        "arms": [
+          "ml050"
+        ],
+        "contracts": 5,
+        "delay_ms": 500,
+        "kind": "arrival",
+        "limit": 21359750000000,
+        "signal_time": "2025-05-28T20:01:00+00:00",
+        "time_ns": 1748462520500000000
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 2,
+        "best_ask_nanos": 21359500000000,
+        "best_ask_size": 1,
+        "best_bid_nanos": 21359000000000,
+        "best_bid_size": 3,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea00100830381025f9e32066cc943180e815c303e06000080b5c04f7913000002000000800843410c4734066cc943181b3a00003ae75906",
+          "record_index": 19322747,
+          "sequence": 106555194,
+          "ts_event_ns": 1748462546147515999,
+          "ts_recv_ns": 1748462546147624716
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 7736,
+        "short_limit_marketable": false,
+        "spread_nanos": 500000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea00100830381028d0b6b066cc943183df766303e06000000fb68256d130000010000000008544234a273066cc943185d3700003be75906",
+        "record_index": 19322748,
+        "sequence": 106555195,
+        "ts_event_ns": 1748462546151213965,
+        "ts_recv_ns": 1748462546151776820
+      },
+      "request": {
+        "arms": [
+          "ml050"
+        ],
+        "contracts": 5,
+        "kind": "before_first_through_event",
+        "limit": 21359750000000,
+        "record_index": 19322748,
+        "signal_time": "2025-05-28T20:01:00+00:00"
+      }
+    },
+    {
+      "book": {
+        "ask_size_at_limit": 10,
+        "best_ask_nanos": 21408000000000,
+        "best_ask_size": 10,
+        "best_bid_nanos": 21406750000000,
+        "best_bid_size": 1,
+        "bid_size_at_or_above_limit": 0,
+        "last_complete_event": {
+          "raw_hex": "0ea0010083038102b7ca71de75ca4318f6f76e303e06000080c3ba25781300000100000080084142b33678de75ca431864330000634a6606",
+          "record_index": 19638094,
+          "sequence": 107367011,
+          "ts_event_ns": 1748463687941868215,
+          "ts_recv_ns": 1748463687942289075
+        },
+        "opposing_display_covers_quantity": false,
+        "resting_orders": 7254,
+        "short_limit_marketable": false,
+        "spread_nanos": 1250000000,
+        "status": "OBSERVED_COMPLETE_EVENT"
+      },
+      "equal_capture_time_boundary": false,
+      "first_unapplied_record": {
+        "raw_hex": "0ea00100830381028bea71de75ca4318fcf76e303e06000000403c707813000008000000000854422bb57cde75ca431870360000654a6606",
+        "record_index": 19638095,
+        "sequence": 107367013,
+        "ts_event_ns": 1748463687941876363,
+        "ts_recv_ns": 1748463687942583595
+      },
+      "request": {
+        "arms": [
+          "no-ml"
+        ],
+        "contracts": 5,
+        "kind": "before_first_through_event",
+        "limit": 21408000000000,
+        "record_index": 19638095,
+        "signal_time": "2025-05-28T19:51:00+00:00"
+      }
+    }
+  ],
+  "official_boundary_records_checked": 24,
+  "reader_sha256": "63a4cb1572c22f6efccbcba29f350e1d580cd9fbca36b51aab93b0cc7eb14616",
+  "records_applied": 19638095,
+  "research_status": "HOLD_VALIDATION",
+  "scope": "Observed displayed book before arrivals and first entry-through events; no simulated matching or PNL revision",
+  "script_sha256": "552ff13c009e14a02cefa5efef743b5c1a3c7150e8efb79c5c27e2408f86b6c0",
+  "snapshot_end_record": 6637,
+  "timeline_sha256": "7b1f8546feb84d76b81466fe204a2b58b52e917164aecc7eeacbebe871de060d"
+}

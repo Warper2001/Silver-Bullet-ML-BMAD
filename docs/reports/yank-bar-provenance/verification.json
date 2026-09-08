@@ -1,0 +1,80 @@
+{
+  "baseline_commit": "27e4e1e0c0415bb4514822a6b17193369bff9d85",
+  "canonical_runs": {
+    "all_five_equal": true,
+    "both_exit_codes": [
+      0,
+      0
+    ],
+    "commands": [
+      "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m src.cli.check_yank_bar_provenance --output-dir .local-provenance/verified-run1",
+      "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m src.cli.check_yank_bar_provenance --output-dir .local-provenance/verified-run2"
+    ],
+    "files": {
+      "lineage.jsonl": {
+        "bytes_equal": true,
+        "first_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+        "second_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+        "size_bytes": 442149619
+      },
+      "manifest.json": {
+        "bytes_equal": true,
+        "first_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+        "second_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+        "size_bytes": 5764
+      },
+      "pilot-differences.jsonl": {
+        "bytes_equal": true,
+        "first_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+        "second_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+        "size_bytes": 21296482
+      },
+      "report.json": {
+        "bytes_equal": true,
+        "first_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+        "second_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+        "size_bytes": 2588
+      },
+      "report.md": {
+        "bytes_equal": true,
+        "first_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+        "second_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+        "size_bytes": 1779
+      }
+    }
+  },
+  "cli_import_isolation": "PASS in fresh interpreter with legacy dependency imports blocked",
+  "data_suitability": "BLOCKED",
+  "format_check": "Black and git diff --check pass",
+  "historical_regression": {
+    "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m pytest tests/unit/yank_signals tests/unit/yank_replay tests/unit/test_strategy_core_consistency.py tests/unit/test_strategy_core_scaling.py -q",
+    "junit": "regressions.xml",
+    "passed": 133,
+    "revision": "b6626622e3468c932722409530120d60f29c6ce6",
+    "working_tree": "/root/Silver-Bullet-ML-BMAD-yank-replay"
+  },
+  "independent_parent_lineage_check": {
+    "checker_sha256": "24ca70db799dbf156a7eca241f5cb80e45b2bc484254e560175ecb79923d599e",
+    "constituents_once_each": 351628,
+    "independent_full_lineage_check": "PASS",
+    "interpreter": "python3 -O",
+    "mixed": 5583,
+    "multi": 29520,
+    "original_csv_all_fields": "PASS",
+    "rows": 289230,
+    "run": "verified-run1"
+  },
+  "new_tests": {
+    "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m pytest tests/unit/yank_bar_provenance -q",
+    "junit": "new-tests.xml",
+    "passed": 44
+  },
+  "parent_input_preservation": {
+    "checked_inputs": 18,
+    "details": "parent-verification.json",
+    "unchanged": true
+  },
+  "research_status": "HOLD_VALIDATION",
+  "review": "Three independent review lenses; confirmed packaging, arithmetic, interruption and verification issues patched; final import smoke issue patched. No unresolved actionable findings.",
+  "schema_version": 1
+}

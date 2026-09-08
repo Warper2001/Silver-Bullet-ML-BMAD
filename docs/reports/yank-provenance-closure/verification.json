@@ -1,0 +1,778 @@
+{
+  "schema_version": 1,
+  "base_revision": "b82c098719de1646b787a8b7f69b6e82435122ae",
+  "worktree": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+  "research_status": "HOLD_VALIDATION",
+  "input_and_artifact_checks": {
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/artifact-hashes.json": {
+      "expected_sha256": "ca26962efdd23dc7a3204db3ddbed6c10cf6ed8442a09754e45ee865673cabf7",
+      "observed_sha256": "ca26962efdd23dc7a3204db3ddbed6c10cf6ed8442a09754e45ee865673cabf7",
+      "after_sha256": "ca26962efdd23dc7a3204db3ddbed6c10cf6ed8442a09754e45ee865673cabf7"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/import-manifest.json": {
+      "expected_sha256": "e206155e54aa7e483ac694fb5b4e480823910902782da88fece733eec932bf53",
+      "observed_sha256": "e206155e54aa7e483ac694fb5b4e480823910902782da88fece733eec932bf53",
+      "after_sha256": "e206155e54aa7e483ac694fb5b4e480823910902782da88fece733eec932bf53"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/reconciliation.jsonl": {
+      "expected_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "observed_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "after_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/gaps-hashes.json": {
+      "expected_sha256": "80c32a8eaccf0c078153d08430b833f58ace4165cda1319f50de190c82255438",
+      "observed_sha256": "80c32a8eaccf0c078153d08430b833f58ace4165cda1319f50de190c82255438",
+      "after_sha256": "80c32a8eaccf0c078153d08430b833f58ace4165cda1319f50de190c82255438"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/mismatches-artifact-hashes.json": {
+      "expected_sha256": "6031ded8e6489abbc3d8793543811d1baf6370125e86094fbdbece2e428affc3",
+      "observed_sha256": "6031ded8e6489abbc3d8793543811d1baf6370125e86094fbdbece2e428affc3",
+      "after_sha256": "6031ded8e6489abbc3d8793543811d1baf6370125e86094fbdbece2e428affc3"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/mismatches-frozen-reconciliation-check.json": {
+      "expected_sha256": "7fc981ee22c0035b9e5a501a41c84ede8395a027e5571b3b197ec319fd31f73f",
+      "observed_sha256": "7fc981ee22c0035b9e5a501a41c84ede8395a027e5571b3b197ec319fd31f73f",
+      "after_sha256": "7fc981ee22c0035b9e5a501a41c84ede8395a027e5571b3b197ec319fd31f73f"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/mismatches-native-provenance.json": {
+      "expected_sha256": "1a6a905fecb8ad446b14248174f3342c23b0a243e3ec90c1f380ef8b2780564b",
+      "observed_sha256": "1a6a905fecb8ad446b14248174f3342c23b0a243e3ec90c1f380ef8b2780564b",
+      "after_sha256": "1a6a905fecb8ad446b14248174f3342c23b0a243e3ec90c1f380ef8b2780564b"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/parent-independent-reconstruction.py": {
+      "expected_sha256": "15c40a5ccd2fa8e8f2e48743834982086272c1ea0f41bf4eb33051c77ac468bd",
+      "observed_sha256": "15c40a5ccd2fa8e8f2e48743834982086272c1ea0f41bf4eb33051c77ac468bd",
+      "after_sha256": "15c40a5ccd2fa8e8f2e48743834982086272c1ea0f41bf4eb33051c77ac468bd"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-extract.py": {
+      "expected_sha256": "30b23cfc203db8298675713c0535db1cfb95be2f10c1f7f6858cfc682f3067cb",
+      "observed_sha256": "30b23cfc203db8298675713c0535db1cfb95be2f10c1f7f6858cfc682f3067cb",
+      "after_sha256": "30b23cfc203db8298675713c0535db1cfb95be2f10c1f7f6858cfc682f3067cb"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-hash-manifest.json": {
+      "expected_sha256": "f8db6135ee936d4aa121d01564825e41458f758b726e0ac622eca6f97fe2e9ec",
+      "observed_sha256": "f8db6135ee936d4aa121d01564825e41458f758b726e0ac622eca6f97fe2e9ec",
+      "after_sha256": "f8db6135ee936d4aa121d01564825e41458f758b726e0ac622eca6f97fe2e9ec"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-import-hashes.json": {
+      "expected_sha256": "a60684f5374f045dfde07041372d9a7116f7e8ff6dc346e5704511377ac168c4",
+      "observed_sha256": "a60684f5374f045dfde07041372d9a7116f7e8ff6dc346e5704511377ac168c4",
+      "after_sha256": "a60684f5374f045dfde07041372d9a7116f7e8ff6dc346e5704511377ac168c4"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-manifest.json.txt": {
+      "expected_sha256": "343df19464426bbbe4bdefe31cd45a311247b0eeaddf414605373e74497ac4e1",
+      "observed_sha256": "343df19464426bbbe4bdefe31cd45a311247b0eeaddf414605373e74497ac4e1",
+      "after_sha256": "343df19464426bbbe4bdefe31cd45a311247b0eeaddf414605373e74497ac4e1"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-raw-2025.jsonl": {
+      "expected_sha256": "baeb1a060250c6c6071fe658459123604c85595df0688d0af278ecb3b6fa1b40",
+      "observed_sha256": "baeb1a060250c6c6071fe658459123604c85595df0688d0af278ecb3b6fa1b40",
+      "after_sha256": "baeb1a060250c6c6071fe658459123604c85595df0688d0af278ecb3b6fa1b40"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/verification.json": {
+      "expected_sha256": "586168fe43a31008b32cd8aa7285df2e0a4367bfd36bd22d5eb784c3eeb27ecf",
+      "observed_sha256": "586168fe43a31008b32cd8aa7285df2e0a4367bfd36bd22d5eb784c3eeb27ecf",
+      "after_sha256": "586168fe43a31008b32cd8aa7285df2e0a4367bfd36bd22d5eb784c3eeb27ecf"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv": {
+      "expected_sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+      "observed_sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+      "after_sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822"
+    },
+    "/root/Silver-Bullet-ML-BMAD/mnq_historical.json": {
+      "expected_sha256": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924",
+      "observed_sha256": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924",
+      "after_sha256": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/comparison.json": {
+      "expected_sha256": "3e94c33bf627c65dcc70b3264daa8f3f0699b0ca1d0e378e35342c4228a6d7e5",
+      "observed_sha256": "3e94c33bf627c65dcc70b3264daa8f3f0699b0ca1d0e378e35342c4228a6d7e5",
+      "after_sha256": "3e94c33bf627c65dcc70b3264daa8f3f0699b0ca1d0e378e35342c4228a6d7e5"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/manifest.json": {
+      "expected_sha256": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1",
+      "observed_sha256": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1",
+      "after_sha256": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-events.jsonl.gz": {
+      "expected_sha256": "f784f2415e9006df064d4638b699fefb3629edc80b71a4537a3231c268c6ccf8",
+      "observed_sha256": "f784f2415e9006df064d4638b699fefb3629edc80b71a4537a3231c268c6ccf8",
+      "after_sha256": "f784f2415e9006df064d4638b699fefb3629edc80b71a4537a3231c268c6ccf8"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-gates.jsonl.gz": {
+      "expected_sha256": "74c16aa40b588492f16c6f337ee2c9e7c10ecdf57109bc39db52f046ebb5d6d5",
+      "observed_sha256": "74c16aa40b588492f16c6f337ee2c9e7c10ecdf57109bc39db52f046ebb5d6d5",
+      "after_sha256": "74c16aa40b588492f16c6f337ee2c9e7c10ecdf57109bc39db52f046ebb5d6d5"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-report.json": {
+      "expected_sha256": "c3dba75354105ba1fc5fbe3c6fea7f351ad0fa407d4416d264be3667299250ef",
+      "observed_sha256": "c3dba75354105ba1fc5fbe3c6fea7f351ad0fa407d4416d264be3667299250ef",
+      "after_sha256": "c3dba75354105ba1fc5fbe3c6fea7f351ad0fa407d4416d264be3667299250ef"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-events.jsonl.gz": {
+      "expected_sha256": "bf0943a8f7705eeeb94f153d9acc8ee37b6d92fac71983a4bd6acf903acf9fd6",
+      "observed_sha256": "bf0943a8f7705eeeb94f153d9acc8ee37b6d92fac71983a4bd6acf903acf9fd6",
+      "after_sha256": "bf0943a8f7705eeeb94f153d9acc8ee37b6d92fac71983a4bd6acf903acf9fd6"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-gates.jsonl.gz": {
+      "expected_sha256": "f552fb28cbb225370ab6677270390ee2aba93ff56dc5d2dd0a752b2401f0fd10",
+      "observed_sha256": "f552fb28cbb225370ab6677270390ee2aba93ff56dc5d2dd0a752b2401f0fd10",
+      "after_sha256": "f552fb28cbb225370ab6677270390ee2aba93ff56dc5d2dd0a752b2401f0fd10"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-report.json": {
+      "expected_sha256": "e0fb45380bab2bee9fa882e07e4c26bf72f4c59d35315eb11d9e01120ba911cb",
+      "observed_sha256": "e0fb45380bab2bee9fa882e07e4c26bf72f4c59d35315eb11d9e01120ba911cb",
+      "after_sha256": "e0fb45380bab2bee9fa882e07e4c26bf72f4c59d35315eb11d9e01120ba911cb"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/artifacts.json": {
+      "expected_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+      "observed_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+      "after_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/event-extracts.jsonl": {
+      "expected_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "observed_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "after_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/report.json": {
+      "expected_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+      "observed_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+      "after_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/report.md": {
+      "expected_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "observed_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "after_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/manifest.json": {
+      "expected_sha256": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156",
+      "observed_sha256": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156",
+      "after_sha256": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst": {
+      "expected_sha256": "bde71af6e7dd122176c8af53bec813921709059303ace434cfabf909c15e6749",
+      "observed_sha256": "bde71af6e7dd122176c8af53bec813921709059303ace434cfabf909c15e6749",
+      "after_sha256": "bde71af6e7dd122176c8af53bec813921709059303ace434cfabf909c15e6749"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst": {
+      "expected_sha256": "c9b96c9469f98fb54ac163feaedc9a8bc6104640cd6c7e20cf022fd364eb8a7e",
+      "observed_sha256": "c9b96c9469f98fb54ac163feaedc9a8bc6104640cd6c7e20cf022fd364eb8a7e",
+      "after_sha256": "c9b96c9469f98fb54ac163feaedc9a8bc6104640cd6c7e20cf022fd364eb8a7e"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst": {
+      "expected_sha256": "08d0757e4448634fff7e39169817c989a4e9edff17a2b058443cdce4e6d1b021",
+      "observed_sha256": "08d0757e4448634fff7e39169817c989a4e9edff17a2b058443cdce4e6d1b021",
+      "after_sha256": "08d0757e4448634fff7e39169817c989a4e9edff17a2b058443cdce4e6d1b021"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst": {
+      "expected_sha256": "f6687005d7edc74a4e6d2b141ec2c81b828394ecd51740d74e643963b490215c",
+      "observed_sha256": "f6687005d7edc74a4e6d2b141ec2c81b828394ecd51740d74e643963b490215c",
+      "after_sha256": "f6687005d7edc74a4e6d2b141ec2c81b828394ecd51740d74e643963b490215c"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250523.status.dbn.zst": {
+      "expected_sha256": "82cd5f3e695ad76a8be2e1f9701c3180ebcb1ddcbbe382315176db89df850c9c",
+      "observed_sha256": "82cd5f3e695ad76a8be2e1f9701c3180ebcb1ddcbbe382315176db89df850c9c",
+      "after_sha256": "82cd5f3e695ad76a8be2e1f9701c3180ebcb1ddcbbe382315176db89df850c9c"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250525.status.dbn.zst": {
+      "expected_sha256": "e7b8099b94a88cd42da3aed93d5f0fbc7800f2530eb30d30cac1e3632dce65ca",
+      "observed_sha256": "e7b8099b94a88cd42da3aed93d5f0fbc7800f2530eb30d30cac1e3632dce65ca",
+      "after_sha256": "e7b8099b94a88cd42da3aed93d5f0fbc7800f2530eb30d30cac1e3632dce65ca"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250526.status.dbn.zst": {
+      "expected_sha256": "c9246d4b2fa3ff58d6272536318c8578c0ee4c15f3422b5ab4248e7bf51481db",
+      "observed_sha256": "c9246d4b2fa3ff58d6272536318c8578c0ee4c15f3422b5ab4248e7bf51481db",
+      "after_sha256": "c9246d4b2fa3ff58d6272536318c8578c0ee4c15f3422b5ab4248e7bf51481db"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst": {
+      "expected_sha256": "2160412a161b4de5bcaf52bd0e2b708ad0d81737d3f3e2995df99e16be1bd490",
+      "observed_sha256": "2160412a161b4de5bcaf52bd0e2b708ad0d81737d3f3e2995df99e16be1bd490",
+      "after_sha256": "2160412a161b4de5bcaf52bd0e2b708ad0d81737d3f3e2995df99e16be1bd490"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst": {
+      "expected_sha256": "d84d6a2f9c2ecf4436f2a7e347956d2e062bbb910e078472136a3a5ca9d2b180",
+      "observed_sha256": "d84d6a2f9c2ecf4436f2a7e347956d2e062bbb910e078472136a3a5ca9d2b180",
+      "after_sha256": "d84d6a2f9c2ecf4436f2a7e347956d2e062bbb910e078472136a3a5ca9d2b180"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst": {
+      "expected_sha256": "4bb3cd581a131c7a3459d537622980d410cad5a32b48c225be09a13ba48fab45",
+      "observed_sha256": "4bb3cd581a131c7a3459d537622980d410cad5a32b48c225be09a13ba48fab45",
+      "after_sha256": "4bb3cd581a131c7a3459d537622980d410cad5a32b48c225be09a13ba48fab45"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250530.status.dbn.zst": {
+      "expected_sha256": "b76cfc7bc3e7353041d7c91b300f5204d080a0adc12bcd332d3f0b20177148c9",
+      "observed_sha256": "b76cfc7bc3e7353041d7c91b300f5204d080a0adc12bcd332d3f0b20177148c9",
+      "after_sha256": "b76cfc7bc3e7353041d7c91b300f5204d080a0adc12bcd332d3f0b20177148c9"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/metadata.json": {
+      "expected_sha256": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9",
+      "observed_sha256": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9",
+      "after_sha256": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250519.definition.dbn.zst": {
+      "expected_sha256": "b0e77ce84ce918246616fb8fc709027464e800178abd8700cbd6d80f833a587b",
+      "observed_sha256": "b0e77ce84ce918246616fb8fc709027464e800178abd8700cbd6d80f833a587b",
+      "after_sha256": "b0e77ce84ce918246616fb8fc709027464e800178abd8700cbd6d80f833a587b"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250520.definition.dbn.zst": {
+      "expected_sha256": "0225e3ca550f9c1893244bcd9bea25384f09e578dbe28ba67aa49ce03b1e0da1",
+      "observed_sha256": "0225e3ca550f9c1893244bcd9bea25384f09e578dbe28ba67aa49ce03b1e0da1",
+      "after_sha256": "0225e3ca550f9c1893244bcd9bea25384f09e578dbe28ba67aa49ce03b1e0da1"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250521.definition.dbn.zst": {
+      "expected_sha256": "e2c9018a96c08e93a73284362ff74cc1a6496ce8905d06452f9b6eba1d3f6594",
+      "observed_sha256": "e2c9018a96c08e93a73284362ff74cc1a6496ce8905d06452f9b6eba1d3f6594",
+      "after_sha256": "e2c9018a96c08e93a73284362ff74cc1a6496ce8905d06452f9b6eba1d3f6594"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250522.definition.dbn.zst": {
+      "expected_sha256": "f35a6841b07cf9fc78f026420651820488ef818b4bcb726db81c636874d11cb1",
+      "observed_sha256": "f35a6841b07cf9fc78f026420651820488ef818b4bcb726db81c636874d11cb1",
+      "after_sha256": "f35a6841b07cf9fc78f026420651820488ef818b4bcb726db81c636874d11cb1"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250523.definition.dbn.zst": {
+      "expected_sha256": "fc4ea840e7d1228e7ba5174a2c8c13f48d4eb38e58c6771c244c64db8e6b3002",
+      "observed_sha256": "fc4ea840e7d1228e7ba5174a2c8c13f48d4eb38e58c6771c244c64db8e6b3002",
+      "after_sha256": "fc4ea840e7d1228e7ba5174a2c8c13f48d4eb38e58c6771c244c64db8e6b3002"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250525.definition.dbn.zst": {
+      "expected_sha256": "25c44abdf94caab6802aadccc554801a97ae28bdfa06b33ad723d3979fa2386f",
+      "observed_sha256": "25c44abdf94caab6802aadccc554801a97ae28bdfa06b33ad723d3979fa2386f",
+      "after_sha256": "25c44abdf94caab6802aadccc554801a97ae28bdfa06b33ad723d3979fa2386f"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250526.definition.dbn.zst": {
+      "expected_sha256": "2bf61cb9dc674415a6eb87433ef89a389bdefd9621cd388774156946bc06d503",
+      "observed_sha256": "2bf61cb9dc674415a6eb87433ef89a389bdefd9621cd388774156946bc06d503",
+      "after_sha256": "2bf61cb9dc674415a6eb87433ef89a389bdefd9621cd388774156946bc06d503"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250527.definition.dbn.zst": {
+      "expected_sha256": "8e6671683a0a81797ec1786d62c005ac5dad80ffd5c972165bb3bc4c740f82d7",
+      "observed_sha256": "8e6671683a0a81797ec1786d62c005ac5dad80ffd5c972165bb3bc4c740f82d7",
+      "after_sha256": "8e6671683a0a81797ec1786d62c005ac5dad80ffd5c972165bb3bc4c740f82d7"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250528.definition.dbn.zst": {
+      "expected_sha256": "309afad712652a31734d962128da97adf9721d619f4b3f3c0df46d1946178e7b",
+      "observed_sha256": "309afad712652a31734d962128da97adf9721d619f4b3f3c0df46d1946178e7b",
+      "after_sha256": "309afad712652a31734d962128da97adf9721d619f4b3f3c0df46d1946178e7b"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250529.definition.dbn.zst": {
+      "expected_sha256": "0f679012f75cfa779522ef4c6db2adf121ce7728ef0515371c5a843135d0d862",
+      "observed_sha256": "0f679012f75cfa779522ef4c6db2adf121ce7728ef0515371c5a843135d0d862",
+      "after_sha256": "0f679012f75cfa779522ef4c6db2adf121ce7728ef0515371c5a843135d0d862"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250530.definition.dbn.zst": {
+      "expected_sha256": "e90ba1030ecb0dd93875ccb178fc07c70912f992bbb84954aa2bbe21fd5b275a",
+      "observed_sha256": "e90ba1030ecb0dd93875ccb178fc07c70912f992bbb84954aa2bbe21fd5b275a",
+      "after_sha256": "e90ba1030ecb0dd93875ccb178fc07c70912f992bbb84954aa2bbe21fd5b275a"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/metadata.json": {
+      "expected_sha256": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33",
+      "observed_sha256": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33",
+      "after_sha256": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250519.mbo.dbn.zst": {
+      "expected_sha256": "857b4d466347f6af1e0b7f3582de3f6e57713a7a152c1eaf27504bf10d2535d6",
+      "observed_sha256": "857b4d466347f6af1e0b7f3582de3f6e57713a7a152c1eaf27504bf10d2535d6",
+      "after_sha256": "857b4d466347f6af1e0b7f3582de3f6e57713a7a152c1eaf27504bf10d2535d6"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250520.mbo.dbn.zst": {
+      "expected_sha256": "5a94a963312c1fdd2bcaf43f499151e5b3ff3158da2d657920942f37170790ff",
+      "observed_sha256": "5a94a963312c1fdd2bcaf43f499151e5b3ff3158da2d657920942f37170790ff",
+      "after_sha256": "5a94a963312c1fdd2bcaf43f499151e5b3ff3158da2d657920942f37170790ff"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250521.mbo.dbn.zst": {
+      "expected_sha256": "00c3fabee823390ec5be236281553952754f65b801d07632ee9ba964c91bae65",
+      "observed_sha256": "00c3fabee823390ec5be236281553952754f65b801d07632ee9ba964c91bae65",
+      "after_sha256": "00c3fabee823390ec5be236281553952754f65b801d07632ee9ba964c91bae65"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250522.mbo.dbn.zst": {
+      "expected_sha256": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942",
+      "observed_sha256": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942",
+      "after_sha256": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250523.mbo.dbn.zst": {
+      "expected_sha256": "7261b656c9fcc3f877e520aa9f76e15970aa58c1c4b8d69f900c3f16e99da79e",
+      "observed_sha256": "7261b656c9fcc3f877e520aa9f76e15970aa58c1c4b8d69f900c3f16e99da79e",
+      "after_sha256": "7261b656c9fcc3f877e520aa9f76e15970aa58c1c4b8d69f900c3f16e99da79e"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250525.mbo.dbn.zst": {
+      "expected_sha256": "338da0db1fb132a641c022931e15da058fca6a6cd775c3998fdf49fff5864f45",
+      "observed_sha256": "338da0db1fb132a641c022931e15da058fca6a6cd775c3998fdf49fff5864f45",
+      "after_sha256": "338da0db1fb132a641c022931e15da058fca6a6cd775c3998fdf49fff5864f45"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250526.mbo.dbn.zst": {
+      "expected_sha256": "c792f119361844e17ff40fe4d4e99b5ce91b11d19608c759c0ecedcae306ef64",
+      "observed_sha256": "c792f119361844e17ff40fe4d4e99b5ce91b11d19608c759c0ecedcae306ef64",
+      "after_sha256": "c792f119361844e17ff40fe4d4e99b5ce91b11d19608c759c0ecedcae306ef64"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250527.mbo.dbn.zst": {
+      "expected_sha256": "a1583a621327b4638da219b1e44379d66071a8d4aa0dbb84ba3fd88a4b4c8be3",
+      "observed_sha256": "a1583a621327b4638da219b1e44379d66071a8d4aa0dbb84ba3fd88a4b4c8be3",
+      "after_sha256": "a1583a621327b4638da219b1e44379d66071a8d4aa0dbb84ba3fd88a4b4c8be3"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst": {
+      "expected_sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+      "observed_sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+      "after_sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250529.mbo.dbn.zst": {
+      "expected_sha256": "a21a4734b7a54406111fd609ff32556a65ca5efb0132b1a3d796b6f0682952da",
+      "observed_sha256": "a21a4734b7a54406111fd609ff32556a65ca5efb0132b1a3d796b6f0682952da",
+      "after_sha256": "a21a4734b7a54406111fd609ff32556a65ca5efb0132b1a3d796b6f0682952da"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250530.mbo.dbn.zst": {
+      "expected_sha256": "42d98c3c66062b6f87c04c4e8215f84d6db5617bc0c99b9124a9ebc821618df2",
+      "observed_sha256": "42d98c3c66062b6f87c04c4e8215f84d6db5617bc0c99b9124a9ebc821618df2",
+      "after_sha256": "42d98c3c66062b6f87c04c4e8215f84d6db5617bc0c99b9124a9ebc821618df2"
+    },
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/metadata.json": {
+      "expected_sha256": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9",
+      "observed_sha256": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9",
+      "after_sha256": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9"
+    },
+    "/root/Silver-Bullet-ML-BMAD/models/xgboost/tier2_meta_labeling_model.pkl": {
+      "expected_sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2",
+      "observed_sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2",
+      "after_sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/digests/provenance-r1-1.md": {
+      "expected_sha256": "6bf3d14b8d5247437e11111c9c9c1878fb6b0fbeb54deb1f0701cb4af39f32c6",
+      "observed_sha256": "6bf3d14b8d5247437e11111c9c9c1878fb6b0fbeb54deb1f0701cb4af39f32c6",
+      "after_sha256": "6bf3d14b8d5247437e11111c9c9c1878fb6b0fbeb54deb1f0701cb4af39f32c6"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/parent-timestamp-docs.md": {
+      "expected_sha256": "a37d506186c33d8e67f2c2da74b1fa895b7a997e84c69f94b51d04505cf42673",
+      "observed_sha256": "a37d506186c33d8e67f2c2da74b1fa895b7a997e84c69f94b51d04505cf42673",
+      "after_sha256": "a37d506186c33d8e67f2c2da74b1fa895b7a997e84c69f94b51d04505cf42673"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-aggregation-comparison.json": {
+      "expected_sha256": "3fd272f13d98cd517491526b1f06854fdc8672ea1a0b9cd32089f2c015d7fff5",
+      "observed_sha256": "3fd272f13d98cd517491526b1f06854fdc8672ea1a0b9cd32089f2c015d7fff5",
+      "after_sha256": "3fd272f13d98cd517491526b1f06854fdc8672ea1a0b9cd32089f2c015d7fff5"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-collect_historical_data.py.txt": {
+      "expected_sha256": "1ccc9baf4d5bcbf723defb587f51e8fce74ac08af2b01d933b113405c33bd4c1",
+      "observed_sha256": "1ccc9baf4d5bcbf723defb587f51e8fce74ac08af2b01d933b113405c33bd4c1",
+      "after_sha256": "1ccc9baf4d5bcbf723defb587f51e8fce74ac08af2b01d933b113405c33bd4c1"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-compare.py": {
+      "expected_sha256": "fc0b02c999d2168d368b0ef2980bc3b745781054b2bb4d7779a68151393b7b71",
+      "observed_sha256": "fc0b02c999d2168d368b0ef2980bc3b745781054b2bb4d7779a68151393b7b71",
+      "after_sha256": "fc0b02c999d2168d368b0ef2980bc3b745781054b2bb4d7779a68151393b7b71"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-complete-lineage.jsonl": {
+      "expected_sha256": "44132a8c2db0423089d0495772c5de362b11137954f3c8c5f542b569146553e9",
+      "observed_sha256": "44132a8c2db0423089d0495772c5de362b11137954f3c8c5f542b569146553e9",
+      "after_sha256": "44132a8c2db0423089d0495772c5de362b11137954f3c8c5f542b569146553e9"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-convert_to_time_bars.py.txt": {
+      "expected_sha256": "d57aff5ab76148104b56c581b0d94a620913415f85ff09585874a77d6f60e1cb",
+      "observed_sha256": "d57aff5ab76148104b56c581b0d94a620913415f85ff09585874a77d6f60e1cb",
+      "after_sha256": "d57aff5ab76148104b56c581b0d94a620913415f85ff09585874a77d6f60e1cb"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-development-summary.json": {
+      "expected_sha256": "bf60671ce76aad83801d3a0b177026f22a289000aaa8456f0f574bad57c0f93d",
+      "observed_sha256": "bf60671ce76aad83801d3a0b177026f22a289000aaa8456f0f574bad57c0f93d",
+      "after_sha256": "bf60671ce76aad83801d3a0b177026f22a289000aaa8456f0f574bad57c0f93d"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-git-history.txt": {
+      "expected_sha256": "7407b1da9d2ef4575800a58505406541e99789bfe1f653f497b5ac1623079103",
+      "observed_sha256": "7407b1da9d2ef4575800a58505406541e99789bfe1f653f497b5ac1623079103",
+      "after_sha256": "7407b1da9d2ef4575800a58505406541e99789bfe1f653f497b5ac1623079103"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-historical-code-check.txt": {
+      "expected_sha256": "a60f84ccd0716ccc63c1cde47c5fddb536c7281fc04d53158e30ec0e2ebe5fb1",
+      "observed_sha256": "a60f84ccd0716ccc63c1cde47c5fddb536c7281fc04d53158e30ec0e2ebe5fb1",
+      "after_sha256": "a60f84ccd0716ccc63c1cde47c5fddb536c7281fc04d53158e30ec0e2ebe5fb1"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-historical_data_loader.py.txt": {
+      "expected_sha256": "6efd880ee1f000b82c76160421755bf67afbb2dd90e23c1b8e90d73b41756554",
+      "observed_sha256": "6efd880ee1f000b82c76160421755bf67afbb2dd90e23c1b8e90d73b41756554",
+      "after_sha256": "6efd880ee1f000b82c76160421755bf67afbb2dd90e23c1b8e90d73b41756554"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-historical_downloader.py.txt": {
+      "expected_sha256": "c4f26ae2439d19b012dda3704b2163fdfdd6e2fc805a9d47480d211640145949",
+      "observed_sha256": "c4f26ae2439d19b012dda3704b2163fdfdd6e2fc805a9d47480d211640145949",
+      "after_sha256": "c4f26ae2439d19b012dda3704b2163fdfdd6e2fc805a9d47480d211640145949"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-matched-lineage.jsonl": {
+      "expected_sha256": "365080c5c23bc14b6cc670348f40024de96f1ad3a10a102e008c8df4695c27ed",
+      "observed_sha256": "365080c5c23bc14b6cc670348f40024de96f1ad3a10a102e008c8df4695c27ed",
+      "after_sha256": "365080c5c23bc14b6cc670348f40024de96f1ad3a10a102e008c8df4695c27ed"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-pilot-intersection.json": {
+      "expected_sha256": "fc174944f77d5765f5dc5399f71dc7444ecf85d8308d10cdb2af04bf0b4cc513",
+      "observed_sha256": "fc174944f77d5765f5dc5399f71dc7444ecf85d8308d10cdb2af04bf0b4cc513",
+      "after_sha256": "fc174944f77d5765f5dc5399f71dc7444ecf85d8308d10cdb2af04bf0b4cc513"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-raw-scope.json": {
+      "expected_sha256": "a967120ab01b6a47ea458bdf53dbd421e9c1dcb6857cffbfc8f0d4ec30a2f31e",
+      "observed_sha256": "a967120ab01b6a47ea458bdf53dbd421e9c1dcb6857cffbfc8f0d4ec30a2f31e",
+      "after_sha256": "a967120ab01b6a47ea458bdf53dbd421e9c1dcb6857cffbfc8f0d4ec30a2f31e"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-reconstruct.py": {
+      "expected_sha256": "7e87a077d2f6e43254bee9ccd41c241573b7548365c275ff952b7f74d22be939",
+      "observed_sha256": "7e87a077d2f6e43254bee9ccd41c241573b7548365c275ff952b7f74d22be939",
+      "after_sha256": "7e87a077d2f6e43254bee9ccd41c241573b7548365c275ff952b7f74d22be939"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-reconstruction.json": {
+      "expected_sha256": "efec5a046ad1c13ffa9a7f8a234f03814d5bd5d3df8674861d7ddf3804c9d9a6",
+      "observed_sha256": "efec5a046ad1c13ffa9a7f8a234f03814d5bd5d3df8674861d7ddf3804c9d9a6",
+      "after_sha256": "efec5a046ad1c13ffa9a7f8a234f03814d5bd5d3df8674861d7ddf3804c9d9a6"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-row-comparison.json": {
+      "expected_sha256": "85a18aa7ad0ec499565d003d524c6a7faa157ce8363456d9a2041bccb71ef2cf",
+      "observed_sha256": "85a18aa7ad0ec499565d003d524c6a7faa157ce8363456d9a2041bccb71ef2cf",
+      "after_sha256": "85a18aa7ad0ec499565d003d524c6a7faa157ce8363456d9a2041bccb71ef2cf"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-transformation.py.txt": {
+      "expected_sha256": "e14ff2bcec8a8966ddd7b95979b5ac50314f95fb6372df062ac0efa152fcf779",
+      "observed_sha256": "e14ff2bcec8a8966ddd7b95979b5ac50314f95fb6372df062ac0efa152fcf779",
+      "after_sha256": "e14ff2bcec8a8966ddd7b95979b5ac50314f95fb6372df062ac0efa152fcf779"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-vendor-docs.json": {
+      "expected_sha256": "178aab58c27dbb4a14db08402a4e1ee320e8c84cf38f819794b5e1c4fc691914",
+      "observed_sha256": "178aab58c27dbb4a14db08402a4e1ee320e8c84cf38f819794b5e1c4fc691914",
+      "after_sha256": "178aab58c27dbb4a14db08402a4e1ee320e8c84cf38f819794b5e1c4fc691914"
+    },
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-yank-signal-replay-inputs.json.txt": {
+      "expected_sha256": "128c6943711f3aa8b2cb34baffb9f6c08b397cad6562286b930d968169d1ed66",
+      "observed_sha256": "128c6943711f3aa8b2cb34baffb9f6c08b397cad6562286b930d968169d1ed66",
+      "after_sha256": "128c6943711f3aa8b2cb34baffb9f6c08b397cad6562286b930d968169d1ed66"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run1/lineage.jsonl": {
+      "expected_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+      "observed_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+      "after_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run1/manifest.json": {
+      "expected_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+      "observed_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+      "after_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run1/pilot-differences.jsonl": {
+      "expected_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+      "observed_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+      "after_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run1/report.json": {
+      "expected_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+      "observed_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+      "after_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run1/report.md": {
+      "expected_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+      "observed_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+      "after_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run2/lineage.jsonl": {
+      "expected_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+      "observed_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+      "after_sha256": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run2/manifest.json": {
+      "expected_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+      "observed_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+      "after_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run2/pilot-differences.jsonl": {
+      "expected_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+      "observed_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+      "after_sha256": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run2/report.json": {
+      "expected_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+      "observed_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+      "after_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run2/report.md": {
+      "expected_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+      "observed_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+      "after_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-bar-provenance/manifest.json": {
+      "expected_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+      "observed_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+      "after_sha256": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-bar-provenance/report.json": {
+      "expected_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+      "observed_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+      "after_sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-bar-provenance/report.md": {
+      "expected_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+      "observed_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda",
+      "after_sha256": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-execution-pilot/final-run1/artifacts.json": {
+      "expected_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+      "observed_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+      "after_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-execution-pilot/final-run1/event-extracts.jsonl": {
+      "expected_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "observed_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "after_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-execution-pilot/final-run1/reconciliation.jsonl": {
+      "expected_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "observed_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "after_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-execution-pilot/final-run1/report.json": {
+      "expected_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+      "observed_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+      "after_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-execution-pilot/final-run1/report.md": {
+      "expected_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "observed_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "after_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-pilot-completion/run-a/artifacts.json": {
+      "expected_sha256": "b71001abd3ad63c22916380d2f07f3e9af112a9e59472f1c91b136aa7185076d",
+      "observed_sha256": "b71001abd3ad63c22916380d2f07f3e9af112a9e59472f1c91b136aa7185076d",
+      "after_sha256": "b71001abd3ad63c22916380d2f07f3e9af112a9e59472f1c91b136aa7185076d"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-pilot-completion/run-a/event-extracts.jsonl": {
+      "expected_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "observed_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "after_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-pilot-completion/run-a/reconciliation.jsonl": {
+      "expected_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "observed_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "after_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-pilot-completion/run-a/report.json": {
+      "expected_sha256": "0e2c2ef1501e3f14c4c1a360d27a0040a7841eff6348c41c7dd1537a4cf0c1c0",
+      "observed_sha256": "0e2c2ef1501e3f14c4c1a360d27a0040a7841eff6348c41c7dd1537a4cf0c1c0",
+      "after_sha256": "0e2c2ef1501e3f14c4c1a360d27a0040a7841eff6348c41c7dd1537a4cf0c1c0"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-pilot-completion/run-a/report.md": {
+      "expected_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "observed_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "after_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22"
+    },
+    "/root/Silver-Bullet-ML-BMAD/docs/reports/yank-execution-pilot/final-run2/artifacts.json": {
+      "expected_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+      "observed_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+      "after_sha256": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3"
+    },
+    "/root/Silver-Bullet-ML-BMAD/docs/reports/yank-execution-pilot/final-run2/event-extracts.jsonl": {
+      "expected_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "observed_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+      "after_sha256": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464"
+    },
+    "/root/Silver-Bullet-ML-BMAD/docs/reports/yank-execution-pilot/final-run2/reconciliation.jsonl": {
+      "expected_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "observed_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+      "after_sha256": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b"
+    },
+    "/root/Silver-Bullet-ML-BMAD/docs/reports/yank-execution-pilot/final-run2/report.json": {
+      "expected_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+      "observed_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+      "after_sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5"
+    },
+    "/root/Silver-Bullet-ML-BMAD/docs/reports/yank-execution-pilot/final-run2/report.md": {
+      "expected_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "observed_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+      "after_sha256": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/bars.jsonl": {
+      "expected_sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+      "observed_sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+      "after_sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/coverage.jsonl": {
+      "expected_sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+      "observed_sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+      "after_sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/definitions.json": {
+      "expected_sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+      "observed_sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+      "after_sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/delayed-events.json": {
+      "expected_sha256": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+      "observed_sha256": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+      "after_sha256": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/exchange-diagnostic.jsonl": {
+      "expected_sha256": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+      "observed_sha256": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+      "after_sha256": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/manifest.json": {
+      "expected_sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+      "observed_sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+      "after_sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/replay.json": {
+      "expected_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+      "observed_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+      "after_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/report.json": {
+      "expected_sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+      "observed_sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+      "after_sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a/status.json": {
+      "expected_sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930",
+      "observed_sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930",
+      "after_sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/bars.jsonl": {
+      "expected_sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+      "observed_sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+      "after_sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/coverage.jsonl": {
+      "expected_sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+      "observed_sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+      "after_sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/definitions.json": {
+      "expected_sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+      "observed_sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+      "after_sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/delayed-events.json": {
+      "expected_sha256": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+      "observed_sha256": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+      "after_sha256": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/exchange-diagnostic.jsonl": {
+      "expected_sha256": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+      "observed_sha256": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+      "after_sha256": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/manifest.json": {
+      "expected_sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+      "observed_sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+      "after_sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/replay.json": {
+      "expected_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+      "observed_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+      "after_sha256": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/report.json": {
+      "expected_sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+      "observed_sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+      "after_sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-b/status.json": {
+      "expected_sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930",
+      "observed_sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930",
+      "after_sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/src/cli/check_yank_execution_pilot.py": {
+      "expected_sha256": "faa12e06bb8564f6f43fa50c7c34e1830e9c62e044238118982a4d64cc2bbb1c",
+      "observed_sha256": "faa12e06bb8564f6f43fa50c7c34e1830e9c62e044238118982a4d64cc2bbb1c",
+      "after_sha256": "faa12e06bb8564f6f43fa50c7c34e1830e9c62e044238118982a4d64cc2bbb1c"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/src/research/yank_execution_pilot/__init__.py": {
+      "expected_sha256": "916bb9b786eefd2fa111a41f2829ca113a64ff9f40e9c577371c7e25725bb5e2",
+      "observed_sha256": "916bb9b786eefd2fa111a41f2829ca113a64ff9f40e9c577371c7e25725bb5e2",
+      "after_sha256": "916bb9b786eefd2fa111a41f2829ca113a64ff9f40e9c577371c7e25725bb5e2"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/src/research/yank_execution_pilot/audit.py": {
+      "expected_sha256": "cb0045d37816300050432e969d9f39027f05016be4dd01e6712da1d017f85fe3",
+      "observed_sha256": "cb0045d37816300050432e969d9f39027f05016be4dd01e6712da1d017f85fe3",
+      "after_sha256": "cb0045d37816300050432e969d9f39027f05016be4dd01e6712da1d017f85fe3"
+    },
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/src/research/yank_execution_pilot/core.py": {
+      "expected_sha256": "87c5bac764752d152844b5c3638af2b0fb7bb7bf13670f15a50ad8d6275268b3",
+      "observed_sha256": "87c5bac764752d152844b5c3638af2b0fb7bb7bf13670f15a50ad8d6275268b3",
+      "after_sha256": "87c5bac764752d152844b5c3638af2b0fb7bb7bf13670f15a50ad8d6275268b3"
+    }
+  },
+  "checked_files": 137,
+  "all_recorded_hashes_match": true,
+  "root_historical_alias": {
+    "path": "/root/mnq_historical.json",
+    "sha256": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924",
+    "scope": "byte hash only; no mixed-year price decoding"
+  },
+  "lineage_check": {
+    "independent_full_lineage_check": "PASS",
+    "rows": 289230,
+    "constituents_once_each": 351628,
+    "multi": 29520,
+    "mixed": 5583,
+    "original_csv_all_fields": "PASS",
+    "command": "python3 -O docs/reports/yank-bar-provenance/verify-lineage.py /root/Silver-Bullet-ML-BMAD-yank-provenance/.local-provenance/verified-run1",
+    "checker_sha256": "24ca70db799dbf156a7eca241f5cb80e45b2bc484254e560175ecb79923d599e"
+  },
+  "candidate_writer_check": {
+    "revision": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8",
+    "path": "scripts/generate_1min_dollar_bars_2025.py",
+    "source_sha256": "8f603a91acce9dfcec199b73e5f1ecb3f2d19904bbafeb0eb0bb018523c8f27e",
+    "input": "verified 2025 extract in original extract order; json.load replaced with these objects; temporary working directory; input open intercepted",
+    "input_records": 351628,
+    "output_sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+    "expected_sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+    "bytes": 22318944,
+    "matches_frozen_bytes": true,
+    "exit_code": 0,
+    "limitation": "Controlled compatibility check, not an original invocation or acquisition receipt.",
+    "command": "python3 docs/reports/yank-provenance-closure/check-historical-candidate.py",
+    "checker_sha256": "27e28207bebc35a055e5a7cabdc4bd91211df04683556278a17acfd46f612217"
+  },
+  "tests": {
+    "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m pytest tests/unit/yank_bar_provenance -q --junitxml=docs/reports/yank-provenance-closure/provenance-tests.xml",
+    "passed": 44,
+    "failures": 0,
+    "warnings": "2 existing Pydantic deprecations",
+    "junit_sha256": "722700c942b5e84dce0dae796ef4f7cf0cb2d7c201ef1e68215b31739a9ba0e2"
+  },
+  "boundaries": {
+    "acquisition": false,
+    "network": false,
+    "sealed_holdouts_read": false,
+    "non_2025_prices_analyzed": false,
+    "full_native_audit_rerun": false,
+    "strategy_or_production_changes": false
+  },
+  "preservation": {
+    "method": "Recorded hash comparisons plus git diff against base; original audit, frozen archive, both corrected native outputs, provenance pair and prior research pins checked. Hashing opaque mixed-year/native files does not decode prices.",
+    "tracked_changes": [],
+    "unchanged_before_report_edit": true,
+    "after_all_recorded_hashes_match": true,
+    "final_existing_tracked_changes": [
+      "docs/reports/yank-pilot-completion/README.md"
+    ],
+    "pilot_completion_only_additive_link": true,
+    "all_other_existing_tracked_files_unchanged_from_base": true,
+    "frozen_strategy_settings_and_results": "Unchanged: Git comparison covers tracked source/config/docs; pinned archive manifests, model and replay/audit artifacts match before and after."
+  },
+  "citation_checks": {
+    "sources_verified": 18,
+    "question_references_resolved": 30,
+    "exact_line_excerpts_match": true,
+    "json_pointers_resolve": true,
+    "all_six_questions_have_limitations_and_precise_blockers": true,
+    "semantic_check": "Each question assessed against its cited source/code/record and bounded search results. Compatibility and historical narrative distinguished from authenticated execution; no negative search treated as positive authentication."
+  },
+  "searched_revisions": {
+    "ref_inventory": "search-inventory.json#/searches/0",
+    "candidate": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8",
+    "prior_search_base": "84f2382ed238ff66f42c470bf8021c0fd7e4e4e2",
+    "additional_transformer_origin": "6fbf784b6f793d3bacf06ad343128374e20a85c7",
+    "full_history_results": "search-inventory.json"
+  },
+  "closure_artifact_sha256": {
+    "historical-writer.py.txt": "8f603a91acce9dfcec199b73e5f1ecb3f2d19904bbafeb0eb0bb018523c8f27e",
+    "sources.json": "22689268ae986e58675fece3708a9f60ce36c22c05540cfafb586167a0c25922",
+    "search-inventory.json": "94788c2c0a7380fb55d329e7e2755ead1c526c6428412025d2015656c7f11ea0",
+    "provenance-tests.xml": "722700c942b5e84dce0dae796ef4f7cf0cb2d7c201ef1e68215b31739a9ba0e2",
+    "check-historical-candidate.py": "27e28207bebc35a055e5a7cabdc4bd91211df04683556278a17acfd46f612217",
+    "claims.json": "bd2825db0e0c5c2c7e74620cfa29a782450321a618c55a667fc1a96dbb75f90e",
+    "README.md": "b1fd369b4ccc6fc2a02fa97d4eb958a3f4f54dbdd17011e1e1612469f8efac93"
+  },
+  "status": "PASS_CLOSURE_CHECKS_WITH_PROVENANCE_BLOCKERS",
+  "git_diff_check": "PASS"
+}

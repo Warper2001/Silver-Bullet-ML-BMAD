@@ -16,6 +16,8 @@ The frozen audit's May 28 no-ML order 4 retains **both conditional interpretatio
 
 Corrected minute-replay economics remain exactly as previously published: two closed modeled trades per arm, no terminal contracts, no-ML net −$818 / equity $49,182 and ML0.50 net −$873 / equity $49,127. Each arm carries $8 in modeled closed-trade charges. The historical $4-per-close assumption is not a verified broker fee. The same-bar ambiguity annotation remains; no hypothetical partial fills, changed fills or revised frozen-order P&L are introduced.
 
+The incremental [provenance closure pass](../yank-provenance-closure/README.md) found a historical generator that reproduces the frozen CSV byte-for-byte from the verified 2025 extract. All six authenticated provenance questions remain unresolved; the report lists the exact missing records. This new evidence leaves the original provenance conclusions and **HOLD_VALIDATION** intact.
+
 ## Verification
 
 [Verification evidence](verification.json) records the two fresh audit runs, canonical SHA256 values, unchanged original artifacts and saved repeat, all input and archive hashes, code hashes, complete finding/schedule equality and unchanged native replay artifacts and sources. Only `code_hashes` differs from the original JSON report, reflecting the command/path integration; the event extracts, reconciliation and Markdown findings retain original bytes. Both fresh runs parse 237,146,989 native MBO records and produce identical canonical bytes.

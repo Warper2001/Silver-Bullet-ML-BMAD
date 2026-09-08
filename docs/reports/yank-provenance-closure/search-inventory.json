@@ -1,0 +1,220 @@
+{
+  "scope": "Local metadata/code/reachable Git only. Not an exhaustive search of every filesystem location, unreachable object, shell history, credentials, remote archive or sealed holdout. Prior inventory read before incremental searches.",
+  "searches": [
+    {
+      "id": "refs",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "for-each-ref",
+        "--format=%(refname) %(objectname)"
+      ],
+      "exit_code": 0,
+      "stdout": "refs/heads/1minuteDB fcb58fee95cb991991fbd0afa7d6472996793c82\nrefs/heads/analysis/friction-rescreen 83e80411ee465a7a4416a6a4dbecbd50c8a2d60a\nrefs/heads/best_day_trade_scalp dda9d2f070ae832bde562392c41c49a979ab6451\nrefs/heads/chore/audit-trail-20260804 1910acbc68ad02cb7bbf6b718e14ec695453785e\nrefs/heads/chore/commit-pending-working-tree-20260731 05a8414497f55b348ec8c2ab6a46f6551ac1b842\nrefs/heads/chore/gitignore-large-data 38143481b73b0627520a7eb8bd8a566ff7b9f236\nrefs/heads/chore/untrack-cascade-ledgers 42ae5cb098e8d75ce6fe19cfa50c1dc26078a7d0\nrefs/heads/crypto 252334084f3a7dd2f28406a2020ee7536cd53d88\nrefs/heads/crypto-variant-no-killzones 16c891198741f714d43d9a0c68fac7d0e85c218b\nrefs/heads/diag/lrc-characterisation b7c838f50d5f8f7e643a5eeded5aa5e0a7841a9c\nrefs/heads/dll-parity-deploy 8f268bebaf1fcaf0e58f13bce8f847026cc8977f\nrefs/heads/feat/floor-monitor-report-only 023e5820c5cf08abd481ac4773b98a46a6c0b342\nrefs/heads/feat/mim-parity-day-check 16498f9519f7b553d6038ea8d17d977c87214dbb\nrefs/heads/feat/parity-telegram 51e17b1ac1fc0a55cdf6a8e82cdd68f3717b2710\nrefs/heads/feat/research-validation-stack a7f96c2c9221f32850d781ff1c181574a2933f50\nrefs/heads/feat/s26-autoroll-and-unproductive-check 389958c71291936ed9d5bab4fa90925aee42d856\nrefs/heads/feat/sim-invvol-track 8e910feb4e93b62ac9e6ceb49c924457d367a72e\nrefs/heads/feat/thursday-amendment3 991c4dfec3581e18bcc98e3460b794e7925bd589\nrefs/heads/feat/ticksim-fill-simulator 84f2382ed238ff66f42c470bf8021c0fd7e4e4e2\nrefs/heads/feat/vendor-systemd-units 305ddfc6712d3dff28270380a890effcb85e94da\nrefs/heads/feat/yank-bar-provenance 1499d2bb0c66b25d7629e78f007127a796bde266\nrefs/heads/feat/yank-evaluation-heartbeat ca852722164145ba41e6ebd20e221fb42540588c\nrefs/heads/feat/yank-ml-canary 7c9bc0ada6bc60049a12d79101035cd9fcb56e0e\nrefs/heads/feat/yank-native-minute-pilot b82c098719de1646b787a8b7f69b6e82435122ae\nrefs/heads/feat/yank-research-replay b6626622e3468c932722409530120d60f29c6ce6\nrefs/heads/feature/backtesting-optimizations 2bc882ec29a632669e0382377a0610022fe04dce\nrefs/heads/feature/fvgfractal-prd 2ea8e9c7d16275822c5c590c9509c48c08009170\nrefs/heads/fix/buildspec-amendment-1-venue c45d703ae7588c60aca93ecf1f7655ccb9c1f267\nrefs/heads/fix/env-refresh-race 017521c051e51b34b18bb347d098adc1bdb3607d\nrefs/heads/fix/gap-fade-ledger-hole d96f821d38e9f62faa4b09222185efcc4307572c\nrefs/heads/fix/mim-mirror-external-close 675c653698f906359851389dfbb4513695a175b4\nrefs/heads/fix/mim-nb-1600-closeout-ordering 26bd9099070a002ea93092016a5a970e7ffa3ea4\nrefs/heads/fix/mim-nb-catchup-provenance 8f1bcbc69ce5a505a051477329616a218095f4c9\nrefs/heads/fix/mim-nb-sigma-provenance 97b4b03f0869f54eb07121e1d58078ee918ce7ff\nrefs/heads/fix/mim-nb-stale-catstop-test c31660bdaa705fb3a54286ec55ce80c564f6eba5\nrefs/heads/fix/s26-combine-symbol-and-exits aedecb6ab067c3758c5cfb4e6a15962de0e25f48\nrefs/heads/fix/s26-exit-reproducibility 8597b2195045e9044a28a9613ccf777a3d53e3fb\nrefs/heads/fix/yank-recovery-hardening 4cc41ea957632229d57409ff69f5d94c403f85b6\nrefs/heads/fix/yank-trade-log-idempotent 96f090ce007bf2a42f9cea452179979a36a7fa0b\nrefs/heads/gap-fade-fills b9f45ed0794ff5d2e556ffe08701e49c6465acc6\nrefs/heads/iPad 072fae34e456444a050e5d4392aee29ce8e9152d\nrefs/heads/main 27e4e1e0c0415bb4514822a6b17193369bff9d85\nrefs/heads/merge/invvol-into-feat c13a0e44a0d8ba52e33a71cd7a4ed6fc7453880d\nrefs/heads/mim-ops-hardening 2e9fdae226f11b47fdf84413f180ba6ad3028d4d\nrefs/heads/ops/halt-distance-code-followup 5b66077a1fef331af09f5d29c973ab836d061a73\nrefs/heads/ops/halt-review-20260713-ride-buffer c8d52cc41281c8d609c9b7ae69489ac9d36f62f5\nrefs/heads/prereg/gap-v2-successor 525f687390f00aa2abc0a751e2d452d0d9b4c4f5\nrefs/heads/prereg/gap-velocity-conditioned-response 03bc7830d4e423fabd5e8c2f133439679d5095e7\nrefs/heads/prereg/intraday-momentum-mnq-cost-screen 816878a34b70ac330d2f2177dcf922e3855a22a4\nrefs/heads/prereg/mim-nb-post-repair-evaluation 5891a31b9b546b4270bfe8e5f67206757ffd765f\nrefs/heads/prereg/mim-nb-risk-mechanics-removal 647632c25baae1946ce99a8de5a405dec7e77290\nrefs/heads/prereg/mim-nb-sigma-provenance 86f402fe23a301e0cbaa9e2cf9f38d32124e38cf\nrefs/heads/prereg/mim-x2-powered af031bff72dbef5d2b2ab41dbdc80230c31c373b\nrefs/heads/prereg/ofi-bar-level d84726b28feb9ea4f5a91ec69e93f3bc978f8902\nrefs/heads/prereg/s26-exit-atr-floor e7d5d9ca8e3e2054247d710409d2aaa647253739\nrefs/heads/prereg/sigma-fail-closed 16e94cc171ba7306b0df923e81e25e9e6586a408\nrefs/heads/prereg/tick-data-infrastructure f4642d21393882d739cd7d8004400d0e6275defd\nrefs/heads/prereg/ticksim-cli da7472bf748b39141b887c1da293d31165112020\nrefs/heads/prereg/ticksim-cli-report 64c058a97a94ac14efa96c05edb742173a7180e1\nrefs/heads/prereg/ticksim-gate d7f5daf9d48a1eee69094c15d5917fb3bc7e347d\nrefs/heads/prereg/ticksim-generator fc42b9fc2d741fb7e7cc5b9ee0e82afa387c4efb\nrefs/heads/prereg/ticksim-integrity 61d7e2451f09f665b77e1dad2a172fd6e5bc3367\nrefs/heads/prereg/ticksim-parity-gate d87e3cfa884222d971d3d5614699bd66341146ef\nrefs/heads/prereg/ticksim-parity-inv 770ca869157858d1392294572c40a1ba1175b7af\nrefs/heads/prereg/ticksim-part-a dd8a52d3a7386d02a8adfff0ec0a6162a8a39e9a\nrefs/heads/prereg/ticksim-part-b 57152cdca998b4e01c0c48b990d600c062c65f9a\nrefs/heads/prereg/ticksim-run-part-a 2bcd40d1c22e044348b4b47d013a9a8379126eb2\nrefs/heads/prereg/yank-floor-removal e56bc6ac8e475be8d4dcda57ddb7b381b217b062\nrefs/heads/prereg/yank-gap-floor ed53ae562f00d659fca101fa61aedf7c547ea1f3\nrefs/heads/prereg/yank-shutdown-rule 8e8c1b8f50a8dd5e53ec7e5b334da9e089e9fa99\nrefs/heads/prereg/yank-viability-mes b0e12822d994c1441901a11b89351c3eddb616d0\nrefs/heads/silver_bullet_fast fba48498a54ff88490e0acb071f3a2291042f1d4\nrefs/heads/silver_bullet_slow 9e876aaaa37c9cc95a5484df662cfaf0c1a275cf\nrefs/heads/watchdog-unit f283adcb6e595b6f19b50245563e7ba1640fca8e\nrefs/heads/worktree-capture-leak-detector 7908faec5d7eb4c76394bce19df3a7bd84eaeae4\nrefs/heads/worktree-fix-s26-combine-frozen-firstdate 9e55c35f7688c4b78a945738adc5027e707723ef\nrefs/heads/worktree-gap-pdh-preregistration 317f3ffadbbcaa93ab55927da4dbcb3647e23a11\nrefs/heads/worktree-innovation-strategy-trump-edge 6f0de3e1d73f50b486663695e1272e6cee5b5324\nrefs/heads/worktree-joint-mc-prereg 9d5acc8c788e49f34d5690af694aa90c9228628e\nrefs/heads/worktree-lr-filter-compressed-cascade-prereg 052117408d077ab8a6c655d257a6f2dd4102ee57\nrefs/heads/worktree-mim-nb-autoroll a796de9d91c14310113ed8d618567f95d4a62ba9\nrefs/heads/worktree-mim-resilience 95bfbca60c4cc029b0d4ff384c4bd33eeb7799c8\nrefs/heads/worktree-no-risk-starts 721ba18030a07f8b2749df82a945b4649cde5312\nrefs/heads/worktree-post-r3-options-research 8dace25d4151bba86d2492ac9a64bd8a13c0b721\nrefs/heads/worktree-prereg-combine-restart-floor-fix b4e855f0d1821a96afc26acfa9fc9c92b920e59d\nrefs/heads/worktree-prereg-risk-mechanics 6d506143f61844602b8f6ee8a35d6b2a52318cd9\nrefs/heads/worktree-spicy-sniffing-flask 95b5ea1d8f427a0ef96ed8ffb4fdaf45cac027cc\nrefs/heads/worktree-sunny-spinning-cocke 22a9ea4cfefef9bac25c5781156dad9a48a85232\nrefs/heads/worktree-watchdog-account-env 7fd1a7893e04f8ce60d3f30d93322495398e3be4\nrefs/heads/worktree-yank-debug-gap-logging 1c11d1853a5d5a04505b4c5fbbbed4c5fd5cf7ed\nrefs/heads/worktree-yank-shorter-timeframe-prereg 5486ec7f37a88a96a55facee68f0f06044e9a6c2\nrefs/heads/yank-breaker-shadow-seal 2c2a5d49fa5a73ef9fd5d9d57ae45e954a813bcc\nrefs/remotes/origin/1minuteDB fcb58fee95cb991991fbd0afa7d6472996793c82\nrefs/remotes/origin/HEAD fe99d225c2a830dbceac0676952393d5f35cdc95\nrefs/remotes/origin/analysis/yank-gap-ceiling-g5-gate 7d52a3f07b2f54e6cb486a57b569aa5ad0190020\nrefs/remotes/origin/best_day_trade_scalp dda9d2f070ae832bde562392c41c49a979ab6451\nrefs/remotes/origin/chore/audit-trail-20260804 1910acbc68ad02cb7bbf6b718e14ec695453785e\nrefs/remotes/origin/chore/audit-trail-20260806 f4f958a99adc5b247da89d6ba8d9e5572124e809\nrefs/remotes/origin/chore/commit-pending-working-tree-20260731 220dc9db500b129ff1664d4307dfc460d7ef8dcc\nrefs/remotes/origin/chore/track-warmup-series 744642e3075d2e5bf219c320b15408068796fff2\nrefs/remotes/origin/chore/untrack-live-data 84bb7b35a8192eff5ae37ded0794f80353e9d8b7\nrefs/remotes/origin/crypto 252334084f3a7dd2f28406a2020ee7536cd53d88\nrefs/remotes/origin/crypto-variant-no-killzones 16c891198741f714d43d9a0c68fac7d0e85c218b\nrefs/remotes/origin/deploy/yank-gap-ceiling-env 6f09c35e117e26685387e4ac69f71c7e44ad2718\nrefs/remotes/origin/dll-parity-deploy 8f268bebaf1fcaf0e58f13bce8f847026cc8977f\nrefs/remotes/origin/docs/bidir-m15-choch-stability-amendment c225ab4b23fddd0e4d0c81cca76e68203a468def\nrefs/remotes/origin/feat/floor-monitor-report-only 023e5820c5cf08abd481ac4773b98a46a6c0b342\nrefs/remotes/origin/feat/mim-parity-day-check 16498f9519f7b553d6038ea8d17d977c87214dbb\nrefs/remotes/origin/feat/parity-telegram 51e17b1ac1fc0a55cdf6a8e82cdd68f3717b2710\nrefs/remotes/origin/feat/research-validation-stack a7f96c2c9221f32850d781ff1c181574a2933f50\nrefs/remotes/origin/feat/s26-autoroll-and-unproductive-check 4dc696eee68d44d29fea7abbb36623a02a39673b\nrefs/remotes/origin/feat/sim-invvol-track 8e910feb4e93b62ac9e6ceb49c924457d367a72e\nrefs/remotes/origin/feat/thursday-amendment3 991c4dfec3581e18bcc98e3460b794e7925bd589\nrefs/remotes/origin/feat/ticksim-fill-simulator d87e3cfa884222d971d3d5614699bd66341146ef\nrefs/remotes/origin/feat/vendor-systemd-units 305ddfc6712d3dff28270380a890effcb85e94da\nrefs/remotes/origin/feat/yank-bullish-shadow-watcher 861ee011ab2939eb719c97d06432d5a53569c515\nrefs/remotes/origin/feat/yank-evaluation-heartbeat ca852722164145ba41e6ebd20e221fb42540588c\nrefs/remotes/origin/feat/yank-gap-ceiling-response-a 225b115133437894649ea3cd25d002ea12d50bf5\nrefs/remotes/origin/feat/yank-ml-canary 7c9bc0ada6bc60049a12d79101035cd9fcb56e0e\nrefs/remotes/origin/feature/backtesting-optimizations 2bc882ec29a632669e0382377a0610022fe04dce\nrefs/remotes/origin/feature/fvgfractal-prd 2ea8e9c7d16275822c5c590c9509c48c08009170\nrefs/remotes/origin/fix/backtest-engine-m15-tz-and-gap-ceiling-backtest 41d693d7c7540b7b28475963c4070ca9168fdc6b\nrefs/remotes/origin/fix/buildspec-amendment-1-venue c45d703ae7588c60aca93ecf1f7655ccb9c1f267\nrefs/remotes/origin/fix/gap-fade-ledger-hole d96f821d38e9f62faa4b09222185efcc4307572c\nrefs/remotes/origin/fix/mim-mirror-external-close 675c653698f906359851389dfbb4513695a175b4\nrefs/remotes/origin/fix/mim-nb-1600-closeout-ordering 26bd9099070a002ea93092016a5a970e7ffa3ea4\nrefs/remotes/origin/fix/mim-nb-catchup-provenance 8f1bcbc69ce5a505a051477329616a218095f4c9\nrefs/remotes/origin/fix/mim-nb-sigma-provenance 97b4b03f0869f54eb07121e1d58078ee918ce7ff\nrefs/remotes/origin/fix/mim-nb-stale-catstop-test c31660bdaa705fb3a54286ec55ce80c564f6eba5\nrefs/remotes/origin/fix/s26-combine-unit-drift 82fc49cd2ae1cd97dc2c1b82573874b880538ad0\nrefs/remotes/origin/fix/yank-recovery-hardening 4cc41ea957632229d57409ff69f5d94c403f85b6\nrefs/remotes/origin/fix/yank-trade-log-idempotent 96f090ce007bf2a42f9cea452179979a36a7fa0b\nrefs/remotes/origin/gap-fade-fills b9f45ed0794ff5d2e556ffe08701e49c6465acc6\nrefs/remotes/origin/iPad 072fae34e456444a050e5d4392aee29ce8e9152d\nrefs/remotes/origin/main fe99d225c2a830dbceac0676952393d5f35cdc95\nrefs/remotes/origin/merge/invvol-into-feat c13a0e44a0d8ba52e33a71cd7a4ed6fc7453880d\nrefs/remotes/origin/mim-ops-hardening 2e9fdae226f11b47fdf84413f180ba6ad3028d4d\nrefs/remotes/origin/ops/halt-distance-code-followup 5b66077a1fef331af09f5d29c973ab836d061a73\nrefs/remotes/origin/ops/halt-review-20260713-ride-buffer c8d52cc41281c8d609c9b7ae69489ac9d36f62f5\nrefs/remotes/origin/prereg/mim-nb-post-repair-evaluation 5891a31b9b546b4270bfe8e5f67206757ffd765f\nrefs/remotes/origin/prereg/mim-nb-risk-mechanics-removal 647632c25baae1946ce99a8de5a405dec7e77290\nrefs/remotes/origin/prereg/mim-nb-sigma-provenance 86f402fe23a301e0cbaa9e2cf9f38d32124e38cf\nrefs/remotes/origin/prereg/sigma-fail-closed 16e94cc171ba7306b0df923e81e25e9e6586a408\nrefs/remotes/origin/prereg/tick-data-infrastructure f4642d21393882d739cd7d8004400d0e6275defd\nrefs/remotes/origin/prereg/ticksim-parity-gate d87e3cfa884222d971d3d5614699bd66341146ef\nrefs/remotes/origin/prereg/yank-floor-removal e56bc6ac8e475be8d4dcda57ddb7b381b217b062\nrefs/remotes/origin/silver_bullet_fast fba48498a54ff88490e0acb071f3a2291042f1d4\nrefs/remotes/origin/silver_bullet_slow 9e876aaaa37c9cc95a5484df662cfaf0c1a275cf\nrefs/remotes/origin/watchdog-unit f283adcb6e595b6f19b50245563e7ba1640fca8e\nrefs/remotes/origin/worktree-capture-leak-detector 7908faec5d7eb4c76394bce19df3a7bd84eaeae4\nrefs/remotes/origin/worktree-fix-s26-combine-frozen-firstdate 9e55c35f7688c4b78a945738adc5027e707723ef\nrefs/remotes/origin/worktree-innovation-strategy-trump-edge 6f0de3e1d73f50b486663695e1272e6cee5b5324\nrefs/remotes/origin/worktree-joint-mc-prereg a32f3434079f499c4f2cf5ecf9e3984e02a5ec02\nrefs/remotes/origin/worktree-no-risk-starts 721ba18030a07f8b2749df82a945b4649cde5312\nrefs/remotes/origin/worktree-post-r3-options-research 8dace25d4151bba86d2492ac9a64bd8a13c0b721\nrefs/remotes/origin/worktree-prereg-combine-restart-floor-fix b4e855f0d1821a96afc26acfa9fc9c92b920e59d\nrefs/remotes/origin/worktree-prereg-risk-mechanics 6d506143f61844602b8f6ee8a35d6b2a52318cd9\nrefs/remotes/origin/worktree-watchdog-account-env 7fd1a7893e04f8ce60d3f30d93322495398e3be4\nrefs/remotes/origin/worktree-yank-shorter-timeframe-prereg 5486ec7f37a88a96a55facee68f0f06044e9a6c2\nrefs/remotes/origin/yank-breaker-shadow-seal 2c2a5d49fa5a73ef9fd5d9d57ae45e954a813bcc\nrefs/stash b2098cadf9535ea3f1bd35ba4be115ce442b0f04\n",
+      "stderr": "",
+      "disposition": "Local reachable refs at search time; no fetch. --all searches below use this inventory."
+    },
+    {
+      "id": "raw-history",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "log",
+        "--all",
+        "--format=%H %aI %s",
+        "--",
+        "mnq_historical.json",
+        "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "",
+      "disposition": "No tracked history for either frozen file; this is a bounded negative result, not proof no receipt exists elsewhere."
+    },
+    {
+      "id": "prior-paths",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "log",
+        "--all",
+        "--format=%H %aI %s",
+        "--",
+        "convert_to_time_bars.py",
+        "src/data/historical_downloader.py",
+        "collect_historical_data.py",
+        "src/data/transformation.py",
+        "src/research/historical_data_loader.py"
+      ],
+      "exit_code": 0,
+      "stdout": "4e9dc48c73b92112aff8414ac7c8d597771aca84 2026-05-16T18:43:31+00:00 fix: resolve startup notional overflow and XGBoost feature mismatch\n5162b2af7ead329c7d800da669c05fda9d346bba 2026-03-31T03:02:06+00:00 feat: Add Silver Bullet optimization researcher with SHAP analysis\n13491191ab2859430097947062ce27b495696766 2026-03-30T18:32:52+00:00 fix: Improve robustness of data collection and detection systems\n072fae34e456444a050e5d4392aee29ce8e9152d 2026-03-29T01:22:36+00:00 feat: Implement autonomous paper trading system with signal detection\nc729fb9b81491bab23d142b3fa3b5c5f3ad580d7 2026-03-25T02:49:15+00:00 feat: Optimize Silver Bullet strategy with massive performance improvements\nf52d1e4f87f60732c5b10cda5f92361f15bfe062 2026-03-21T20:32:45+00:00 fix: Fix 5 CRITICAL bugs in TradeStation downloader\na2bb946a4ae6c77291acebb9a9632c892aba8859 2026-03-21T20:16:32+00:00 feat: Implement TradeStation historical MNQ data downloader\n58422b71fd62758c6bf56a543bd55065705c43b3 2026-03-19T20:47:57-05:00 feat: Add comprehensive data collection, monitoring UI, and test coverage\n6446c9b5ec05648bfaf424ac262362023e740fc5 2026-03-18T18:19:28-05:00 feat: Implement historical data loader for backtesting (Story 7.1)\n0e893cbe5ed90d1f2ea5dfc31822310912a69852 2026-03-15T21:06:18-05:00 Fix code review findings: Improve transformation robustness and monitoring\n6fbf784b6f793d3bacf06ad343128374e20a85c7 2026-03-15T15:29:42-05:00 Implement Story 1.4: Transform Raw Trade Data to Dollar Bars\n",
+      "stderr": "",
+      "disposition": "Extends saved prior inventory to transformation and loader history. No frozen hash-bound invocation found in these sources."
+    },
+    {
+      "id": "writer-history",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "log",
+        "--all",
+        "--format=%H %s",
+        "--name-only",
+        "-G",
+        "mnq_historical|mnq_1min_2025|50_000_000|50000000",
+        "--",
+        "*download*.py",
+        "*collect*.py",
+        "*convert*.py",
+        "*transform*.py",
+        "*preprocess*.py",
+        "*prepare*.py",
+        "*generat*.py"
+      ],
+      "exit_code": 0,
+      "stdout": "197d50fb0b47ffea3c768bba8de86d822bfa0561 feat: 1-year validation backtest + 2026 YTD data download\n\ndownload_mnq_2026_ytd.py\n72a45ddf133fa2c2431b3c0bc7b401afa381abaf fix: apply Silver Bullet execution review patches and deploy paper trader\n\ngenerate_silver_bullet_training_data.py\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8 feat: Add Tier 1 model support and regime-specific thresholds for 1-minute trading\n\nscripts/generate_1min_dollar_bars_2025.py\nscripts/generate_regime_aware_training_data_1min_2025.py\nc729fb9b81491bab23d142b3fa3b5c5f3ad580d7 feat: Optimize Silver Bullet strategy with massive performance improvements\n\nconvert_to_time_bars.py\n0e893cbe5ed90d1f2ea5dfc31822310912a69852 Fix code review findings: Improve transformation robustness and monitoring\n\ntests/unit/test_transformation.py\n6fbf784b6f793d3bacf06ad343128374e20a85c7 Implement Story 1.4: Transform Raw Trade Data to Dollar Bars\n\nsrc/data/transformation.py\ntests/unit/test_transformation.py\n",
+      "stderr": "",
+      "disposition": "Found previously uninspected candidate scripts/generate_1min_dollar_bars_2025.py at d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8. Other hits are live transformation, another-period downloader or training consumers; no acquisition receipt."
+    },
+    {
+      "id": "candidate-history",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "log",
+        "--all",
+        "--format=%H %aI %s",
+        "--",
+        "scripts/generate_1min_dollar_bars_2025.py"
+      ],
+      "exit_code": 0,
+      "stdout": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8 2026-04-15T22:49:10+00:00 feat: Add Tier 1 model support and regime-specific thresholds for 1-minute trading\n",
+      "stderr": "",
+      "disposition": "One reachable change adds candidate."
+    },
+    {
+      "id": "candidate-branches",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "branch",
+        "-a",
+        "--contains",
+        "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8"
+      ],
+      "exit_code": 0,
+      "stdout": "  1minuteDB\n  remotes/origin/1minuteDB\n",
+      "stderr": "",
+      "disposition": "Candidate is reachable on local and saved remote 1minuteDB; absent from current worktree, which explains why current-tree search missed it."
+    },
+    {
+      "id": "candidate-references",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "log",
+        "--all",
+        "--format=%H %s",
+        "-G",
+        "generate_1min_dollar_bars_2025",
+        "--",
+        "*.py",
+        "*.md",
+        "*.json",
+        "*.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8 feat: Add Tier 1 model support and regime-specific thresholds for 1-minute trading\n",
+      "stderr": "",
+      "disposition": "Only candidate introduction found; historical migration notes and orchestrator corroborate intent, without input/output hashes or original run identity."
+    },
+    {
+      "id": "migration-records",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "git",
+        "grep",
+        "-n",
+        "-E",
+        "generate_1min|289,?230|351,?628|sha256|mnq_historical",
+        "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8",
+        "--",
+        "1_MINUTE_MIGRATION_PLAN.md",
+        "MIGRATION_EXECUTION_STATUS.md",
+        "MIGRATION_LIVE_STATUS.md",
+        "scripts/migrate_to_1min_2025.py",
+        "scripts/verify_2025_data_source.py"
+      ],
+      "exit_code": 0,
+      "stdout": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:MIGRATION_EXECUTION_STATUS.md:12:- \u2705 **Task 1.0:** Data source verification - **351,628 bars found** (270% above expected)\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:MIGRATION_EXECUTION_STATUS.md:13:- \u2705 **Task 1.1:** 1-minute dollar bar generation - **289,230 dollar bars created**\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:MIGRATION_EXECUTION_STATUS.md:161:   - `scripts/generate_1min_dollar_bars_2025.py`\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:MIGRATION_LIVE_STATUS.md:12:- \u2705 Data source verification: **351,628 bars found** (270% above expected)\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:MIGRATION_LIVE_STATUS.md:13:- \u2705 Dollar bar generation: **289,230 bars created** (2.2x above target)\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:MIGRATION_LIVE_STATUS.md:24:- \u2705 Data loaded: 289,230 bars\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:scripts/migrate_to_1min_2025.py:82:            \"scripts/generate_1min_dollar_bars_2025.py\",\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:scripts/verify_2025_data_source.py:5:Confirms that /root/mnq_historical.json exists and is accessible.\nd54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8:scripts/verify_2025_data_source.py:21:    data_path = Path(\"/root/mnq_historical.json\")\n",
+      "stderr": "",
+      "disposition": "Matching counts and planned invocation are corroboration, not authenticated frozen-file execution."
+    },
+    {
+      "id": "current-writer-references",
+      "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute",
+      "argv": [
+        "rg",
+        "-n",
+        "mnq_historical|mnq_1min_2025|50_000_000|50000000",
+        "--glob",
+        "*.py",
+        "src/data",
+        "scripts",
+        "convert_to_time_bars.py",
+        "collect_historical_data.py",
+        "generate_silver_bullet_training_data.py"
+      ],
+      "exit_code": 0,
+      "stdout": "convert_to_time_bars.py:62:        file_path: Path to mnq_historical.json\nconvert_to_time_bars.py:226:    df = load_tradestation_data('mnq_historical.json')\ngenerate_silver_bullet_training_data.py:35:def load_bars_df(json_path: str = \"mnq_historical.json\") -> pd.DataFrame:\nsrc/data/transformation.py:16:DOLLAR_THRESHOLD = 50_000_000  # $50M notional value per bar\nsrc/data/models.py:164:        max_reasonable = 50_000_000_000  # $50B\nsrc/data/market_data_validator.py:48:            ...     volume=1000, notional_value=50_000_000\nsrc/data/market_data_validator.py:195:            ...     volume=1000, notional_value=50_000_000\nsrc/data/market_data_validator.py:229:            if bar.notional_value >= 50_000_000:\nsrc/data/market_data_validator.py:236:                    f\"({bar.notional_value / 50_000_000 * 100:.1f}% of threshold)\"\nscripts/optimize_exit_parameters_1min.py:216:    data_path = Path(\"data/processed/dollar_bars/1_minute/mnq_1min_2025.csv\")\nscripts/threshold_sensitivity_analysis.py:40:    data_file = Path(data_path) / \"mnq_1min_2025.csv\"\nscripts/validate_drift_detection.py:52:    data_file = Path(data_path) / \"mnq_1min_2025.csv\"\nscripts/validate_drift_detection_simple.py:29:    data_file = Path(data_path) / \"mnq_1min_2025.csv\"\nscripts/validate_drift_detection_latency.py:51:    data_file = Path(data_path) / \"mnq_1min_2025.csv\"\n",
+      "stderr": "",
+      "disposition": "Current source references reviewed as construction/acquisition leads only; no strategy executed."
+    },
+    {
+      "id": "metadata-paths",
+      "cwd": "/root/Silver-Bullet-ML-BMAD",
+      "argv": [
+        "rg",
+        "--files",
+        "--hidden",
+        "--no-ignore",
+        "data/yank",
+        "data/raw",
+        "data/processed",
+        "-g",
+        "*manifest*",
+        "-g",
+        "*receipt*",
+        "-g",
+        "*checkpoint*",
+        "-g",
+        "*metadata*",
+        "-g",
+        "*request*",
+        "-g",
+        "!**/*holdout*/**",
+        "-g",
+        "!**/*sealed*/**"
+      ],
+      "exit_code": 0,
+      "stdout": "data/yank/databento-pilot-20260907/manifest.json\ndata/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/manifest.json\ndata/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/metadata.json\ndata/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/manifest.json\ndata/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/metadata.json\ndata/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/manifest.json\ndata/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/metadata.json\n",
+      "stderr": "",
+      "disposition": "Filename inventory only outside pilot metadata. Seven candidates, all separate Databento pilot manifests/metadata; no original raw acquisition receipt in these searched locations."
+    },
+    {
+      "id": "new-acquisition-code",
+      "cwd": "/root/Silver-Bullet-ML-BMAD",
+      "argv": [
+        "rg",
+        "-n",
+        "mnq_historical|mnq_1min_2025|e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924",
+        "src/cli/acquire_tradestation_curve.py",
+        "src/data/tradestation_curve_batch.py"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "",
+      "disposition": "New main-worktree acquisition code has no exact raw/target reference; unrelated commodity acquisition was not run."
+    }
+  ]
+}

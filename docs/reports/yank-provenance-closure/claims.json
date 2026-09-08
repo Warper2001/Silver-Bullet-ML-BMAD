@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "research_status": "HOLD_VALIDATION",
+  "data_suitability": "BLOCKED",
+  "disposition": "Six provenance questions assessed; none authenticated to the exact frozen input. A newly located historical writer is byte-compatible.",
+  "reference_resolution": "source IDs resolve in sources.json (hashes, full Git revisions and retained line excerpts); search IDs resolve in search-inventory.json; verification keys resolve in verification.json.",
+  "claims": [
+    {
+      "id": "raw_origin",
+      "question": "Is the raw origin authenticated for the exact frozen input?",
+      "status": "unresolved",
+      "observed_facts": [
+        "The frozen raw hash and verified 2025 extract remain unchanged. The current /root/mnq_historical.json has the same hash as the pinned repository copy.",
+        "The candidate names /root/mnq_historical.json as input; it contains no acquisition operation. The available pilot request identifies a separate Databento MNQM5 MBO dataset."
+      ],
+      "supporting_references": [
+        {
+          "source": "candidate",
+          "lines": [
+            26,
+            31
+          ]
+        },
+        {
+          "source": "pilot-request",
+          "lines": [
+            1,
+            20
+          ]
+        },
+        {
+          "verification": "root_historical_alias"
+        },
+        {
+          "search": "raw-history"
+        },
+        {
+          "search": "metadata-paths"
+        }
+      ],
+      "limitations": [
+        "Path equality today, TradeStation-shaped fields, matching prices and migration notes cannot authenticate the original raw bytes. Searches are bounded to the recorded local locations and reachable refs."
+      ],
+      "missing_evidence": [
+        "An original provider export/download receipt or authenticated response chain binding raw SHA256 e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924 to provider, endpoint/API version, request ID, requested symbols, date ranges, interval, session and adjustment options; if assembled, per-response hashes and assembly manifest."
+      ]
+    },
+    {
+      "id": "historical_writer",
+      "question": "Is the exact process that historically wrote the frozen CSV authenticated?",
+      "status": "unresolved",
+      "observed_facts": [
+        "Reachable commit d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8 contains a generator targeting the exact CSV name with factor 20 and threshold 50000000.",
+        "With only verified 2025 extract objects supplied to its JSON loader, in original extract order and a temporary output directory, the unchanged generator main function emits exactly the frozen 22318944 CSV bytes.",
+        "Migration status records the matching 351628 input / 289230 output counts; an orchestrator calls this generator."
+      ],
+      "supporting_references": [
+        {
+          "source": "candidate",
+          "lines": [
+            17,
+            19
+          ]
+        },
+        {
+          "source": "candidate",
+          "lines": [
+            72,
+            135
+          ]
+        },
+        {
+          "source": "migration-status",
+          "lines": [
+            11,
+            15
+          ]
+        },
+        {
+          "source": "migration-command",
+          "lines": [
+            76,
+            84
+          ]
+        },
+        {
+          "verification": "candidate_writer_check"
+        },
+        {
+          "search": "candidate-history"
+        },
+        {
+          "search": "candidate-references"
+        }
+      ],
+      "limitations": [
+        "The controlled run substitutes the 2025 extract for mixed-year JSON loading and is a compatibility experiment performed now. It is not an original run record.",
+        "Historical count assertions and the current raw alias hash do not bind the historical source revision and environment to both frozen hashes. The candidate uses float arithmetic and input order; the prior independent proof uses Decimal and explicit sorting. Agreement on this input does not make those implementations generally equivalent."
+      ],
+      "missing_evidence": [
+        "A contemporaneous invocation/build record naming generator revision or source hash 8f603a91acce9dfcec199b73e5f1ecb3f2d19904bbafeb0eb0bb018523c8f27e, command, environment, parameters and raw input hash, with output SHA256 3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822, or an independently authenticated equivalent chain of custody."
+      ]
+    },
+    {
+      "id": "timestamp_interval",
+      "question": "Are source timestamp interval boundaries established?",
+      "status": "unresolved",
+      "observed_facts": [
+        "The independent lineage checker reconfirms every CSV label equals its last constituent source timestamp. Candidate code also emits the last constituent label without a shift.",
+        "Retained documentation describes TradeStation chart/ASCII closing labels; it explicitly does not authenticate the frozen REST/source convention."
+      ],
+      "supporting_references": [
+        {
+          "source": "candidate",
+          "lines": [
+            104,
+            114
+          ]
+        },
+        {
+          "source": "chart-caveat"
+        },
+        {
+          "verification": "lineage_check"
+        },
+        {
+          "source": "provenance-report",
+          "json_pointer": "/unavailable_evidence_reasons/1"
+        }
+      ],
+      "limitations": [
+        "A last-constituent label does not establish whether that source label means start, end, exchange event time or another clock. Variable aggregation prevents a universal one-minute interpretation."
+      ],
+      "missing_evidence": [
+        "Versioned timing documentation for the authenticated exact source endpoint/export, tied to its original request, specifying start/end labeling, inclusivity, timezone/clock and treatment of partial/corrected bars."
+      ]
+    },
+    {
+      "id": "observation_availability",
+      "question": "Is actual observation availability established?",
+      "status": "unresolved",
+      "observed_facts": [
+        "The preserved lineage explicitly retains unknown arrival/availability; the candidate reads a completed historical file and emits inherited labels, with no receipt or bar-publication timing record."
+      ],
+      "supporting_references": [
+        {
+          "source": "candidate",
+          "lines": [
+            26,
+            64
+          ]
+        },
+        {
+          "source": "candidate",
+          "lines": [
+            104,
+            114
+          ]
+        },
+        {
+          "source": "provenance-report",
+          "json_pointer": "/unavailable_evidence_reasons/1"
+        },
+        {
+          "source": "frozen-manifest",
+          "json_pointer": "/execution_assumptions"
+        }
+      ],
+      "limitations": [
+        "Interval closing time, even if established later, would not prove client receipt or finality time. Capture timing in the separate native pilot does not transfer to this file."
+      ],
+      "missing_evidence": [
+        "Original response/stream receipt timestamps with a documented clock, bar-finalization flags and revision policy bound to the frozen source records, plus a documented release/availability guarantee if historical receipt records cannot be recovered. Any such guarantee must be distinguished from observed strategy-client arrival."
+      ]
+    },
+    {
+      "id": "contract_policy",
+      "question": "Are contract mapping and roll/adjustment policy authenticated?",
+      "status": "unresolved",
+      "observed_facts": [
+        "Retained exact lineage contains 5583 bars mixing raw Contract labels. Candidate discards Contract while constructing bar dictionaries and has no contract-aware reset or additional price adjustment in its accumulation loop.",
+        "Native pilot MNQM5 request/instrument attribution is separate from raw MNQM25."
+      ],
+      "supporting_references": [
+        {
+          "source": "candidate",
+          "lines": [
+            47,
+            64
+          ]
+        },
+        {
+          "source": "candidate",
+          "lines": [
+            86,
+            124
+          ]
+        },
+        {
+          "source": "provenance-report",
+          "json_pointer": "/counts/mixed_contract"
+        },
+        {
+          "source": "provenance-report",
+          "json_pointer": "/unavailable_evidence_reasons/4"
+        },
+        {
+          "source": "pilot-metadata",
+          "lines": [
+            4,
+            18
+          ]
+        }
+      ],
+      "limitations": [
+        "The candidate explains how contract labels can be discarded, conditional on its use. Exact output reproduction needs no additional adjustment, but says nothing about adjustments already embedded in raw prices. It authenticates neither provider aliases nor the policy that selected/interleaved contracts."
+      ],
+      "missing_evidence": [
+        "Original requested symbols and effective-dated provider-to-exchange/instrument mapping for every raw Contract label, together with contract selection/roll dates, overlap/deduplication rules and explicit adjusted/unadjusted setting plus any adjustment factors, all bound to the frozen acquisition/assembly manifest."
+      ]
+    },
+    {
+      "id": "session_completeness",
+      "question": "Are the session template and acquisition completeness established?",
+      "status": "unresolved",
+      "observed_facts": [
+        "All 351628 retained 2025 constituents reconcile once into 289230 CSV rows; 29520 aggregate multiple source records.",
+        "Candidate only filters year, skips zero high/low or parse failures, and reports completeness as the fraction of output bars reaching the threshold. This metric does not count missing source intervals or failed acquisition pages.",
+        "No original source receipt/checkpoint was found in the recorded metadata inventory; available pilot manifests cover a separate May 2025 request."
+      ],
+      "supporting_references": [
+        {
+          "verification": "lineage_check"
+        },
+        {
+          "source": "candidate",
+          "lines": [
+            38,
+            64
+          ]
+        },
+        {
+          "source": "candidate",
+          "lines": [
+            141,
+            144
+          ]
+        },
+        {
+          "source": "pilot-request",
+          "lines": [
+            1,
+            20
+          ]
+        },
+        {
+          "search": "metadata-paths"
+        }
+      ],
+      "limitations": [
+        "Reconciliation proves completeness relative to the retained 2025 input, not completeness of the input against a trading calendar or acquisition request. Missing CSV minute labels can reflect aggregation. The migration note reporting 100% completeness supplies no independent acquisition evidence."
+      ],
+      "missing_evidence": [
+        "The authenticated original session template/calendar and exact requested coverage; page/window counts and response hashes, successful terminal pagination/checkpoint records, retries/failures and deduplication/assembly rules; a reconciliation of expected eligible source intervals including holidays, pauses, zero-trade bars and partial sessions."
+      ]
+    }
+  ],
+  "new_supported_conclusions": [
+    {
+      "id": "historical_candidate_compatibility",
+      "status": "established",
+      "claim": "The generator at d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8 reproduces the exact frozen CSV bytes when supplied the verified 2025 extract through controlled IO substitution.",
+      "references": [
+        {
+          "source": "candidate"
+        },
+        {
+          "verification": "candidate_writer_check"
+        }
+      ],
+      "limitation": "Does not authenticate historical execution or raw origin."
+    },
+    {
+      "id": "raw_alias_current_identity",
+      "status": "established",
+      "claim": "Both current raw-file paths have identical pinned SHA256.",
+      "references": [
+        {
+          "verification": "root_historical_alias"
+        }
+      ],
+      "limitation": "Present file identity only, not historical custody."
+    }
+  ],
+  "retained_conclusions": [
+    {
+      "status": "established",
+      "claim": "Exact construction and last-label inheritance; all retained constituents reconcile once.",
+      "verification": "lineage_check"
+    },
+    {
+      "status": "contradicted",
+      "claim": "Every frozen CSV row represents one uniform source minute.",
+      "source": "provenance-report",
+      "json_pointer": "/counts/multi_record",
+      "limitation": "This retained counterexample does not authenticate source interval semantics."
+    }
+  ]
+}

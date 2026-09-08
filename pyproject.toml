@@ -30,6 +30,29 @@ tenacity = "^8.2.0"
 [tool.poetry.scripts]
 validate-data = "src.cli.validate_data:main"
 
+# Offline research/validation only. NEVER imported from a live trading path.
+#
+# These are installed into a SEPARATE interpreter, /root/Silver-Bullet-ML-BMAD/.venv-research,
+# NOT the .venv the live combine bots run on (trader-yank, trader-mim-nb, ...).
+# Installing them into .venv would let pip re-resolve numpy/scipy/scikit-learn
+# underneath running traders. Build the research venv with:
+#
+#   python3 -m venv /root/Silver-Bullet-ML-BMAD/.venv-research
+#   /root/Silver-Bullet-ML-BMAD/.venv-research/bin/pip install arch skfolio statsmodels \
+#       scikit-learn xgboost pandas numpy scipy pyarrow
+#
+# arch      -> Reality Check / Hansen SPA / Romano-Wolf StepM / MCS, block bootstraps
+#              (multiple-testing correction over a family of strategy variants)
+# skfolio   -> CombinatorialPurgedCV, WalkForward (purged/embargoed cross-validation)
+# statsmodels -> multipletests: Benjamini-Hochberg FDR, Holm
+#
+# Deflated Sharpe is implemented in tools/validation/deflated_sharpe.py because
+# neither arch nor skfolio ships it. Run its --self-test before relying on it.
+[tool.poetry.group.research.dependencies]
+arch = "^8.0.0"
+skfolio = "^1.0.5"
+statsmodels = "^0.15.0"
+
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
 flake8 = "^6.0.0"

@@ -1,0 +1,22 @@
+{
+  "native_files": [
+    {
+      "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+      "sha256": "d84d6a2f9c2ecf4436f2a7e347956d2e062bbb910e078472136a3a5ca9d2b180"
+    },
+    {
+      "file": "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250522.mbo.dbn.zst",
+      "sha256": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942"
+    },
+    {
+      "file": "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst",
+      "sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e"
+    }
+  ],
+  "report": {
+    "file": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/reports/yank-execution-pilot/final-run1/report.json",
+    "sha256": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5"
+  },
+  "schema_version": 1,
+  "scope": "May22 arrival and May28 invalid-book recovery from daily native reconstruction boundaries; full pending windows and all other coverage retained from frozen report"
+}

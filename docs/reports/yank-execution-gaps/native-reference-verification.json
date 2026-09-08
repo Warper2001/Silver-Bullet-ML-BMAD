@@ -1,0 +1,22 @@
+{
+  "files": {
+    "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250522.mbo.dbn.zst": {
+      "sha256": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942",
+      "unique_references": 8
+    },
+    "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst": {
+      "sha256": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+      "unique_references": 148
+    }
+  },
+  "python": "3.12.3",
+  "report_sha256": "faf2efe10f4e45ef77ad66301ff68864be841b6a5ea4afc45c37fb41eab37b44",
+  "research_status": "HOLD_VALIDATION",
+  "status": "PASS_NATIVE_REFERENCE_CHECK",
+  "unique_references": 156,
+  "versions": {
+    "databento": "0.85.0",
+    "databento-dbn": "0.68.0",
+    "numpy": "2.4.6"
+  }
+}

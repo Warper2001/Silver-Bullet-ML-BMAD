@@ -1,0 +1,12 @@
+{
+  "artifacts": {
+    "native-reference-verification.json": "38e1ceeec6640dbd3e6efd9e907221cac3838a2f4c7cda1235c12a9386ac7258",
+    "report.json.gz": "ed73c0a67b4070b3408c3ad21411304837f0d80910fa4fd50e99ab5d18d1edc7",
+    "report.md": "3183fd62c2c06c59605208cf8b95c152e8b8e5792c0bc22d1937ee3937c9d664",
+    "tests.xml": "9cad6e102da44cd840cdcc75f318e9af39b4f2a48f38f5ea591ebcc5a2960edf"
+  },
+  "canonical_run": "/tmp/yank-gap-assessment-b",
+  "research_status": "HOLD_VALIDATION",
+  "schema_version": 1,
+  "uncompressed_report_sha256": "faf2efe10f4e45ef77ad66301ff68864be841b6a5ea4afc45c37fb41eab37b44"
+}

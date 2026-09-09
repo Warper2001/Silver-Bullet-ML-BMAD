@@ -1,0 +1,283 @@
+{
+  "capture_sha256": "a78a7bc4852825d4ac3b6ab4b58ab2f8bbfaf04df41a421bf59057d213c97fc4",
+  "classification": "SYNTHETIC_ACCOUNT_DECLARATION_NEGATIVE_CONTROL",
+  "coverage_sha256": "77da57a383757c5d2ed2bb6754d06cb8b3670387b775baa17445004423782fd6",
+  "initial_state": {
+    "account_evidence": {
+      "receipt_time": "2025-05-19T14:00:00Z",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "OBSERVED"
+    },
+    "checkpoint": {
+      "bars": [
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:40:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:41:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:42:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:43:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:44:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:45:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:46:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:47:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:48:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:49:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:50:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:51:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:52:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:53:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:54:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:55:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:56:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 100.0,
+          "high": 101.0,
+          "is_forward_filled": false,
+          "low": 99.0,
+          "notional_value": 200000.0,
+          "open": 100.0,
+          "timestamp": "2025-05-19T13:57:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 107.0,
+          "high": 108.0,
+          "is_forward_filled": false,
+          "low": 106.0,
+          "notional_value": 214000.0,
+          "open": 107.0,
+          "timestamp": "2025-05-19T13:58:00+00:00",
+          "volume": 100
+        },
+        {
+          "close": 103.0,
+          "high": 108.0,
+          "is_forward_filled": false,
+          "low": 102.0,
+          "notional_value": 210000.0,
+          "open": 107.0,
+          "timestamp": "2025-05-19T13:59:00+00:00",
+          "volume": 100
+        }
+      ],
+      "schema_version": 1,
+      "snapshot_sha256": "4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92",
+      "state": {
+        "_active_entry_decision": null,
+        "_bearish_sweep_bar": -20,
+        "_bearish_sweep_expires": "0001-01-01T00:00:00+00:00",
+        "_bullish_sweep_bar": -20,
+        "_bullish_sweep_expires": "0001-01-01T00:00:00+00:00",
+        "_cached_sweep": {
+          "bars_ago": 1,
+          "direction": "BEARISH",
+          "sweep_price": 112.0
+        },
+        "_current_day": null,
+        "_daily_ranges": [],
+        "_data_stale": false,
+        "_h1_atr": 10.0,
+        "_h1_atr_history": [],
+        "_h1_slope": -10.0,
+        "_is_backfill": false,
+        "_last_bearish_sweep_h1_ts": "0001-01-01T00:00:00+00:00",
+        "_last_bullish_sweep_h1_ts": "0001-01-01T00:00:00+00:00",
+        "_last_entry_bar": -120,
+        "_last_processed_timestamp": "2025-05-19T13:59:00+00:00",
+        "_last_vol_regime_pct": 0.0,
+        "_m15_choch_active": true,
+        "_m15_last_bar_ts": "0001-01-01T00:00:00+00:00",
+        "_on_combine": true,
+        "_session_high": "-inf",
+        "_session_low": "inf",
+        "_session_open_price": "nan",
+        "_shadow_bullish_m15_choch_active": false,
+        "_shadow_m15_last_bar_ts": "0001-01-01T00:00:00+00:00",
+        "_shadow_trade": null,
+        "_vol_regime_high": false,
+        "accepted_buffer_sha256": "463a2d2fa630a0297ab4ba6171db2112ecaae7e4077f19bd8baebf3627702625",
+        "active_trade": null,
+        "bar_count": 20,
+        "completed_trades": [],
+        "consumed_history": {
+          "accepted_m1": 20,
+          "adr_full_ready": false,
+          "completed_h1": 0,
+          "initial_bucket_complete": false,
+          "lr_ready": false,
+          "lr_required": 1950,
+          "partial_completed_h1": 0,
+          "positive_atr_observations": 0,
+          "prior_daily_ranges": 0,
+          "volatility_full_ready": false,
+          "volatility_minimum_ready": false
+        },
+        "h1_bearish_sweep_active": true,
+        "h1_bullish_sweep_active": false,
+        "risk": {
+          "daily_halted": false,
+          "daily_pnl": 0.0,
+          "last_trading_date": null
+        },
+        "session_start_time": null
+      }
+    },
+    "classification": "OBSERVED_STATE",
+    "daily_halted": false,
+    "daily_pnl": 0.0,
+    "is_backfill": true,
+    "last_trading_date": null,
+    "on_combine": true
+  }
+}

@@ -1,0 +1,42 @@
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 46%]
+....................................................F................... [ 62%]
+........................................................................ [ 77%]
+........................................................................ [ 93%]
+...............................                                          [100%]
+=================================== FAILURES ===================================
+__________ TestLoadStrategyConfig.test_load_repo_strategy_config_yaml __________
+
+self = <tests.unit.test_config_loader.TestLoadStrategyConfig object at 0x79c46bd96b40>
+
+    def test_load_repo_strategy_config_yaml(self):
+        """The actual repo-root strategy_config.yaml loads without error."""
+        from src.research.config_loader import load_strategy_config
+    
+        repo_yaml = Path("strategy_config.yaml")
+        if not repo_yaml.exists():
+            pytest.skip("strategy_config.yaml not found at repo root")
+        result = load_strategy_config(repo_yaml)
+        assert isinstance(result, StrategyConfig)
+        assert result.min_gap_atr_ratio == 0.25
+        assert result.bearish_only is True
+        assert result.tuesday_exclusion is True
+>       assert result.sl_multiplier == 5.0
+E       assert 2.0 == 5.0
+E        +  where 2.0 = StrategyConfig(sl_multiplier=2.0, tp_multiplier=8.0, entry_pct=0.5, atr_threshold=0.5, max_gap_dollars=60.0, max_gap_a...eshold=-0.02, enable_breakeven_stop=False, breakeven_trigger_r=2.0, enable_trailing_stop=False, trailing_stop_mult=1.5).sl_multiplier
+
+tests/unit/test_config_loader.py:130: AssertionError
+=============================== warnings summary ===============================
+src/detection/models.py:285
+  /root/Silver-Bullet-ML-BMAD-yank-validation/src/detection/models.py:285: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MomentumSignal(BaseModel):
+
+../Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:319
+  /root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:319: PydanticDeprecatedSince20: `json_encoders` is deprecated. See https://docs.pydantic.dev/2.12/concepts/serialization/#custom-serializers for alternatives. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_config_loader.py::TestLoadStrategyConfig::test_load_repo_strategy_config_yaml
+1 failed, 462 passed, 2 warnings in 30.07s

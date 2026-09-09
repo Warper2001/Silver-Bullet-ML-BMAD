@@ -1,0 +1,10 @@
+{
+  "all_members_match_sources": true,
+  "code_revision": "f2bc13cc57b10e427e10a2544a13db463aafface",
+  "decision": "HOLD_VALIDATION",
+  "enabled": false,
+  "manifest_sha256": "cba34beac9b68e197b0403636a1915fb7cb31972afed7137acfd5bc9cbf0c8dc",
+  "package_bytes": 48287,
+  "package_sha256": "be824d38b6b60dafad75fb1e0b9b39915a4e8eb8e84b2ede12a68e031eaca6d0",
+  "verified_members": 16
+}

@@ -1,0 +1,40 @@
+{
+  "bar_count": 2880,
+  "capacity": 1,
+  "capture_bytes": 10975592,
+  "code_sha256": {
+    "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+    "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+    "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5"
+  },
+  "coverage": {
+    "accepted": 1,
+    "capture_closed": true,
+    "capture_sha256": "3f750eb584818fa6e3276682df63e8a5b6fd0e823c234e347c9be5ad5aadc261",
+    "coverage_scope": "accepted_prefix_before_close",
+    "decision": "HOLD_VALIDATION",
+    "dropped": 0,
+    "enabled": true,
+    "invalid_reasons": [],
+    "valid_coverage": true,
+    "written": 1
+  },
+  "decision": "HOLD_VALIDATION",
+  "decision_transitions": 2880,
+  "limitations": [
+    "Direct poll observer benchmark; verified-startup guards have separate integration tests.",
+    "Explicit larger offline capture bounds; default settings not qualified.",
+    "Backfill invokes both shadow paths with synthetic feed and memory storage.",
+    "No independent observed account, real broker, or deployment identity evidence."
+  ],
+  "max_bytes": 64000000,
+  "max_nodes": 4000000,
+  "poll_and_close_seconds": 71.68596869707108,
+  "scope": "PRIVATE_PINNED_OFFLINE_RUNTIME",
+  "shadow_method_calls": {
+    "bullish_advance": 2880,
+    "bullish_detect": 2880,
+    "bullish_update": 2880,
+    "parity_fetch": 1
+  }
+}

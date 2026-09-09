@@ -1,0 +1,86 @@
+{
+  "base_revision": "a478d674e8d507928cec843b139f086d14d85296",
+  "code_revision": "f2bc13cc57b10e427e10a2544a13db463aafface",
+  "decision": "HOLD_VALIDATION",
+  "files": {
+    "deploy/yank-observation.disabled.json": {
+      "bytes": 990,
+      "sha256": "f407fb855388e393a50ec630275681333e83fea3811033927787e1ae445fd83b"
+    },
+    "docs/yank-evidence-pilot-preparation.md": {
+      "bytes": 15041,
+      "sha256": "d5734816f8a9cc9625bc64e7431ae36ddfbd275be46e04e16cf4e1049bff1c35"
+    },
+    "docs/yank-tradestation-semantics.md": {
+      "bytes": 5754,
+      "sha256": "64f66ecd8ee4bf3c3e6a4697744cd960fd36cc91ac9ba03cf67a4a81d383d710"
+    },
+    "src/cli/check_yank_deployed_replay.py": {
+      "bytes": 850,
+      "sha256": "4ee71548475bfbdf6653f319ce6f04bc445fb83ad85808c166502b78f751a413"
+    },
+    "src/cli/compare_yank_decision_capture.py": {
+      "bytes": 293,
+      "sha256": "058153c53b49c6631c5ae86ba771f8b3f94314115b6a491a42343564481e85c8"
+    },
+    "src/research/yank_deployed_validation/__init__.py": {
+      "bytes": 88,
+      "sha256": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e"
+    },
+    "src/research/yank_deployed_validation/account.py": {
+      "bytes": 7986,
+      "sha256": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3"
+    },
+    "src/research/yank_deployed_validation/adapter.py": {
+      "bytes": 21667,
+      "sha256": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6"
+    },
+    "src/research/yank_deployed_validation/capture.py": {
+      "bytes": 21531,
+      "sha256": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d"
+    },
+    "src/research/yank_deployed_validation/compare.py": {
+      "bytes": 9463,
+      "sha256": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83"
+    },
+    "src/research/yank_deployed_validation/evidence.py": {
+      "bytes": 11556,
+      "sha256": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf"
+    },
+    "src/research/yank_deployed_validation/gaps.py": {
+      "bytes": 17818,
+      "sha256": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88"
+    },
+    "src/research/yank_deployed_validation/replay.py": {
+      "bytes": 10497,
+      "sha256": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647"
+    },
+    "src/research/yank_deployed_validation/startup.py": {
+      "bytes": 18514,
+      "sha256": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685"
+    },
+    "src/research/yank_deployed_validation/tradestation.py": {
+      "bytes": 22955,
+      "sha256": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed"
+    }
+  },
+  "operational_gates": {
+    "acquisition_authorized": false,
+    "actual_observation_sessions": [],
+    "incremental_spend_usd": 0,
+    "installation_authorized": false,
+    "live_collection_authorized": false,
+    "production_expected_release": null,
+    "production_signer": null,
+    "production_trusted_public_keys": null,
+    "restart_authorized": false
+  },
+  "purpose": "Disabled observation preparation overlay; not an installation authorization",
+  "required_snapshot_manifest_sha256": "4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92",
+  "requirements": [
+    "Existing repository and pinned snapshot/dependencies; this overlay does not replace the installed strategy.",
+    "Follow docs/yank-evidence-pilot-preparation.md after concrete maintenance approval.",
+    "Supply independently approved runtime/checkpoint/process/key inputs outside captures."
+  ],
+  "schema_version": 1
+}

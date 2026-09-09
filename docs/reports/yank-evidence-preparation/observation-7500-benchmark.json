@@ -1,0 +1,79 @@
+{
+  "bar_count": 7500,
+  "code_sha256": {
+    "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+    "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+    "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5"
+  },
+  "coverage": {
+    "accepted": 1,
+    "capture_closed": true,
+    "capture_sha256": "a3d647d7b98b093baa7905213842f7a55e6c02965b242b66e36565333f840293",
+    "coverage_scope": "accepted_prefix_before_close",
+    "decision": "HOLD_VALIDATION",
+    "dropped": 4,
+    "enabled": true,
+    "invalid_reasons": [
+      "poll_capture_failed",
+      "poll_observation_overflow",
+      "response_body_exceeds_capture_bound",
+      "response_capture_failed"
+    ],
+    "valid_coverage": false,
+    "written": 1
+  },
+  "decision": "HOLD_VALIDATION",
+  "decision_equal": true,
+  "limitations": [
+    "Direct poll observer benchmark; verified-startup guards have separate integration tests.",
+    "Default capture bounds do not preserve complete startup poll evidence.",
+    "RSS is process high-water including baseline and libraries; not observer-only memory.",
+    "Queue snapshots are samples, not continuous peak instrumentation.",
+    "Synthetic constant-price backfill invokes bullish watcher but opens no shadow trade.",
+    "ProjectX transport and both shadow storage sinks are synthetic/in-memory.",
+    "One run per mode on a shared host; timings are descriptive, not isolated production latency certification."
+  ],
+  "max_record_bytes": 2000000,
+  "measurements": {
+    "baseline": {
+      "poll_seconds": 137.21350707300007,
+      "process_high_water_rss_kib": 277544
+    },
+    "disabled": {
+      "poll_seconds": 137.76572769100312,
+      "process_high_water_rss_kib": 287272
+    },
+    "enabled": {
+      "poll_seconds": 148.2832386320224,
+      "process_high_water_rss_kib": 293964
+    }
+  },
+  "queue_capacity": 2,
+  "sampled_queue_bytes": 0,
+  "sampled_queue_records": 0,
+  "scope": "PRIVATE_PINNED_OFFLINE_RUNTIME",
+  "shadow_method_calls": {
+    "baseline": {
+      "bullish_advance": 7500,
+      "bullish_detect": 7500,
+      "bullish_update": 7500,
+      "parity_fetch": 1
+    },
+    "disabled": {
+      "bullish_advance": 7500,
+      "bullish_detect": 7500,
+      "bullish_update": 7500,
+      "parity_fetch": 1
+    },
+    "enabled": {
+      "bullish_advance": 7500,
+      "bullish_detect": 7500,
+      "bullish_update": 7500,
+      "parity_fetch": 1
+    }
+  },
+  "state_equal": true,
+  "storage_write_threads": [
+    "yank-decision-capture"
+  ]
+}

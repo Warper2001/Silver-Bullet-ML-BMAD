@@ -1,0 +1,12 @@
+{
+  "all_operational_gates_closed": true,
+  "authorized_spend_usd": 0,
+  "decision": "HOLD_VALIDATION",
+  "deterministic": true,
+  "documented_bar_limit": 57600,
+  "earliest_final_request_offset_seconds": 480,
+  "exact_one_minute_overlaps": true,
+  "ledger_sha256": "366c3b0b2c622b04f777b9bdf43eeedfc1bdfea197d40e5c745c662ad5667852",
+  "maximum_calendar_minute_labels_inclusive": 10081,
+  "requests": 9
+}

@@ -8,6 +8,12 @@ import pytz
 from datetime import datetime
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.model_selection import TimeSeriesSplit
+
+try:  # sklearn >= 1.6; replaces the removed cv="prefit" idiom
+    from sklearn.frozen import FrozenEstimator as _FrozenEstimator
+except ImportError:  # older sklearn -> the TimeSeriesSplit path below is used
+    _FrozenEstimator = None
 
 base_dir = "/root/Silver-Bullet-ML-BMAD"
 train_csv_path = os.path.join(base_dir, "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv")
@@ -187,9 +193,52 @@ def main():
         random_state=42
     )
     
-    # Use Sigmoid Calibration for robust probabilities
-    calibrated_clf = CalibratedClassifierCV(estimator=clf, method="sigmoid", cv=5)
-    calibrated_clf.fit(X_train, y_train)
+    # Sigmoid calibration, fitted WITHOUT letting the calibrator see the future.
+    #
+    # Was: CalibratedClassifierCV(estimator=clf, method="sigmoid", cv=5).
+    # An integer cv resolves to StratifiedKFold for a classifier, so each of the
+    # 5 internal models trained on folds drawn from BOTH sides of the fold it
+    # was calibrated on. On a time series that means the calibration map is
+    # fitted using data from after the period it calibrates. Measured elsewhere
+    # in this repo, k-fold on serially-correlated rows inflates ROC AUC by
+    # +0.12 to +0.15 over a leak-free reference
+    # (see tools/validation/cv_leakage_probe.py). Calibration distorts
+    # probability levels rather than ranking, so the effect here is smaller than
+    # for a leaky train/test split -- but the thresholds swept below (0.55,
+    # 0.60, 0.65) are read off exactly those probability levels.
+    #
+    # `trades_train` is produced by simulate_trades() walking the bars in order,
+    # so positional slicing is chronological.
+    CAL_FRACTION = 0.2
+    cal_start = int(len(X_train) * (1.0 - CAL_FRACTION))
+    X_fit, y_fit = X_train.iloc[:cal_start], y_train[:cal_start]
+    X_cal, y_cal = X_train.iloc[cal_start:], y_train[cal_start:]
+
+    if _FrozenEstimator is not None and len(X_cal) >= 50 and len(np.unique(y_cal)) == 2:
+        # Preferred: fit on the earlier block, calibrate on the strictly later
+        # one, so the calibrator only ever sees data after what trained it.
+        #
+        # NOTE: the old idiom for this was cv="prefit". That has been REMOVED
+        # from sklearn -- it raises InvalidParameterError on both 1.8 (the venv
+        # the live bots run) and 1.9. FrozenEstimator (sklearn >= 1.6) is the
+        # supported replacement and is verified working on both.
+        print(f"Calibrating on a held-out LATER block: "
+              f"fit={len(X_fit)} trades, calibrate={len(X_cal)} trades")
+        clf.fit(X_fit, y_fit)
+        calibrated_clf = CalibratedClassifierCV(
+            estimator=_FrozenEstimator(clf), method="sigmoid")
+        calibrated_clf.fit(X_cal, y_cal)
+    else:
+        # Fallback when the tail block is too small or single-class: an
+        # expanding-window ensemble. Still never trains on the future, but each
+        # sub-model sees a different amount of history.
+        print(f"Held-out calibration not usable "
+              f"(FrozenEstimator={'yes' if _FrozenEstimator else 'no'}, "
+              f"tail n={len(X_cal)}, classes={len(np.unique(y_cal))}); "
+              f"falling back to TimeSeriesSplit calibration")
+        calibrated_clf = CalibratedClassifierCV(
+            estimator=clf, method="sigmoid", cv=TimeSeriesSplit(n_splits=5))
+        calibrated_clf.fit(X_train, y_train)
     
     os.makedirs(os.path.dirname(model_path), exist_ok=True)
     joblib.dump(calibrated_clf, model_path)

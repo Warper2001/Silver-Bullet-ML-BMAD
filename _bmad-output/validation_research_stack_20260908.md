@@ -383,12 +383,69 @@ now sorts like the others.
 .venv-research/bin/python tools/validation/test_temporal_splits.py   # ALL HELPER TESTS PASSED
 ```
 
-### 9.4 Left alone deliberately — needs your call
+### 9.4 S26 calibration — FIXED 2026-09-09 (§10)
 
-`run_mnq_s26_pipeline.py:191` uses
-`CalibratedClassifierCV(estimator=clf, method="sigmoid", cv=5)`, which resolves
-to StratifiedKFold — the calibration map is fitted on folds containing future
-data. **Not changed**, because S26 is a running strategy (`trader-s26`,
-`trader-s26-combine`) and altering calibration changes a deployed model's
-probability outputs. It affects probability calibration rather than ranking, so
-it is a smaller effect than a leaky train/test split, but it is real.
+Originally left alone pending a decision, on the belief it fed a live model.
+That belief was wrong — see §10.1. Now fixed.
+
+---
+
+## 10. S26 calibration fix (2026-09-09)
+
+### 10.1 Correction: this was never in the live path
+
+§9.4 held this back on the grounds that changing calibration would alter a
+deployed model's probabilities. Tracing the artifacts shows that was wrong:
+
+| artifact | written by | read by |
+|---|---|---|
+| `models/mnq_s26_xgboost_model.pkl` | `run_mnq_s26_pipeline.py` | `inspect_mnq_probs.py` — a diagnostic. **Nothing live.** |
+| `models/s26_soft_fvg_ml_model.pkl` | `train_s26_soft_fvg_ml.py` | **both live traders**: `src/research/s26_soft_fvg_streaming.py`, `src/research/btc_s26_combine.py` |
+
+The leaky calibration was in the pipeline that writes the *first* file. The
+model the live S26 bots actually load comes from `train_s26_soft_fvg_ml.py`,
+which already uses a positional 70/30 temporal split
+(`trades_df.iloc[:split_idx]`) and performs no calibration at all — clean on
+this axis. So the fix carries **no live risk**, and the caution in §9.4 was
+overstated.
+
+Neither `.pkl` was regenerated: mtimes are unchanged (2026-06-10 and
+2026-06-04). Changing the script changes nothing until someone deliberately
+re-runs it.
+
+### 10.2 The fix
+
+`CalibratedClassifierCV(estimator=clf, method="sigmoid", cv=5)` resolves to
+StratifiedKFold for a classifier, so each internal model trained on folds drawn
+from **both sides** of the fold it calibrated — the calibration map is fitted
+using data from after the period it calibrates. That distorts probability
+*levels* rather than ranking, which matters here specifically because the
+pipeline then sweeps thresholds of 0.55 / 0.60 / 0.65 read off those levels.
+
+Replaced with a held-out **later** block: fit the classifier on the first 80% of
+the (chronologically ordered) 2025 trades, then fit the sigmoid calibrator on
+the last 20%, so the calibrator only ever sees data *after* what trained the
+classifier. Falls back to `TimeSeriesSplit(n_splits=5)` when the tail block is
+too small or single-class.
+
+### 10.3 A trap worth recording: `cv="prefit"` is gone
+
+The textbook idiom for held-out calibration is `cv="prefit"`. **It has been
+removed from sklearn** and raises `InvalidParameterError` on **both** 1.8 (the
+venv the live bots run) and 1.9 (the research venv). The first version of this
+fix used it and would have crashed the pipeline. `FrozenEstimator`
+(sklearn >= 1.6) is the supported replacement; it is verified working on both
+versions, with an ImportError guard falling back to the TimeSeriesSplit path.
+
+### 10.4 Test
+
+`tools/validation/test_s26_calibration.py` exercises the exact block on
+synthetic data — both branches — asserting that `cv="prefit"` is still rejected
+(so nobody reinstates it), that the calibration rows are strictly later than the
+fitting rows, that probabilities are valid and non-degenerate, and that the
+fallback splitter never trains on the future.
+
+```
+sklearn 1.9.0  ALL CALIBRATION TESTS PASSED
+sklearn 1.8.0  ALL CALIBRATION TESTS PASSED     # the live venv
+```

@@ -2,6 +2,8 @@
 
 **HOLD_VALIDATION.** This work targets the installed TradeStation one-minute signal implementation with two-contract ProjectX execution. It does not authorize a trading change or establish profitability.
 
+Preparation update (2026-09-09): [decision evidence and next-window package](../yank-evidence-pilot-preparation.md) adds a disabled trusted-collector admission path and local TradeStation archive tooling. [Semantics research](../yank-tradestation-semantics.md) separates documented flags from unresolved minute labeling. The historical results below remain unchanged; no live evidence has been collected by this preparation.
+
 Worktree: `/root/Silver-Bullet-ML-BMAD-yank-validation`; branch: `feat/yank-deployed-validation`; base: `ceac044a5ec4e34435e99534ccbcb9d629185b23`. Each stage is a separate local conventional commit.
 
 ## Completed engineering

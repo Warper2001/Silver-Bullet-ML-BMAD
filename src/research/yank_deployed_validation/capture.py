@@ -220,6 +220,8 @@ def install_poll_observer(trader,capture,*,identity,readiness,state_reader):
         try:before=state_reader()
         except Exception:before=None;capture.invalidate('decision_state_capture_failed')
         current=context.get();offset=len(current['intentions']) if current is not None else 0
+        try:record('decision_times',datetime.now(timezone.utc).isoformat())
+        except Exception:capture.invalidate('decision_time_capture_failed')
         result=await original_detect(bar,is_backfill)
         try:record('decisions',dict(kind='decision_transition',bar_time=bar.timestamp.isoformat(),before=before,after=state_reader(),intentions=current['intentions'][offset:] if current is not None else []))
         except Exception:capture.invalidate('decision_state_capture_failed')
@@ -234,7 +236,7 @@ def install_poll_observer(trader,capture,*,identity,readiness,state_reader):
     trader._log_filter_decision=filter_log;trader.ml_filter.predict_proba=predict;trader._detect_and_enter=detect
     async def observed_poll():
         nonlocal sequence
-        observation={'bars':None,'status_code':None,'request_failure':None,'poll_observation':'already_admitted','label_evidence':[],'clock_reads':[],'decisions':[],'intentions':[],'execution_replies':[],'errors':[],'observation_bytes':0,'observation_records':0,'observation_dropped':False};token=context.set(observation)
+        observation={'bars':None,'status_code':None,'request_failure':None,'poll_observation':'already_admitted','label_evidence':[],'clock_reads':[],'decision_times':[],'decisions':[],'intentions':[],'execution_replies':[],'errors':[],'observation_bytes':0,'observation_records':0,'observation_dropped':False};token=context.set(observation)
         original_client=trader.client;original_execution=trader._ts_client
         class Execution:
             def __getattr__(self,name):return getattr(original_execution,name)
@@ -314,7 +316,7 @@ def install_poll_observer(trader,capture,*,identity,readiness,state_reader):
             try:
                 if not observation['clock_reads'] or 'receipt_time' not in observation or before is None or (observation['status_code']==200 and observation['bars'] is None):raise ValueError('missing poll evidence')
                 poll_time=observation['clock_reads'][0]
-                event={k:observation[k] for k in ('bars','receipt_time','request_id','status_code','clock_reads','execution_replies','request_failure','poll_observation','label_evidence')}
+                event={k:observation[k] for k in ('bars','receipt_time','request_id','status_code','clock_reads','decision_times','execution_replies','request_failure','poll_observation','label_evidence')}
                 event['poll_time']=poll_time
                 event['bars_hash_scope']='canonical_parsed_Bars_not_HTTP_bytes'
                 event['raw_http_bytes_sha256']=observation.get('raw_http_bytes_sha256')

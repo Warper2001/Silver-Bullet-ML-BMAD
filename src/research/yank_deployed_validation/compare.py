@@ -35,20 +35,24 @@ def differences(expected,actual,path=''):
     return exact,floats
 
 
-async def replay_capture(rows,manifest,snapshot):
+async def replay_capture(rows,manifest,snapshot,*,bundle=None,trusted_keys=None,expected_release=None,coverage=None):
+    from .evidence import verify_bundle
+    admission = verify_bundle(bundle, trusted_keys or {}, expected_release or {}, rows, coverage or {}, manifest['initial_state'], snapshot)
+    trusted = admission['eligible']
     expected_identity=identities(snapshot);results=[];observations=[];expected_sequence=1
     try:adapter=Adapter(snapshot,manifest['initial_state'])
     except ValueError as e:return dict(results=[dict(status='UNASSESSABLE',reason=str(e))],broker_observations=[])
     for row in rows:
         if row.get('schema_version')!=1:raise ValueError('capture schema')
-        if row['kind']=='broker_observation':observations.append(row);continue
+        if row['kind'] in ('broker_observation', 'account_boundary', 'account_request'):observations.append(row);continue
         if row['kind']!='poll':raise ValueError('capture kind')
         trace=row['trace'];reasons=[]
         if trace.get('sequence')!=expected_sequence:reasons.append('capture_sequence_gap_or_duplicate')
         expected_sequence+=1
         scope=row['readiness'].get('identity_verification_scope')
-        if scope!='PRIVATE_PINNED_OFFLINE_RUNTIME':reasons.append('live_identity_unverified')
-        if adapter.account_verification=='UNVERIFIED_EXTERNAL_DECLARATION':reasons.append('account_evidence_unverified')
+        if trusted and (row['readiness'].get('clock_semantics')!='observed_per_call' or not trace['input'].get('clock_reads')):reasons.append('decision_time_clock_evidence_unavailable')
+        if not trusted and scope!='PRIVATE_PINNED_OFFLINE_RUNTIME':reasons.append('live_identity_unverified')
+        if not trusted and adapter.account_verification=='UNVERIFIED_EXTERNAL_DECLARATION':reasons.append('account_evidence_unverified')
         if row['identities']!=expected_identity:reasons.append('identity_mismatch')
         if not row['readiness'].get('equivalent_feed_and_state',False):reasons.append('feed_or_state_unavailable')
         clock_reads=trace['input'].get('clock_reads')
@@ -75,14 +79,16 @@ async def replay_capture(rows,manifest,snapshot):
         exact=[];floats=[]
         for field in ('decisions','intentions','after','scheduled'):
             e,f=differences(trace[field],actual[field],field);exact+=e;floats+=f
-        results.append(dict(sequence=trace['sequence'],status='UNASSESSABLE' if reasons else ('MISMATCH' if exact else ('MATCH_DISCRETE_WITH_FLOAT_DIFFERENCES' if floats else 'MATCH')),reasons=reasons,verification_scope='PRIVATE_OFFLINE_DIAGNOSTIC_ONLY',exact_differences=exact,float_differences=floats))
+        results.append(dict(sequence=trace['sequence'],status='UNASSESSABLE' if reasons else ('MISMATCH' if exact else ('MATCH_DISCRETE_WITH_FLOAT_DIFFERENCES' if floats else 'MATCH')),reasons=reasons,verification_scope='TRUSTED_COLLECTOR_LIVE_COMPARISON' if trusted else 'PRIVATE_OFFLINE_DIAGNOSTIC_ONLY',exact_differences=exact,float_differences=floats))
     adapter.runtime.verify()
     return dict(results=results,broker_observations=observations)
 
 
-def run(manifest_path,input_dir,snapshot,output_dir):
+def run(manifest_path,input_dir,snapshot,output_dir,*,evidence_path=None,trusted_keys_path=None,expected_release_path=None):
     manifest_hash=digest(manifest_path)
-    code_paths=[Path(__file__),Path(__file__).with_name('capture.py'),Path(__file__).with_name('adapter.py')]
+    trust_paths=[Path(p) for p in (evidence_path,trusted_keys_path,expected_release_path) if p]
+    trust_hashes={str(p):digest(p) for p in trust_paths}
+    code_paths=[Path(__file__),Path(__file__).with_name('capture.py'),Path(__file__).with_name('adapter.py'),Path(__file__).with_name('evidence.py'),Path(__file__).with_name('account.py')]
     code_hashes={p.name:digest(p) for p in code_paths}
     m=json.loads(Path(manifest_path).read_text());root=Path(input_dir).resolve();out=Path(output_dir)
     if not {'capture_sha256','coverage_sha256','initial_state'}<=m.keys():raise ValueError('capture manifest schema')
@@ -93,17 +99,28 @@ def run(manifest_path,input_dir,snapshot,output_dir):
             if not p.resolve().is_relative_to(root) or digest(p)!=m[key]:raise ValueError('capture pin mismatch')
     verify();coverage=json.loads((root/'coverage.json').read_text())
     rows=[json.loads(line) for line in (root/'capture.jsonl').read_text().splitlines()]
+    from .evidence import verify_bundle
+    def read_optional(path): return json.loads(Path(path).read_text()) if path else {}
+    bundle=read_optional(evidence_path) if evidence_path else None
+    trusted_keys=read_optional(trusted_keys_path);expected_release=read_optional(expected_release_path)
+    admission=verify_bundle(bundle, trusted_keys, expected_release, rows, coverage, m['initial_state'], snapshot)
+    if evidence_path and (m.get('publication')!='COMPLETE' or m.get('evidence_sha256')!=digest(evidence_path)):
+        admission.update(eligible=False, coverage='FAIL')
+        admission['reasons'].append('signed_package_not_complete')
+        bundle=None
     if not coverage.get('valid_coverage') or coverage.get('capture_sha256')!=m['capture_sha256'] or coverage.get('written')!=len(rows):
         result=dict(results=[dict(status='UNASSESSABLE',reason='invalid_capture_coverage')],broker_observations=[])
-    else:result=asyncio.run(replay_capture(rows,m,snapshot))
+    else:result=asyncio.run(replay_capture(rows,m,snapshot,bundle=bundle,trusted_keys=trusted_keys,expected_release=expected_release,coverage=coverage))
     verify()
+    if trust_hashes!={str(p):digest(p) for p in trust_paths}:raise ValueError('trust inputs changed')
     if digest(manifest_path)!=manifest_hash or code_hashes!={p.name:digest(p) for p in code_paths}:raise ValueError('comparison inputs changed')
-    result.update(manifest_sha256=manifest_hash,code_sha256=code_hashes,decision='HOLD_VALIDATION',capture_sha256=m['capture_sha256'],economics='NOT_ASSESSED',execution='Observed venue records reported separately; no fills inferred from intentions')
+    result.update(admission=admission,trust_inputs_sha256=trust_hashes,manifest_sha256=manifest_hash,code_sha256=code_hashes,decision='HOLD_VALIDATION',capture_sha256=m['capture_sha256'],economics='NOT_ASSESSED',execution='Observed venue records reported separately; no fills inferred from intentions')
     out.mkdir(parents=True);(out/'comparison.json').write_text(canonical(result));return result
 
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--manifest',required=True);p.add_argument('--input-dir',required=True);p.add_argument('--snapshot',required=True);p.add_argument('--output-dir',required=True)
-    a=p.parse_args();run(a.manifest,a.input_dir,a.snapshot,a.output_dir)
+    p.add_argument('--evidence');p.add_argument('--trusted-keys');p.add_argument('--expected-release')
+    a=p.parse_args();run(a.manifest,a.input_dir,a.snapshot,a.output_dir,evidence_path=a.evidence,trusted_keys_path=a.trusted_keys,expected_release_path=a.expected_release)
 
 if __name__=='__main__':main()

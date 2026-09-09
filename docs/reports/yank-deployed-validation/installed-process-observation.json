@@ -1,0 +1,46 @@
+{
+  "ActiveState": "active",
+  "DropInPaths": "",
+  "ExecMainStartTimestamp": "Fri 2026-09-04 20:36:45 UTC",
+  "ExecStart": "{ path=/root/Silver-Bullet-ML-BMAD/.venv/bin/python ; argv[]=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/yank_streaming_working.py ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+  "FragmentPath": "/etc/systemd/system/trader-yank.service",
+  "MainPID": "455819",
+  "WorkingDirectory": "/root/Silver-Bullet-ML-BMAD",
+  "limitations": [
+    "/proc environ reports exec environment, not all later Python environment mutations",
+    "No Python code/model bytes authenticated as loaded in memory",
+    "Source snapshot is on-disk identity only"
+  ],
+  "observation_recorded_at_utc": "2026-09-08T23:56:23.162722+00:00",
+  "pid_identity_stable_during_read": true,
+  "proc_start_ticks": "59836184",
+  "process_cwd": "/root/Silver-Bullet-ML-BMAD",
+  "process_exec_environment_whitelist": {
+    "SIM_INVVOL": "1",
+    "SYMBOL": "MNQU26",
+    "TIER2_DEBUG": "1",
+    "YANK_CONTRACTS": "2",
+    "YANK_DATA_SHADOW": "1",
+    "YANK_MAX_GAP_ATR_RATIO": "0.426",
+    "YANK_MIRROR_TS_SIM": "1"
+  },
+  "process_executable": "/usr/bin/python3.12",
+  "projectx_execution_selector_present": true,
+  "queried_absent_process_environment_keys": [
+    "STRATEGY_CONFIG_PATH",
+    "TIER2_BLOCKED_MONTHS",
+    "YANK_DATA_PX_LIVE",
+    "YANK_DATA_SOURCE"
+  ],
+  "returncode": 0,
+  "scope": "read-only systemd manager metadata, not process-loaded byte authentication",
+  "whitelisted_environment": {
+    "SIM_INVVOL": "1",
+    "SYMBOL": "MNQU26",
+    "TIER2_DEBUG": "1",
+    "YANK_CONTRACTS": "2",
+    "YANK_DATA_SHADOW": "1",
+    "YANK_MAX_GAP_ATR_RATIO": "0.426",
+    "YANK_MIRROR_TS_SIM": "1"
+  }
+}

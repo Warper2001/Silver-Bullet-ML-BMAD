@@ -244,5 +244,6 @@
     "vol_regime_lookback": 120,
     "vol_regime_threshold": 0.75
   },
-  "runtime_environment": "UNVERIFIED: no per-unit drop-ins present in /etc, /run, /usr/lib; global drop-ins/manager environment/process identity not authenticated"
+  "runtime_environment": "QUALIFIED: supplementary systemd manager and whitelisted /proc exec environment agree with installed unit; loaded code/model bytes and later Python mutations remain unverified",
+  "runtime_observation": "../reports/yank-deployed-validation/installed-process-observation.json"
 }

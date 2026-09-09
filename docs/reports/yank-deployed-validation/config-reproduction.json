@@ -1,0 +1,7 @@
+{
+  "decision": "HOLD_VALIDATION",
+  "effective_strategy_matches": true,
+  "execution_quantity": 2,
+  "ml_threshold": 0.5,
+  "source_class": "private exact pinned Tier2StreamingTrader"
+}

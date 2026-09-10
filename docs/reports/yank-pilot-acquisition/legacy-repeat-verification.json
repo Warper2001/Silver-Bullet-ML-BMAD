@@ -1,0 +1,8 @@
+{
+  "identical_runs": true,
+  "identical_to_prior_comparison": true,
+  "comparison_sha256": "1ec571e0a59522161dd1c66b717f7e85e59543f360fddb4afe91ee86a837c3a9",
+  "eligible": false,
+  "diagnostic_polls": 3,
+  "decision": "HOLD_VALIDATION"
+}

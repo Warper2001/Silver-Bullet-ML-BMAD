@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "decision": "HOLD_VALIDATION",
+  "status": "PROPOSED_NOT_APPROVED",
+  "service": "trader-yank.service",
+  "window_utc": {
+    "start": "2026-09-12T14:00:00Z",
+    "end": "2026-09-12T15:00:00Z",
+    "abort_enablement_after": "2026-09-12T14:30:00Z"
+  },
+  "operator": "Existing service owner; named operator acceptance required before approval",
+  "rollback_artifact": "rollback-candidate.tar.gz",
+  "sessions": [
+    {
+      "id": "plumbing-1",
+      "start": "2026-09-14T13:20:00Z",
+      "end": "2026-09-14T16:10:00Z"
+    },
+    {
+      "id": "plumbing-2",
+      "start": "2026-09-16T13:20:00Z",
+      "end": "2026-09-16T16:10:00Z"
+    }
+  ],
+  "installation_authorized": false,
+  "restart_authorized": false,
+  "live_collection_authorized": false,
+  "gates": {
+    "named_operator_accepted": false,
+    "maintenance_window_approved": false,
+    "release_and_launcher_approved": false,
+    "runtime_config_model_pins_independently_approved": false,
+    "checkpoint_independently_verified": false,
+    "public_key_and_signer_provisioned": false,
+    "production_latency_qualified": false,
+    "contract_roll_state_verified": false,
+    "rollback_rechecked_at_window": false
+  },
+  "contract_policy": "Reconfirm actual live contract at window; do not copy MNQM25 historical symbol or change MNQU26 automatically.",
+  "account_verdict_without_coherent_evidence": "UNKNOWN"
+}

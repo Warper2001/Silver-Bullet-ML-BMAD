@@ -1,0 +1,24 @@
+{
+  "arms": {
+    "ml050": {
+      "cash": "49127.00",
+      "costs": "8",
+      "economic_realized": "-873.00",
+      "entry_timing": "PASS",
+      "equity": "49127.00",
+      "marks_checked": 29,
+      "trades": 2
+    },
+    "no-ml": {
+      "cash": "49182.0",
+      "costs": "8",
+      "economic_realized": "-818.0",
+      "entry_timing": "PASS",
+      "equity": "49182.0",
+      "marks_checked": 13,
+      "trades": 2
+    }
+  },
+  "fee_qualification": "4 USD per closed trade is a modeled assumption, not a verified broker charge",
+  "status": "PASS_PUBLISHED_LEDGER"
+}

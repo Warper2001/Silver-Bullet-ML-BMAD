@@ -1,0 +1,82 @@
+{
+  "adjustments": {
+    "price": "unadjusted explicit contract",
+    "roll": "none"
+  },
+  "availability": {
+    "label": "minute start",
+    "receipt_semantics": "native capture proxy, not provider receipt",
+    "rule": "max(minute_end,completed_event_capture)"
+  },
+  "classification": "DEVELOPMENT_2025",
+  "contracts": {
+    "data": "MNQM5",
+    "installed_spec": "MNQU26",
+    "mapping": "explicit development-only different expiration; same MNQ point/tick specs"
+  },
+  "coverage": {
+    "bars": 13440,
+    "rows": 17280,
+    "status": "qualified: MBO reconstruction not independent provider coverage"
+  },
+  "execution_state": {
+    "classification": "SYNTHETIC_UNKNOWN_ACCOUNT",
+    "daily_halted": false,
+    "daily_pnl": 0.0,
+    "is_backfill": true,
+    "last_trading_date": null,
+    "on_combine": true
+  },
+  "files": [
+    {
+      "file": "bars.jsonl",
+      "sha256": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af"
+    },
+    {
+      "file": "coverage.jsonl",
+      "sha256": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5"
+    },
+    {
+      "file": "manifest.json",
+      "sha256": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0"
+    },
+    {
+      "file": "report.json",
+      "sha256": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713"
+    },
+    {
+      "file": "status.json",
+      "sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930"
+    },
+    {
+      "file": "definitions.json",
+      "sha256": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959"
+    }
+  ],
+  "format": "native-minute-v1",
+  "interval": {
+    "end_exclusive": "2025-05-31T00:00:00Z",
+    "start": "2025-05-19T00:00:00Z"
+  },
+  "request": {
+    "identity": "existing purchased native acquisition 20260907",
+    "new_requests": false
+  },
+  "schema_version": 1,
+  "session": {
+    "coverage": "native status evidence",
+    "empty_minutes": "not fabricated",
+    "timezone": "UTC, New York strategy dates"
+  },
+  "source": {
+    "dataset": "GLBX.MDP3",
+    "instrument_id": 42009475,
+    "provider": "Databento",
+    "schema": "MBO completed T events"
+  },
+  "warmup": {
+    "prehistory_rows": 0,
+    "requirement": "120 completed H1 plus ATR prehistory, LR1950, ADR20 preceding sessions",
+    "status": "INSUFFICIENT_PREINTERVAL"
+  }
+}

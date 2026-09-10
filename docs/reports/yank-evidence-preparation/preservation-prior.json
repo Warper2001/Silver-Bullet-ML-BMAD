@@ -1,0 +1,6 @@
+{
+  "checked": 177,
+  "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -O docs/reports/yank-deployed-validation/verify-preservation.py",
+  "decision": "HOLD_VALIDATION",
+  "mismatches": []
+}

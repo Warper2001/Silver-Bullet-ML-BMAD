@@ -1,0 +1,7 @@
+{
+  "decision": "HOLD_VALIDATION",
+  "isolation": "PASS",
+  "order_producing_polls": 3,
+  "network_and_live_import_traps": "not triggered",
+  "comparison": "UNASSESSABLE_ACCOUNT_EVIDENCE; zero decision/state differences"
+}

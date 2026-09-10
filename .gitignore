@@ -227,3 +227,11 @@ data/s26_replay/*
 # 1-minute history (145/390 bars differ on a session we can check). Losing or altering
 # this file makes sigma's pre-2026-06-11 history unreconstructible.
 #   data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv   (tracked, see above)
+
+# Local purchased-input provenance lineage
+.local-provenance/
+
+# Reproducible native-minute pilot artifacts; compact reports remain tracked.
+data/yank/native-minute-*/
+!src/research/yank_native_minute/pins.json
+!docs/reports/yank-native-minute/*.json

@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-09-10T01:02:06.634074+00:00",
+  "scope": "read-only on-disk service/release inspection; not loaded-object attestation",
+  "main_checkout_head": "27e4e1e0c0415bb4514822a6b17193369bff9d85",
+  "service": {
+    "MainPID": "455819",
+    "ExecMainStartTimestamp": "Fri 2026-09-04 20:36:45 UTC",
+    "ActiveState": "active",
+    "FragmentPath": "/etc/systemd/system/trader-yank.service",
+    "DropInPaths": ""
+  },
+  "sha256": {
+    "/root/Silver-Bullet-ML-BMAD/src/research/yank_streaming_working.py": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67",
+    "/root/Silver-Bullet-ML-BMAD/strategy_config.yaml": "293c9d23c69f667564954e30bbb6360ca8af658288978ffa62de1b3c21391abb",
+    "/root/Silver-Bullet-ML-BMAD/models/xgboost/tier2_meta_labeling_model.pkl": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2",
+    "/root/Silver-Bullet-ML-BMAD/models/xgboost/tier2_threshold.json": "f15753530508e2fe73f8f22dfdf7f87bd37647e190caa98e1624e58a5ef04e7e",
+    "/root/Silver-Bullet-ML-BMAD/models/xgboost/lr_regime_config.json": "6410625050fe90846fcd2543b426b7bf20d118d36a487a030bafb3eca25a5a24",
+    "/etc/systemd/system/trader-yank.service": "1acfb8632a6cd612456ce602b55402a899f194b84dea5e5a790157a8b7c6fa37"
+  },
+  "loaded_runtime_identity": "UNKNOWN",
+  "installed_configuration_difference": "TIER2_DEBUG=1 exists in installed unit and is absent from checked-in unit",
+  "configured_symbol": "MNQU26",
+  "configured_contracts": 2,
+  "main_source_dirty": true,
+  "snapshot_source_sha256": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67"
+}

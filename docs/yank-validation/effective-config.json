@@ -1,0 +1,249 @@
+{
+  "comparison": {
+    "atr_threshold": {
+      "frozen": 0.5,
+      "installed": 0.5,
+      "same": true
+    },
+    "bearish_only": {
+      "frozen": true,
+      "installed": true,
+      "same": true
+    },
+    "breakeven_trigger_r": {
+      "frozen": 2.0,
+      "installed": 2.0,
+      "same": true
+    },
+    "commission_per_roundtrip": {
+      "frozen": 4.0,
+      "installed": 4.0,
+      "same": true
+    },
+    "contracts_per_trade": {
+      "frozen": 5,
+      "installed": 5,
+      "same": true
+    },
+    "enable_breakeven_stop": {
+      "frozen": false,
+      "installed": false,
+      "same": true
+    },
+    "enable_ifvg_fallback": {
+      "frozen": false,
+      "installed": false,
+      "same": true
+    },
+    "enable_kill_zone_filter": {
+      "frozen": true,
+      "installed": true,
+      "same": true
+    },
+    "enable_trailing_stop": {
+      "frozen": false,
+      "installed": false,
+      "same": true
+    },
+    "entry_pct": {
+      "frozen": 0.5,
+      "installed": 0.5,
+      "same": true
+    },
+    "funding_rate_filter_enabled": {
+      "frozen": false,
+      "installed": false,
+      "same": true
+    },
+    "funding_rate_long_threshold": {
+      "frozen": -0.02,
+      "installed": -0.02,
+      "same": true
+    },
+    "funding_rate_short_threshold": {
+      "frozen": 0.03,
+      "installed": 0.03,
+      "same": true
+    },
+    "h1_sweep_lookback": {
+      "frozen": 6,
+      "installed": 6,
+      "same": true
+    },
+    "kill_zone_end_et": {
+      "frozen": "11:00:00",
+      "installed": "11:00:00",
+      "same": true
+    },
+    "kill_zone_start_et": {
+      "frozen": "09:30:00",
+      "installed": "09:30:00",
+      "same": true
+    },
+    "m15_confirmation": {
+      "frozen": true,
+      "installed": true,
+      "same": true
+    },
+    "max_daily_loss": {
+      "frozen": -750.0,
+      "installed": -300.0,
+      "same": false
+    },
+    "max_gap_atr_ratio": {
+      "frozen": "UNRECORDED",
+      "installed": 0.426,
+      "same": false
+    },
+    "max_gap_dollars": {
+      "frozen": 60.0,
+      "installed": 60.0,
+      "same": true
+    },
+    "max_hold_bars": {
+      "frozen": 60,
+      "installed": 60,
+      "same": true
+    },
+    "max_pending_bars": {
+      "frozen": 240,
+      "installed": 240,
+      "same": true
+    },
+    "min_gap_atr_ratio": {
+      "frozen": 0.25,
+      "installed": 0.25,
+      "same": true
+    },
+    "ml_threshold": {
+      "frozen": 0.5,
+      "installed": 0.5,
+      "same": true
+    },
+    "sl_multiplier": {
+      "frozen": 2.0,
+      "installed": 2.0,
+      "same": true
+    },
+    "tp_multiplier": {
+      "frozen": 8.0,
+      "installed": 8.0,
+      "same": true
+    },
+    "trailing_stop_mult": {
+      "frozen": 1.5,
+      "installed": 1.5,
+      "same": true
+    },
+    "tuesday_exclusion": {
+      "frozen": true,
+      "installed": true,
+      "same": true
+    },
+    "vol_regime_lookback": {
+      "frozen": 120,
+      "installed": 120,
+      "same": true
+    },
+    "vol_regime_threshold": {
+      "frozen": 0.75,
+      "installed": 0.75,
+      "same": true
+    }
+  },
+  "decision": "HOLD_VALIDATION",
+  "execution": {
+    "account_state": "UNAVAILABLE",
+    "execution_venue": "ProjectX",
+    "lr_config": {
+      "enabled": true,
+      "fast_len": 390,
+      "gate_criteria": {
+        "min_filter_ratio": 0.25,
+        "threshold_min": 0.45,
+        "val_pf_min": 1.2
+      },
+      "ml_threshold": 0.5,
+      "note": "Written by validate_lr_regime_promotion.py \u2014 all gate criteria passed",
+      "polarity": "counter_trend",
+      "slow_len": 1950,
+      "val_tail_months": [
+        "2025-11",
+        "2025-12"
+      ],
+      "validated_date": "2026-05-16"
+    },
+    "ml_threshold": 0.5,
+    "point_value": 2,
+    "quantity": 2,
+    "signal_source": "tradestation",
+    "symbol": "MNQU26",
+    "tick_size": 0.25
+  },
+  "frozen_config": {
+    "atr_threshold": 0.5,
+    "bearish_only": true,
+    "breakeven_trigger_r": 2.0,
+    "commission_per_roundtrip": 4.0,
+    "contracts_per_trade": 5,
+    "enable_breakeven_stop": false,
+    "enable_ifvg_fallback": false,
+    "enable_kill_zone_filter": true,
+    "enable_trailing_stop": false,
+    "entry_pct": 0.5,
+    "funding_rate_filter_enabled": false,
+    "funding_rate_long_threshold": -0.02,
+    "funding_rate_short_threshold": 0.03,
+    "h1_sweep_lookback": 6,
+    "kill_zone_end_et": "11:00:00",
+    "kill_zone_start_et": "09:30:00",
+    "m15_confirmation": true,
+    "max_daily_loss": -750.0,
+    "max_gap_dollars": 60.0,
+    "max_hold_bars": 60,
+    "max_pending_bars": 240,
+    "min_gap_atr_ratio": 0.25,
+    "ml_threshold": 0.5,
+    "sl_multiplier": 2.0,
+    "tp_multiplier": 8.0,
+    "trailing_stop_mult": 1.5,
+    "tuesday_exclusion": true,
+    "vol_regime_lookback": 120,
+    "vol_regime_threshold": 0.75
+  },
+  "frozen_manifest_sha256": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1",
+  "on_disk_effective_strategy": {
+    "atr_threshold": 0.5,
+    "bearish_only": true,
+    "breakeven_trigger_r": 2.0,
+    "commission_per_roundtrip": 4.0,
+    "contracts_per_trade": 5,
+    "enable_breakeven_stop": false,
+    "enable_ifvg_fallback": false,
+    "enable_kill_zone_filter": true,
+    "enable_trailing_stop": false,
+    "entry_pct": 0.5,
+    "funding_rate_filter_enabled": false,
+    "funding_rate_long_threshold": -0.02,
+    "funding_rate_short_threshold": 0.03,
+    "h1_sweep_lookback": 6,
+    "kill_zone_end_et": "11:00:00",
+    "kill_zone_start_et": "09:30:00",
+    "m15_confirmation": true,
+    "max_daily_loss": -300.0,
+    "max_gap_atr_ratio": 0.426,
+    "max_gap_dollars": 60.0,
+    "max_hold_bars": 60,
+    "max_pending_bars": 240,
+    "min_gap_atr_ratio": 0.25,
+    "ml_threshold": 0.5,
+    "sl_multiplier": 2.0,
+    "tp_multiplier": 8.0,
+    "trailing_stop_mult": 1.5,
+    "tuesday_exclusion": true,
+    "vol_regime_lookback": 120,
+    "vol_regime_threshold": 0.75
+  },
+  "runtime_environment": "QUALIFIED: supplementary systemd manager and whitelisted /proc exec environment agree with installed unit; loaded code/model bytes and later Python mutations remain unverified",
+  "runtime_observation": "../reports/yank-deployed-validation/installed-process-observation.json"
+}

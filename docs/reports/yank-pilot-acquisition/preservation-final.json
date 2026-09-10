@@ -1,0 +1,13 @@
+{
+  "prior_preparation_files_checked": 49,
+  "mismatches": [],
+  "installed_files_checked": 6,
+  "installed_mismatches": [],
+  "service_identity_unchanged": true,
+  "service": {
+    "MainPID": "455819",
+    "ExecMainStartTimestamp": "Fri 2026-09-04 20:36:45 UTC",
+    "ActiveState": "active"
+  },
+  "decision": "HOLD_VALIDATION"
+}

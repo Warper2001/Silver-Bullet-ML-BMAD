@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "enabled": false,
+  "decision": "HOLD_VALIDATION",
+  "purpose": "Maintenance-window proposal; not an executable service manifest",
+  "startup_entry_point": "src.research.yank_deployed_validation.startup.prepare_observation",
+  "expected_release_reference": null,
+  "trusted_public_keys_reference": null,
+  "external_signer_reference": null,
+  "external_pseudonym_salt_reference": null,
+  "output_directory": null,
+  "maintenance_approval": null,
+  "maintenance_window_utc": null,
+  "rollback_release_reference": null,
+  "direct_projectx_integration_verified": false,
+  "mirror_inherited_http_boundary_supported": true,
+  "account_snapshot_coherence_verified": false,
+  "historical_acquisition_enabled": false,
+  "authorized_incremental_spend_usd": 0,
+  "sessions": [],
+  "capture_limits": {
+    "capacity": 1,
+    "max_bytes": 64000000,
+    "max_nodes": 4000000
+  },
+  "capture_limits_status": "OFFLINE_2880_BAR_BENCHMARK_ONLY_NOT_PRODUCTION_LATENCY_QUALIFIED"
+}

@@ -1,0 +1,6 @@
+{
+  "checked": 42,
+  "decision": "HOLD_VALIDATION",
+  "mismatches": [],
+  "scope": "installed-source copy, configuration, fitted model, adapter, snapshot and prior reports in validation worktree"
+}

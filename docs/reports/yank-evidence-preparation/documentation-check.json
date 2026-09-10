@@ -1,0 +1,20 @@
+{
+  "checked_date": "2026-09-09",
+  "mode": "public documentation only; no authentication",
+  "parsed_schema_observations": [
+    "Bar.BarStatus and Bar.IsEndOfHistory are separate fields",
+    "REST date-range parameters firstdate and lastdate",
+    "Shared TimeStamp schema is RFC3339; endpoint minute interval labeling unresolved"
+  ],
+  "report": "docs/yank-tradestation-semantics.md",
+  "sources": [
+    {
+      "download_sha256": "268b7b0b47c96d7b696b8c17b1f7d2d1fd1b8839f2aabba0b18958f983154c8a",
+      "url": "https://api.tradestation.com/docs/specification/"
+    },
+    {
+      "download_sha256": "621f97c9dc99693e5745c861a60eab8c39bb8c26cc56576c396704f83470f9eb",
+      "url": "https://api.tradestation.com/docs/assets/js/42059736.54db3d8f.js"
+    }
+  ]
+}

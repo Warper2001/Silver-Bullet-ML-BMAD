@@ -1,0 +1,197 @@
+{
+  "archive": {
+    "first_inclusive": "2025-04-01T00:00:00Z",
+    "last_exclusive": "2025-05-31T00:00:00Z"
+  },
+  "authorized_spend_usd": 0,
+  "decision": "HOLD_VALIDATION",
+  "evaluation": {
+    "first_inclusive": "2025-05-19T00:00:00Z",
+    "last_exclusive": "2025-05-31T00:00:00Z"
+  },
+  "gates": {
+    "acquisition_authorized": false,
+    "cost_verified": false,
+    "entitlement_verified": false,
+    "expiration_verified": false,
+    "label_semantics_verified": false,
+    "session_calendar_verified": false,
+    "symbol_verified": false
+  },
+  "maximum_window_days": 7,
+  "mode": "local-only-proposal",
+  "overlap_minutes": 1,
+  "rate_schedule": {
+    "documentation_reference": "docs/yank-tradestation-semantics.md",
+    "documented_max_bars": 57600,
+    "documented_requests_per_5_minutes": 500,
+    "minimum_spacing_seconds": 60,
+    "provider_limit_verified": true,
+    "retries": "not scheduled; gate remains closed"
+  },
+  "requests": [
+    {
+      "earliest_offset_seconds": 0,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-04-01T00:00:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-04-08T00:00:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-04-01T00:00:00Z",
+        "interval": 1,
+        "lastdate": "2025-04-08T00:00:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-001",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 60,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-04-07T23:59:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-04-14T23:59:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-04-07T23:59:00Z",
+        "interval": 1,
+        "lastdate": "2025-04-14T23:59:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-002",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 120,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-04-14T23:58:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-04-21T23:58:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-04-14T23:58:00Z",
+        "interval": 1,
+        "lastdate": "2025-04-21T23:58:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-003",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 180,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-04-21T23:57:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-04-28T23:57:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-04-21T23:57:00Z",
+        "interval": 1,
+        "lastdate": "2025-04-28T23:57:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-004",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 240,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-04-28T23:56:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-05-05T23:56:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-04-28T23:56:00Z",
+        "interval": 1,
+        "lastdate": "2025-05-05T23:56:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-005",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 300,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-05-05T23:55:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-05-12T23:55:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-05-05T23:55:00Z",
+        "interval": 1,
+        "lastdate": "2025-05-12T23:55:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-006",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 360,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-05-12T23:54:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-05-19T23:54:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-05-12T23:54:00Z",
+        "interval": 1,
+        "lastdate": "2025-05-19T23:54:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-007",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 420,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-05-19T23:53:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-05-26T23:53:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-05-19T23:53:00Z",
+        "interval": 1,
+        "lastdate": "2025-05-26T23:53:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-008",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    },
+    {
+      "earliest_offset_seconds": 480,
+      "endpoint": "/v3/marketdata/barcharts/MNQM25",
+      "first_inclusive": "2025-05-26T23:52:00Z",
+      "interval": 1,
+      "last_exclusive": "2025-05-31T00:00:00Z",
+      "method": "GET",
+      "provider_boundary_inclusion": "unverified",
+      "query": {
+        "firstdate": "2025-05-26T23:52:00Z",
+        "interval": 1,
+        "lastdate": "2025-05-31T00:00:00Z",
+        "unit": "Minute"
+      },
+      "request_id": "may2025-009",
+      "symbol": "MNQM25",
+      "unit": "Minute"
+    }
+  ],
+  "schema_version": 1
+}

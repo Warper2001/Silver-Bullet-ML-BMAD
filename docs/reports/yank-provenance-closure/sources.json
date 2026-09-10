@@ -1,0 +1,198 @@
+{
+  "candidate": {
+    "path": "scripts/generate_1min_dollar_bars_2025.py",
+    "sha256": "8f603a91acce9dfcec199b73e5f1ecb3f2d19904bbafeb0eb0bb018523c8f27e",
+    "revision": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8",
+    "line_ranges": [
+      {
+        "start": 1,
+        "end": 168,
+        "text": "#!/usr/bin/env python3\n\"\"\"\nGenerate 1-Minute Dollar Bars from 2025 MNQ Trade Data\n\nLoads /root/mnq_historical.json, filters to 2025 data, and generates\n1-minute dollar bars with $50M notional value threshold.\n\nOutput: data/processed/dollar_bars/1_minute/mnq_1min_2025.csv\n\"\"\"\n\nimport json\nimport sys\nfrom pathlib import Path\nfrom datetime import datetime\nimport csv\n\n# Constants\nDOLLAR_THRESHOLD = 50_000_000  # $50M notional value per bar\nMNQ_MULTIPLIER = 20.0  # $20 per point per contract\n\ndef main():\n    print(\"=\" * 70)\n    print(\"1-MINUTE DOLLAR BAR GENERATION - 2025 MNQ DATA\")\n    print(\"=\" * 70)\n\n    # Load data\n    data_path = Path(\"/root/mnq_historical.json\")\n    print(f\"\\n\ud83d\udcc2 Loading data from: {data_path}\")\n\n    with open(data_path, 'r') as f:\n        raw_data = json.load(f)\n\n    print(f\"\u2705 Loaded {len(raw_data):,} total bars\")\n\n    # Filter to 2025 and convert to bar format\n    print(f\"\\n\ud83d\udcca Filtering to 2025 data...\")\n\n    bars_2025 = []\n    for bar_data in raw_data:\n        try:\n            timestamp_str = bar_data.get('TimeStamp', '')\n            timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))\n\n            if timestamp.year != 2025:\n                continue\n\n            open_price = float(bar_data.get('Open', 0))\n            high_price = float(bar_data.get('High', 0))\n            low_price = float(bar_data.get('Low', 0))\n            close_price = float(bar_data.get('Close', 0))\n            volume = int(bar_data.get('TotalVolume', 0))\n\n            if high_price == 0 or low_price == 0:\n                continue\n\n            bars_2025.append({\n                'timestamp': timestamp,\n                'open': open_price,\n                'high': high_price,\n                'low': low_price,\n                'close': close_price,\n                'volume': volume,\n            })\n        except Exception:\n            continue\n\n    print(f\"\u2705 Filtered to {len(bars_2025):,} bars for 2025\")\n    print(f\"   Period: {bars_2025[0]['timestamp']} to {bars_2025[-1]['timestamp']}\")\n\n    # Calculate notional values and dollar bar accumulation\n    print(f\"\\n\ud83d\udcb0 Generating dollar bars (threshold: ${DOLLAR_THRESHOLD/1_000_000:.0f}M)...\")\n\n    output_path = Path(\"data/processed/dollar_bars/1_minute\")\n    output_path.mkdir(parents=True, exist_ok=True)\n\n    output_file = output_path / \"mnq_1min_2025.csv\"\n\n    dollar_bars = []\n    current_notional = 0.0\n    current_open = None\n    current_high = float('-inf')\n    current_low = float('inf')\n    current_close = None\n    current_volume = 0\n    bar_start_time = None\n\n    for bar in bars_2025:\n        # Initialize first bar\n        if current_open is None:\n            current_open = bar['open']\n            current_high = bar['high']\n            current_low = bar['low']\n            bar_start_time = bar['timestamp']\n\n        # Update OHLC\n        current_high = max(current_high, bar['high'])\n        current_low = min(current_low, bar['low'])\n        current_close = bar['close']\n        current_volume += bar['volume']\n\n        # Calculate notional value for this bar\n        notional = bar['close'] * bar['volume'] * MNQ_MULTIPLIER\n        current_notional += notional\n\n        # Check if threshold reached\n        if current_notional >= DOLLAR_THRESHOLD:\n            dollar_bars.append({\n                'timestamp': bar['timestamp'],\n                'open': current_open,\n                'high': current_high,\n                'low': current_low,\n                'close': current_close,\n                'volume': current_volume,\n                'notional': current_notional,\n            })\n\n            # Reset for next bar\n            current_notional = 0.0\n            current_open = None\n            current_high = float('-inf')\n            current_low = float('inf')\n            current_close = None\n            current_volume = 0\n            bar_start_time = None\n\n    print(f\"\u2705 Generated {len(dollar_bars):,} dollar bars\")\n\n    # Write to CSV\n    print(f\"\\n\ud83d\udcbe Writing to: {output_file}\")\n\n    with open(output_file, 'w', newline='') as f:\n        writer = csv.DictWriter(f, fieldnames=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'notional'])\n        writer.writeheader()\n        writer.writerows(dollar_bars)\n\n    print(f\"\u2705 Saved {len(dollar_bars):,} dollar bars\")\n\n    # Data quality summary\n    print(f\"\\n\ud83d\udcca DATA QUALITY SUMMARY:\")\n\n    # Check completeness\n    complete_bars = sum(1 for bar in dollar_bars if bar['notional'] >= DOLLAR_THRESHOLD)\n    completeness = complete_bars / len(dollar_bars) * 100\n    print(f\"   Completeness: {completeness:.2f}% (target: 99.99%)\")\n\n    # Check OHLC consistency\n    invalid_ohlc = sum(1 for bar in dollar_bars if bar['high'] < bar['low'])\n    print(f\"   Invalid OHLC: {invalid_ohlc}\")\n\n    # Notional value statistics\n    notionals = [bar['notional'] for bar in dollar_bars]\n    avg_notional = sum(notionals) / len(notionals)\n    min_notional = min(notionals)\n    max_notional = max(notionals)\n\n    print(f\"   Notional values:\")\n    print(f\"     Average: ${avg_notional/1_000_000:.2f}M\")\n    print(f\"     Min: ${min_notional/1_000_000:.2f}M\")\n    print(f\"     Max: ${max_notional/1_000_000:.2f}M\")\n\n    print(f\"\\n\" + \"=\" * 70)\n    print(\"\u2705 1-MINUTE DOLLAR BAR GENERATION COMPLETE\")\n    print(\"=\" * 70)\n\n    return 0\n\nif __name__ == \"__main__\":\n    sys.exit(main())"
+      }
+    ],
+    "retained_copy": "historical-writer.py.txt"
+  },
+  "migration-status": {
+    "path": "MIGRATION_EXECUTION_STATUS.md",
+    "sha256": "d250a5cc202b217ed40b171032244b3cccd6921fc008e83a4616551236571a6a",
+    "revision": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8",
+    "line_ranges": [
+      {
+        "start": 1,
+        "end": 15,
+        "text": "# 1-Minute Migration Execution Status\n\n**Updated:** 2026-04-14 23:20\n**Status:** IN PROGRESS - Phase 2 (HMM Training)\n**Progress:** 30% Complete\n\n---\n\n## \u2705 COMPLETED PHASES\n\n### Phase 1: Data Generation \u2705 COMPLETE\n- \u2705 **Task 1.0:** Data source verification - **351,628 bars found** (270% above expected)\n- \u2705 **Task 1.1:** 1-minute dollar bar generation - **289,230 dollar bars created**\n- \u2705 **Task 1.4:** Transaction cost analysis - **$14.58/trade net expectation**\n- \u2705 **Quality:** 100% completeness, 0 data quality issues"
+      },
+      {
+        "start": 157,
+        "end": 164,
+        "text": "## \ud83d\udcc1 KEY FILES CREATED\n\n1. **Data Scripts:**\n   - `scripts/verify_2025_data_source.py`\n   - `scripts/generate_1min_dollar_bars_2025.py`\n   - `scripts/analyze_transaction_costs_1min.py`\n\n2. **ML Scripts:**"
+      }
+    ]
+  },
+  "migration-command": {
+    "path": "scripts/migrate_to_1min_2025.py",
+    "sha256": "63b230786b697601b5cc121dbacddedd3a521930c4cf97470a80b3fd9c39361e",
+    "revision": "d54b1a4a07a31dabe1f5bfd715793dbce9cfe4b8",
+    "line_ranges": [
+      {
+        "start": 70,
+        "end": 84,
+        "text": "    # Phase 1: Data Generation\n    if not args.skip_data_gen:\n        print(\"\\n\" + \"=\" * 70)\n        print(\"PHASE 1: DATA GENERATION\")\n        print(\"=\" * 70)\n\n        results['data_verification'] = run_script(\n            \"scripts/verify_2025_data_source.py\",\n            \"Data Source Verification\"\n        )\n\n        results['dollar_bars'] = run_script(\n            \"scripts/generate_1min_dollar_bars_2025.py\",\n            \"1-Minute Dollar Bar Generation\"\n        )"
+      }
+    ]
+  },
+  "transformer": {
+    "path": "src/data/transformation.py",
+    "sha256": "3d5f548f68d50d84e9d2c80aa79ace05fc708a34b2be115caf84e20f4f99dc5f",
+    "revision": "b82c098719de1646b787a8b7f69b6e82435122ae",
+    "line_ranges": [
+      {
+        "start": 14,
+        "end": 17,
+        "text": "# MNQ futures contract specifications\nMNQ_MULTIPLIER = 0.5  # $0.5 per point per contract\nDOLLAR_THRESHOLD = 50_000_000  # $50M notional value per bar\nBAR_TIMEOUT_SECONDS = 5  # Maximum bar duration for low-volume periods"
+      },
+      {
+        "start": 124,
+        "end": 142,
+        "text": "            market_data: Market data from WebSocket\n        \"\"\"\n        # Use last price for Dollar Bars (actual trades, not quotes)\n        price = market_data.last\n        if price is None:\n            logger.warning(\"Market data missing last price, skipping\")\n            return\n\n        raw_volume = market_data.volume\n        if self._prev_raw_volume is None:\n            # First tick of the session: baseline the cumulative volume, contribute zero.\n            # The quote stream sends total daily volume; we need only the per-update delta.\n            self._prev_raw_volume = raw_volume\n            volume_delta = 0\n        else:\n            volume_delta = max(0, raw_volume - self._prev_raw_volume)\n            self._prev_raw_volume = raw_volume\n        volume = volume_delta\n        notional = price * volume * MNQ_MULTIPLIER"
+      },
+      {
+        "start": 220,
+        "end": 228,
+        "text": "        # Create DollarBar\n        bar = DollarBar(\n            timestamp=datetime.now(),\n            open=self._bar_open,  # type: ignore[assignment]\n            high=self._bar_high,  # type: ignore[assignment]\n            low=self._bar_low,  # type: ignore[assignment]\n            close=self._bar_close,  # type: ignore[assignment]\n            volume=self._bar_volume,\n            notional_value=self._bar_notional,"
+      }
+    ]
+  },
+  "converter": {
+    "path": "convert_to_time_bars.py",
+    "sha256": "abf47352f78c2ccec863639c64a5b34f4cdba60df4b007993202d6a6e027b576",
+    "revision": "b82c098719de1646b787a8b7f69b6e82435122ae",
+    "line_ranges": [
+      {
+        "start": 23,
+        "end": 23,
+        "text": "MNQ_MULTIPLIER = 0.5  # $0.5 per point per contract"
+      },
+      {
+        "start": 77,
+        "end": 98,
+        "text": "    # Parse timestamps\n    df['timestamp'] = pd.to_datetime(df['TimeStamp'])\n\n    # Convert numeric columns\n    numeric_cols = ['Open', 'High', 'Low', 'Close', 'TotalVolume']\n    for col in numeric_cols:\n        df[col] = pd.to_numeric(df[col], errors='coerce')\n\n    # Rename columns to lowercase for consistency\n    df = df.rename(columns={\n        'Open': 'open',\n        'High': 'high',\n        'Low': 'low',\n        'Close': 'close',\n        'TotalVolume': 'volume'\n    })\n\n    # Set timestamp as index\n    df = df.set_index('timestamp')\n\n    # Sort by timestamp\n    df = df.sort_index()"
+      },
+      {
+        "start": 225,
+        "end": 236,
+        "text": "    # Step 1: Load data\n    df = load_tradestation_data('mnq_historical.json')\n\n    # Step 2: Filter to killzones\n    killzone_df = filter_to_killzones(df)\n\n    # Step 3: Resample to 5-minute bars\n    time_bars = resample_to_time_bars(killzone_df, frequency='5min')\n\n    # Step 4: Save to monthly HDF5 files\n    print(\"\\n\ud83d\udcbe Saving to monthly HDF5 files...\")\n    save_monthly_files(time_bars, 'data/processed/time_bars/')"
+      }
+    ]
+  },
+  "downloader": {
+    "path": "src/data/historical_downloader.py",
+    "sha256": "994fafc4665aa3eb1cb069ed43c1999368d9d0ec0d0481f2322299eb71f51a21",
+    "revision": "b82c098719de1646b787a8b7f69b6e82435122ae",
+    "line_ranges": [
+      {
+        "start": 284,
+        "end": 297,
+        "text": "    def _save_to_hdf5(self, symbol: str, bars: list[BarData]) -> None:\n        \"\"\"Save bars to HDF5 file atomically.\n\n        Args:\n            symbol: Contract symbol\n            bars: List of bars to save\n\n        Raises:\n            ValueError: If file size exceeds maximum\n        \"\"\"\n        # Ensure data directory exists\n        self.data_dir.mkdir(parents=True, exist_ok=True)\n\n        file_path = self.data_dir / f\"{symbol}.h5\""
+      },
+      {
+        "start": 338,
+        "end": 345,
+        "text": "\n                # Add metadata\n                dataset.attrs[\"symbol\"] = symbol\n                dataset.attrs[\"count\"] = len(bars)\n                dataset.attrs[\"created_at\"] = datetime.now(timezone.utc).isoformat()\n                dataset.attrs[\"multiplier\"] = MNQ_MULTIPLIER\n\n            # Validate file size"
+      },
+      {
+        "start": 387,
+        "end": 401,
+        "text": "        self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)\n\n        checkpoint_data = {\n            \"symbols\": list(self._downloaded_symbols),\n            \"updated_at\": datetime.now(timezone.utc).isoformat(),\n        }\n\n        # Write to temp file first\n        temp_file = self.checkpoint_file.with_suffix(\".tmp\")\n\n        for attempt in range(3):\n            try:\n                with open(temp_file, \"w\") as f:\n                    json.dump(checkpoint_data, f, indent=2)\n"
+      }
+    ]
+  },
+  "client": {
+    "path": "src/data/tradestation_client.py",
+    "sha256": "9412ab5161e2a405dd527d5a6d1aab07a49352e1a764a02529fd1da8cefe9e19",
+    "revision": "b82c098719de1646b787a8b7f69b6e82435122ae",
+    "line_ranges": [
+      {
+        "start": 253,
+        "end": 266,
+        "text": "\n        params = {\n            \"interval\": str(interval),\n            \"unit\": unit,\n            \"startDate\": start_date.strftime(\"%Y-%m-%d\"),\n            \"endDate\": end_date.strftime(\"%Y-%m-%d\"),\n        }\n\n        try:\n            response = await client.get(\n                f\"{BARS_ENDPOINT}/{symbol}\",\n                headers=headers,\n                params=params,\n            )"
+      }
+    ]
+  },
+  "old-transformer": {
+    "path": "src/data/transformation.py",
+    "sha256": "19f4f7421d9140492de1886a250b156a3d11d45631085eabb127c5c68138a84e",
+    "revision": "6fbf784b6f793d3bacf06ad343128374e20a85c7",
+    "line_ranges": [
+      {
+        "start": 14,
+        "end": 16,
+        "text": "MNQ_MULTIPLIER = 0.5  # $0.5 per point per contract\nDOLLAR_THRESHOLD = 50_000_000  # $50M notional value per bar\nBAR_TIMEOUT_SECONDS = 5  # Maximum bar duration for low-volume periods"
+      },
+      {
+        "start": 108,
+        "end": 114,
+        "text": "        price = market_data.last\n        if price is None:\n            logger.warning(\"Market data missing last price, skipping\")\n            return\n\n        volume = market_data.volume\n        notional = price * volume * MNQ_MULTIPLIER"
+      },
+      {
+        "start": 172,
+        "end": 180,
+        "text": "        # Create DollarBar\n        bar = DollarBar(\n            timestamp=datetime.now(),\n            open=self._bar_open,  # type: ignore[assignment]\n            high=self._bar_high,  # type: ignore[assignment]\n            low=self._bar_low,  # type: ignore[assignment]\n            close=self._bar_close,  # type: ignore[assignment]\n            volume=self._bar_volume,\n            notional_value=self._bar_notional,"
+      }
+    ]
+  },
+  "prior-search": {
+    "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-git-history.txt",
+    "sha256": "7407b1da9d2ef4575800a58505406541e99789bfe1f653f497b5ac1623079103"
+  },
+  "prior-code-check": {
+    "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-historical-code-check.txt",
+    "sha256": "a60f84ccd0716ccc63c1cde47c5fddb536c7281fc04d53158e30ec0e2ebe5fb1"
+  },
+  "prior-digest": {
+    "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/digests/provenance-r1-1.md",
+    "sha256": "6bf3d14b8d5247437e11111c9c9c1878fb6b0fbeb54deb1f0701cb4af39f32c6"
+  },
+  "chart-caveat": {
+    "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/parent-timestamp-docs.md",
+    "sha256": "a37d506186c33d8e67f2c2da74b1fa895b7a997e84c69f94b51d04505cf42673"
+  },
+  "provenance-report": {
+    "path": "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-bar-provenance/report.json",
+    "sha256": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91"
+  },
+  "lineage-check": {
+    "path": "/root/Silver-Bullet-ML-BMAD-yank-minute/docs/reports/yank-bar-provenance/verify-lineage.py",
+    "sha256": "24ca70db799dbf156a7eca241f5cb80e45b2bc484254e560175ecb79923d599e"
+  },
+  "pilot-request": {
+    "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/mbo-submission-intent.json",
+    "sha256": "197b20a0661c9641fc5eb20fc4a150ec1e01337785bf95d211b7c991837ec0b3",
+    "line_ranges": [
+      {
+        "start": 1,
+        "end": 20,
+        "text": "{\n  \"request\": {\n    \"compression\": \"zstd\",\n    \"dataset\": \"GLBX.MDP3\",\n    \"delivery\": \"download\",\n    \"encoding\": \"dbn\",\n    \"end\": \"2025-05-31\",\n    \"schema\": \"mbo\",\n    \"split_duration\": \"day\",\n    \"start\": \"2025-05-19\",\n    \"stype_in\": \"raw_symbol\",\n    \"stype_out\": \"instrument_id\",\n    \"symbols\": [\n      \"MNQM5\"\n    ]\n  },\n  \"started_at_utc\": \"2026-09-07T21:35:05.295603+00:00\"\n}"
+      }
+    ]
+  },
+  "pilot-metadata": {
+    "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/metadata.json",
+    "sha256": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9",
+    "line_ranges": [
+      {
+        "start": 1,
+        "end": 29,
+        "text": "{\n    \"version\": 1,\n    \"job_id\": \"GLBX-20260907-NWS3PA9QPX\",\n    \"query\": {\n        \"dataset\": \"GLBX.MDP3\",\n        \"schema\": \"mbo\",\n        \"symbols\": [\n            \"MNQM5\"\n        ],\n        \"stype_in\": \"raw_symbol\",\n        \"stype_out\": \"instrument_id\",\n        \"start\": 1747612800000000000,\n        \"end\": 1748649600000000000,\n        \"limit\": null,\n        \"encoding\": \"dbn\",\n        \"compression\": \"zstd\"\n    },\n    \"customizations\": {\n        \"pretty_px\": false,\n        \"pretty_ts\": false,\n        \"map_symbols\": false,\n        \"split_symbols\": false,\n        \"split_duration\": \"day\",\n        \"split_size\": null,\n        \"packaging\": null,\n        \"delivery\": \"download\"\n    }\n}"
+      }
+    ]
+  },
+  "pilot-manifest": {
+    "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/manifest.json",
+    "sha256": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156"
+  },
+  "frozen-manifest": {
+    "path": "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/manifest.json",
+    "sha256": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1"
+  }
+}

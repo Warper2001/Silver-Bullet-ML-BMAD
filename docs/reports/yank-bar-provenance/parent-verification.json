@@ -1,0 +1,46 @@
+{
+  "canonical_pair": [
+    "verified-run1",
+    "verified-run2"
+  ],
+  "canonical_sha256": {
+    "lineage.jsonl": "acb2a02dae05648de36e30360015b5bfd5b0984ab4ce9c878f228dc0afc8a6a9",
+    "manifest.json": "75d6423a30ae32e812a9501344cc233d85c290adc59ad3c3b0c8f21ec65053de",
+    "pilot-differences.jsonl": "9a39b25e801eeae9fb03d6fead6a205678bbd1ec8e70b62b4af1953861855e66",
+    "report.json": "764420f5b331a96f581b5e4f9482dea92ffe23fdc098ae935fb159b817403e91",
+    "report.md": "03eaa672cd2cbc111891268124c1938b10162667d5541eb8b9653b7ad98c4eda"
+  },
+  "independent_full_lineage_check": {
+    "checker_sha256": "24ca70db799dbf156a7eca241f5cb80e45b2bc484254e560175ecb79923d599e",
+    "constituents_once_each": 351628,
+    "independent_full_lineage_check": "PASS",
+    "interpreter": "python3 -O",
+    "mixed": 5583,
+    "multi": 29520,
+    "original_csv_all_fields": "PASS",
+    "rows": 289230,
+    "run": "verified-run1"
+  },
+  "input_count": 18,
+  "input_sha256": {
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/comparison.json": "3e94c33bf627c65dcc70b3264daa8f3f0699b0ca1d0e378e35342c4228a6d7e5",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/manifest.json": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-events.jsonl.gz": "f784f2415e9006df064d4638b699fefb3629edc80b71a4537a3231c268c6ccf8",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-gates.jsonl.gz": "74c16aa40b588492f16c6f337ee2c9e7c10ecdf57109bc39db52f046ebb5d6d5",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-report.json": "c3dba75354105ba1fc5fbe3c6fea7f351ad0fa407d4416d264be3667299250ef",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-events.jsonl.gz": "bf0943a8f7705eeeb94f153d9acc8ee37b6d92fac71983a4bd6acf903acf9fd6",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-gates.jsonl.gz": "f552fb28cbb225370ab6677270390ee2aba93ff56dc5d2dd0a752b2401f0fd10",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-report.json": "e0fb45380bab2bee9fa882e07e4c26bf72f4c59d35315eb11d9e01120ba911cb",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/artifacts.json": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/event-extracts.jsonl": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/import-manifest.json": "e206155e54aa7e483ac694fb5b4e480823910902782da88fece733eec932bf53",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/reconciliation.jsonl": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/report.json": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/report.md": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/provenance-raw-2025.jsonl": "baeb1a060250c6c6071fe658459123604c85595df0688d0af278ecb3b6fa1b40",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/manifest.json": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156",
+    "/root/Silver-Bullet-ML-BMAD/mnq_historical.json": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924"
+  },
+  "unchanged": true
+}

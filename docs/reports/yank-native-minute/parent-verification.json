@@ -1,0 +1,254 @@
+{
+  "all_bytes_identical": true,
+  "canonical_pair": [
+    "data/yank/native-minute-reviewed-a",
+    "data/yank/native-minute-reviewed-b"
+  ],
+  "canonical_sha256": {
+    "bars.jsonl": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+    "coverage.jsonl": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+    "definitions.json": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+    "delayed-events.json": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+    "exchange-diagnostic.jsonl": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+    "manifest.json": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+    "replay.json": "a6a10e53cd541b083260c8a0a03dc391b458122226e8111de99118359c63382b",
+    "report.json": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+    "status.json": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930"
+  },
+  "checker_sha256": {
+    "compute-raw-trade-digests.py": "0a262368e199467191edd48ce305c978c35fcf422698cc45646e57f2bc567108",
+    "probe-native-events.py": "6731dfcb805f0e6ca181df74b98268c89c1f513e0e432e64a40143161dc02cc1",
+    "verify-native-oracle.py": "a3fab1ea40b9a2750bc24db91ca869c9cbf981ae50201ef5e7af5c51527eb9fb",
+    "verify-published-replay.py": "1833398dce2fc53316fe47ce0ac5245af5756c3e66ee204d41e2e82cc14892f4"
+  },
+  "code_hashes_match": true,
+  "full_event_probe": {
+    "bad_flag_trades": 0,
+    "daily": {
+      "glbx-mdp3-20250519.mbo.dbn.zst": {
+        "records": 21384192,
+        "trades": 739791
+      },
+      "glbx-mdp3-20250520.mbo.dbn.zst": {
+        "records": 20815985,
+        "trades": 680500
+      },
+      "glbx-mdp3-20250521.mbo.dbn.zst": {
+        "records": 31241949,
+        "trades": 944833
+      },
+      "glbx-mdp3-20250522.mbo.dbn.zst": {
+        "records": 26481316,
+        "trades": 844572
+      },
+      "glbx-mdp3-20250523.mbo.dbn.zst": {
+        "records": 28895293,
+        "trades": 931997
+      },
+      "glbx-mdp3-20250525.mbo.dbn.zst": {
+        "records": 878549,
+        "trades": 46047
+      },
+      "glbx-mdp3-20250526.mbo.dbn.zst": {
+        "records": 4432366,
+        "trades": 207810
+      },
+      "glbx-mdp3-20250527.mbo.dbn.zst": {
+        "records": 18404689,
+        "trades": 632507
+      },
+      "glbx-mdp3-20250528.mbo.dbn.zst": {
+        "records": 22081340,
+        "trades": 717604
+      },
+      "glbx-mdp3-20250529.mbo.dbn.zst": {
+        "records": 30288970,
+        "trades": 911319
+      },
+      "glbx-mdp3-20250530.mbo.dbn.zst": {
+        "records": 32242340,
+        "trades": 869772
+      }
+    },
+    "examples": [
+      [
+        "glbx-mdp3-20250527.mbo.dbn.zst",
+        4106157,
+        1748349299999994093,
+        4106159,
+        1748349300000002948
+      ]
+    ],
+    "records": 237146989,
+    "snapshot_trades": 0,
+    "trade_event_crosses_minute": 1,
+    "trades": 7526752,
+    "unterminated_trades": 0
+  },
+  "input_hashes_unchanged": {
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/comparison.json": "3e94c33bf627c65dcc70b3264daa8f3f0699b0ca1d0e378e35342c4228a6d7e5",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/manifest.json": "af16cffe7556dd5dfb8e308e3cf226988668e0d10bc91beef7ef289e534f0cb1",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-events.jsonl.gz": "f784f2415e9006df064d4638b699fefb3629edc80b71a4537a3231c268c6ccf8",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-gates.jsonl.gz": "74c16aa40b588492f16c6f337ee2c9e7c10ecdf57109bc39db52f046ebb5d6d5",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/ml050-report.json": "c3dba75354105ba1fc5fbe3c6fea7f351ad0fa407d4416d264be3667299250ef",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-events.jsonl.gz": "bf0943a8f7705eeeb94f153d9acc8ee37b6d92fac71983a4bd6acf903acf9fd6",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-gates.jsonl.gz": "f552fb28cbb225370ab6677270390ee2aba93ff56dc5d2dd0a752b2401f0fd10",
+    "/root/Silver-Bullet-ML-BMAD-yank-replay/docs/reports/yank-signals/development-run1/no-ml-report.json": "e0fb45380bab2bee9fa882e07e4c26bf72f4c59d35315eb11d9e01120ba911cb",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/artifacts.json": "a52c0a9e617b6a20f5ea35be86d4d7ad70c3513ed858262fca3f23bf56b122c3",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/event-extracts.jsonl": "9a6dc5f4ff799a2dcda519bb549d48eb891a42de3321a6e76c1206542e06b464",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/import-manifest.json": "e206155e54aa7e483ac694fb5b4e480823910902782da88fece733eec932bf53",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/reconciliation.jsonl": "f4bea6eb59f510812224907de31c22413a1b86f373de081f50877e1f39ba1a5b",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/report.json": "b248ca2aefafe77b473e5efa5ca2cbaa1e7891d5c5f5e73d0864a84fa3d893e5",
+    "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/technical-yank-bar-provenance-and-pilot-evidence-g-2026-09-07/imports/frozen-audit/report.md": "17ef5b89f3bb1e4d878fc2a85415fe84b062b60ca4a26df6bafe84ece404db22",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/manifest.json": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst": "bde71af6e7dd122176c8af53bec813921709059303ace434cfabf909c15e6749",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst": "c9b96c9469f98fb54ac163feaedc9a8bc6104640cd6c7e20cf022fd364eb8a7e",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst": "08d0757e4448634fff7e39169817c989a4e9edff17a2b058443cdce4e6d1b021",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst": "f6687005d7edc74a4e6d2b141ec2c81b828394ecd51740d74e643963b490215c",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250523.status.dbn.zst": "82cd5f3e695ad76a8be2e1f9701c3180ebcb1ddcbbe382315176db89df850c9c",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250525.status.dbn.zst": "e7b8099b94a88cd42da3aed93d5f0fbc7800f2530eb30d30cac1e3632dce65ca",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250526.status.dbn.zst": "c9246d4b2fa3ff58d6272536318c8578c0ee4c15f3422b5ab4248e7bf51481db",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst": "2160412a161b4de5bcaf52bd0e2b708ad0d81737d3f3e2995df99e16be1bd490",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst": "d84d6a2f9c2ecf4436f2a7e347956d2e062bbb910e078472136a3a5ca9d2b180",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst": "4bb3cd581a131c7a3459d537622980d410cad5a32b48c225be09a13ba48fab45",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250530.status.dbn.zst": "b76cfc7bc3e7353041d7c91b300f5204d080a0adc12bcd332d3f0b20177148c9",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/metadata.json": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250519.definition.dbn.zst": "b0e77ce84ce918246616fb8fc709027464e800178abd8700cbd6d80f833a587b",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250520.definition.dbn.zst": "0225e3ca550f9c1893244bcd9bea25384f09e578dbe28ba67aa49ce03b1e0da1",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250521.definition.dbn.zst": "e2c9018a96c08e93a73284362ff74cc1a6496ce8905d06452f9b6eba1d3f6594",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250522.definition.dbn.zst": "f35a6841b07cf9fc78f026420651820488ef818b4bcb726db81c636874d11cb1",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250523.definition.dbn.zst": "fc4ea840e7d1228e7ba5174a2c8c13f48d4eb38e58c6771c244c64db8e6b3002",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250525.definition.dbn.zst": "25c44abdf94caab6802aadccc554801a97ae28bdfa06b33ad723d3979fa2386f",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250526.definition.dbn.zst": "2bf61cb9dc674415a6eb87433ef89a389bdefd9621cd388774156946bc06d503",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250527.definition.dbn.zst": "8e6671683a0a81797ec1786d62c005ac5dad80ffd5c972165bb3bc4c740f82d7",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250528.definition.dbn.zst": "309afad712652a31734d962128da97adf9721d619f4b3f3c0df46d1946178e7b",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250529.definition.dbn.zst": "0f679012f75cfa779522ef4c6db2adf121ce7728ef0515371c5a843135d0d862",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250530.definition.dbn.zst": "e90ba1030ecb0dd93875ccb178fc07c70912f992bbb84954aa2bbe21fd5b275a",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/metadata.json": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250519.mbo.dbn.zst": "857b4d466347f6af1e0b7f3582de3f6e57713a7a152c1eaf27504bf10d2535d6",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250520.mbo.dbn.zst": "5a94a963312c1fdd2bcaf43f499151e5b3ff3158da2d657920942f37170790ff",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250521.mbo.dbn.zst": "00c3fabee823390ec5be236281553952754f65b801d07632ee9ba964c91bae65",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250522.mbo.dbn.zst": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250523.mbo.dbn.zst": "7261b656c9fcc3f877e520aa9f76e15970aa58c1c4b8d69f900c3f16e99da79e",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250525.mbo.dbn.zst": "338da0db1fb132a641c022931e15da058fca6a6cd775c3998fdf49fff5864f45",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250526.mbo.dbn.zst": "c792f119361844e17ff40fe4d4e99b5ce91b11d19608c759c0ecedcae306ef64",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250527.mbo.dbn.zst": "a1583a621327b4638da219b1e44379d66071a8d4aa0dbb84ba3fd88a4b4c8be3",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250529.mbo.dbn.zst": "a21a4734b7a54406111fd609ff32556a65ca5efb0132b1a3d796b6f0682952da",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250530.mbo.dbn.zst": "42d98c3c66062b6f87c04c4e8215f84d6db5617bc0c99b9124a9ebc821618df2",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/metadata.json": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9",
+    "/root/Silver-Bullet-ML-BMAD/models/xgboost/tier2_meta_labeling_model.pkl": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2"
+  },
+  "legacy_tests": {
+    "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m pytest tests/unit/yank_signals tests/unit/yank_replay tests/unit/test_strategy_core_consistency.py tests/unit/test_strategy_core_scaling.py -q",
+    "count": 133,
+    "cwd": "/root/Silver-Bullet-ML-BMAD-yank-replay",
+    "revision": "b6626622e3468c932722409530120d60f29c6ce6"
+  },
+  "native_oracle": {
+    "coverage_rows": 17280,
+    "delayed_bars": 1,
+    "matched_rows": {
+      "capture": 13440,
+      "exchange_diagnostic": 13440
+    },
+    "method": "All OHLCV and first/last native references compared to hash-pinned prior independent native research; trade/event totals cross-checked by fresh full native probe.",
+    "official_status_coverage": "PASS",
+    "oracle_sha256": "03732c05f1d75787e841a8ab98816aeb0264f784acbe08f2ea35bab2c29fb212",
+    "raw_trade_digests_checked": 26880,
+    "status": "PASS_INDEPENDENT_NATIVE_COMPARISON",
+    "trade_count": 7526752
+  },
+  "new_tests": {
+    "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m pytest tests/unit/yank_native_minute -q",
+    "count": 65,
+    "cwd": "/root/Silver-Bullet-ML-BMAD-yank-minute"
+  },
+  "official_boundary_decode": [
+    {
+      "action": "T",
+      "file": "glbx-mdp3-20250527.mbo.dbn.zst",
+      "flags": 0,
+      "price_nanos": 21296750000000,
+      "record_index": 4106157,
+      "sequence": 19727869,
+      "size": 1,
+      "ts_event_ns": 1748349299999778819,
+      "ts_recv_ns": 1748349299999994093
+    },
+    {
+      "action": "F",
+      "file": "glbx-mdp3-20250527.mbo.dbn.zst",
+      "flags": 0,
+      "price_nanos": 21296750000000,
+      "record_index": 4106158,
+      "sequence": 19727869,
+      "size": 1,
+      "ts_event_ns": 1748349299999778819,
+      "ts_recv_ns": 1748349299999994093
+    },
+    {
+      "action": "C",
+      "file": "glbx-mdp3-20250527.mbo.dbn.zst",
+      "flags": 128,
+      "price_nanos": 21296750000000,
+      "record_index": 4106159,
+      "sequence": 19727870,
+      "size": 1,
+      "ts_event_ns": 1748349299999778819,
+      "ts_recv_ns": 1748349300000002948
+    }
+  ],
+  "optimized_checker_negative_tests": [
+    "published cash tamper rejected",
+    "published trade PNL tamper rejected",
+    "published decision availability tamper rejected",
+    "gate prefix tamper rejected",
+    "event interval and availability tamper rejected",
+    "terminal prefix tamper rejected",
+    "deleted and renumbered marks rejected",
+    "early bar availability and incomplete event rejected"
+  ],
+  "published_ledger": {
+    "arms": {
+      "ml050": {
+        "cash": "49127.00",
+        "costs": "8",
+        "economic_realized": "-873.00",
+        "entry_timing": "PASS",
+        "equity": "49127.00",
+        "marks_checked": 29,
+        "trades": 2
+      },
+      "no-ml": {
+        "cash": "49182.0",
+        "costs": "8",
+        "economic_realized": "-818.0",
+        "entry_timing": "PASS",
+        "equity": "49182.0",
+        "marks_checked": 13,
+        "trades": 2
+      }
+    },
+    "fee_qualification": "4 USD per closed trade is a modeled assumption, not a verified broker charge",
+    "status": "PASS_PUBLISHED_LEDGER"
+  },
+  "raw_digest_oracle": {
+    "matched": {
+      "capture": 13440,
+      "exchange_diagnostic": 13440
+    },
+    "method": "Fresh native scan using uint8 byte matrices, independent of structured record copying",
+    "oracle_sha256": "8b427bcb214ddef3b2db039c7acde3a5f1f007c4e04c914ef13ac9523accdeb2",
+    "status": "PASS_ALL_RAW_TRADE_DIGESTS",
+    "trade_count": 7526752
+  },
+  "review": {
+    "accepted_findings_fixed": true,
+    "deferred_findings": 0,
+    "fresh_post_review_builds": 2,
+    "layers_completed": 3,
+    "post_review_tests_passed": 65
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "baseline_commit": "ceac044a5ec4e34435e99534ccbcb9d629185b23",
+  "blocked": [
+    "TradeStation label/completion/revision/client receipt evidence",
+    "Authenticated process-loaded code/model identity",
+    "Preinterval deployed warm-up",
+    "Authenticated account/risk state",
+    "Historical invalid-book semantics/recovery evidence and hypothetical queue position",
+    "Observed ProjectX execution"
+  ],
+  "branch": "feat/yank-deployed-validation",
+  "decision": "HOLD_VALIDATION",
+  "economics": "NOT_ASSESSED_DEVELOPMENT_EVIDENCE_ONLY",
+  "engineering": "PASS_NEW_OFFLINE_TOOLS_WITH_DOCUMENTED_BASELINE_TEST_FAILURE",
+  "gap_assessment": {
+    "frozen_outcomes_unchanged": true,
+    "independently_verified_mbo_references": 156,
+    "scenarios": 30,
+    "supported": 11,
+    "unassessable": 19
+  },
+  "native": {
+    "counts": {
+      "completed_simulated_trades": 1,
+      "decision_transitions": 12909,
+      "final_buffer_rows": 7500,
+      "final_consumed_history": {
+        "accepted_m1": 7500,
+        "adr_full_ready": false,
+        "completed_h1": 129,
+        "initial_bucket_complete": false,
+        "lr_ready": true,
+        "lr_required": 1950,
+        "partial_completed_h1": 6,
+        "positive_atr_observations": 120,
+        "prior_daily_ranges": 11,
+        "volatility_full_ready": true,
+        "volatility_minimum_ready": true
+      },
+      "intentions": 5,
+      "poll_errors": 0,
+      "polls": 13440
+    },
+    "identical_files": [
+      "trace.jsonl",
+      "report.json"
+    ],
+    "polls_per_run": 13440,
+    "report_sha256": "cd776afeb6bdb5ba105790f91978a301b0f0935c3b410274f9447ae5ea290874",
+    "run_directories": [
+      "/tmp/yank-deployed-reviewed-a",
+      "/tmp/yank-deployed-reviewed-b"
+    ],
+    "trace_sha256": "9a0ddb3df90fb55e14e417a239025b8e56f3574a81c9a3d5a81f4280ba16f29d"
+  },
+  "operations": {
+    "acquired_data": false,
+    "authenticated": false,
+    "holdouts_opened": false,
+    "live_collection": false,
+    "merged": false,
+    "model_training": false,
+    "pushed": false,
+    "services_restarted": false,
+    "trading_changed": false
+  },
+  "preservation": {
+    "main_git_status_before_after_identical": true,
+    "main_source_sha256": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67",
+    "mismatches": [],
+    "unique_files": 177
+  },
+  "regressions": {
+    "baseline_failed": 1,
+    "baseline_passed": 404,
+    "failure": "tests/unit/test_config_loader.py::TestLoadStrategyConfig::test_load_repo_strategy_config_yaml expects SL5 while pinned YAML specifies SL2; reproduced before changes; preserved",
+    "final_failed": 1,
+    "final_passed": 462,
+    "frozen_replay_passed": 133,
+    "new_tool_tests_passed": 58
+  },
+  "retained_evidence_sha256": {
+    "baseline-regressions.log": "9d5915d5bec0574bc265bc97cae9691bb539cbe0bafefc240f7a0b0456fc04f6",
+    "baseline-regressions.xml": "d2108403b0c443231316ea93d152a9bbbd89d4ffabaecf655c87a5b2f5a49a03",
+    "config-reproduction.json": "83111358c0943597bdc5695f5ab3d0316cc430c05a0be12effa8ad4c86f30cb8",
+    "final-regressions.log": "a22fd956c900900c7ac83475e39e74ab222a39c98f65b465e5beb2284dd74e90",
+    "final-regressions.xml": "df19b1423b676c2dbbaff9131243225af09fbd37680668f1bb6951194eb91d91",
+    "frozen-regressions.xml": "018848f9f8afcfba1dc037e788a10a5c21217d8fa364a9cfbe4b179d2842b75a",
+    "installed-process-observation.json": "e4495126442c41bd725586ec15d6943e369bbb48cd72f02575b0671f4ff5c6cf",
+    "lineage-check.json": "5da1dd025f4113f69be46439d6d1f03420d4690d821ce092a69ec36f17266180",
+    "native-report.json": "cd776afeb6bdb5ba105790f91978a301b0f0935c3b410274f9447ae5ea290874",
+    "native-trace.jsonl.gz": "2f761ce22041fea910515fd7a8685e428e436989f35ef9e76b94501d19efa570",
+    "preservation-final.json": "aa0afff10edc63f5b33234cd310dc1dadee37a2a771738f6476b77e4f883cd79",
+    "preservation.json": "cb8ea3a31f872f42dadd04b2babe14bb05b88e1a208422c08a03dd87c9697f38",
+    "published-replay-check.json": "a59772d439eb534b518d3450cbc6b4ee4272629ada85b7bbc0e4d3b150e1ebda",
+    "shadow/capture.jsonl": "a78a7bc4852825d4ac3b6ab4b58ab2f8bbfaf04df41a421bf59057d213c97fc4",
+    "shadow/comparison.json": "5125c4f31a4253d47d59f962286ebc5ac3472ae96528d5a7d8f77e7d95f9abc9",
+    "shadow/coverage.json": "77da57a383757c5d2ed2bb6754d06cb8b3670387b775baa17445004423782fd6",
+    "shadow/isolation.json": "318891d1a8c923ad59008852ab7c4be3cb132f5f23cc655dc5719a2d1805b422",
+    "shadow/manifest.json": "b2b2033e31d4083df8bb23e8226e075ec4c346f247e2162e3ac3ad59d1d36ba6",
+    "stage3-tests.xml": "69814f6f537a1dd4cbf45d1070d7d168073586a58b65ae92ae01c6f21e203026",
+    "verify-preservation.py": "acf2b5eaa996fba897d48ef38c311438207f1563a4c7269b29b4587be88ce874"
+  },
+  "shadow": {
+    "cli_comparisons_byte_identical": true,
+    "exact_differences": 0,
+    "float_differences": 0,
+    "live_import_and_network_traps": "PASS",
+    "missing_reply_negative_control": "PASS",
+    "order_producing_polls": 3,
+    "result": "UNASSESSABLE_ACCOUNT_EVIDENCE",
+    "synthetic_private_match_test": "PASS"
+  }
+}

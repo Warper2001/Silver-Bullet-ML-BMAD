@@ -52,6 +52,15 @@ class TradeDatabase:
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_trade_identity "
                 "ON trades(trader_id, timestamp, direction, entry_price, exit_price, pnl)"
             )
+            # Provenance columns (2026-09-02). Without these the table silently
+            # mixes replayed history with live trading: trader-yank read
+            # +$102,151.90 while only 5 of its 1,846 rows were written live, and
+            # trader-btc-carry logged 1 row while its executor had been in PAPER
+            # mode for three months. Both defects were a missing label, not a
+            # missing gate. See tools/migrate_trades_provenance.py.
+            for _col in ("write_mode", "execution_mode"):
+                if not any(r[1] == _col for r in conn.execute("PRAGMA table_info(trades)")):
+                    conn.execute(f"ALTER TABLE trades ADD COLUMN {_col} TEXT")
             conn.commit()
 
     def log_trade(
@@ -65,21 +74,35 @@ class TradeDatabase:
         exit_price: Optional[float] = None,
         exit_reason: Optional[str] = None,
         ml_proba: Optional[float] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        execution_mode: str = "unknown",
+        write_mode: str = "realtime",
     ):
-        """Record a completed trade."""
+        """Record a completed trade.
+
+        execution_mode: what was actually at risk -- 'live', 'sim', 'paper', or
+            'unknown'. Callers MUST pass this. The default is deliberately
+            'unknown' rather than 'live': an honest unknown is recoverable, a
+            wrong 'live' is the BTC-CARRY incident (a paper bot recorded as
+            trading real money for three months).
+        write_mode: 'realtime' when logged as the trade happens (the default,
+            since that is what a running bot does), 'backfilled' for replay or
+            catch-up writes. A backfill that forgets to pass 'backfilled' is how
+            +$101,892.90 of replayed P&L came to sit in the ledger looking like
+            a track record.
+        """
         meta_json = json.dumps(metadata) if metadata else None
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("""
-                    INSERT OR IGNORE INTO trades 
-                    (trader_id, timestamp, symbol, direction, entry_price, exit_price, pnl, exit_reason, ml_proba, metadata, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT OR IGNORE INTO trades
+                    (trader_id, timestamp, symbol, direction, entry_price, exit_price, pnl, exit_reason, ml_proba, metadata, created_at, write_mode, execution_mode)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    trader_id, timestamp, symbol, direction, entry_price, 
-                    exit_price, pnl, exit_reason, ml_proba, meta_json, 
-                    datetime.utcnow().isoformat()
+                    trader_id, timestamp, symbol, direction, entry_price,
+                    exit_price, pnl, exit_reason, ml_proba, meta_json,
+                    datetime.utcnow().isoformat(), write_mode, execution_mode
                 ))
                 conn.commit()
         except Exception as e:

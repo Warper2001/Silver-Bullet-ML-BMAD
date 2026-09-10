@@ -980,7 +980,18 @@ class Tier2StreamingTrader:
         self._shadow_bullish_m15_choch_active: bool = False
         self._shadow_m15_last_bar_ts: datetime = _epoch
         self._shadow_trade: Optional[dict] = None
-        self._shadow_logger = TradeLogger(
+        # Distinct attribute name from self._shadow_logger (the ProjectX-parity
+        # ShadowParityLogger set in initialize() at self._data_shadow) -- both
+        # shadow features used to share the name self._shadow_logger, and whichever
+        # initialized second silently clobbered the other. When ShadowParityLogger
+        # won that race, _advance_shadow_trade's self._shadow_logger.append_trade(...)
+        # threw AttributeError on every closing shadow-bullish trade, from inside the
+        # unguarded per-bar loop in _poll_and_process -- aborting that poll cycle
+        # before _detect_and_enter ever ran, and (since the throw happens before
+        # self._shadow_trade is cleared) repeating on every subsequent poll forever.
+        # Confirmed live 2026-09-02 12:39 UTC onward on trader-yank.service: 9,474+
+        # consecutive "Error in poll cycle" crashes, zero real entries since 08-17.
+        self._shadow_trade_logger = TradeLogger(
             log_path=Path(__file__).parent.parent.parent / "logs" / "yank_shadow_bullish_trades.csv"
         )
 
@@ -1721,7 +1732,7 @@ class Tier2StreamingTrader:
         }
         pnl = ((exit_dec.exit_price - t["entry_price"]) * self._point_value * self._contracts
               - self._strategy_config.commission_per_roundtrip)
-        self._shadow_logger.append_trade(TradeRecord(
+        self._shadow_trade_logger.append_trade(TradeRecord(
             timestamp_entry=t["entry_time"], timestamp_exit=bar.timestamp, direction="LONG",
             entry_price=t["entry_price"], exit_price=exit_dec.exit_price,
             tp_price=t["tp_price"], sl_price=t["sl_price"], gap_size=t["gap_size"],

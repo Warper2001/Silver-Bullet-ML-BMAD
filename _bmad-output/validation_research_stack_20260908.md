@@ -449,3 +449,81 @@ fallback splitter never trains on the future.
 sklearn 1.9.0  ALL CALIBRATION TESTS PASSED
 sklearn 1.8.0  ALL CALIBRATION TESTS PASSED     # the live venv
 ```
+
+---
+
+## 11. YANK 23-day silence — investigated 2026-09-09/10
+
+### 11.1 Verdict: YANK is not broken
+
+It had logged no trade since 2026-08-17. It is not blocked; the market has not
+been offering its setup.
+
+The diagnostic block only prints when H1 bearish sweep **and** M15 CHoCH are
+already true, so every `qualified=YES` line is a case where both higher-timeframe
+gates passed. There were 10 since 08-21 — but **seven landed within eight
+seconds** (20:37:23–31 on 09-04), immediately after the 20:36:45 service restart.
+Those are startup backfill replay, not live events.
+
+That leaves **3 genuine live near-misses in 23 days**: 08-21, 08-26, 09-09.
+
+On each, entry needs `fvg_signal.direction == BEARISH and cached_sweep is not
+None`. `cached_sweep` is assigned from `self._cached_sweep`, and
+`h1_bearish_sweep_active` is *defined* as that being non-None and bearish, so it
+cannot be the blocker inside this branch. By elimination `detect_fvg` returned a
+**bullish** FVG under bearish higher-timeframe context — correctly, no entry.
+Against YANK's own rate of ~1 trade per 7 business days, 3 near-misses and zero
+fills is unremarkable.
+
+### 11.2 A wrong turn worth recording
+
+The investigation initially concluded "the no-entry path logs nothing" from
+`logs/tier2_filter_log.csv` being frozen at the restart. **That was the wrong
+file.** `_log_filter_decision()` writes `logs/tier2_bar_decisions.csv`, which is
+current and does log every bar. The `else` branch is not silent.
+
+### 11.3 What the investigation actually found: a 1.66 GB shared log
+
+`logs/tier2_bar_decisions.csv` is **24,065,642 rows / 1.66 GB**, and 2025-dated
+bars are still arriving in recent appends.
+
+**Three traders append to that one file** — `yank_streaming_working.py`,
+`tier2_streaming_working.py`, `btc_combine_streaming.py` — and only YANK carried
+the backfill guard, whose own comment records fixing this once already at "9.2M
+rows / 631MB observed". It is now 2.6× worse. This is the "fixed on one of three
+copies, unmerged" item, located.
+
+Two consequences beyond disk: the file has **no `trader_id` column**, so rows
+cannot be attributed to a bot; and any manual or backtest run of the two
+unguarded scripts appends its whole history into the live trail.
+
+### 11.4 The patch (logging only — no trading behaviour changed)
+
+1. **`tier2_streaming_working.py`, `btc_combine_streaming.py`** — YANK's backfill
+   guard added verbatim to `_log_filter_decision()`.
+2. **`yank_streaming_working.py`** — the 08-21 diagnostic relabelled. It printed
+   `pattern=`/`raw_gap=` recomputed from the **last three bars** alongside
+   `qualified=` from `detect_fvg`'s **full window scan**, so
+   `pattern=no raw_gap=0.00 | qualified=YES` read as an impossible state and cost
+   real time on 09-09. Now `last3_pattern=` / `last3_gap=` / `window_fvg=` + `dir=`.
+3. **`yank_streaming_working.py`** — near-miss logging. An INFO line when both
+   higher-timeframe gates passed and an FVG existed but was the wrong direction,
+   and a WARNING if `cached_sweep` is ever None while the sweep is active (should
+   be unreachable; if it fires, the sweep state has desynchronised).
+
+Every added line is a comment, a `logger` call, or the guard's early return in a
+logging-only function. `_fvg_hit` and the entry path are byte-identical. All
+three files compile on the **live** interpreter (`.venv`, sklearn 1.8). Branch
+logic verified across all four cases, including that the common "no FVG" case
+stays silent so this is not a per-bar log.
+
+### 11.5 Not done — needs you
+
+- **The 1.66 GB file is untouched.** Truncating or rotating a live trading log is
+  your call. The guard stops the two unguarded scripts adding to it; it does not
+  shrink what is there.
+- **Nothing is deployed.** These are worktree edits; the running processes are
+  unaffected. Live fixes here have historically gone out by direct file copy
+  rather than git, so deployment is a deliberate step.
+- **No `trader_id` column** was added — that changes the CSV schema, and
+  `analyze_filter_funnel.py` and `tools/combine_ops_healthcheck.py` read it.

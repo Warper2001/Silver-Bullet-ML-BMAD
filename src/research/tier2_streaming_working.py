@@ -1777,6 +1777,17 @@ class Tier2StreamingTrader:
         action: str,
     ) -> None:
         """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
+        # Do NOT log during the startup backfill: those bars are historical and were
+        # re-logged on every restart, ballooning the file (9.2M rows / 631MB observed).
+        # Only live (steady-state) bars should produce a decision trail.
+        #
+        # This guard existed only in yank_streaming_working.py. All THREE traders
+        # append to the same shared logs/tier2_bar_decisions.csv, so the two
+        # unguarded copies kept re-logging their backfill into it: the file reached
+        # 24,065,642 rows / 1.66 GB by 2026-09-10, with 2025-dated bars still
+        # arriving in recent appends. Guard added here 2026-09-10 to match YANK.
+        if self._is_backfill:
+            return  # backfill bars are historical — see comment above
         try:
             log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
             log_path.parent.mkdir(parents=True, exist_ok=True)

@@ -226,10 +226,15 @@ def test_cached_timestamp_does_not_cache_mutable_bar_values(tmp_path):
     a = sys.modules[type(view).__module__]
     asyncio.run(trader._poll_and_process())
     original = view.state()
+    trader.dollar_bars[0].timestamp = datetime.fromisoformat(trader.dollar_bars[0].timestamp.isoformat())
     timestamp = trader.dollar_bars[0].timestamp
+    assert type(timestamp) is datetime and timestamp.tzinfo is timezone.utc
     # Keep a timestamp hot while mutable fields change; force a new extraction
     # just as an advancing decision boundary does in the existing state reader.
     a._timestamp_parts(timestamp)
+    hits = a._utc_timestamp_parts.cache_info().hits
+    a._timestamp_parts(timestamp)
+    assert a._utc_timestamp_parts.cache_info().hits == hits+1
     trader.dollar_bars[0].high += 5
     view._buffer_cache_key = None
     after = view.state()

@@ -1,0 +1,154 @@
+{
+  "scope": "SEPARATE_DIAGNOSTIC_MAIN_THREAD_PROFILE_NOT_LATENCY",
+  "identity": {
+    "workload": "startup",
+    "git_head": "7ffb675e47fb68b11eac74728279cb2e67ec2035",
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "a7c48dc94ce6d3f0d92f6784441c522ab31c65633de7e622b6a6be45a96aa0b2",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "profile_driver_sha256": "25784c04fcee930a1b1cf5d8dc8d34c62e4a0deb5bc879b5e20d0a9a5df2a13c",
+    "profile_aggregation": "SUM_DISTINCT_CODE_OBJECTS_SHARING_SOURCE_LABEL_AFTER_DISABLE"
+  },
+  "limitations": [
+    "Cumulative categories overlap and must not be summed.",
+    "Distinct compiled code objects sharing labels are aggregated; caller graph omitted.",
+    "Separate standard-lossy pstats is supplemental and can overwrite same-label code objects.",
+    "emit includes bounded producer work; writer-thread disk time is not profiled."
+  ],
+  "attribution": {
+    "extraction": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/adapter.py",
+        "line": 279,
+        "function": "state",
+        "primitive_calls": 5762,
+        "total_calls": 5762,
+        "self_seconds": 9.049600727000001,
+        "cumulative_seconds": 30.965448233000004
+      }
+    ],
+    "bounded_copy": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/capture.py",
+        "line": 28,
+        "function": "copy",
+        "primitive_calls": 11280,
+        "total_calls": 1620461,
+        "self_seconds": 1.9145120500000001,
+        "cumulative_seconds": 2.642322178
+      }
+    ],
+    "state_normalization": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/adapter.py",
+        "line": 47,
+        "function": "normalize",
+        "primitive_calls": 10215,
+        "total_calls": 312014,
+        "self_seconds": 0.6155650130000001,
+        "cumulative_seconds": 1.271264981
+      }
+    ],
+    "timestamp_cache_lookup": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/adapter.py",
+        "line": 27,
+        "function": "_timestamp_parts",
+        "primitive_calls": 4148640,
+        "total_calls": 4148640,
+        "self_seconds": 3.287218235,
+        "cumulative_seconds": 14.932724609000001
+      }
+    ],
+    "timestamp_derivation": [
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'isoformat' of 'datetime.datetime' objects>",
+        "primitive_calls": 4211773,
+        "total_calls": 4211773,
+        "self_seconds": 7.199798336000001,
+        "cumulative_seconds": 7.2030051010000005
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'replace' of 'datetime.datetime' objects>",
+        "primitive_calls": 4165882,
+        "total_calls": 4165882,
+        "self_seconds": 4.667630195,
+        "cumulative_seconds": 4.667630195
+      }
+    ],
+    "serialization": [
+      {
+        "file": "/usr/lib/python3.12/json/__init__.py",
+        "line": 299,
+        "function": "loads",
+        "primitive_calls": 11279,
+        "total_calls": 11279,
+        "self_seconds": 0.025879914,
+        "cumulative_seconds": 0.24459424500000002
+      },
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/adapter.py",
+        "line": 43,
+        "function": "canonical",
+        "primitive_calls": 14554,
+        "total_calls": 14554,
+        "self_seconds": 0.09581338400000002,
+        "cumulative_seconds": 5.8264269010000005
+      }
+    ],
+    "runtime_checks": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/startup.py",
+        "line": 85,
+        "function": "runtime_identity",
+        "primitive_calls": 2,
+        "total_calls": 2,
+        "self_seconds": 0.000993739,
+        "cumulative_seconds": 0.045608952
+      }
+    ],
+    "storage_handoff": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/capture.py",
+        "line": 97,
+        "function": "emit",
+        "primitive_calls": 1,
+        "total_calls": 1,
+        "self_seconds": 0.011958365,
+        "cumulative_seconds": 1.5744626620000002
+      }
+    ],
+    "decision_record": [
+      {
+        "file": "/root/Silver-Bullet-ML-BMAD/src/research/yank_deployed_validation/capture.py",
+        "line": 200,
+        "function": "record",
+        "primitive_calls": 11278,
+        "total_calls": 11278,
+        "self_seconds": 0.07643126600000001,
+        "cumulative_seconds": 1.933705333
+      }
+    ]
+  }
+}

@@ -1,0 +1,1382 @@
+[
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "baseline",
+    "parity_rows": 1,
+    "pid": 1252754,
+    "poll": {
+      "cpu_seconds": 36.957016082,
+      "wall_seconds": 36.95886346511543
+    },
+    "prepare": {
+      "cpu_seconds": 5.228000000023769e-06,
+      "wall_seconds": 8.27200710773468e-06
+    },
+    "process_high_water_rss_kib": 265776,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "disabled",
+    "parity_rows": 1,
+    "pid": 1252866,
+    "poll": {
+      "cpu_seconds": 37.507040112999995,
+      "wall_seconds": 37.509539714083076
+    },
+    "prepare": {
+      "cpu_seconds": 2.9604999999932602e-05,
+      "wall_seconds": 3.3630989491939545e-05
+    },
+    "process_high_water_rss_kib": 265908,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 10975591,
+    "close": {
+      "cpu_seconds": 0.07901337300000932,
+      "wall_seconds": 0.06232885201461613
+    },
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": {
+      "accepted": 1,
+      "capture_closed": true,
+      "capture_sha256": "4f45330325603c1fd0a6b982bf1d482afa74e3e9d1ce52529ddca6b1f2880996",
+      "coverage_scope": "accepted_prefix_before_close",
+      "decision": "HOLD_VALIDATION",
+      "dropped": 0,
+      "enabled": true,
+      "invalid_reasons": [],
+      "valid_coverage": true,
+      "written": 1
+    },
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "guarded",
+    "parity_rows": 1,
+    "pid": 1252997,
+    "poll": {
+      "cpu_seconds": 81.385570367,
+      "wall_seconds": 81.1760151591152
+    },
+    "prepare": {
+      "cpu_seconds": 0.024102585000000065,
+      "wall_seconds": 0.023977721808478236
+    },
+    "process_high_water_rss_kib": 339648,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "disabled",
+    "parity_rows": 1,
+    "pid": 1253357,
+    "poll": {
+      "cpu_seconds": 36.338175231,
+      "wall_seconds": 36.34002344100736
+    },
+    "prepare": {
+      "cpu_seconds": 2.7531000000191597e-05,
+      "wall_seconds": 3.1567877158522606e-05
+    },
+    "process_high_water_rss_kib": 265736,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 10975591,
+    "close": {
+      "cpu_seconds": 0.06341647500001102,
+      "wall_seconds": 0.047427925979718566
+    },
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": {
+      "accepted": 1,
+      "capture_closed": true,
+      "capture_sha256": "4b6da8fbb17fe659754fa0c4de428c856a9faee9a560b4b486f9388b6667e475",
+      "coverage_scope": "accepted_prefix_before_close",
+      "decision": "HOLD_VALIDATION",
+      "dropped": 0,
+      "enabled": true,
+      "invalid_reasons": [],
+      "valid_coverage": true,
+      "written": 1
+    },
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "guarded",
+    "parity_rows": 1,
+    "pid": 1253505,
+    "poll": {
+      "cpu_seconds": 75.708470908,
+      "wall_seconds": 75.486712340964
+    },
+    "prepare": {
+      "cpu_seconds": 0.03124427499999971,
+      "wall_seconds": 0.030862821964547038
+    },
+    "process_high_water_rss_kib": 340668,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "baseline",
+    "parity_rows": 1,
+    "pid": 1253807,
+    "poll": {
+      "cpu_seconds": 36.879974325999996,
+      "wall_seconds": 36.88968404615298
+    },
+    "prepare": {
+      "cpu_seconds": 4.857000000413336e-06,
+      "wall_seconds": 7.811002433300018e-06
+    },
+    "process_high_water_rss_kib": 265916,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 10975591,
+    "close": {
+      "cpu_seconds": 0.06165194400000473,
+      "wall_seconds": 0.049785856856033206
+    },
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": {
+      "accepted": 1,
+      "capture_closed": true,
+      "capture_sha256": "e48c2ed8df8ab162e991b6f953f9c708006beb7714bc4e633bdae86304eb5cb9",
+      "coverage_scope": "accepted_prefix_before_close",
+      "decision": "HOLD_VALIDATION",
+      "dropped": 0,
+      "enabled": true,
+      "invalid_reasons": [],
+      "valid_coverage": true,
+      "written": 1
+    },
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "guarded",
+    "parity_rows": 1,
+    "pid": 1254067,
+    "poll": {
+      "cpu_seconds": 76.272437718,
+      "wall_seconds": 76.11273854086176
+    },
+    "prepare": {
+      "cpu_seconds": 0.022614212000000133,
+      "wall_seconds": 0.02241798210889101
+    },
+    "process_high_water_rss_kib": 339620,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "baseline",
+    "parity_rows": 1,
+    "pid": 1255302,
+    "poll": {
+      "cpu_seconds": 39.984380833,
+      "wall_seconds": 40.02962172799744
+    },
+    "prepare": {
+      "cpu_seconds": 6.1989999999845224e-06,
+      "wall_seconds": 8.962815627455711e-06
+    },
+    "process_high_water_rss_kib": 266024,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 2880,
+    "final_state_sha256": "69e23ce96f32fecda992d57d0ed994324eb3e52c35f057b05fc9d96d691ffc13",
+    "fixture_sha256": [
+      "e80bedaf41f3e3357ac0a68f68613d5c3ffa3113b69397742397c4a108c9739c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "disabled",
+    "parity_rows": 1,
+    "pid": 1255428,
+    "poll": {
+      "cpu_seconds": 38.823949459,
+      "wall_seconds": 38.828642698936164
+    },
+    "prepare": {
+      "cpu_seconds": 3.1907999999969405e-05,
+      "wall_seconds": 3.5353004932403564e-05
+    },
+    "process_high_water_rss_kib": 265884,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": null,
+    "workload": "startup"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "baseline",
+    "parity_rows": 31,
+    "pid": 1255795,
+    "poll": {
+      "cpu_seconds": 0.9639489930000025,
+      "wall_seconds": 0.9639580228831619
+    },
+    "prepare": {
+      "cpu_seconds": 8.58300001027601e-06,
+      "wall_seconds": 1.2127915397286415e-05
+    },
+    "process_high_water_rss_kib": 281132,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 139.93565700800002,
+      "wall_seconds": 139.9562356059905
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "disabled",
+    "parity_rows": 31,
+    "pid": 1257090,
+    "poll": {
+      "cpu_seconds": 0.8839591349999978,
+      "wall_seconds": 0.8840592531487346
+    },
+    "prepare": {
+      "cpu_seconds": 4.967399999600275e-05,
+      "wall_seconds": 5.498318932950497e-05
+    },
+    "process_high_water_rss_kib": 280512,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 148.49685286300002,
+      "wall_seconds": 148.54613537504338
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 518494,
+    "close": {
+      "cpu_seconds": 0.07075177400000143,
+      "wall_seconds": 0.07043519499711692
+    },
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": {
+      "accepted": 30,
+      "capture_closed": true,
+      "capture_sha256": "39fb6ed5781862516bdd0c1f018c4e488903a50cfeb16e6bf68e802a376b8dab",
+      "coverage_scope": "accepted_prefix_before_close",
+      "decision": "HOLD_VALIDATION",
+      "dropped": 0,
+      "enabled": true,
+      "invalid_reasons": [],
+      "valid_coverage": true,
+      "written": 30
+    },
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "guarded",
+    "parity_rows": 31,
+    "pid": 1258032,
+    "poll": {
+      "cpu_seconds": 3.6513054670000145,
+      "wall_seconds": 3.614719029981643
+    },
+    "prepare": {
+      "cpu_seconds": 0.17321630399999322,
+      "wall_seconds": 0.17265206389129162
+    },
+    "process_high_water_rss_kib": 281388,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 132.659935584,
+      "wall_seconds": 132.6898922480177
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "disabled",
+    "parity_rows": 31,
+    "pid": 1258912,
+    "poll": {
+      "cpu_seconds": 0.829922028999988,
+      "wall_seconds": 0.8299889490008354
+    },
+    "prepare": {
+      "cpu_seconds": 6.28449999737768e-05,
+      "wall_seconds": 6.660004146397114e-05
+    },
+    "process_high_water_rss_kib": 281272,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 133.866957069,
+      "wall_seconds": 133.878314003814
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 518494,
+    "close": {
+      "cpu_seconds": 0.058287907999982735,
+      "wall_seconds": 0.05762605299241841
+    },
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": {
+      "accepted": 30,
+      "capture_closed": true,
+      "capture_sha256": "80be024e99ef6579ffcd178f94342f2b2622913f90278030a1cb7c559f3ae9cc",
+      "coverage_scope": "accepted_prefix_before_close",
+      "decision": "HOLD_VALIDATION",
+      "dropped": 0,
+      "enabled": true,
+      "invalid_reasons": [],
+      "valid_coverage": true,
+      "written": 30
+    },
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "guarded",
+    "parity_rows": 31,
+    "pid": 1259680,
+    "poll": {
+      "cpu_seconds": 3.3935236840000016,
+      "wall_seconds": 3.3546722589526325
+    },
+    "prepare": {
+      "cpu_seconds": 0.2037788849999913,
+      "wall_seconds": 0.20373918092809618
+    },
+    "process_high_water_rss_kib": 280900,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 130.214922103,
+      "wall_seconds": 130.22587183793075
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "baseline",
+    "parity_rows": 31,
+    "pid": 1260109,
+    "poll": {
+      "cpu_seconds": 0.8234449679999898,
+      "wall_seconds": 0.8235051969531924
+    },
+    "prepare": {
+      "cpu_seconds": 8.242000006930539e-06,
+      "wall_seconds": 1.1177035048604012e-05
+    },
+    "process_high_water_rss_kib": 280628,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 135.793667822,
+      "wall_seconds": 135.9135482290294
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 518494,
+    "close": {
+      "cpu_seconds": 0.07078174899999112,
+      "wall_seconds": 0.0708276447840035
+    },
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": {
+      "accepted": 30,
+      "capture_closed": true,
+      "capture_sha256": "31f956da47f4d1b62aa303504f75fff674ab62314998735b4df4c9bb333c221f",
+      "coverage_scope": "accepted_prefix_before_close",
+      "decision": "HOLD_VALIDATION",
+      "dropped": 0,
+      "enabled": true,
+      "invalid_reasons": [],
+      "valid_coverage": true,
+      "written": 30
+    },
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "guarded",
+    "parity_rows": 31,
+    "pid": 1262579,
+    "poll": {
+      "cpu_seconds": 3.3206030000000055,
+      "wall_seconds": 3.273476517992094
+    },
+    "prepare": {
+      "cpu_seconds": 0.17706185700001242,
+      "wall_seconds": 0.17692750389687717
+    },
+    "process_high_water_rss_kib": 280884,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 127.554081469,
+      "wall_seconds": 127.56486839288846
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "baseline",
+    "parity_rows": 31,
+    "pid": 1262963,
+    "poll": {
+      "cpu_seconds": 0.9044557379999958,
+      "wall_seconds": 0.9045042209327221
+    },
+    "prepare": {
+      "cpu_seconds": 8.231999998997708e-06,
+      "wall_seconds": 1.0977033525705338e-05
+    },
+    "process_high_water_rss_kib": 280760,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 128.811935449,
+      "wall_seconds": 128.82383228489198
+    },
+    "workload": "steady"
+  },
+  {
+    "capture_bytes": 0,
+    "close": null,
+    "code_sha256": {
+      "src/research/yank_deployed_validation/__init__.py": "955184615bca6cb124268294e87c10b9294f3062bfa24ea7a0befb6e910d0d3e",
+      "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+      "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+      "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+      "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+      "src/research/yank_deployed_validation/compare.py": "4fd8eef9455ddfdc1a4909a74c576d5c72663fa4a4cffced44ed2f1edeff8c83",
+      "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+      "src/research/yank_deployed_validation/gaps.py": "316b8b1eba555056b6105bd31fac5a113dc741d1014b7e7f990d4a1d56f4cb88",
+      "src/research/yank_deployed_validation/replay.py": "21bc6bb37e26f8c94cebf5e99cb1e4b16f22c9c813d352cab610d1eb73243647",
+      "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+      "src/research/yank_deployed_validation/tradestation.py": "776352a62c18864af93cdc0404caf698423522b3d636743e1df2f6c7ff64d9ed",
+      "tests/unit/yank_deployed_validation/observer_overhead.py": "7b823aa6d2ab1f73a8d375739c515c74f4cbff5dfdfd1fd4b8462bc42a096aa1",
+      "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+      "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+      "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+    },
+    "coverage": null,
+    "decision": "HOLD_VALIDATION",
+    "diagnostic": false,
+    "environment": {
+      "cpu_count": 4,
+      "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+    },
+    "final_bar_count": 7500,
+    "final_state_sha256": "dec27e881780a8aed9f01f0ed85f9fee79d622db519eab5f1178b8d65d754c88",
+    "fixture_sha256": [
+      "b9678a3c2b5ddbb9d716ec95a2880a1418d180989f549d7146a710bb969d0855",
+      "fbbb971379b6f0e8ecb3391b1fe062e0f1324d9be47148a17a3fd3c94cadf00c",
+      "a7a8816b0f2c024133fa0e889dc80c59fc97880d1cb12907183aba3050e45e99",
+      "41dca4e08f63f5cfc942bbc76bd112fc0e4c5c044ce36073930fffc2f20a708d",
+      "566bf857e593f1863669d502f7ba99ef4321853c3f3946464738ff4a325dfd70",
+      "094d5cd4e8fae45c40d3ed91fd6951cd8589488eb9a4a21347b6f515e4fc403b",
+      "5ab7f2df8a4896063a7169218d2a6ce4ea9a5fc6bc8cc6064a2134bfd6e0d6ae",
+      "dd3ec3851fcf926f5e5a9261a1f57d48e3689823e22215d512b83692beeba6a1",
+      "26b88e95d664eb8a20e67b89f885b4d89609ce38e26c9160e2815a3401a46916",
+      "776a3a08f0dc56b6ebd40047b36916272d8dcc3660849f5120f7530431798147",
+      "4991878826961955a848327856d87d1144745f956a739c43946e7b4628ca15bb",
+      "3e0e0f6d6bc724f29aed02304a45d698aebd8b61cbaa1d1f91597e7e16d5b5ae",
+      "f6d6f9995df68feb531a12a81d00cb2c373fb158047c514baf37df5d6e5823cf",
+      "09e18e1f5b5c824766932c6977e1dd7fe857ee35c21e6658e6d3eae7491f5657",
+      "dc6429ef1f107eeca72534cc9f210e63b468ca8a16ce869e7038e2c9ae49af3b",
+      "15ab9d77692f6f381d122afb26df6da840dfda350c49d17b133fb6138b1f9261",
+      "101a3534336f0ad63000cd2956311697fd5a0a27998707f3a6a054fbe151b1b7",
+      "c8dc894fecc275fc926b5d5afb4516b1ae05749d13327bf6983c25540cd668df",
+      "f8107d44270e7ca56ab60bc1299689f37b63270a37f28774d91b6d68af9b2408",
+      "0f1c0c52d2354cbc577299308210536fdfe66f2c788bd21fdc5c23d50219b1fa",
+      "28c82697d9cfaf4a45053da86f869e286ff6686289e2ab0f43a116ef4b26991a",
+      "8feddde0c40b2beb57881ece38dd299b73d5c822529f77c26e4d8b4363b6c5be",
+      "aa1bcf4a1f0a46e3cd266bd9298662ecd549fe49424e0d6cd977af67a654ac93",
+      "77606ab70e16a19411a1e855d3c7a5caf36d5d06083f089fec28bfc9167ce189",
+      "d9201173cf14d7513e37e185f7f3a6f1166add8dacf2411cf31dcaa4b73f2416",
+      "08be5230ce4ad6d94dcb71c5bc7b7fe3db4c51591328f34a829acfead55f5b8a",
+      "96189bc3a5b9f4b0120b507ea4c548d0db41f898cb4e99f544a30ea23dff5626",
+      "48db42a74cb90a263a72c0d02dc986181f0165261965d400c0f9c0a615cd174c",
+      "92a2f931c0a2424412876e1b66cfecd6133237f73df2c16dd5175581e4fc17db",
+      "ba9772f7834de6d323536812e1288110f8ed05a4208b28d7d16a9db5c3cd614c"
+    ],
+    "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+    "limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    },
+    "mode": "disabled",
+    "parity_rows": 31,
+    "pid": 1263392,
+    "poll": {
+      "cpu_seconds": 0.7552221109999948,
+      "wall_seconds": 0.7552893480751663
+    },
+    "prepare": {
+      "cpu_seconds": 4.934399999001471e-05,
+      "wall_seconds": 5.324999801814556e-05
+    },
+    "process_high_water_rss_kib": 280884,
+    "release_expectation": "SELF_DERIVED_PRIVATE_SYNTHETIC_NOT_INDEPENDENT_RELEASE_EVIDENCE",
+    "shadow_feed": "FIXED_SYNTHETIC_STARTUP_TAIL_NOT_LIVE_PARITY_EVIDENCE",
+    "warmup": {
+      "cpu_seconds": 132.164136001,
+      "wall_seconds": 132.17723493813537
+    },
+    "workload": "steady"
+  }
+]

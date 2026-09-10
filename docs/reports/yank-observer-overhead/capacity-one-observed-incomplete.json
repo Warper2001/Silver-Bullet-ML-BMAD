@@ -1,0 +1,23 @@
+{
+  "scope": "SEPARATE_CORRECTNESS_RUN_WITH_CONCURRENT_ROOT_VERIFICATION",
+  "outcomes": [
+    {
+      "case": "True",
+      "coverage": {
+        "accepted": 1,
+        "capture_closed": true,
+        "capture_sha256": "8952ac20fbc49dd7fcae943d78350201069703e6d67b471ac1fca25f9ac82fbb",
+        "coverage_scope": "accepted_prefix_before_close",
+        "decision": "HOLD_VALIDATION",
+        "dropped": 2,
+        "enabled": true,
+        "invalid_reasons": [
+          "queue_overflow"
+        ],
+        "valid_coverage": false,
+        "written": 1
+      }
+    }
+  ],
+  "limitation": "Unpaced synthetic polls can overflow capacity1; no retry or admission claim."
+}

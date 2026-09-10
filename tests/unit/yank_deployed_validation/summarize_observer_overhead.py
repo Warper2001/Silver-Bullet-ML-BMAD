@@ -44,6 +44,7 @@ def attribution(path):
     groups = {'extraction': [('adapter.py','state')],
               'bounded_copy': [('capture.py','copy')],
               'state_normalization': [('adapter.py','normalize')],
+              'timestamp_cache_lookup': [('adapter.py','_timestamp_parts'), ('adapter.py','_utc_timestamp_parts')],
               'timestamp_derivation': [('~', "<method 'isoformat' of 'datetime.datetime' objects>"),
                                        ('~', "<method 'replace' of 'datetime.datetime' objects>")],
               'serialization': [('adapter.py','canonical'), ('__init__.py','loads')],
@@ -76,10 +77,14 @@ def main():
     assert all(a['fixture_sha256'] == b['fixture_sha256'] and a['final_state_sha256'] == b['final_state_sha256']
                for a,b in zip(before,after)), 'before/after behavior or fixture mismatch'
     result['decision'] = 'HOLD_VALIDATION'
+    result['timing_captures_admissible'] = False
     result['limitations'] = ['Shared host descriptive timings, no numerical production latency target.',
         'RSS is absolute process high-water including libraries, fixtures and warmup, not observer-only peak.',
         'Queue bounds are configured limits, not continuously observed peaks.',
-        'Fixed private synthetic shadow tail, synthetic account, and self-derived release expectations are not live evidence.']
+        'Fixed private synthetic shadow tail, synthetic account, and self-derived release expectations are not live evidence.',
+        'Timing capture signing public keys were not retained; these are capture/timing diagnostics, not independently verifiable signed admission packages.',
+        'Steady timing captures mix historical strategy clocks with real collector receipt clocks and are chronologically inadmissible.',
+        'Private Clock subclass timestamps bypass the exact built-in UTC cache; no cache-driven timing improvement is claimed from these cells.']
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True)+'\n')
 
 

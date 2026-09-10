@@ -1,0 +1,68 @@
+{
+  "scope": "OFFLINE_SYNTHETIC_OBSERVER_OVERHEAD",
+  "latency_before": {
+    "status": "COMPLETE_VALIDATED_18_CELLS",
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/observer_overhead.py --output /tmp/yank-overhead-official-before",
+    "artifact": "latency-before.json"
+  },
+  "latency_after": {
+    "status": "COMPLETE_VALIDATED_18_CELLS",
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/observer_overhead.py --output /tmp/yank-overhead-official-after",
+    "artifact": "latency-after.json"
+  },
+  "profile_before": {
+    "status": "COMPLETE",
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/profile_observer_overhead.py --output /tmp/yank-overhead-profile-before-final",
+    "artifact": "raw-diagnostics-before.tar.gz"
+  },
+  "profile_after": {
+    "status": "COMPLETE",
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/profile_observer_overhead.py --output /tmp/yank-overhead-profile-after",
+    "artifact": "raw-diagnostics-after.tar.gz"
+  },
+  "focused_tests": {
+    "status": "PASS_9",
+    "command": ".venv/bin/python -m pytest -q -s tests/unit/yank_deployed_validation/test_observer_overhead.py --basetemp /tmp/yank-overhead-focused-final",
+    "artifact": "focused-tests.log"
+  },
+  "superseded": [
+    {
+      "command": ".venv/bin/python tests/unit/yank_deployed_validation/observer_overhead.py --output /tmp/yank-overhead-before --diagnostic",
+      "reason": "Exploratory mutable shadow closure caused steady runtime invalidation; not latency evidence."
+    },
+    {
+      "command": ".venv/bin/python tests/unit/yank_deployed_validation/observer_overhead.py --output /tmp/yank-overhead-latency-before",
+      "reason": "Interrupted/superseded: pinned whole shadow fixture although only15 rows returned; official harness pins only returned15."
+    },
+    {
+      "command": ".venv/bin/python tests/unit/yank_deployed_validation/observer_overhead.py --output /tmp/yank-overhead-diagnostic-before --diagnostic",
+      "reason": "Standard cProfile overwrites distinct same-label code objects; superseded by aggregated profile."
+    },
+    {
+      "command": ".venv/bin/python tests/unit/yank_deployed_validation/profile_observer_overhead.py --output /tmp/yank-overhead-profile-before",
+      "reason": "FAILED orphan caller edge during profile dump; incomplete publication not treated as evidence."
+    },
+    {
+      "command": ".venv/bin/python tests/unit/yank_deployed_validation/profile_observer_overhead.py --output /tmp/yank-overhead-profile-before-v2",
+      "reason": "Interrupted before completion to simplify attribution to tested top-level aggregation."
+    }
+  ],
+  "limitations": [
+    "Official timing captures retain queue/write diagnostics, not independently verifiable signed admission packages: public keys were not retained.",
+    "Steady timing captures combine historical strategy clock and real collector receipt clock; chronology is not admissible live evidence.",
+    "Separate signed correctness packages retain synthetic consistent multi-poll clocks, public keys, independent control expectations and verification verdicts.",
+    "Correctness tests pace between polls only after an unpaced capacity1 run exposed overflow; official latency runs remain unpaced.",
+    "Private Clock subclasses bypass the cache; full-poll timing changes cannot be attributed to that cache, and profile helper overhead differs. Explicit built-in UTC component diagnostic is separate."
+  ],
+  "decision": "HOLD_VALIDATION",
+  "source_commit": "db5aeb5a3411a2bf2861a47e8736702d1954132f",
+  "comparison": {
+    "status": "PASS_IDENTICAL_FIXTURES_AND_FINAL_STATES_36_CELLS",
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/summarize_observer_overhead.py --before /tmp/yank-overhead-official-before/results.json --after /tmp/yank-overhead-official-after/results.json --output docs/reports/yank-observer-overhead/comparison.json"
+  },
+  "utc_component_diagnostic": {
+    "status": "PASS_COMPLETE_STATE_EQUALITY_AND_CACHE_BOUNDS",
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/utc_state_diagnostic.py --output docs/reports/yank-observer-overhead/utc-state-diagnostic.json",
+    "artifact": "utc-state-diagnostic.json"
+  }
+}

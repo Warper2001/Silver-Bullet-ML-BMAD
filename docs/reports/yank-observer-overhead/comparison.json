@@ -1,0 +1,501 @@
+{
+  "after": {
+    "startup": {
+      "baseline": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          39.394527581999995,
+          36.295020985,
+          35.563780503
+        ],
+        "median_wall_seconds": 36.29718207381666,
+        "rss_high_water_kib": [
+          266284,
+          266132,
+          266152
+        ],
+        "wall_seconds": [
+          39.40194439794868,
+          36.29718207381666,
+          35.56731710396707
+        ]
+      },
+      "disabled": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          39.413887082,
+          38.074651824,
+          37.045823074000005
+        ],
+        "median_wall_seconds": 38.079281935002655,
+        "rss_high_water_kib": [
+          265652,
+          266036,
+          266308
+        ],
+        "wall_seconds": [
+          39.41673664399423,
+          38.079281935002655,
+          37.04784368514083
+        ]
+      },
+      "guarded": {
+        "capture_bytes": [
+          10975591,
+          10975591,
+          10975591
+        ],
+        "coverage": [
+          {
+            "accepted": 1,
+            "capture_closed": true,
+            "capture_sha256": "224f01332aa82618ebcb9da1280fe751fc84ecad909e45978434737dc147bf69",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 1
+          },
+          {
+            "accepted": 1,
+            "capture_closed": true,
+            "capture_sha256": "1d9d8f60a77818d7861dff412ef67cff0b467ca2e745d49f22169ff4af9c0b10",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 1
+          },
+          {
+            "accepted": 1,
+            "capture_closed": true,
+            "capture_sha256": "1299449aafd0158a031ad087e81b51c4905171ca28e6a55e70b82c7301733beb",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 1
+          }
+        ],
+        "cpu_seconds": [
+          70.89484734999999,
+          74.02105736200001,
+          75.607814048
+        ],
+        "median_wall_seconds": 73.82843160396442,
+        "rss_high_water_kib": [
+          340116,
+          340924,
+          340840
+        ],
+        "wall_seconds": [
+          70.75507902703248,
+          73.82843160396442,
+          75.41338195605204
+        ]
+      },
+      "guarded_minus_baseline_median_seconds": 37.53124953014776,
+      "guarded_to_baseline_median_ratio": 2.033998987960592
+    },
+    "steady": {
+      "baseline": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          0.7534132240000133,
+          0.8179336350000028,
+          0.9595842619999928
+        ],
+        "median_wall_seconds": 0.8179393759928644,
+        "rss_high_water_kib": [
+          280764,
+          281276,
+          281400
+        ],
+        "wall_seconds": [
+          0.7534641660749912,
+          0.8179393759928644,
+          0.9595857111271471
+        ]
+      },
+      "disabled": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          0.751268567000011,
+          0.7158717190000061,
+          0.7425841410000089
+        ],
+        "median_wall_seconds": 0.7426413290668279,
+        "rss_high_water_kib": [
+          281032,
+          281084,
+          280764
+        ],
+        "wall_seconds": [
+          0.7513256790116429,
+          0.7158787630032748,
+          0.7426413290668279
+        ]
+      },
+      "guarded": {
+        "capture_bytes": [
+          518494,
+          518494,
+          518494
+        ],
+        "coverage": [
+          {
+            "accepted": 30,
+            "capture_closed": true,
+            "capture_sha256": "cdbbe3ae8f31521823bac914a663cc2ebd4e23340dc9b11f998b5bc2f45c4481",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 30
+          },
+          {
+            "accepted": 30,
+            "capture_closed": true,
+            "capture_sha256": "76868ef3e37fb6dfdf30bbed194cfbd61be7d949489081fd79aab836c29ab025",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 30
+          },
+          {
+            "accepted": 30,
+            "capture_closed": true,
+            "capture_sha256": "a00a80c3f582c67a520ecb8ca78c102a519b0bb7102d5b149f1a4bb31682d150",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 30
+          }
+        ],
+        "cpu_seconds": [
+          3.172106365000019,
+          3.036627693000014,
+          3.045336810000009
+        ],
+        "median_wall_seconds": 3.009723470080644,
+        "rss_high_water_kib": [
+          281604,
+          282060,
+          282052
+        ],
+        "wall_seconds": [
+          3.1374480831436813,
+          3.009723470080644,
+          2.9913232440594584
+        ]
+      },
+      "guarded_minus_baseline_median_seconds": 2.1917840940877795,
+      "guarded_to_baseline_median_ratio": 3.6796412526628384
+    }
+  },
+  "before": {
+    "startup": {
+      "baseline": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          36.957016082,
+          36.879974325999996,
+          39.984380833
+        ],
+        "median_wall_seconds": 36.95886346511543,
+        "rss_high_water_kib": [
+          265776,
+          265916,
+          266024
+        ],
+        "wall_seconds": [
+          36.95886346511543,
+          36.88968404615298,
+          40.02962172799744
+        ]
+      },
+      "disabled": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          37.507040112999995,
+          36.338175231,
+          38.823949459
+        ],
+        "median_wall_seconds": 37.509539714083076,
+        "rss_high_water_kib": [
+          265908,
+          265736,
+          265884
+        ],
+        "wall_seconds": [
+          37.509539714083076,
+          36.34002344100736,
+          38.828642698936164
+        ]
+      },
+      "guarded": {
+        "capture_bytes": [
+          10975591,
+          10975591,
+          10975591
+        ],
+        "coverage": [
+          {
+            "accepted": 1,
+            "capture_closed": true,
+            "capture_sha256": "4f45330325603c1fd0a6b982bf1d482afa74e3e9d1ce52529ddca6b1f2880996",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 1
+          },
+          {
+            "accepted": 1,
+            "capture_closed": true,
+            "capture_sha256": "4b6da8fbb17fe659754fa0c4de428c856a9faee9a560b4b486f9388b6667e475",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 1
+          },
+          {
+            "accepted": 1,
+            "capture_closed": true,
+            "capture_sha256": "e48c2ed8df8ab162e991b6f953f9c708006beb7714bc4e633bdae86304eb5cb9",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 1
+          }
+        ],
+        "cpu_seconds": [
+          81.385570367,
+          75.708470908,
+          76.272437718
+        ],
+        "median_wall_seconds": 76.11273854086176,
+        "rss_high_water_kib": [
+          339648,
+          340668,
+          339620
+        ],
+        "wall_seconds": [
+          81.1760151591152,
+          75.486712340964,
+          76.11273854086176
+        ]
+      },
+      "guarded_minus_baseline_median_seconds": 39.15387507574633,
+      "guarded_to_baseline_median_ratio": 2.0593906685659507
+    },
+    "steady": {
+      "baseline": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          0.9639489930000025,
+          0.8234449679999898,
+          0.9044557379999958
+        ],
+        "median_wall_seconds": 0.9045042209327221,
+        "rss_high_water_kib": [
+          281132,
+          280628,
+          280760
+        ],
+        "wall_seconds": [
+          0.9639580228831619,
+          0.8235051969531924,
+          0.9045042209327221
+        ]
+      },
+      "disabled": {
+        "capture_bytes": [
+          0,
+          0,
+          0
+        ],
+        "coverage": [
+          null,
+          null,
+          null
+        ],
+        "cpu_seconds": [
+          0.8839591349999978,
+          0.829922028999988,
+          0.7552221109999948
+        ],
+        "median_wall_seconds": 0.8299889490008354,
+        "rss_high_water_kib": [
+          280512,
+          281272,
+          280884
+        ],
+        "wall_seconds": [
+          0.8840592531487346,
+          0.8299889490008354,
+          0.7552893480751663
+        ]
+      },
+      "guarded": {
+        "capture_bytes": [
+          518494,
+          518494,
+          518494
+        ],
+        "coverage": [
+          {
+            "accepted": 30,
+            "capture_closed": true,
+            "capture_sha256": "39fb6ed5781862516bdd0c1f018c4e488903a50cfeb16e6bf68e802a376b8dab",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 30
+          },
+          {
+            "accepted": 30,
+            "capture_closed": true,
+            "capture_sha256": "80be024e99ef6579ffcd178f94342f2b2622913f90278030a1cb7c559f3ae9cc",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 30
+          },
+          {
+            "accepted": 30,
+            "capture_closed": true,
+            "capture_sha256": "31f956da47f4d1b62aa303504f75fff674ab62314998735b4df4c9bb333c221f",
+            "coverage_scope": "accepted_prefix_before_close",
+            "decision": "HOLD_VALIDATION",
+            "dropped": 0,
+            "enabled": true,
+            "invalid_reasons": [],
+            "valid_coverage": true,
+            "written": 30
+          }
+        ],
+        "cpu_seconds": [
+          3.6513054670000145,
+          3.3935236840000016,
+          3.3206030000000055
+        ],
+        "median_wall_seconds": 3.3546722589526325,
+        "rss_high_water_kib": [
+          281388,
+          280900,
+          280884
+        ],
+        "wall_seconds": [
+          3.614719029981643,
+          3.3546722589526325,
+          3.273476517992094
+        ]
+      },
+      "guarded_minus_baseline_median_seconds": 2.4501680380199105,
+      "guarded_to_baseline_median_ratio": 3.708851966985079
+    }
+  },
+  "decision": "HOLD_VALIDATION",
+  "limitations": [
+    "Shared host descriptive timings, no numerical production latency target.",
+    "RSS is absolute process high-water including libraries, fixtures and warmup, not observer-only peak.",
+    "Queue bounds are configured limits, not continuously observed peaks.",
+    "Fixed private synthetic shadow tail, synthetic account, and self-derived release expectations are not live evidence.",
+    "Timing capture signing public keys were not retained; these are capture/timing diagnostics, not independently verifiable signed admission packages.",
+    "Steady timing captures mix historical strategy clocks with real collector receipt clocks and are chronologically inadmissible.",
+    "Private Clock subclass timestamps bypass the exact built-in UTC cache; no cache-driven timing improvement is claimed from these cells."
+  ],
+  "timing_captures_admissible": false
+}

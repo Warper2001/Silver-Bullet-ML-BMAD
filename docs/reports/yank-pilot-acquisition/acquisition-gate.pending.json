@@ -1,0 +1,32 @@
+{
+  "symbol": "MNQM25",
+  "endpoint": "https://api.tradestation.com/v3/marketdata/barcharts/MNQM25",
+  "incremental_cost_usd": null,
+  "contract_verified": true,
+  "entitlement_verified": false,
+  "acquisition_authorized": true,
+  "authorization_scope": "User authorized existing-credential acquisition only after verified zero incremental cost.",
+  "evidence_references": {
+    "contract": {
+      "reference": "symbol-verification.json",
+      "reviewed_by": "collector preparation agent",
+      "reviewed_at": "2026-09-10T01:01:01.359374+00:00",
+      "symbol": "MNQM25",
+      "endpoint": "https://api.tradestation.com/v3/marketdata/barcharts/MNQM25",
+      "credential_sha256": null
+    },
+    "endpoint": {
+      "credential_sha256": null
+    },
+    "zero_cost": {
+      "credential_sha256": null
+    },
+    "entitlement": {
+      "credential_sha256": null
+    },
+    "approval": {
+      "credential_sha256": null
+    }
+  },
+  "credential_sha256": null
+}

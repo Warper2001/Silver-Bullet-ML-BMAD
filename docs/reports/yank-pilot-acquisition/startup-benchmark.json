@@ -1,0 +1,1013 @@
+{
+  "admission": {
+    "account": "UNKNOWN",
+    "account_details": [
+      {
+        "reasons": [
+          "missing account replies"
+        ],
+        "state": "UNKNOWN",
+        "verdict": "UNKNOWN"
+      }
+    ],
+    "checkpoint": "PASS",
+    "coverage": "PASS",
+    "decision": "HOLD_VALIDATION",
+    "eligible": false,
+    "identity": "PASS",
+    "reasons": [
+      "account_not_admitted"
+    ],
+    "signature": "PASS"
+  },
+  "bar_count": 2880,
+  "capture_bytes": 10975591,
+  "code_sha256": {
+    "src/cli/check_yank_deployed_replay.py": "4ee71548475bfbdf6653f319ce6f04bc445fb83ad85808c166502b78f751a413",
+    "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+    "src/research/yank_deployed_validation/adapter.py": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
+    "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+    "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+    "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685",
+    "tests/unit/yank_deployed_validation/test_evidence.py": "6cbf7c9f4d77fa4c8e4bc60df266e8d6a694712262eda0e33544d6a8fac41012",
+    "tests/unit/yank_deployed_validation/test_observation_benchmark.py": "9988b8f4623ea696e5084d21d0e5ddbf712435e983bad43bf1f38b331d3ad4c5",
+    "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+  },
+  "coverage": {
+    "accepted": 1,
+    "capture_closed": true,
+    "capture_sha256": "7273c48f4e557ef73f9fb36674afe903c429bfc93099a5e847343738d2138d3f",
+    "coverage_scope": "accepted_prefix_before_close",
+    "decision": "HOLD_VALIDATION",
+    "dropped": 0,
+    "enabled": true,
+    "invalid_reasons": [],
+    "valid_coverage": true,
+    "written": 1
+  },
+  "decision": "HOLD_VALIDATION",
+  "decision_equal": true,
+  "failure_control": {
+    "account": "UNKNOWN",
+    "account_details": [
+      {
+        "reasons": [
+          "missing account replies"
+        ],
+        "state": "UNKNOWN",
+        "verdict": "UNKNOWN"
+      }
+    ],
+    "checkpoint": "PASS",
+    "coverage": "FAIL",
+    "decision": "HOLD_VALIDATION",
+    "eligible": false,
+    "identity": "PASS",
+    "reasons": [
+      "account_not_admitted",
+      "coverage_not_admitted"
+    ],
+    "signature": "PASS"
+  },
+  "filesystem_events": [
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/startup.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/evidence.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/account.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/capture.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/adapter.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/capture.jsonl",
+      "phase": "prepare",
+      "thread": "yank-decision-capture"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/startup.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/evidence.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/account.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/capture.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/adapter.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/data/models.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/ml/regime_detection/lr_channel_detector.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/config_loader.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/lr_channel.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/projectx_bars.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/projectx_client.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/shadow_parity.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/strategy_core.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/ts_sim_mirror.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/strategy_config.yaml",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/trader-yank.service",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pyyaml-6.0.3.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/databento_dbn-0.68.0.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/httpx-0.28.1.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/joblib-1.5.3.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/numpy-2.4.6.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pandas-2.3.3.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pydantic-2.12.5.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pytz-2026.1.post1.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/scikit_learn-1.8.0.dist-info/METADATA",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/strategy_config.yaml",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/trader-yank.service",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/proc/self/stat",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/proc/sys/kernel/random/boot_id",
+      "phase": "prepare",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "capture_write",
+      "path": "capture.jsonl",
+      "phase": "poll",
+      "thread": "yank-decision-capture"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/startup.py",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/evidence.py",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/account.py",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/capture.py",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/adapter.py",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/proc/self/stat",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/proc/sys/kernel/random/boot_id",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/capture.jsonl",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/coverage.json",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/capture.jsonl",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/evidence.json.pending",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/capture.jsonl",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/coverage.json",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/evidence.json",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/manifest.json.pending",
+      "phase": "close",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/manifest.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/evidence.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/capture.jsonl",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/capture.jsonl",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/coverage.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/tmp/yank-full-startup-measured/test_full_verified_startup_2880/capture/evidence.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/data/models.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/ml/regime_detection/lr_channel_detector.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/config_loader.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/lr_channel.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/projectx_bars.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/projectx_client.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/shadow_parity.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/strategy_core.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/ts_sim_mirror.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/strategy_config.yaml",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/trader-yank.service",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pyyaml-6.0.3.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/databento_dbn-0.68.0.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/httpx-0.28.1.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/joblib-1.5.3.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/numpy-2.4.6.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pandas-2.3.3.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pydantic-2.12.5.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pytz-2026.1.post1.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/scikit_learn-1.8.0.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/data/models.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/shadow_parity.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/strategy_core.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/config_loader.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/strategy_config.yaml",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "builtins.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/manifest.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/data/models.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/ml/regime_detection/lr_channel_detector.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/config_loader.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/lr_channel.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/projectx_bars.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/projectx_client.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/shadow_parity.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/strategy_core.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/ts_sim_mirror.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/strategy_config.yaml",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/trader-yank.service",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pyyaml-6.0.3.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/databento_dbn-0.68.0.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/httpx-0.28.1.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/joblib-1.5.3.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/numpy-2.4.6.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pandas-2.3.3.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pydantic-2.12.5.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/pytz-2026.1.post1.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD/.venv/lib/python3.12/site-packages/scikit_learn-1.8.0.dist-info/METADATA",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/data/models.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/shadow_parity.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/strategy_core.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/src/research/config_loader.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/strategy_config.yaml",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "builtins.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/tests/unit/yank_deployed_validation/test_startup_benchmark.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/tests/unit/yank_deployed_validation/test_evidence.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/tests/unit/yank_deployed_validation/test_observation_benchmark.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/startup.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/evidence.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/account.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/capture.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/research/yank_deployed_validation/adapter.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    },
+    {
+      "operation": "Path.open",
+      "path": "/root/Silver-Bullet-ML-BMAD-yank-validation/src/cli/check_yank_deployed_replay.py",
+      "phase": "verification",
+      "thread": "MainThread"
+    }
+  ],
+  "filter_decision_count": 2637,
+  "limitations": [
+    "One run per mode on a shared host with identical passive profiling; descriptive timings only.",
+    "RSS is cumulative process high-water, not incremental collector memory.",
+    "Configured queue envelope bound is not continuous peak-memory instrumentation.",
+    "Path.open, builtins.open and os.open are monitored; this is not a kernel syscall audit.",
+    "Constant synthetic provider-shaped backfill exercises both shadows but opens no trade.",
+    "Feed, account identity, release reference, signer and shadow storage are private synthetic fixtures.",
+    "No authenticated requests, production certification or independently observed account evidence.",
+    "Large explicit offline bounds do not qualify default collector settings."
+  ],
+  "limits": {
+    "capacity": 16,
+    "max_bytes": 64000000,
+    "max_nodes": 4000000
+  },
+  "measurements": {
+    "baseline": {
+      "close_seconds": 1.4004763215780258e-07,
+      "poll_seconds": 80.3543500379892,
+      "prepare_seconds": 7.309718057513237e-07,
+      "process_high_water_rss_kib": 274216
+    },
+    "guarded": {
+      "close_seconds": 0.07833839696832001,
+      "poll_seconds": 133.908050253056,
+      "prepare_seconds": 0.06234735203906894,
+      "process_high_water_rss_kib": 352732
+    }
+  },
+  "poll_overhead_seconds": 53.55370021506678,
+  "poll_ratio": 1.6664692103134198,
+  "queue_retained_byte_upper_bound": 1024000000,
+  "scope": "PRIVATE_PINNED_OFFLINE_FULL_VERIFIED_STARTUP",
+  "shadow_method_calls": {
+    "baseline": {
+      "_advance_shadow_trade": 2880,
+      "_detect_shadow_bullish_entry": 2880,
+      "_update_shadow_bullish_m15_choch": 2880
+    },
+    "guarded": {
+      "_advance_shadow_trade": 2880,
+      "_detect_shadow_bullish_entry": 2880,
+      "_update_shadow_bullish_m15_choch": 2880
+    }
+  },
+  "state_equal": true,
+  "storage_write_threads": [
+    "yank-decision-capture"
+  ],
+  "verification_seconds": 0.4489452460547909
+}

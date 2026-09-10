@@ -5,7 +5,7 @@ The contract adapter is implemented, reviewed, and initialized against the exist
 ## Verified result
 
 - **Initial audit: 78,648 records mapped to MNQU26; 7,814 records excluded.**
-- The subsequent bounded poll accepted eight additional after-hours bars: **78,656 mapped in total**, with exclusions unchanged. One was timely at the adapter; no eligible prospective session resulted.
+- Subsequent bounded polls accepted ten additional after-hours bars: **78,658 mapped in total**, with exclusions unchanged. Two were timely at the adapter; no eligible prospective session resulted.
 - All initial 78,648 emitted rows retained their original OHLCV and event/receipt timestamps. Independently checked 314,029 unique evidence byte offsets against the original runtime log.
 - The shadow journal recorded 21,626 RTH observations as outside the frozen horizon and rejected 4,307 weekend rows. It contains no unidentified-input flags that would disqualify the collector state.
 - A real adapter restart preserved the exact feed bytes and cursor, with no duplicate rows.
@@ -29,6 +29,7 @@ The contract adapter is implemented, reviewed, and initialized against the exist
 - [Actual shadow output](runs/20260910T214803-shadow-47055eba62/report.md) and [governing freeze snapshot](runs/20260910T214803-shadow-47055eba62/freeze-snapshot.json).
 - [Current decision report](runs/20260910T220846-evaluate-31b9429d4b/report.md).
 - [Bounded shadow output](runs/20260910T220816-shadow-624c704d41/report.md) and [timing/integrity verification](runs/20260910-contract-feed-poll/initial-poll-verification.json).
+- [Restarted bounded shadow output](runs/20260910T221058-shadow-1a7e830b36/report.md) and [evaluation](runs/20260910T221121-evaluate-f762ffc872/report.md).
 
 Artifacts remain local under ignored `runs/` directories. The implementation is version-controlled.
 

@@ -5,6 +5,7 @@ import builtins
 import dataclasses
 from datetime import datetime, timezone
 from enum import Enum
+from functools import lru_cache
 import hashlib
 import importlib.metadata
 import json
@@ -15,6 +16,21 @@ import sys
 import types
 
 SNAPSHOT_MANIFEST_SHA256 = '4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92'
+
+
+@lru_cache(maxsize=8192)
+def _utc_timestamp_parts(timestamp):
+    """Cache only immutable UTC datetime derivations, never bar/runtime values."""
+    return timestamp.isoformat(), timestamp.replace(minute=0, second=0, microsecond=0)
+
+
+def _timestamp_parts(timestamp):
+    # Datetime equality merges equal instants with different representations and
+    # can ignore fold. Restrict cache keys to exact UTC datetimes; custom types
+    # and all other timezones retain their original uncached behavior.
+    if type(timestamp) is datetime and timestamp.tzinfo is timezone.utc:
+        return _utc_timestamp_parts(timestamp)
+    return timestamp.isoformat(), timestamp.replace(minute=0, second=0, microsecond=0)
 
 
 def digest(path):
@@ -265,13 +281,13 @@ class Adapter:
         names=['_on_combine','_last_processed_timestamp','active_trade','completed_trades','_is_backfill','h1_bullish_sweep_active','h1_bearish_sweep_active','_m15_choch_active','_m15_last_bar_ts','_shadow_bullish_m15_choch_active','_shadow_m15_last_bar_ts','_shadow_trade','_cached_sweep','_active_entry_decision','_h1_atr','_h1_slope','_vol_regime_high','_last_vol_regime_pct','_current_day','_session_open_price','_session_high','_session_low','_daily_ranges','_data_stale','_last_entry_bar','_bullish_sweep_bar','_bearish_sweep_bar','_bullish_sweep_expires','_bearish_sweep_expires','_last_bullish_sweep_h1_ts','_last_bearish_sweep_h1_ts','_h1_atr_history','session_start_time']
         key=(len(t.dollar_bars),t._last_processed_timestamp)
         if key != self._buffer_cache_key:
-            rows=[[b.timestamp.isoformat(),b.open,b.high,b.low,b.close,b.volume,b.notional_value,b.is_forward_filled] for b in t.dollar_bars]
-            self._buffer_hash=hashlib.sha256(canonical(rows).encode()).hexdigest();self._buffer_cache_key=key
-            buckets={}
+            rows=[];buckets={}
             for b in t.dollar_bars:
-                hour=b.timestamp.replace(minute=0,second=0,microsecond=0)
+                label,hour=_timestamp_parts(b.timestamp)
+                rows.append([label,b.open,b.high,b.low,b.close,b.volume,b.notional_value,b.is_forward_filled])
                 if hour not in buckets:buckets[hour]=[b.high,b.low,b.close,0,b.timestamp]
                 item=buckets[hour];item[0]=max(item[0],b.high);item[1]=min(item[1],b.low);item[2]=b.close;item[3]+=1
+            self._buffer_hash=hashlib.sha256(canonical(rows).encode()).hexdigest();self._buffer_cache_key=key
             completed=list(buckets.values())[:-1];tr=[]
             for i,item in enumerate(completed):
                 tr.append(item[0]-item[1] if i==0 else max(item[0]-item[1],abs(item[0]-completed[i-1][2]),abs(item[1]-completed[i-1][2])))

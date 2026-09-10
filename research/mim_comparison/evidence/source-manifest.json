@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-09-10T20:27:28.665849+00:00",
+  "git_head": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+  "author_url": "https://concretumgroup.com/python-backtesting-beat-the-market-an-effective-intraday-momentum-strategy-for-the-sp500-etf-spy/",
+  "author_html_sha256": "ed3df1e664de1048fe4f808b45cf4f32be1f6a304bbef445893f1e15630d9d4c",
+  "sources": {
+    "src/research/mim_nb_live.py": "313cbb546d322d13140cd1f47d8c5adf2b44930b5ba8ad3f8eeef61489af85d5",
+    "study_mim_noise_bands_gate0.py": "b0869293d0627589a54ebed9a346d58f9f09757125ce79a14e081db1370b215b",
+    "study_mim_noise_bands_gate1_oos.py": "55865b7c1ddbf73f9151b72bb6ebabe204e2dcb3efd74403a83b21db51543dde",
+    "tools/mim_parity_day.py": "416b72adf12c74c0e8047b741a1f30323044426f74da7c08b88d9ff282f5c07b",
+    "study_mim_x2_powered.py": "2c7fd50abe9ffa54bfa1f3cbee63ccdc950a68f1470cb83e24fc5ebdc808cf30"
+  },
+  "data": {
+    "data/mim_x/mnq_1min_by_contract.csv": {
+      "sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+      "size": 146975558,
+      "mtime_ns": 1787930342398557742
+    }
+  }
+}

@@ -1,0 +1,232 @@
+[
+  {
+    "close": 102.0,
+    "initial_position": 0,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": 1,
+    "realized": 0.0,
+    "deactivated": false,
+    "action": "ENTER_LONG",
+    "trades": []
+  },
+  {
+    "close": 98.0,
+    "initial_position": 0,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": -1,
+    "realized": 0.0,
+    "deactivated": false,
+    "action": "ENTER_SHORT",
+    "trades": []
+  },
+  {
+    "close": 101.0,
+    "initial_position": 0,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": 0,
+    "realized": 0.0,
+    "deactivated": false,
+    "action": "NONE",
+    "trades": []
+  },
+  {
+    "close": 100.0,
+    "initial_position": 1,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": 1,
+    "realized": 0.0,
+    "deactivated": false,
+    "action": "NONE",
+    "trades": []
+  },
+  {
+    "close": 98.0,
+    "initial_position": 1,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": -1,
+    "realized": -4.0,
+    "deactivated": false,
+    "action": "BAND_STOP_EXIT+ENTER_SHORT",
+    "trades": [
+      {
+        "day": "2026-09-10",
+        "dir": 1,
+        "entry_t": "10:00",
+        "entry_px": "100.00",
+        "exit_t": "11:00",
+        "exit_px": "98.00",
+        "reason": "STOP",
+        "pnl_pts": "-2.00",
+        "pnl_usd": "-4.00",
+        "day_pnl_usd": "-4.00"
+      }
+    ]
+  },
+  {
+    "close": 98.0,
+    "initial_position": 1,
+    "initial_anchor": 598.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": 0,
+    "realized": -1000.0,
+    "deactivated": true,
+    "action": "BAND_STOP_EXIT",
+    "trades": [
+      {
+        "day": "2026-09-10",
+        "dir": 1,
+        "entry_t": "10:00",
+        "entry_px": "598.00",
+        "exit_t": "11:00",
+        "exit_px": "98.00",
+        "reason": "STOP",
+        "pnl_pts": "-500.00",
+        "pnl_usd": "-1000.00",
+        "day_pnl_usd": "-1000.00"
+      }
+    ]
+  },
+  {
+    "close": 98.0,
+    "initial_position": 1,
+    "initial_anchor": 597.995,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": -1,
+    "realized": -999.99,
+    "deactivated": false,
+    "action": "BAND_STOP_EXIT+ENTER_SHORT",
+    "trades": [
+      {
+        "day": "2026-09-10",
+        "dir": 1,
+        "entry_t": "10:00",
+        "entry_px": "598.00",
+        "exit_t": "11:00",
+        "exit_px": "98.00",
+        "reason": "STOP",
+        "pnl_pts": "-500.00",
+        "pnl_usd": "-999.99",
+        "day_pnl_usd": "-999.99"
+      }
+    ]
+  },
+  {
+    "close": 102.0,
+    "initial_position": 0,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": true,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": 0,
+    "realized": 0.0,
+    "deactivated": false,
+    "action": "NONE",
+    "trades": []
+  },
+  {
+    "close": 98.0,
+    "initial_position": 1,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": false,
+    "reject_exits_only": true,
+    "position": -1,
+    "realized": 0.0,
+    "deactivated": false,
+    "action": "BAND_STOP_EXIT+ENTER_SHORT",
+    "trades": []
+  },
+  {
+    "close": 102.0,
+    "initial_position": 1,
+    "initial_anchor": 100.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": true,
+    "stop_filled": false,
+    "reject_exits_only": false,
+    "position": 0,
+    "realized": 4.0,
+    "deactivated": false,
+    "action": "EOD_EXIT",
+    "trades": [
+      {
+        "day": "2026-09-10",
+        "dir": 1,
+        "entry_t": "10:00",
+        "entry_px": "100.00",
+        "exit_t": "16:00",
+        "exit_px": "102.00",
+        "reason": "EOD",
+        "pnl_pts": "+2.00",
+        "pnl_usd": "+4.00",
+        "day_pnl_usd": "+4.00"
+      }
+    ]
+  },
+  {
+    "close": 102.0,
+    "initial_position": 1,
+    "initial_anchor": 102.0,
+    "initial_realized": 0.0,
+    "rejected": false,
+    "eod": false,
+    "stop_filled": true,
+    "reject_exits_only": false,
+    "position": 1,
+    "realized": -500.0,
+    "deactivated": false,
+    "action": "CAT_STOP_DETECTED+ENTER_LONG",
+    "trades": [
+      {
+        "day": "2026-09-10",
+        "dir": 1,
+        "entry_t": "10:00",
+        "entry_px": "102.00",
+        "exit_t": "11:00",
+        "exit_px": "-148.00",
+        "reason": "CAT_STOP",
+        "pnl_pts": "-250.00",
+        "pnl_usd": "-500.00",
+        "day_pnl_usd": "-500.00"
+      }
+    ]
+  }
+]

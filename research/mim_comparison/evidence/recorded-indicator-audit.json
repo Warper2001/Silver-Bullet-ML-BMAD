@@ -1,0 +1,149 @@
+{
+  "target": "2026-09-10",
+  "prior_days": [
+    "2026-08-20",
+    "2026-08-21",
+    "2026-08-24",
+    "2026-08-25",
+    "2026-08-26",
+    "2026-08-27",
+    "2026-08-28",
+    "2026-08-31",
+    "2026-09-01",
+    "2026-09-02",
+    "2026-09-03",
+    "2026-09-04",
+    "2026-09-08",
+    "2026-09-09"
+  ],
+  "duplicate_counts": {
+    "2026-06-11": 56,
+    "2026-06-19": 60,
+    "2026-07-31": 28
+  },
+  "inputs": {
+    "data/mim_nb/bars_raw.csv": "61e8ca428e041d4a84cb2c56a718a259bcc9a220eb9100680fdabda460a0a5ed",
+    "data/mim_nb/decisions.csv": "55c9ae12d67fbefa912771e75524ceb20c94112fa32c6a3ecfa8797cbcd84e00"
+  },
+  "scope": "first-observed indicator reconciliation only; no contract identity or broker-action parity claimed",
+  "marks": [
+    {
+      "mark": "10:00",
+      "sigma": 0.002603267383712233,
+      "ub": 29530.47839737534,
+      "lb": 29014.02160262466,
+      "vwap": 29133.977743416875,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "10:30",
+      "sigma": 0.0027221093120180667,
+      "ub": 29533.935479359276,
+      "lb": 29010.56452064072,
+      "vwap": 29148.101529903855,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "11:00",
+      "sigma": 0.002957292114829741,
+      "ub": 29540.77688829737,
+      "lb": 29003.72311170263,
+      "vwap": 29167.020411003017,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "11:30",
+      "sigma": 0.0030289828794735235,
+      "ub": 29542.862354718167,
+      "lb": 29001.637645281837,
+      "vwap": 29176.380343247623,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "12:00",
+      "sigma": 0.0025995073384325845,
+      "ub": 29530.36901859817,
+      "lb": 29014.13098140183,
+      "vwap": 29182.14578043193,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "12:30",
+      "sigma": 0.0021887268699662954,
+      "ub": 29518.4195174656,
+      "lb": 29026.0804825344,
+      "vwap": 29182.6435074526,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "13:00",
+      "sigma": 0.0023627198881972034,
+      "ub": 29523.480930867685,
+      "lb": 29021.019069132315,
+      "vwap": 29183.8284565841,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "13:30",
+      "sigma": 0.0028110360727041967,
+      "ub": 29536.52233659595,
+      "lb": 29007.977663404054,
+      "vwap": 29186.169652959215,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "14:00",
+      "sigma": 0.0028958492322993363,
+      "ub": 29538.989530205276,
+      "lb": 29005.51046979472,
+      "vwap": 29186.544128880385,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "14:30",
+      "sigma": 0.002705316238922395,
+      "ub": 29533.446973061193,
+      "lb": 29011.053026938807,
+      "vwap": 29185.523613545527,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "15:00",
+      "sigma": 0.0029877522721484806,
+      "ub": 29541.66296665873,
+      "lb": 29002.83703334127,
+      "vwap": 29184.962165032535,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "15:30",
+      "sigma": 0.0028388824143551323,
+      "ub": 29537.332379712985,
+      "lb": 29007.16762028701,
+      "vwap": 29183.60757545533,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    },
+    {
+      "mark": "16:00",
+      "sigma": 0.003113908248752438,
+      "ub": 29545.332812479144,
+      "lb": 28999.167187520852,
+      "vwap": 29181.835913393636,
+      "serialization_agrees": true,
+      "old_sigma_tolerance_would_fail": true
+    }
+  ],
+  "status": "agrees at serialized precision"
+}

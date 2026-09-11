@@ -1,14 +1,20 @@
 # Proposed maintenance and observation
 
-**PROPOSED, NOT APPROVED. HOLD_VALIDATION.** No installation, service restart or live collection has occurred. The exact proposal is also available as [JSON](maintenance-proposal.json).
+**PROPOSED, NOT APPROVED. HOLD_VALIDATION.** This task performed no installation, service restart or live collection. The exact proposal is also available as [JSON](maintenance-proposal.json).
 
 ## Window and current service
 
 Propose **Saturday September 12, 2026, 14:00–15:00 UTC**, with enablement abandoned after 14:30 if a gate remains unresolved. This sits within the normal weekend closure described by [CME's Micro E-mini trading hours](https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html); the operator must still confirm broker maintenance availability. This is a proposed slot, not a discovered existing appointment.
 
-Read-only inspection found `trader-yank.service` active, PID 455819, started September 4 at 20:36:45 UTC. Its working directory is the main checkout and its command invokes `src/research/yank_streaming_working.py`. The installed unit has `TIER2_DEBUG=1`, absent from the checked-in template, and configures MNQU26 with two contracts. Its comment anticipates a September roll; verify the actual approved live contract at the window. Do not change contracts automatically or copy the historical MNQM25 symbol into live configuration.
+Earlier read-only inspection found `trader-yank.service` active, PID 455819, started September 4 at 20:36:45 UTC. The September 10 observer-overhead inspection instead found PID 1247178, started at 19:35 UTC. This task performed only a read-only `systemctl show`; it did not restart the service. Its working directory is the main checkout and its command invokes `src/research/yank_streaming_working.py`. The installed unit has `TIER2_DEBUG=1`, absent from the checked-in template, and configures MNQU26 with two contracts. Its comment anticipates a September roll; verify the actual approved live contract at the window. Do not change contracts automatically or copy the historical MNQM25 symbol into live configuration.
 
-The on-disk strategy is dirty relative to the main checkout HEAD, but its SHA256 matches the preserved validation snapshot. That establishes file equality only, not the code loaded by the current process. See [service fingerprints](service-inspection.json). A checkout/reset of the main tree would lose existing work and is not part of this proposal.
+The on-disk strategy is dirty relative to the main checkout HEAD and now differs from the preserved validation snapshot because of existing diagnostic edits. The consolidation preserved all existing modified files byte-for-byte. The source changed again outside this task during observer measurement; this task did not edit or restore it, and the preservation report records both fingerprints. Current loaded-process identity remains UNKNOWN. See the [earlier service fingerprints](service-inspection.json) and [current read-only check](../yank-observer-overhead/installed-preservation.json). A checkout/reset of the main tree would lose existing work and is not part of this proposal. The old rollback candidate and release expectations require renewed comparison and independent review; they cannot be treated as current release evidence.
+
+## Measured observer readiness
+
+The [observer report](../yank-observer-overhead/README.md) retains three fresh-process counterbalanced repetitions before and after the candidate change. Guarded median poll time changed from 76.113 to 73.828 seconds for 2,880-bar startup and from 3.355 to 3.010 seconds for 30 incremental polls after a 7,500-bar warm-up. Shared-host variation and the private Clock cache bypass limit attribution; these results do not establish accepted production latency.
+
+The tested proposal remains capacity 1, 64,000,000 bytes per queued record and four million nodes. All official guarded timing cells retained complete queue/write coverage, but a separate unpaced fixture dropped two of three records and correctly failed coverage. Queue limits are not a whole-process memory limit; observed guarded startup RSS approached 333MiB. Timing packages are not admission evidence; separate signed synthetic correctness packages also retain account UNKNOWN. The current collector inventory is a candidate, not an approved release.
 
 ## Approval packet and responsibilities
 

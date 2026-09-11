@@ -980,7 +980,18 @@ class Tier2StreamingTrader:
         self._shadow_bullish_m15_choch_active: bool = False
         self._shadow_m15_last_bar_ts: datetime = _epoch
         self._shadow_trade: Optional[dict] = None
-        self._shadow_logger = TradeLogger(
+        # Distinct attribute name from self._shadow_logger (the ProjectX-parity
+        # ShadowParityLogger set in initialize() at self._data_shadow) -- both
+        # shadow features used to share the name self._shadow_logger, and whichever
+        # initialized second silently clobbered the other. When ShadowParityLogger
+        # won that race, _advance_shadow_trade's self._shadow_logger.append_trade(...)
+        # threw AttributeError on every closing shadow-bullish trade, from inside the
+        # unguarded per-bar loop in _poll_and_process -- aborting that poll cycle
+        # before _detect_and_enter ever ran, and (since the throw happens before
+        # self._shadow_trade is cleared) repeating on every subsequent poll forever.
+        # Confirmed live 2026-09-02 12:39 UTC onward on trader-yank.service: 9,474+
+        # consecutive "Error in poll cycle" crashes, zero real entries since 08-17.
+        self._shadow_trade_logger = TradeLogger(
             log_path=Path(__file__).parent.parent.parent / "logs" / "yank_shadow_bullish_trades.csv"
         )
 
@@ -1721,7 +1732,7 @@ class Tier2StreamingTrader:
         }
         pnl = ((exit_dec.exit_price - t["entry_price"]) * self._point_value * self._contracts
               - self._strategy_config.commission_per_roundtrip)
-        self._shadow_logger.append_trade(TradeRecord(
+        self._shadow_trade_logger.append_trade(TradeRecord(
             timestamp_entry=t["entry_time"], timestamp_exit=bar.timestamp, direction="LONG",
             entry_price=t["entry_price"], exit_price=exit_dec.exit_price,
             tp_price=t["tp_price"], sl_price=t["sl_price"], gap_size=t["gap_size"],
@@ -2072,14 +2083,47 @@ class Tier2StreamingTrader:
                             if _cfg.max_gap_atr_ratio > 0 and self._h1_atr > 0
                             else _cfg.max_gap_dollars / POINT_VALUE_USD)
                 _floor_1m = _cfg.atr_threshold * calc_atr(m1_df)
+                # NOTE ON READING THIS LINE (2026-09-10): the two halves measure
+                # DIFFERENT things and will legitimately disagree.
+                #   last3_*   -- recomputed here from ONLY the final three bars
+                #   window_fvg-- what detect_fvg() returned over its FULL scan window
+                # So `last3_pattern=no last3_gap=0.00 ... window_fvg=YES` is not a
+                # contradiction: no FVG ends on this bar, but one exists earlier in
+                # the window. The previous wording printed the second half as
+                # `qualified=`, which read as a verdict on the first half and caused
+                # a false "impossible state" reading during the 2026-09-09
+                # no-trades investigation.
+                _dir = fvg_signal.direction.value if fvg_signal else "-"
                 logger.debug(
-                    f"🔍 Bearish 3-bar gap: pattern={'YES' if _is_bearish_3bar else 'no'} "
-                    f"raw_gap={_raw_gap:.2f}pts | need >= {max(_min_gap, _floor_1m):.2f} "
+                    f"🔍 Bearish gap scan: last3_pattern={'YES' if _is_bearish_3bar else 'no'} "
+                    f"last3_gap={_raw_gap:.2f}pts | need >= {max(_min_gap, _floor_1m):.2f} "
                     f"(min_gap_atr_ratio={_cfg.min_gap_atr_ratio}×H1ATR={self._h1_atr:.2f}={_min_gap:.2f}, "
                     f"1m_floor={_floor_1m:.2f}) and <= {_ceiling:.2f} (ceiling) "
-                    f"| qualified={'YES' if fvg_signal else 'NO'}"
+                    f"| window_fvg={'YES' if fvg_signal else 'NO'} dir={_dir}"
                 )
             _fvg_hit = bool(fvg_signal and fvg_signal.direction == Direction.BEARISH and cached_sweep is not None)
+            # Surface the NEAR-MISS at INFO: both higher-timeframe gates passed and an
+            # FVG existed, but it was unusable. Without this the only trace is a
+            # per-bar SKIP row in the 24M-row shared decision CSV, which is why
+            # answering "is YANK broken or is the market just not offering setups?"
+            # required reading source on 2026-09-09. Fires only when an FVG is present
+            # and rejected -- 3 live occurrences in the 23 days to 2026-09-09, so this
+            # is not a per-bar log. Purely diagnostic: no control flow depends on it.
+            if fvg_signal is not None and not _fvg_hit:
+                if cached_sweep is None:
+                    # Should be unreachable: h1_bearish_sweep_active is DEFINED as
+                    # (_cached_sweep is not None and direction is BEARISH). If this
+                    # ever fires the sweep state has desynchronised -- a real bug.
+                    logger.warning(
+                        "⚠️ State desync: h1_bearish_sweep_active is True but "
+                        "cached_sweep is None — bearish entry suppressed. Investigate."
+                    )
+                else:
+                    logger.info(
+                        f"⛔ Bearish near-miss: H1 bearish sweep + M15 CHoCH active and an "
+                        f"FVG was found, but its direction is {fvg_signal.direction.value} "
+                        f"(need bearish) — no entry this bar."
+                    )
             if _fvg_hit:
                 fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}  # type: ignore[union-attr]
                 if not self.lr_filter.allows(bars, "bearish"):

@@ -1,41 +1,66 @@
 {
-  "schema_version": 1,
+  "account_verdict_without_coherent_evidence": "UNKNOWN",
+  "contract_policy": "Reconfirm actual live contract at window; do not copy MNQM25 historical symbol or change MNQU26 automatically.",
   "decision": "HOLD_VALIDATION",
-  "status": "PROPOSED_NOT_APPROVED",
-  "service": "trader-yank.service",
-  "window_utc": {
-    "start": "2026-09-12T14:00:00Z",
-    "end": "2026-09-12T15:00:00Z",
-    "abort_enablement_after": "2026-09-12T14:30:00Z"
+  "gates": {
+    "checkpoint_independently_verified": false,
+    "contract_roll_state_verified": false,
+    "maintenance_window_approved": false,
+    "named_operator_accepted": false,
+    "production_latency_qualified": false,
+    "public_key_and_signer_provisioned": false,
+    "release_and_launcher_approved": false,
+    "rollback_rechecked_at_window": false,
+    "runtime_config_model_pins_independently_approved": false
+  },
+  "installation_authorized": false,
+  "live_collection_authorized": false,
+  "observer_readiness": {
+    "candidate_inventory": "../yank-observer-overhead/collector-candidate.json",
+    "capacity_one_complete_for_all_workloads": false,
+    "comparison": "../yank-observer-overhead/comparison.json",
+    "fresh_independent_release_checkpoint_key_review_required": true,
+    "guarded_median_wall_seconds": {
+      "startup": {
+        "after": 73.82843160396442,
+        "before": 76.11273854086176
+      },
+      "steady": {
+        "after": 3.009723470080644,
+        "before": 3.3546722589526325
+      }
+    },
+    "installed_source_and_process_changed_since_prior_report": true,
+    "measurement_report": "../yank-observer-overhead/README.md",
+    "observed_capacity_one_limitation": "Unpaced small synthetic fixture accepted/wrote1 of3 records;2 drops caused queue_overflow and invalid coverage. Official timing and paced correctness evidence are reported separately.",
+    "production_latency_accepted": false,
+    "proposed_limits": {
+      "capacity": 1,
+      "max_bytes": 64000000,
+      "max_nodes": 4000000
+    }
   },
   "operator": "Existing service owner; named operator acceptance required before approval",
+  "restart_authorized": false,
   "rollback_artifact": "rollback-candidate.tar.gz",
+  "schema_version": 1,
+  "service": "trader-yank.service",
   "sessions": [
     {
+      "end": "2026-09-14T16:10:00Z",
       "id": "plumbing-1",
-      "start": "2026-09-14T13:20:00Z",
-      "end": "2026-09-14T16:10:00Z"
+      "start": "2026-09-14T13:20:00Z"
     },
     {
+      "end": "2026-09-16T16:10:00Z",
       "id": "plumbing-2",
-      "start": "2026-09-16T13:20:00Z",
-      "end": "2026-09-16T16:10:00Z"
+      "start": "2026-09-16T13:20:00Z"
     }
   ],
-  "installation_authorized": false,
-  "restart_authorized": false,
-  "live_collection_authorized": false,
-  "gates": {
-    "named_operator_accepted": false,
-    "maintenance_window_approved": false,
-    "release_and_launcher_approved": false,
-    "runtime_config_model_pins_independently_approved": false,
-    "checkpoint_independently_verified": false,
-    "public_key_and_signer_provisioned": false,
-    "production_latency_qualified": false,
-    "contract_roll_state_verified": false,
-    "rollback_rechecked_at_window": false
-  },
-  "contract_policy": "Reconfirm actual live contract at window; do not copy MNQM25 historical symbol or change MNQU26 automatically.",
-  "account_verdict_without_coherent_evidence": "UNKNOWN"
+  "status": "PROPOSED_NOT_APPROVED",
+  "window_utc": {
+    "abort_enablement_after": "2026-09-12T14:30:00Z",
+    "end": "2026-09-12T15:00:00Z",
+    "start": "2026-09-12T14:00:00Z"
+  }
 }

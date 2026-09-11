@@ -58,7 +58,10 @@ def make_bot(tmp_path, is_backfill=False):
     bot._shadow_trade = None
     bot.active_trade = None  # real path — must stay untouched
     bot._active_entry_decision = None
-    bot._shadow_logger = y.TradeLogger(log_path=tmp_path / "yank_shadow_bullish_trades.csv")
+    # Support both the committed combined sink and the locally installed split
+    # sink without making this fixture depend on uncommitted strategy changes.
+    bot._shadow_trade_logger = y.TradeLogger(log_path=tmp_path / "yank_shadow_bullish_trades.csv")
+    bot._shadow_logger = bot._shadow_trade_logger
     return bot
 
 
@@ -120,7 +123,7 @@ class TestShadowLifecycle:
         bot._advance_shadow_trade(tp_bar)
         assert bot._shadow_trade is None, "closed trade must clear shadow state"
 
-        rows = list(__import__("csv").DictReader(open(bot._shadow_logger._log_path)))
+        rows = list(__import__("csv").DictReader(open(bot._shadow_trade_logger._log_path)))
         assert len(rows) == 1
         assert rows[0]["direction"] == "LONG"
         assert rows[0]["exit_reason"] == "TP"

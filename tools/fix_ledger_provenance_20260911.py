@@ -42,6 +42,17 @@ REALTIME_LAG_H = 24.0  # mirrors tools/migrate_trades_provenance.py
 
 LAG_SQL = "(julianday(created_at) - julianday(timestamp)) * 24.0"
 
+# Mirrors EXECUTION_MODE in tools/migrate_trades_provenance.py (with the 2026-09-11
+# s26-combine correction). Traders absent here stay 'unknown' by design: yank / s26 /
+# s27 rows span both replayed history and live trading, so the venue is per-row, not
+# per-trader, and an honest 'unknown' beats a guess.
+EXECUTION_MODE = {
+    "trader-btc-carry": "paper",
+    "trader-gap-fade": "sim",
+    "trader-mim-nb": "live",
+    "trader-s26-combine": "paper",
+}
+
 
 def report(conn: sqlite3.Connection, label: str) -> None:
     print(f"\n--- {label} ---")
@@ -93,11 +104,17 @@ def main() -> int:
         "AND (created_at IS NULL OR timestamp IS NULL)"
     ).fetchone()[0]
 
+    n_exec_null = conn.execute(
+        "SELECT COUNT(*) FROM trades WHERE execution_mode IS NULL"
+    ).fetchone()[0]
+
     print("\n=== planned changes ===")
     print(f"  (1) execution_mode -> 'paper' : {n_s26:>5} rows (trader-s26-combine)")
     print(f"  (2) write_mode -> 'realtime'  : {n_rt:>5} rows (lag < {REALTIME_LAG_H}h)")
     print(f"      write_mode -> 'backfilled': {n_bf:>5} rows (lag >= {REALTIME_LAG_H}h)")
     print(f"      write_mode -> 'unknown'   : {n_unk:>5} rows (no usable timestamps)")
+    print(f"  (3) execution_mode NULL fill  : {n_exec_null:>5} rows "
+          f"(per-trader dict, else 'unknown')")
 
     if not args.apply:
         print("\nDRY RUN — nothing written. Re-run with --apply.")
@@ -124,6 +141,18 @@ def main() -> int:
         )
         conn.execute(
             "UPDATE trades SET write_mode='unknown' WHERE write_mode IS NULL"
+        )
+        # (3) execution_mode: same rule the original migration used — a documented
+        # venue where one exists, an explicit 'unknown' otherwise. NULL is the one
+        # value that means "nobody has looked", and it should not persist.
+        for trader, mode in EXECUTION_MODE.items():
+            conn.execute(
+                "UPDATE trades SET execution_mode=? WHERE trader_id=? "
+                "AND (execution_mode IS NULL OR execution_mode <> ?)",
+                (mode, trader, mode),
+            )
+        conn.execute(
+            "UPDATE trades SET execution_mode='unknown' WHERE execution_mode IS NULL"
         )
 
     report(conn, "AFTER")

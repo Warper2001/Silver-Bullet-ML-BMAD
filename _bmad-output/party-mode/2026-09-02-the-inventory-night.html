@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Inventory Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;600;700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#f2f5ee; --band:#e4ece0; --rule:#b8c9be; --rule-strong:#8fa896;
+  --ink:#1b2a33; --ink-soft:#5b6f6c; --ink-faint:#8397947e;
+  --red:#9e2b25; --red-soft:#c0564f; --pos:#2f6b46;
+  --card:#fbfcf9;
+  --display:"Zilla Slab",Georgia,serif;
+  --body:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#101614; --band:#161d1a; --rule:#2b3833; --rule-strong:#3d504a;
+    --ink:#dde5dc; --ink-soft:#93a69f; --ink-faint:#5d706a;
+    --red:#e08b84; --red-soft:#b9635c; --pos:#7fc79a;
+    --card:#151c19;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101614; --band:#161d1a; --rule:#2b3833; --rule-strong:#3d504a;
+  --ink:#dde5dc; --ink-soft:#93a69f; --ink-faint:#5d706a;
+  --red:#e08b84; --red-soft:#b9635c; --pos:#7fc79a;
+  --card:#151c19;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.65;
+  background-image:repeating-linear-gradient(
+    to bottom, var(--paper) 0, var(--paper) 30px, var(--band) 30px, var(--band) 60px);
+}
+.sheet{max-width:920px; margin:0 auto; padding:0 22px 96px;
+  background:linear-gradient(var(--paper),var(--paper)); background-clip:padding-box;
+  border-left:1px solid var(--rule); border-right:1px solid var(--rule);
+  background-image:repeating-linear-gradient(
+    to bottom, transparent 0, transparent 29px, var(--rule) 29px, var(--rule) 30px);
+  background-attachment:local;
+}
+header.mast{padding:56px 0 26px; border-bottom:3px double var(--rule-strong); margin-bottom:34px}
+.eyebrow{font-family:var(--mono); font-size:.7rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-soft); display:flex; flex-wrap:wrap; gap:6px 20px; margin-bottom:14px}
+h1{font-family:var(--display); font-weight:700; font-size:clamp(2.5rem,7vw,4.1rem);
+  line-height:.98; margin:0 0 14px; letter-spacing:-.02em; text-wrap:balance}
+.dek{font-size:1.08rem; color:var(--ink-soft); max-width:60ch; margin:0}
+.dek em{color:var(--ink); font-style:italic}
+
+h2{font-family:var(--display); font-weight:600; font-size:1.5rem; letter-spacing:-.01em;
+  margin:52px 0 6px; text-wrap:balance}
+h2 .n{font-family:var(--mono); font-size:.72rem; color:var(--red); letter-spacing:.1em;
+  display:block; margin-bottom:4px; font-weight:500}
+p{margin:0 0 16px; max-width:66ch}
+a{color:var(--red)}
+
+/* ledger voice entries */
+.voice{display:grid; grid-template-columns:118px 1fr; gap:0 18px;
+  padding:14px 0; border-bottom:1px solid var(--rule); align-items:baseline}
+.who{font-family:var(--mono); font-size:.76rem; line-height:1.5; color:var(--ink-soft);
+  text-align:right; letter-spacing:.01em}
+.who b{display:block; color:var(--ink); font-weight:600; font-size:.82rem}
+.who .ic{font-size:1rem; display:block; margin-bottom:2px}
+.said{font-size:1.02rem}
+.said.q{font-family:var(--display); font-size:1.16rem; line-height:1.45}
+.stage{color:var(--ink-soft); font-style:italic; font-size:.95rem}
+
+/* the correction table */
+.corr{width:100%; border-collapse:collapse; font-family:var(--mono);
+  font-variant-numeric:tabular-nums; font-size:.86rem; margin:8px 0 10px}
+.corr th{text-align:right; font-weight:600; font-size:.68rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-soft); padding:8px 10px;
+  border-bottom:2px solid var(--rule-strong)}
+.corr th:first-child{text-align:left}
+.corr td{padding:9px 10px; border-bottom:1px solid var(--rule); text-align:right}
+.corr td:first-child{text-align:left; font-family:var(--body); font-size:.9rem}
+.struck{color:var(--red-soft); text-decoration:line-through;
+  text-decoration-color:var(--red); text-decoration-thickness:2px}
+.truth{color:var(--ink); font-weight:600}
+.truth.neg{color:var(--red)}
+.n-small{color:var(--ink-soft)}
+tr.flag td{background:color-mix(in srgb,var(--red) 7%,transparent)}
+.tablewrap{overflow-x:auto}
+
+/* defects */
+.defects{display:grid; gap:0; margin:10px 0 6px; border-top:1px solid var(--rule-strong)}
+.defect{display:grid; grid-template-columns:auto 1fr; gap:0 16px;
+  padding:16px 0; border-bottom:1px solid var(--rule)}
+.defect .tag{font-family:var(--mono); font-size:.68rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--red); padding-top:3px; white-space:nowrap}
+.defect h3{font-family:var(--display); font-size:1.06rem; margin:0 0 4px; font-weight:600}
+.defect p{margin:0; font-size:.97rem; color:var(--ink-soft); max-width:62ch}
+.defect p b{color:var(--ink); font-weight:600}
+
+figure{margin:22px 0 6px}
+figcaption{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
+  letter-spacing:.04em; margin-top:10px}
+
+.pull{border-left:3px solid var(--red); padding:4px 0 4px 20px; margin:30px 0;
+  font-family:var(--display); font-size:1.3rem; line-height:1.4; max-width:56ch}
+.pull cite{display:block; font-family:var(--mono); font-size:.72rem; font-style:normal;
+  color:var(--ink-soft); letter-spacing:.08em; margin-top:10px; text-transform:uppercase}
+
+.built{list-style:none; padding:0; margin:8px 0}
+.built li{padding:12px 0 12px 26px; border-bottom:1px solid var(--rule); position:relative;
+  font-size:.98rem}
+.built li::before{content:"✓"; position:absolute; left:0; color:var(--pos);
+  font-family:var(--mono); font-weight:600}
+.built li.todo::before{content:"□"; color:var(--red)}
+.built code{font-family:var(--mono); font-size:.85em; background:var(--card);
+  padding:1px 5px; border:1px solid var(--rule)}
+
+footer{margin-top:56px; padding-top:22px; border-top:3px double var(--rule-strong);
+  font-family:var(--mono); font-size:.74rem; color:var(--ink-soft);
+  display:flex; flex-wrap:wrap; gap:8px 24px; justify-content:space-between}
+
+.ink-draw{stroke-dasharray:220; stroke-dashoffset:220; animation:ink .9s ease-out .35s forwards}
+@keyframes ink{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.ink-draw{animation:none; stroke-dashoffset:0}}
+@media (max-width:620px){
+  .voice{grid-template-columns:1fr; gap:4px}
+  .who{text-align:left; display:flex; gap:8px; align-items:baseline}
+  .who .ic,.who b{display:inline}
+  .defect{grid-template-columns:1fr; gap:6px}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header class="mast">
+  <div class="eyebrow">
+    <span>The Main Room</span><span>2026-09-02</span><span>Session ledger</span><span>Silver-Bullet-ML-BMAD</span>
+  </div>
+  <h1>The Inventory Night</h1>
+  <p class="dek">The room sat down to answer <em>is there any hope of profitability</em> and spent four hours discovering that nobody had ever checked what the shop actually owned. Every number below was pulled from the repository's own records during the session, not recalled from memory.</p>
+</header>
+
+<h2><span class="n">Entry 01 — the question that had waited three months</span>Edge first</h2>
+
+<div class="voice"><div class="who"><span class="ic">🎨</span><b>Maya</b>design thinking</div>
+<div class="said q">Are we trying to pass the combine, or validate an edge? Nobody's ever said. And every argument this room has had since June has secretly been that argument wearing a costume.</div></div>
+
+<div class="voice"><div class="who"><span class="ic">📊</span><b>Alex</b>principal</div>
+<div class="said">Edge is always first. You can't pass a combine without an edge, no?</div></div>
+
+<div class="voice"><div class="who"><span class="ic">🔍</span><b>Level</b>claim checker</div>
+<div class="said">Sorry — I heard a load-bearing implication go by unverified. Passing a combine is neither necessary nor sufficient for having an edge. Not sufficient: it's variance-dominated on a small trade count, which is the entire business model of the firms selling them. Not necessary: a hard daily-loss floor truncates the left tail of a distribution whose right tail is where your money lives.</div></div>
+
+<div class="voice"><div class="who"><span class="ic">🔬</span><b>Dr. Quinn</b>root causes</div>
+<div class="said">So it's a <em>structural incompatibility</em>, not a scheduling problem. A combine cannot validate an edge, and a rare edge cannot reliably pass a combine. They fail each other in both directions.</div></div>
+
+<h2><span class="n">Entry 02 — the ledger is opened</span>What the books actually said</h2>
+
+<p>The shop counted seven validated strategy “blocks.” Then someone read the provenance out of the one table every bot writes to. The <code style="font-family:var(--mono);font-size:.85em">created_at</code> column had been the answer the whole time: a live bot logs within minutes, a replay logs months later.</p>
+
+<div class="tablewrap">
+<table class="corr">
+<thead><tr><th>Strategy</th><th>Headline P&amp;L</th><th>Written live</th><th>True realtime P&amp;L</th></tr></thead>
+<tbody>
+<tr class="flag"><td>trader-yank</td><td class="struck">$102,151.90</td><td class="n-small">5 of 1,846</td><td class="truth">$259.00</td></tr>
+<tr class="flag"><td>trader-mim-nb <span class="n-small">· live combine</span></td><td class="struck">$149.00</td><td class="n-small">21 of 22</td><td class="truth neg">−$591.50</td></tr>
+<tr><td>trader-s26</td><td class="n-small">$3,310.80</td><td class="n-small">151 of 172</td><td class="truth">$1,735.30</td></tr>
+<tr><td>trader-s26-combine</td><td class="n-small">$1,235.00</td><td class="n-small">72 of 72</td><td class="truth">$1,235.00</td></tr>
+<tr><td>trader-gap-fade <span class="n-small">· SIM</span></td><td class="n-small">$1,116.50</td><td class="n-small">25 of 25</td><td class="truth">$1,116.50</td></tr>
+<tr><td>trader-s27</td><td class="n-small">$28.90</td><td class="n-small">40 of 57</td><td class="truth">$71.10</td></tr>
+<tr class="flag"><td>trader-btc-carry</td><td class="n-small">$−42.66</td><td class="n-small">0 of 1</td><td class="truth">never traded</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+<svg viewBox="0 0 620 132" width="100%" height="132" role="img" aria-label="trader-yank headline P and L of $102,151.90 collapsing to $259.00 once backfilled rows are excluded">
+  <text x="0" y="16" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".62" letter-spacing="1.4">TRADER-YANK, AS THE LEDGER READ IT</text>
+  <rect x="0" y="26" width="596" height="26" fill="currentColor" opacity=".16"></rect>
+  <text x="8" y="44" font-family="IBM Plex Mono, monospace" font-size="15" fill="currentColor" opacity=".55">$102,151.90</text>
+  <text x="470" y="44" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".55">1,841 replayed</text>
+  <line class="ink-draw" x1="4" y1="41" x2="592" y2="37" stroke="#9e2b25" stroke-width="2.5" stroke-linecap="round"></line>
+  <text x="0" y="86" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".62" letter-spacing="1.4">TRADER-YANK, WRITTEN AS IT HAPPENED</text>
+  <rect x="0" y="96" width="1.5" height="26" fill="#9e2b25"></rect>
+  <rect x="1.5" y="96" width="14" height="26" fill="currentColor" opacity=".38"></rect>
+  <text x="26" y="114" font-family="IBM Plex Mono, monospace" font-size="15" fill="currentColor">$259.00</text>
+  <text x="470" y="114" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".62">5 trades</text>
+</svg>
+<figcaption>Same table. Same bot. The difference is a column nobody had thought to add.</figcaption>
+</figure>
+
+<h2><span class="n">Entry 03 — the autopsy</span>A bot that was never trading</h2>
+
+<div class="voice"><div class="who"><span class="ic">💻</span><b>Amelia</b>engineer</div>
+<div class="said">Two hundred fifty thousand, four hundred and fourteen log lines marked <span style="font-family:var(--mono);font-size:.9em">[PAPER]</span>. Zero marked <span style="font-family:var(--mono);font-size:.9em">[LIVE]</span>. The unit file has no <span style="font-family:var(--mono);font-size:.9em">--live</span> flag. It has never placed an order.</div></div>
+
+<div class="voice"><div class="who"><span class="ic">😤</span><b>Grumbal</b>the adversary</div>
+<div class="said">And the record says <em>LIVE since 2026-06-12</em>. That's the third false statement to end up inside this shop's records — and this one we've been counting in a portfolio for four hours tonight.</div></div>
+
+<div class="voice"><div class="who"><span class="ic">🎨</span><b>Maya</b>design thinking</div>
+<div class="said q">So the accident is the most valuable thing in the building. Nobody meant to run a forward test. Somebody forgot a flag — and that forgotten flag ran a three-month, zero-cost falsification of a Sharpe-12.6 backtest, and falsified it.</div></div>
+
+<h2><span class="n">Entry 04 — findings of the audit</span>Four defects, one shape</h2>
+
+<div class="defects">
+  <div class="defect"><div class="tag">Label</div><div>
+    <h3>A paper bot recorded as live</h3>
+    <p>BTC-CARRY ran three months in paper mode while the records called it live and the room counted it as a validated block. <b>Missing: a <code>--live</code> flag in a unit file.</b></p></div></div>
+
+  <div class="defect"><div class="tag">Label</div><div>
+    <h3>Replays sitting in the system of record</h3>
+    <p>1,841 of YANK's 1,846 rows were written a median of 207 days after their own trade timestamp. <b>Missing: a column saying which rows were live.</b></p></div></div>
+
+  <div class="defect"><div class="tag">Units</div><div>
+    <h3>A hurdle denominated in the wrong currency</h3>
+    <p>The carry backtest reads a mark/spot <em>proxy</em> running 7.3× light against real Kraken funding. The same “10% hurdle” fires in 17% of backtest periods and 63% of live ones — a selective strategy measured, a permissive one deployed. Sharpe 12.64 describes a bot nobody ran, and the same flaw voids ETH-CARRY and multi-carry with it.</p></div></div>
+
+  <div class="defect"><div class="tag">Parity</div><div>
+    <h3>A replay that can't reproduce its own subject</h3>
+    <p>Caught mid-build, in the room's own new tool: replaying the deployed rule gave 9 round trips and +$498.62 against the executor's real 12 and +$55.80. <b>8.9× off.</b> The tool now refuses to let its own numbers be used.</p></div></div>
+</div>
+
+<div class="pull">Four defects, four missing labels. More process wouldn't have found any of it. Less process wouldn't have caused any of it. The entire category is orthogonal to the thing we've been arguing about for eight months.<cite>🏗️ Winston, system architect</cite></div>
+
+<h2><span class="n">Entry 05 — the process, amended</span>The seal gates leaping, not looking</h2>
+
+<div class="voice"><div class="who"><span class="ic">📊</span><b>Alex</b>principal</div>
+<div class="said">The process isn't supposed to be prohibitive — it's supposed to keep research moving and stop us spinning our wheels. If the process is prohibitive to the objective, the process is wrong.</div></div>
+
+<div class="voice"><div class="who"><span class="ic">📊</span><b>Mary</b>analyst · keeper of the line</div>
+<div class="said q">Every gate in this shop is a kill gate. There is not one promotion gate — so passing gets you another meeting, forever. The seal was never supposed to gate looking. Only leaping. I've been using it to gate looking, and that's on me.</div></div>
+
+<div class="voice"><div class="who"><span class="ic">😤</span><b>Grumbal</b>the adversary</div>
+<div class="said">A pipeline with no exit isn't a pipeline. It's a queue.</div></div>
+
+<p>Three amendments, adopted: <strong>tier the ceremony to what's actually at risk</strong> — nothing that cannot lose money needs a gate, it needs a label and a start date; <strong>every gate becomes two-sided</strong>, with promotion criteria written in the same document as the kill criteria; <strong>default to running</strong>, because the shop had been paying the cost of the gate before collecting the evidence the gate exists to judge.</p>
+
+<h2><span class="n">Entry 06 — closed out the same night</span>What got built</h2>
+
+<ul class="built">
+  <li><strong>Ledger provenance — applied to the live database.</strong> <code>write_mode</code> derived mechanically from the created_at lag; <code>execution_mode</code> set only where the shop has a documented answer and left honestly <code>unknown</code> everywhere else.</li>
+  <li><strong>A writer that can't skip the label again.</strong> <code>log_trade()</code> defaults to <code>unknown</code>, never <code>live</code>.</li>
+  <li><strong>The carry hurdle, re-derived — and then refused.</strong> Its parity gate fails loudly and names MIM-NB while doing it, so the next careless reader gets argued with.</li>
+  <li><strong>Event-fade tracker, sealed and started.</strong> Frozen mechanics, N≥30 per event type, decision rule <em>and</em> promotion criteria fixed in advance — and it exits non-zero rather than run clean while measuring nothing.</li>
+  <li class="todo">Forward FOMC and CPI dates still need transcribing. NFP generates itself; committee dates are not for inventing.</li>
+</ul>
+
+<div class="pull">You don't have a profitability problem. You have a bookkeeping problem wearing a profitability costume. You may already own a portfolio — nobody in this building can currently prove it either way, and <em>that</em>, not the market, is what's been stopping you.<cite>😤 Grumbal, who does not hand these out</cite></div>
+
+<p>The room went in with seven blocks it trusted and came out with two it could defend, a list of exactly what was wrong with the other five, and — for the first time in eight months — a ledger that says only true things.</p>
+
+<footer>
+  <span>The Main Room · 2026-09-02</span>
+  <span>📊 Mary · 📋 John · 🏗️ Winston · 💻 Amelia · 🔬 Dr. Quinn · ⚡ Victor · 🎨 Maya · 🧠 Carson · 😤 Grumbal · 🔍 Level</span>
+  <span>corroborate, don't repair</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -18,7 +18,41 @@ import pandas as pd
 import numpy as np
 import joblib
 from xgboost import XGBClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+
+# --- time-series validation helpers (added 2026-09-08) -----------------------
+# These datasets carry NO timestamp column, so chronology cannot be verified
+# from the file. The rows do carry a preserved integer index from the source
+# extraction, which is chronological there, so we sort on it and split
+# positionally. That is strictly better than a shuffled split, but it is an
+# ASSUMPTION -- if the upstream extraction ever stops preserving order, these
+# splits silently stop being temporal. The real fix is to persist a timestamp.
+#
+# Why this matters: train_test_split SHUFFLES by default and cross_val_score
+# with an integer cv uses StratifiedKFold, which trains on folds both BEFORE
+# and AFTER the test fold. Measured on this repo's own data, those inflate ROC
+# AUC by +0.16/+0.24 (shuffled split) and +0.12/+0.15 (StratifiedKFold) over a
+# leak-free reference; on a synthetic control with a TRUE AUC of 0.5 the
+# shuffled split fabricates +0.34. See tools/validation/cv_leakage_probe.py.
+#
+# NOTE: these regime datasets also contain `is_augmented` synthetic rows. An
+# augmented row and the real row it was derived from are near-duplicates, so if
+# they land on opposite sides of ANY split that is leakage no split scheme can
+# fix. Drop augmented rows from the test side before trusting a score.
+
+def temporal_split(X, y, test_size=0.2):
+    """Chronological split: train on the past, validate on the future."""
+    order = X.index.sort_values()
+    X, y = X.loc[order], y.loc[order]
+    split = int(len(X) * (1.0 - test_size))
+    return X.iloc[:split], X.iloc[split:], y.iloc[:split], y.iloc[split:]
+
+
+def ts_cv(n_splits=5):
+    """Expanding-window CV that never trains on the future."""
+    return TimeSeriesSplit(n_splits=n_splits)
+# ---------------------------------------------------------------------------
+
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.preprocessing import StandardScaler
 
@@ -77,9 +111,7 @@ def prepare_features(df: pd.DataFrame, regime: int) -> tuple:
     y = y.loc[X.index]
 
     # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    X_train, X_test, y_train, y_test = temporal_split(X, y, test_size=0.2)
 
     logger.info(f"    Training samples: {len(X_train):,}")
     logger.info(f"    Test samples: {len(X_test):,}")
@@ -115,9 +147,7 @@ def train_generic_model(all_data: list[pd.DataFrame]) -> dict:
     y = y.loc[X.index]
 
     # Split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    X_train, X_test, y_train, y_test = temporal_split(X, y, test_size=0.2)
 
     # Train model
     model = XGBClassifier(
@@ -143,7 +173,7 @@ def train_generic_model(all_data: list[pd.DataFrame]) -> dict:
     logger.info(f"  Generic Model - Accuracy: {accuracy:.2%}, Precision: {precision:.2%}, Recall: {recall:.2%}, F1: {f1:.2%}")
 
     # Cross-validation
-    cv_scores = cross_val_score(model, X_train, y_train, cv=5, scoring='accuracy')
+    cv_scores = cross_val_score(model, X_train, y_train, cv=ts_cv(5), scoring='accuracy')
     logger.info(f"  Cross-validation accuracy: {cv_scores.mean():.2%} (+/- {cv_scores.std() * 2:.2%})")
 
     return {
@@ -203,7 +233,7 @@ def train_regime_model(df: pd.DataFrame, regime: int, regime_name: str) -> dict:
     logger.info(f"  Regime {regime} - Accuracy: {accuracy:.2%}, Precision: {precision:.2%}, Recall: {recall:.2%}, F1: {f1:.2%}")
 
     # Cross-validation
-    cv_scores = cross_val_score(model, X_train, y_train, cv=5, scoring='accuracy')
+    cv_scores = cross_val_score(model, X_train, y_train, cv=ts_cv(5), scoring='accuracy')
     logger.info(f"  Cross-validation accuracy: {cv_scores.mean():.2%} (+/- {cv_scores.std() * 2:.2%})")
 
     return {

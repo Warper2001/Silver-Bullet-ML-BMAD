@@ -232,7 +232,8 @@ class S26SoftFVGTrader:
             entry_price=round(t['entry'], 2),
             exit_price=round(exit_price, 2),
             exit_reason=reason,
-            ml_proba=round(t['proba'], 3)
+            ml_proba=round(t['proba'], 3),
+            execution_mode='paper',  # Kraken PF_XBTUSD, no order client wired
         )
         # Maintain legacy CSV for backward compatibility/redundancy
         write_header = not self.trade_log_path.exists()

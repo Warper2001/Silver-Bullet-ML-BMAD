@@ -735,6 +735,10 @@ class GapFadeTrader:
                 "contracts":   CONTRACTS,
                 "simulated":   True,
             },
+            # 'sim' in both modes: GAP_FADE_TS_SIM=0 simulates fills internally,
+            # =1 sends real orders to a TradeStation SIM account. Neither is
+            # real money -- GAP-1 has not been promoted to a funded account.
+            execution_mode = "sim",
         )
         # Hash-chained CSV
         self._trades_log.append({

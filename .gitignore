@@ -186,6 +186,13 @@ data/gap_fade/*
 !data/gap_fade/ledger_repair_20260812.csv
 data/combine_joint/*
 data/ts_sim_mirror/*
+# thursday_short.py's own ChainedCsv ledgers hit the exact same failure on 2026-08-27:
+# tracked, live-appended, and a real entry+exit (reason="shutdown", a mid-position
+# restart) vanished from decisions.csv/trades.csv while the broker fill stayed real.
+# Reconstructed from logs/thursday_short.log; see
+# _bmad-output/reconstruction_note_thursday_20260827.md. Untracked now for the same
+# reason mim_nb/gap_fade already are above — this bot was just missed at the time.
+data/thursday_ts/*
 
 # Same rule, newer research trackers. These ledgers are written by daily systemd
 # timers (yank-lrc-phase2, gap-velocity-prospective) and are DERIVED artifacts —

@@ -71,15 +71,33 @@ def train_premium_model(
     available_features = [f for f in feature_columns if f in df.columns]
     logger.info(f"Using {len(available_features)} features")
 
+    # Row order must BE time order -- the split below is positional.
+    if 'timestamp' in df.columns:
+        df = df.sort_values('timestamp').reset_index(drop=True)
+    else:
+        logger.warning("No 'timestamp' column; assuming the file is already in "
+                       "chronological order. If it is not, the temporal split "
+                       "below is meaningless.")
+
     X = df[available_features].fillna(0)
     y = df['label']
 
-    # Split data
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    # TEMPORAL 80/20 split. Was:
+    #   train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    # train_test_split SHUFFLES by default, so a random split of a time series
+    # puts each validation row's temporal near-twin into training. Measured on
+    # this repo's own data that inflates ROC AUC by +0.16 (logistic) to +0.24
+    # (random forest); on a synthetic control with a TRUE AUC of 0.5 it
+    # fabricates +0.34. See tools/validation/cv_leakage_probe.py.
+    split = int(len(X) * 0.8)
+    X_train, X_val = X.iloc[:split], X.iloc[split:]
+    y_train, y_val = y.iloc[:split], y.iloc[split:]
 
-    logger.info(f"Train: {len(X_train)}, Val: {len(X_val)}")
+    logger.info(f"Train: {len(X_train)}, Val: {len(X_val)} (temporal split)")
+    if y_train.nunique() < 2 or y_val.nunique() < 2:
+        logger.warning("A temporal split left one side single-class. This is "
+                       "real information about label drift -- do not 'fix' it "
+                       "by reintroducing a shuffled split.")
 
     # Calculate scale_pos_weight for imbalanced data
     scale_pos_weight = (len(y_train) - y_train.sum()) / y_train.sum()

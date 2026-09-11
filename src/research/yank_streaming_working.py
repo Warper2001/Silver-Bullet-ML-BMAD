@@ -34,6 +34,7 @@ from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
 from src.research.projectx_bars import fetch_px_ts_shaped, ProjectXBarFetchError, _to_contract_id
 from src.research.shadow_parity import ShadowParityLogger, bars_by_minute
+from src.research.decision_log import append_decision, REASONS as DECISION_REASONS
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
     Direction,
@@ -129,6 +130,12 @@ BAR_INTERVAL = "1"
 BAR_UNIT = "Minute"
 HISTORY_HOURS = 48  # Enough history for H1 swing detection
 POLL_INTERVAL_SECONDS = 60
+
+# Identifies this bot's rows in the SHARED logs/tier2_bar_decisions.csv, which
+# tier2_streaming_working.py and btc_combine_streaming.py also append to. Before this
+# existed the three bots' rows were indistinguishable, so the file could not answer
+# "what did YANK do?" at all.
+DECISION_LOG_TRADER_ID = "trader-yank"
 
 # TradeStation SIM order placement
 SIM_ACCOUNT_ID = "SIM2797251F"
@@ -1888,6 +1895,12 @@ class Tier2StreamingTrader:
                     exit_reason=_exit_reason_str,
                     ml_proba=None if np.isnan(t.ml_proba) else round(float(t.ml_proba), 4),
                     metadata={'contracts': self._contracts, 'bars_held': t.bars_held, 'gap_size': t.gap_size},
+                    # Real money: orders go to the Topstep combine via ProjectX when
+                    # PROJECTX_ACCOUNT_ID is set (the TS SIM traffic in this bot's log
+                    # is the parity mirror, not the execution venue). write_mode is
+                    # left at its 'realtime' default -- this whole block is already
+                    # guarded by `if not self._is_backfill`, so replay never reaches it.
+                    execution_mode='live' if self._on_combine else 'sim',
                 )
             except Exception as e:
                 logger.warning("trades.db log failed (trade still in tier2_trade_log.csv): %s", e)
@@ -1968,76 +1981,91 @@ class Tier2StreamingTrader:
     def _log_filter_decision(
         self,
         bar_timestamp: datetime,
-        h1_sweep_active: bool,
-        kill_zone_active: bool,
-        vol_regime_blocked: bool,
-        m15_confirmed: bool,
-        fvg_detected: bool,
         action: str,
+        rejection_reason: str = "",
+        *,
+        h1_sweep_active: Optional[bool] = None,
+        m15_confirmed: Optional[bool] = None,
+        vol_regime_blocked: bool = False,
+        fvg_detected: bool = False,
     ) -> None:
-        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
-        # Do NOT log during the startup backfill: those bars are historical and were
-        # re-logged on every restart, ballooning the file (9.2M rows / 631MB observed).
-        # Only live (steady-state) bars should produce a decision trail.
-        if self._is_backfill:
-            return  # backfill bars are historical — see comment above
-        try:
-            log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            write_header = not log_path.exists()
-            with log_path.open("a", newline="") as f:
-                w = _csv_mod.DictWriter(f, fieldnames=[
-                    "bar_timestamp", "h1_sweep_active", "kill_zone_active",
-                    "vol_regime_blocked", "m15_confirmed", "fvg_detected", "action",
-                ])
-                if write_header:
-                    w.writeheader()
-                w.writerow({
-                    "bar_timestamp": bar_timestamp.isoformat(),
-                    "h1_sweep_active": h1_sweep_active,
-                    "kill_zone_active": kill_zone_active,
-                    "vol_regime_blocked": vol_regime_blocked,
-                    "m15_confirmed": m15_confirmed,
-                    "fvg_detected": fvg_detected,
-                    "action": action,
-                })
-        except Exception as e:
-            logger.warning("Filter decision log write failed: %s", e)
+        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4).
+
+        Delegates to src/research/decision_log.py — three bots append to that one file
+        and each used to carry its own copy of this writer. The copies drifted: only this
+        one had the backfill guard, so the other two re-logged historical bars on every
+        restart until the file reached 1.66 GB. One writer now, so a fix cannot land on
+        one copy and miss two.
+
+        `rejection_reason` is the field that was missing: `action="SKIP"` alone collapsed
+        every gate in the chain into one indistinguishable value, which is why diagnosing
+        the August-September 2026 silence needed a 275 MB text log instead of this CSV.
+        Sweep/CHoCH default to live state so callers only name what differs.
+        """
+        append_decision(
+            trader_id=DECISION_LOG_TRADER_ID,
+            bar_timestamp=bar_timestamp,
+            action=action,
+            rejection_reason=rejection_reason,
+            h1_sweep_active=(self.h1_bearish_sweep_active
+                             if h1_sweep_active is None else h1_sweep_active),
+            # Was hardcoded False at every call site, so the column read False at 10:00
+            # ET as readily as at 03:00 and told you nothing. This is the real value.
+            kill_zone_active=kill_zone_filter(bar_timestamp, self._strategy_config),
+            vol_regime_blocked=vol_regime_blocked,
+            vol_regime_pct=self._last_vol_regime_pct,
+            m15_confirmed=(self._m15_choch_active
+                           if m15_confirmed is None else m15_confirmed),
+            fvg_detected=fvg_detected,
+            is_backfill=self._is_backfill,
+        )
 
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
-        if self._data_stale:
-            return
+        # Every gate below now records WHY it rejected. Six of them used to return in
+        # silence — leaving no trace in either the CSV or the text log — so a bar that
+        # was blocked by the Tuesday filter looked identical to one the market simply
+        # never offered a setup on. See decision_log.REASONS for the code vocabulary.
         bar_et = bar.timestamp.astimezone(ET_TZ)
+        if self._data_stale:
+            self._log_filter_decision(bar_et, "SKIP", "data_stale")
+            return
         if self.active_trade:
-            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
-                                      self._m15_choch_active, False, "HOLD")
+            self._log_filter_decision(bar_et, "HOLD", "in_trade")
             return
         bars = self.dollar_bars
-        if len(bars) < 20: return  # need 20 bars for ATR and volume features
+        if len(bars) < 20:  # need 20 bars for ATR and volume features
+            self._log_filter_decision(bar_et, "SKIP", "warmup")
+            return
 
         # Topstep combine: no new entries 15:08-17:00 CT (positions auto-flatten at 15:10 CT)
         bar_ct = bar.timestamp.astimezone(CT_TZ)
         ct_min = bar_ct.hour * 60 + bar_ct.minute
         if TOPSTEP_BLOCK_LO <= ct_min < TOPSTEP_BLOCK_HI:
+            self._log_filter_decision(bar_et, "SKIP", "flatten_window")
             return
 
         # Tuesday filter: consistently PF<1.0 across all 5 months of backtest data
         if bar_et.weekday() == 1:  # 1 = Tuesday
+            self._log_filter_decision(bar_et, "SKIP", "tuesday")
             return
 
         # Daily circuit breaker: halt if daily loss limit reached
         if self._risk_manager.check_and_update(bar_et, self._strategy_config.max_daily_loss,
                                                is_backfill=is_backfill):
+            # The breaker logs a WARNING only on the bar it TRIPS; every subsequent
+            # blocked bar that day was silent, so a halted session was indistinguishable
+            # from a quiet one after the fact.
+            self._log_filter_decision(bar_et, "SKIP", "daily_breaker")
             return
 
         # Seasonality gate: skip months with statistically zero edge (default: none blocked)
         if bar_et.month in BLOCKED_MONTHS:
+            self._log_filter_decision(bar_et, "SKIP", "seasonality")
             return
 
         # Volatility regime gate: skip all signals when H1 ATR in top quartile of recent history
         if self._vol_regime_high:
-            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, True,
-                                      self._m15_choch_active, False, "SKIP")
+            self._log_filter_decision(bar_et, "SKIP", "vol_regime", vol_regime_blocked=True)
             return
 
         # FVG detection via strategy_core (replaces self._detect_fvg)
@@ -2053,17 +2081,27 @@ class Tier2StreamingTrader:
                 fvg_signal = None
             if fvg_signal and fvg_signal.direction == Direction.BULLISH:
                 fvg_dict = {"direction": "bullish", "top": fvg_signal.high, "bottom": fvg_signal.low}
+                # Unreachable while bearish_only=True (the branch condition above), but
+                # instrumented to the same standard as the bearish path so that IF the
+                # bullish leg is ever re-enabled under a new pre-registration it arrives
+                # already observable, rather than repeating this whole exercise.
                 if not self.lr_filter.allows(bars, "bullish"):
+                    self._log_filter_decision(bar_et, "SKIP", "lr_regime",
+                                              h1_sweep_active=True, fvg_detected=True)
                     return
                 features = self._extract_features(bars, bar, fvg_dict, "bullish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
+                    self._log_filter_decision(bar_et, "ENTER", "entered",
+                                              h1_sweep_active=True, fvg_detected=True)
                     await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill, ml_proba=proba)
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
+                    self._log_filter_decision(bar_et, "SKIP", "ml_threshold",
+                                              h1_sweep_active=True, fvg_detected=True)
 
         if self.h1_bearish_sweep_active and self._m15_choch_active:  # S25: M15 CHoCH required
             try:
@@ -2127,26 +2165,42 @@ class Tier2StreamingTrader:
             if _fvg_hit:
                 fvg_dict = {"direction": "bearish", "top": fvg_signal.high, "bottom": fvg_signal.low}  # type: ignore[union-attr]
                 if not self.lr_filter.allows(bars, "bearish"):
-                    self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
+                    # The gate that actually stopped both candidates of 2026-09-10.
+                    # Its rejection was INFO-only in a 275MB text log and reached no CSV,
+                    # so a funnel built from this file showed "2 FVGs, 0 entries" with no
+                    # explanation. Now it names itself.
+                    self._log_filter_decision(bar_et, "SKIP", "lr_regime",
+                                              h1_sweep_active=True, m15_confirmed=True,
+                                              fvg_detected=True)
                     return
                 features = self._extract_features(bars, bar, fvg_dict, "bearish")
                 proba = self.ml_filter.predict_proba(features)
                 if proba >= self.ml_filter.threshold:
                     logger.info(f"Signal ALLOWED by ML threshold | P(Success)={proba:.3f}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "ALLOWED")
-                    self._log_filter_decision(bar_et, True, False, False, True, True, "ENTER")
+                    self._log_filter_decision(bar_et, "ENTER", "entered",
+                                              h1_sweep_active=True, m15_confirmed=True,
+                                              fvg_detected=True)
                     await self._enter_trade(fvg_signal, bar, len(bars) - 1, is_backfill, ml_proba=proba)  # type: ignore[arg-type]
                 else:
                     logger.info(f"Signal FILTERED by ML threshold | P(Success)={proba:.3f} < {self.ml_filter.threshold}")
                     self.ml_filter._log_decision(bar.timestamp, proba, "FILTERED")
-                    self._log_filter_decision(bar_et, True, False, False, True, True, "SKIP")
+                    self._log_filter_decision(bar_et, "SKIP", "ml_threshold",
+                                              h1_sweep_active=True, m15_confirmed=True,
+                                              fvg_detected=True)
             else:
-                self._log_filter_decision(bar_et, True, False, False, True, False, "SKIP")
+                # Distinguish "an FVG existed but was unusable" from "no FVG at all" —
+                # these were the same SKIP row before, and telling them apart is the
+                # whole difference between a broken bot and a quiet market.
+                _reason = "fvg_wrong_direction" if fvg_signal is not None else "no_fvg"
+                self._log_filter_decision(bar_et, "SKIP", _reason,
+                                          h1_sweep_active=True, m15_confirmed=True,
+                                          fvg_detected=fvg_signal is not None)
         else:
             # No bearish sweep / M15 CHoCH this bar — log the live no-setup decision so
-            # the steady-state trail isn't silent on the dominant case.
-            self._log_filter_decision(bar_et, self.h1_bearish_sweep_active, False, False,
-                                      self._m15_choch_active, False, "SKIP")
+            # the steady-state trail isn't silent on the dominant case. The boolean
+            # columns still separate "no sweep" from "sweep but no CHoCH".
+            self._log_filter_decision(bar_et, "SKIP", "no_sweep_or_choch")
 
     def _extract_features(self, bars: list, bar: DollarBar, fvg: dict, direction: str) -> dict:
         """Extract inference features matching the training data schema (raw index points)."""

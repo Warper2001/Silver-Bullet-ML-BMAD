@@ -914,7 +914,8 @@ class MimNbLive:
             entry_price=self.entry_px,
             exit_price=exit_px,
             exit_reason=reason,
-            metadata={'pnl_pts': pnl_pts}
+            metadata={'pnl_pts': pnl_pts},
+            execution_mode='live',  # Topstep combine, real money (MNQ 1ct)
         )
 
         self.day_pnl += pnl_usd

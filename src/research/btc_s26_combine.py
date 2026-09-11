@@ -408,7 +408,13 @@ class S26CombineTrader:
                 exit_price=round(exit_price, 2),
                 exit_reason=exit_reason,
                 ml_proba=round(t['proba'], 3),
-                metadata={'contracts': self.contracts, 'paper': True, 'sl': t['sl'], 'tp': t['tp']}
+                metadata={'contracts': self.contracts, 'paper': True, 'sl': t['sl'], 'tp': t['tp']},
+                # NOT 'live', despite the trader name -- this bot has nothing to do
+                # with the Topstep combine. Default is internal paper simulation;
+                # S26_COMBINE_PLACE_ORDERS=1 sends orders to a TradeStation *SIM*
+                # account, which is still not real money. Mislabelling this 'live'
+                # is what put a +$2,500 paper result in the ledger as a track record.
+                execution_mode='sim' if PLACE_ORDERS else 'paper',
             )
             self.active_trade = None
 
@@ -470,18 +476,18 @@ class S26CombineTrader:
                 logger.warning(f"⚠️ SIM bracket order failed HTTP {response.status_code}: {response.text[:200]}")
             else:
                 data = response.json()
+                # Deliberately NOT written to trades.db (removed 2026-09-11). An
+                # order submission is an event, not a trade: this call inserted a
+                # pnl=0.0 / exit_reason="PENDING" row that was never updated on
+                # fill, so it stayed a permanent zero-P&L row. Together with 13
+                # legacy exit_reason="PAPER" rows that made 25 of this trader's 81
+                # ledger rows non-trades -- deflating its win rate (29.6% reported
+                # vs 42.9% over the 56 real closures) and inflating N by 45%.
+                # Net (+$2,500) and PF (1.996) are unaffected: the rows are pnl=0.
+                # The submission is fully recorded in this log; the trades table
+                # holds closed trades only, which is what _manage_active_paper_trade
+                # writes.
                 logger.info(f"✅ COMBINE ORDER SUBMITTED: {data}")
-                # Log to DB
-                self.db.log_trade(
-                    trader_id='trader-s26-combine',
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                    pnl=0.0, # Will be updated upon exit/fill
-                    direction=direction,
-                    entry_price=entry,
-                    exit_price=0.0,
-                    exit_reason="PENDING",
-                    metadata={'contracts': self.contracts, 'order_data': str(data)}
-                )
         except Exception as e:
             logger.error(f"Submit error: {e}")
 

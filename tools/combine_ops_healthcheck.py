@@ -75,6 +75,15 @@ SERVICES = {
     # anything tighter cries wolf every evening.
     # FLIP TO CRITICAL when it moves to a funded account (buildspec §6).
     "trader-gap-fade":       (False, "gap_fade_live.log",           420, None, None),
+    # Added 2026-09-11, for the same reason gap-fade was added a month earlier —
+    # it was the only bot left out of this dict. It crashed 2026-07-27 23:21:42 on
+    # a shared-.env write race and stayed dead 24 days with nothing alerting,
+    # silently voiding FOUR Thursdays (07-30, 08-06, 08-13, 08-20) of a
+    # pre-registered prospective accrual. Its own in-loop "no entry attempted"
+    # alarm cannot fire when the process itself is down; only this check can.
+    # Threshold 420s: it logs a "Waiting [...]" line every 300s poll while flat.
+    # Runs 24/7 (it idles all week waiting for Thursday 00:00 UTC), so no window.
+    "trader-thursday-short": (False, "thursday_short.log",          420, None, None),
     # SIL capture only runs 09:25-16:00 ET Mon-Fri (capture_sil_quotes.py); idle otherwise.
     # Its log only prints a heartbeat every 1200 rows (~53 min), so check the CSV it flushes
     # every 5s poll instead — kills false flapping AND catches a real 401-loop stall in minutes.
@@ -220,6 +229,24 @@ def structural_silence(relpath: str = SILENCE_LOG):
     if not p.exists():
         return None
     try:
+        # Read the HEADER from the start of the file and resolve columns by name.
+        # This used to index positionally (row[1], row[4], row[5]); the 2026-09-11
+        # schema inserted trader_id/vol_regime_pct and shifted every one of them, so
+        # positional parsing would have silently read the wrong columns and reported a
+        # confident, wrong answer — worse than failing.
+        with p.open("r", newline="") as fh:
+            header = next(csv.reader(fh), None)
+        if not header:
+            return None
+        try:
+            i_ts = header.index("bar_timestamp")
+            i_h1 = header.index("h1_sweep_active")
+            i_m15 = header.index("m15_confirmed")
+            i_fvg = header.index("fvg_detected")
+        except ValueError:
+            return None  # unknown schema — say nothing rather than guess
+        i_tid = header.index("trader_id") if "trader_id" in header else None
+
         with p.open("rb") as fh:
             fh.seek(0, 2)
             start = max(0, fh.tell() - SILENCE_TAIL_BYTES)
@@ -234,13 +261,17 @@ def structural_silence(relpath: str = SILENCE_LOG):
     cutoff = datetime.now(ET) - timedelta(days=SILENCE_WINDOW_DAYS)
     confirmed = fvg = sweep = 0
     seen = False
-    # bar_timestamp,h1_sweep_active,kill_zone_active,vol_regime_blocked,m15_confirmed,
-    # fvg_detected,action
+    need = max(i_ts, i_h1, i_m15, i_fvg) + 1
     for row in csv.reader(tail):
-        if len(row) < 6:
+        if len(row) < need:
+            continue
+        # Three bots share this file. Before trader_id existed, their rows were counted
+        # together and attributed to YANK — so this check could be answered by another
+        # bot's activity entirely.
+        if i_tid is not None and len(row) > i_tid and row[i_tid] != SILENCE_SVC:
             continue
         try:
-            ts = datetime.fromisoformat(row[0])
+            ts = datetime.fromisoformat(row[i_ts])
         except ValueError:
             continue
         if ts.tzinfo is None:
@@ -248,7 +279,7 @@ def structural_silence(relpath: str = SILENCE_LOG):
         if ts < cutoff:
             continue
         seen = True
-        h1, m15, has_fvg = _csv_bool(row[1]), _csv_bool(row[4]), _csv_bool(row[5])
+        h1, m15, has_fvg = _csv_bool(row[i_h1]), _csv_bool(row[i_m15]), _csv_bool(row[i_fvg])
         if h1:
             sweep += 1
         if h1 and m15:

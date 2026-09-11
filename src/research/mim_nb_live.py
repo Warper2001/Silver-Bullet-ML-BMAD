@@ -24,7 +24,7 @@ import logging
 import os
 import signal
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -57,6 +57,12 @@ ET = pytz.timezone("America/New_York")
 # Combine account math (Topstep 50K EOD trailing drawdown)
 COMBINE_START_BALANCE = 50_000.0
 MLL_DD = 2_000.0  # Topstep 50K maximum loss limit (trailing, EOD)
+# First day of the CURRENT combine account (acct 26556101, opened 2026-08-13). Used ONLY
+# when floor_state.json cannot be read -- see _combine_epoch_start(). A reset starts a
+# fresh account at COMBINE_START_BALANCE, so replaying a retired account's trades into
+# this one's balance/high-water mark is wrong in an unbounded direction.
+# ⚠️ UPDATE THIS ON EVERY COMBINE RESET.
+COMBINE_EPOCH_START_FALLBACK = date(2026, 8, 13)
 
 BASE_DIR = Path(__file__).parent.parent.parent
 DATA_DIR = BASE_DIR / "data" / "mim_nb"
@@ -232,22 +238,76 @@ class MimNbLive:
     # ------------------------------------------------------------------
     # Combine buffer tracking (risk gate support)
     # ------------------------------------------------------------------
+    def _combine_epoch_start(self) -> date:
+        """First day of the CURRENT combine account.
+
+        A Topstep reset starts a brand-new account at COMBINE_START_BALANCE with a fresh
+        trailing floor, so trades from a retired account must not be replayed into this
+        one's balance or high-water mark. Prefers the floor monitor's authoritative
+        `combine_start`; falls back to the documented constant when that file is missing
+        or malformed -- which is precisely when this whole code path is in use, so it
+        must NOT degrade to "replay everything" there.
+
+        UPDATE COMBINE_EPOCH_START_FALLBACK whenever the combine is reset.
+        """
+        try:
+            st = json.loads(FLOOR_STATE_FILE.read_text())
+            return datetime.fromisoformat(st["combine_start"]).date()
+        except Exception as exc:
+            logger.warning("combine epoch unresolved from %s (%s) -- using the documented "
+                           "fallback %s", FLOOR_STATE_FILE.name, exc,
+                           COMBINE_EPOCH_START_FALLBACK)
+            return COMBINE_EPOCH_START_FALLBACK
+
     def _init_combine_balance(self):
-        """Replay trades.csv to compute cumulative realized P&L and EOD MLL floor.
-        Called once at startup so the buffer gate has accurate state from day one."""
+        """Replay THIS combine's trades to compute realized P&L and the EOD MLL floor.
+        Called once at startup so the buffer gate has accurate state from day one.
+
+        Scoped to the current combine epoch (fixed 2026-09-11). It previously replayed
+        the whole of trades.csv from COMBINE_START_BALANCE, and that file spans account
+        resets: it was carrying 17 trades worth +$681.00 from the account retired on
+        2026-08-13, reporting balance $50,347.50 / hwm $50,787.50 against a true
+        $50,000.08 / $50,298.96.
+
+        Nothing gated on it -- floor gating was removed 2026-07-29 and the DLL guard is
+        static -- and the runtime path prefers the shared floor state, so this was a
+        reporting error rather than a live risk error. But this own-ledger path IS used
+        whenever the floor monitor goes stale (28 times on 2026-07-29/30), and the
+        contamination was not conservative by construction: it happened to understate the
+        buffer only because the retired account ended profitable, which lifted the
+        high-water mark. A loss-making retired epoch could have made it read optimistic.
+
+        Deliberately still MIM-ONLY: YANK's trades are excluded, so this remains a
+        conservative under-estimate of the real combined buffer (post-reset MIM-only
+        buffer $1,637.00 vs the true combined $1,701.12). The shared floor state stays
+        authoritative whenever it is fresh.
+        """
         path = DATA_DIR / "trades.csv"
         if not path.exists():
             return
         try:
+            epoch = self._combine_epoch_start()
             running = COMBINE_START_BALANCE
             hwm = COMBINE_START_BALANCE
+            n_used = n_skipped = 0
             with open(path) as f:
                 for row in csv.DictReader(f):
+                    try:
+                        day = date.fromisoformat(row["day"])
+                    except (KeyError, ValueError):
+                        n_skipped += 1
+                        continue
+                    if day < epoch:
+                        n_skipped += 1
+                        continue
                     pnl = float(row.get("pnl_usd", "0").replace("+", ""))
                     running += pnl
                     hwm = max(hwm, running)
+                    n_used += 1
             self._realized_pnl = running - COMBINE_START_BALANCE
             self._mll_eod_hwm = hwm
+            logger.info("COMBINE EPOCH: start=%s -- replayed %d trade(s), skipped %d from "
+                        "earlier account(s)", epoch, n_used, n_skipped)
             mll_floor = hwm - MLL_DD
             buf = running - mll_floor
             cat_cost = CAT_STOP_PTS * PT_VAL * CONTRACTS

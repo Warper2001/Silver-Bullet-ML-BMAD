@@ -58,7 +58,16 @@ EXECUTION_MODE = {
     "trader-gap-fade": "sim",
     # Live Topstep combine account.
     "trader-mim-nb": "live",
-    "trader-s26-combine": "live",
+    # CORRECTED 2026-09-11: was 'live'. It is not. Despite the name, this bot has
+    # nothing to do with the Topstep combine -- it trades MBT (BTC futures) on
+    # paper. src/research/btc_s26_combine.py stamps metadata['paper'] = True on
+    # every closed-trade row, and only sends broker orders when the env var
+    # S26_COMBINE_PLACE_ORDERS=1, which is unset (its systemd unit even describes
+    # it as "S26 Combine Bot MBTM26 Paper Trader"). The original 'live' came from
+    # the name alone; the same unit-file check already applied to trader-btc-carry
+    # four lines up would have caught it. Its +$2,500 was the largest figure in
+    # the ledger and read as a live track record for nine days.
+    "trader-s26-combine": "paper",
     # trader-yank / trader-s26 / trader-s27 deliberately omitted: their rows span
     # both replayed history and live trading, so the venue is per-row, not
     # per-trader. write_mode separates those; execution_mode stays 'unknown'

@@ -330,7 +330,11 @@ class S27SqueezeTrader:
             exit_price=round(exit_price, 2),
             exit_reason=reason,
             ml_proba=round(t['proba'], 3),
-            metadata={'contracts': self.contracts}
+            metadata={'contracts': self.contracts},
+            # Tracks the actual venue: --live routes to Kraken Futures, otherwise
+            # the demo/paper path. Currently run without --live (see the systemd
+            # unit, "S27 Squeeze BTC Paper Trader").
+            execution_mode='live' if self.live else 'paper',
         )
         # Maintain legacy CSV for backward compatibility/redundancy
         write_header = not self.trade_log_path.exists()

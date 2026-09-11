@@ -513,7 +513,15 @@ async def main() -> None:
     try:
         await trader.run()
     except Exception as exc:
+        # Re-raise after logging. Swallowing here returns normally, so the process
+        # exits 0 and systemd's Restart=on-failure reads it as a clean shutdown.
+        # That is exactly how the 2026-07-27 credential crash (a shared-.env write
+        # race wiped TRADESTATION_CLIENT_ID/SECRET) left this bot dead for 24 days,
+        # silently voiding four Thursdays of a pre-registered prospective accrual.
+        # A clean SIGTERM stop still exits 0: trader.stop() ends _run() without
+        # raising, so only genuine faults reach this path.
         logger.error(f"Fatal: {exc}", exc_info=True)
+        raise
     finally:
         trader.stop()
 

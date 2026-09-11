@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
+from src.research.decision_log import append_decision
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
     Direction,
@@ -122,6 +123,11 @@ class TradeRecord:
 
 # TradeStation market data API
 BAR_INTERVAL = "1"
+# Identifies this bot's rows in the SHARED logs/tier2_bar_decisions.csv (yank and
+# tier2_streaming append to the same file). Added 2026-09-11 — before it, rows from
+# the three bots were indistinguishable and the file could not be attributed at all.
+DECISION_LOG_TRADER_ID = "trader-btc-combine"
+
 BAR_UNIT = "Minute"
 HISTORY_HOURS = 48  # Enough history for H1 swing detection
 POLL_INTERVAL_SECONDS = 60
@@ -1379,40 +1385,32 @@ class Tier2StreamingTrader:
         fvg_detected: bool,
         action: str,
     ) -> None:
-        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
-        # Do NOT log during the startup backfill: those bars are historical and were
-        # re-logged on every restart, ballooning the file (9.2M rows / 631MB observed).
-        # Only live (steady-state) bars should produce a decision trail.
-        #
-        # This guard existed only in yank_streaming_working.py. All THREE traders
-        # append to the same shared logs/tier2_bar_decisions.csv, so the two
-        # unguarded copies kept re-logging their backfill into it: the file reached
-        # 24,065,642 rows / 1.66 GB by 2026-09-10, with 2025-dated bars still
-        # arriving in recent appends. Guard added here 2026-09-10 to match YANK.
-        if self._is_backfill:
-            return  # backfill bars are historical — see comment above
-        try:
-            log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            write_header = not log_path.exists()
-            with log_path.open("a", newline="") as f:
-                w = _csv_mod.DictWriter(f, fieldnames=[
-                    "bar_timestamp", "h1_sweep_active", "kill_zone_active",
-                    "vol_regime_blocked", "m15_confirmed", "fvg_detected", "action",
-                ])
-                if write_header:
-                    w.writeheader()
-                w.writerow({
-                    "bar_timestamp": bar_timestamp.isoformat(),
-                    "h1_sweep_active": h1_sweep_active,
-                    "kill_zone_active": kill_zone_active,
-                    "vol_regime_blocked": vol_regime_blocked,
-                    "m15_confirmed": m15_confirmed,
-                    "fvg_detected": fvg_detected,
-                    "action": action,
-                })
-        except Exception as e:
-            logger.warning("Filter decision log write failed: %s", e)
+        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4).
+
+        Delegates to src/research/decision_log.py (2026-09-11). All THREE traders append
+        to that one shared file and each carried its own copy of this writer; the copies
+        drifted, and the backfill guard that existed only in YANK is why the file reached
+        24,065,642 rows / 1.66 GB by 2026-09-10. The guard now lives in the shared module
+        so it cannot be present in one copy and missing from two.
+
+        Signature unchanged, so the call sites below need no edit. This bot's `action` is
+        a bare SKIP/ENTER/HOLD with no reason encoded, so `rejection_reason` stays coarse
+        here — it is not a running service, and the boolean columns still separate the
+        cases. YANK, which IS live, writes the full reason vocabulary.
+        """
+        append_decision(
+            trader_id=DECISION_LOG_TRADER_ID,
+            bar_timestamp=bar_timestamp,
+            action=action,
+            rejection_reason={"ENTER": "entered", "HOLD": "in_trade"}.get(action, ""),
+            h1_sweep_active=h1_sweep_active,
+            kill_zone_active=kill_zone_active,
+            vol_regime_blocked=vol_regime_blocked,
+            vol_regime_pct=getattr(self, "_last_vol_regime_pct", None),
+            m15_confirmed=m15_confirmed,
+            fvg_detected=fvg_detected,
+            is_backfill=self._is_backfill,
+        )
 
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self._data_stale:

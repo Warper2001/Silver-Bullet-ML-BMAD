@@ -34,6 +34,7 @@ from src.monitoring.trade_db import TradeDatabase
 
 from src.data.auth_v3 import TradeStationAuthV3
 from src.data.models import DollarBar
+from src.research.decision_log import append_decision
 import src.research.strategy_core as strategy_core
 from src.research.strategy_core import (
     Direction,
@@ -160,6 +161,26 @@ BAR_INTERVAL = "1"
 BAR_UNIT = "Minute"
 HISTORY_HOURS = 48  # Enough history for H1 swing detection
 POLL_INTERVAL_SECONDS = 60
+
+# Identifies this bot's rows in the SHARED logs/tier2_bar_decisions.csv (yank and
+# btc_combine append to the same file). Added 2026-09-11 — before it, rows from the
+# three bots were indistinguishable and the file could not be attributed at all.
+DECISION_LOG_TRADER_ID = "trader-tier2"
+# This bot already encoded its reason in the action string ("SKIP:NO_FVG"). Map those
+# suffixes onto the shared vocabulary in decision_log.REASONS so a funnel report can
+# group all three bots' rows together.
+_DECISION_REASON_MAP = {
+    "": "",
+    "CIRCUIT_BREAKER": "daily_breaker",
+    "LR_REGIME": "lr_regime",
+    "ML_FILTER": "ml_threshold",
+    "NO_CHOCH": "no_sweep_or_choch",
+    "NO_SWEEP": "no_sweep_or_choch",
+    "NO_FVG": "no_fvg",
+    "SEASONAL": "seasonality",
+    "TUESDAY": "tuesday",
+    "VOL_REGIME": "vol_regime",
+}
 
 # TradeStation SIM order placement
 SIM_ACCOUNT_ID = "SIM2797251F"
@@ -1776,40 +1797,35 @@ class Tier2StreamingTrader:
         fvg_detected: bool,
         action: str,
     ) -> None:
-        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4)."""
-        # Do NOT log during the startup backfill: those bars are historical and were
-        # re-logged on every restart, ballooning the file (9.2M rows / 631MB observed).
-        # Only live (steady-state) bars should produce a decision trail.
-        #
-        # This guard existed only in yank_streaming_working.py. All THREE traders
-        # append to the same shared logs/tier2_bar_decisions.csv, so the two
-        # unguarded copies kept re-logging their backfill into it: the file reached
-        # 24,065,642 rows / 1.66 GB by 2026-09-10, with 2025-dated bars still
-        # arriving in recent appends. Guard added here 2026-09-10 to match YANK.
-        if self._is_backfill:
-            return  # backfill bars are historical — see comment above
-        try:
-            log_path = Path(__file__).parent.parent.parent / "logs" / "tier2_bar_decisions.csv"
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            write_header = not log_path.exists()
-            with log_path.open("a", newline="") as f:
-                w = _csv_mod.DictWriter(f, fieldnames=[
-                    "bar_timestamp", "h1_sweep_active", "kill_zone_active",
-                    "vol_regime_blocked", "m15_confirmed", "fvg_detected", "action",
-                ])
-                if write_header:
-                    w.writeheader()
-                w.writerow({
-                    "bar_timestamp": bar_timestamp.isoformat(),
-                    "h1_sweep_active": h1_sweep_active,
-                    "kill_zone_active": kill_zone_active,
-                    "vol_regime_blocked": vol_regime_blocked,
-                    "m15_confirmed": m15_confirmed,
-                    "fvg_detected": fvg_detected,
-                    "action": action,
-                })
-        except Exception as e:
-            logger.warning("Filter decision log write failed: %s", e)
+        """Append one per-bar filter decision row to logs/tier2_bar_decisions.csv (FR35, AC#4).
+
+        Delegates to src/research/decision_log.py (2026-09-11). All THREE traders append
+        to that one shared file and each carried its own copy of this writer; the copies
+        drifted, and the backfill guard that existed only in YANK is why the file reached
+        24,065,642 rows / 1.66 GB by 2026-09-10. The guard now lives in the shared module
+        so it cannot be present in one copy and missing from two.
+
+        The signature is unchanged so the call sites below need no edit. This bot already
+        encoded its reason in `action` as "SKIP:LR_REGIME" etc.; that suffix is split off
+        into the new `rejection_reason` column and normalised to the shared vocabulary.
+        """
+        _action, _, _suffix = action.partition(":")
+        _reason = _DECISION_REASON_MAP.get(_suffix, _suffix.lower())
+        if not _reason:  # bare "ENTER"/"HOLD" carry no suffix
+            _reason = {"ENTER": "entered", "HOLD": "in_trade"}.get(_action, "")
+        append_decision(
+            trader_id=DECISION_LOG_TRADER_ID,
+            bar_timestamp=bar_timestamp,
+            action=_action,
+            rejection_reason=_reason,
+            h1_sweep_active=h1_sweep_active,
+            kill_zone_active=kill_zone_active,
+            vol_regime_blocked=vol_regime_blocked,
+            vol_regime_pct=getattr(self, "_last_vol_regime_pct", None),
+            m15_confirmed=m15_confirmed,
+            fvg_detected=fvg_detected,
+            is_backfill=self._is_backfill,
+        )
 
     async def _detect_and_enter(self, bar: DollarBar, is_backfill: bool):
         if self._data_stale:

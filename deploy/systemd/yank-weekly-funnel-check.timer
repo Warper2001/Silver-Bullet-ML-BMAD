@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the YANK weekly funnel checkpoint Friday 2026-09-18 at 21:15 UTC (~16:15 CT / 17:15 ET), after the RTH close, one week after the 2026-09-11 baseline
+
+[Timer]
+OnCalendar=2026-09-18 21:15:00 UTC
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

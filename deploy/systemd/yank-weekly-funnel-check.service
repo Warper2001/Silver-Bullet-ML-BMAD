@@ -1,0 +1,10 @@
+[Unit]
+Description=YANK weekly funnel checkpoint — 7-day gate breakdown + shadow-ledger sealing status (report only, never trades)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/tools/yank_weekly_funnel_check.sh
+TimeoutStartSec=300

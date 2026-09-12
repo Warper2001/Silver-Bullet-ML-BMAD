@@ -23,6 +23,7 @@ Exit code is always 0 — this never signals failure to systemd; the report is t
 """
 from __future__ import annotations
 
+import re
 import sqlite3
 import subprocess
 import sys
@@ -144,6 +145,49 @@ def section_shadow_ledger() -> tuple[str, int, float, float]:
     return "\n".join(out), n, pnl_total, pf
 
 
+_LOG_RECORD_RE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2},\d+\s*\|\s*(\w+)\s*\|"
+)
+
+
+def _count_error_records(log_path: Path, since_date: str) -> int:
+    """Count ERROR/CRITICAL log RECORDS whose OWN timestamp falls in-window.
+
+    Must not simply grep the raw file for 'traceback'/'exception': a Python traceback
+    body (the "File ..., line N" and "SomeException: ..." lines under a logged
+    "Fatal: ..." record) carries NO timestamp prefix of its own -- it is plain stdout
+    text following the one record that triggered it. A naive `awk -F'|' '$1 >= since'`
+    then splits each such line on the ABSENT '|' and gets the whole line as field 1;
+    comparing e.g. "Traceback (most recent call last):" >= "2026-09-05" as a STRING is
+    TRUE (ASCII letters sort after digits), so every traceback body from the ENTIRE
+    file history leaks through as "in window". On this log that inflated a true count
+    of 0 to 3,266, matching five months of history including the 2026-07-27
+    credential-wipe crash dump. Anchoring on the record's own timestamp prefix and
+    attributing continuation lines to the record that started them is the fix.
+    """
+    count = 0
+    current_in_window = False
+    current_is_error = False
+    try:
+        with log_path.open(errors="replace") as f:
+            for line in f:
+                m = _LOG_RECORD_RE.match(line)
+                if m:
+                    date_str, level = m.group(1), m.group(2).upper()
+                    if current_in_window and current_is_error:
+                        count += 1
+                    current_in_window = date_str >= since_date
+                    current_is_error = level in ("ERROR", "CRITICAL")
+                # else: a continuation line (traceback body) — belongs to whatever
+                # record most recently started; carries no timestamp of its own and
+                # must not independently satisfy or fail the window/level test.
+            if current_in_window and current_is_error:
+                count += 1
+    except FileNotFoundError:
+        return -1
+    return count
+
+
 def section_health() -> tuple[str, bool]:
     out = [hr(f"4. BOT HEALTH — trailing {WINDOW_DAYS} days")]
     healthy = True
@@ -158,15 +202,13 @@ def section_health() -> tuple[str, bool]:
 
     try:
         since = (datetime.now(timezone.utc) - timedelta(days=WINDOW_DAYS)).strftime("%Y-%m-%d")
-        errs = subprocess.run(
-            ["bash", "-c",
-             f"awk -F'|' '$1 >= \"{since}\"' {YANK_LOG} 2>/dev/null | "
-             f"grep -icE 'traceback|exception|fatal' || true"],
-            capture_output=True, text=True,
-        ).stdout.strip()
-        n_err = int(errs or 0)
-        out.append(f"ERROR/Traceback/Exception lines in-window: {n_err}")
-        healthy = healthy and n_err == 0
+        n_err = _count_error_records(YANK_LOG, since)
+        if n_err < 0:
+            out.append("yank_streaming_working.log not found")
+        else:
+            out.append(f"ERROR/CRITICAL log records in-window (by the record's own "
+                       f"timestamp, not raw text grep): {n_err}")
+            healthy = healthy and n_err == 0
     except Exception as exc:
         out.append(f"log error-scan failed: {exc}")
 

@@ -1,0 +1,127 @@
+{
+  "observed_at_utc": "2026-09-12T21:47:38.063074+00:00",
+  "sources": [
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/ledger_incident_20260806_gap_fade.md",
+      "sha256": "34a3f8870c45daa13fea95aa37ebe9206f55062cabb306d185c8f35a91d05317"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/halt_review_mim_nb_parity_20260707.md",
+      "sha256": "5910382e5bb821eeb13aa4317d7ef3812686c9916400ee240cea458b282b29ef"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/preregistration_mim_nb_ops_hardening.md",
+      "sha256": "527a5dd6e7485ac8baebe01c2fd63c679a0d1c0363b3dc200d42252c528945db"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-mim-nb-live-performance-decision-2026-09-10/imports/local-evidence.md",
+      "sha256": "622c8317c8683617d4e4b9a1b484ec880761442702e317cfa98d11b62b86e3db"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/preregistration_kraken_thursday_short_restart.md",
+      "sha256": "e5a0e6b1aae6d2cd3c7aaf33ce4c8a3b1c1c613a76ef2b2184b9b913f97dc622"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/docs/reports/yank-execution-pilot/README.md",
+      "sha256": "c54fe5b1f5a7983a6ba7ae2c6f1719c2aaa60544d36616010519bbcec3e5dd0b"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/src/research/mim_nb_live.py",
+      "sha256": "5b7921a767d1ccb6f03a8a123b9b41e5d631d22fb500684a8687b7f45d078f5c"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/src/research/gap_fade_live.py",
+      "sha256": "c925a78294d72144f6406212042018b9f7d30b2bba6f02dc4330f92db4ed6269"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/thursday_short.py",
+      "sha256": "b97b87151b76671cf3510391bb2d9264c77f9e1374c205de4d1c31f87d998a9c"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/specs/spec-commodity-curve-carry/SPEC.md",
+      "sha256": "f6a73b47598c33391f5015c94aaf2dbd49d2fd656e435407a7d2f1326158c4ff"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/specs/spec-commodity-curve-carry/experiment-protocol.md",
+      "sha256": "8ffd36a9efb9dc0d49d6fea5af099ead1332ebd412f351b88dc353bed83ae72e"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/docs/commodity-curve-pilot-acceptance-20260907.md",
+      "sha256": "31b3ca700694a58180f80dfca17b21ebc18dcce5f25efc72c93feed09c759fa8"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/docs/commodity-curve-send-time-audit-20260907.md",
+      "sha256": "eb8a8f06177fa4ddbc4fcce0fe2bfcf6b6318f0a6c8200bce4083fb43ccefa2f"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/docs/commodity-curve-databento-fields-inquiry-20260907.md",
+      "sha256": "0bb3b22b8256bcfa1359ba57bf9636c16a142d08e51a83f1018bb062a829f255"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/tsc1_backtest_results.md",
+      "sha256": "95cd26ff0e6f778c0b73c239be49b3be3142b8280a0873305920d7cd1e7db6fc"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/tsmom1_backtest_results.md",
+      "sha256": "a5dbbb615a35b494b8a0550804168d81a9cee448c302d2d9979fc9e232fff7af"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/xsmom1_results.md",
+      "sha256": "b33881511f8984379551c2cdc7db66261bd21a6715b57cc31eb0606f0a87bfa0"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/verdict_vrp1_phase0_underpowered_20260907.md",
+      "sha256": "0366bc2b10bcbc9c2a6fb622b6b79b126abdcdcbf4afae2e94e6a0c01e03a54f"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/verdict_cot_positioning_20260906.md",
+      "sha256": "9281cf26eae8933a76fc2d1701dbdbb66530244a0ec1ff5544acc5b2794ec417"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/RESULTS.md",
+      "sha256": "6e1f970ab74a278da6efb8fb9d16bbab61265585849d352872a705991f1e4da6"
+    }
+  ],
+  "execution": {
+    "gap_sim": {
+      "event_date": "2026-08-06",
+      "modeled_gross": 646,
+      "fill_gross": 599.5,
+      "signed_shortfall": -46.5,
+      "recoverable_usd": null
+    },
+    "mim_saved_comparison": {
+      "matched_roundtrips": 7,
+      "fill_gross": -293.5,
+      "reference_gross": -341,
+      "signed_fill_minus_reference": 47.5,
+      "mean_absolute_difference": 13.642857,
+      "missing_exit_fills": 1,
+      "broker_net_pnl_available": false,
+      "recoverable_usd": null
+    },
+    "claim": "No presently verified recoverable dollar pool; observed differences and record repairs are not PF uplift; deployment not independently inspected"
+  },
+  "candidate": {
+    "name": "Diversified commodity curve carry",
+    "state": "HOLD-DATA; unsealed; no strategy returns",
+    "development_staging_rows": 95537,
+    "months": 8,
+    "instruments": 214,
+    "roots": 12,
+    "send_time_reconstruction": "already complete; original-publication lineage remains unresolved",
+    "closed_branches": {
+      "TSC-1": "FAIL",
+      "TSMOM-1": "FAIL",
+      "XSMOM-1": "UNDERPOWERED",
+      "VRP-1": "UNDERPOWERED",
+      "COT positioning": "FAIL"
+    },
+    "claim": "Economic distinction only; no measured PF uplift or correlation claim"
+  },
+  "mim_exit_prior_evidence": {
+    "published_exit_incremental_mean_per_session": -4.83,
+    "history_exposed": true,
+    "claim": "Neutral-sample exit already studied; not a new discovery or authorization for a resweep"
+  }
+}

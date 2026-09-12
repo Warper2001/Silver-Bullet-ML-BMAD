@@ -1,0 +1,22 @@
+{
+  "verified_at_utc": "2026-09-12T21:50:25.324948+00:00",
+  "verified": true,
+  "existing_source_trades": 801,
+  "exact_partition_rows": 16,
+  "accounting_tolerance": 1e-08,
+  "source_hashes_rechecked": 20,
+  "document_links_checked": 15,
+  "new_strategy_tests": false,
+  "checks": "Recomputed every CSV partition field from hash-bound existing trades; verified source hashes, PF arithmetic and links. No new exits or returns; no portfolio efficacy queries.",
+  "final_document_links_checked": 17,
+  "final_documents_verified_at_utc": "2026-09-12T21:53:27.068110+00:00",
+  "artifacts_sha256": {
+    "research/mim_diagnostics/PF_SHORTLIST.md": "e25fd3783e9d01ef07281059f829d2aa04ce0eb5ecf65ae625efa2812edbcb1a",
+    "research/mim_diagnostics/README.md": "45e0aa3c0f27a1e19b467af891e2ce188cea0e4ee6affbc717c9013021616c11",
+    "research/mim_diagnostics/evidence/PF_REPRODUCTION.md": "02ac09f65a491bd6a07cf9205f7c04885e267c5d09a69b19834d0ce550ad18ed",
+    "research/mim_diagnostics/evidence/pf-opportunity-snapshot-20260912.json": "b127c4de3b701b925346338498d41d6b158b7d422eb6e3a04ba89bc4e32a0c23",
+    "research/mim_diagnostics/evidence/pf-excursion-partitions-20260912.csv": "29efb7153db84c1ff6186ddf88c77daedf42487b766b4ac66ef4dd3d2cce2054",
+    "research/mim_diagnostics/evidence/pf-route-evidence-20260912.json": "6d4edad7ad18c35d5e5a6293ae4b1a638c63364d64daf75e7956362661d95338"
+  },
+  "csv_serialization": "LF line endings; numeric fields unchanged after verification"
+}

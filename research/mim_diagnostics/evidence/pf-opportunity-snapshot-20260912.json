@@ -1,0 +1,188 @@
+{
+  "observed_at_utc": "2026-09-12T21:46:16.730455+00:00",
+  "objective": "pooled closed-trade net PF; no true live portfolio PF estimated",
+  "mim_historical": {
+    "source_run": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/mim-diagnostics/research/mim_diagnostics/runs/20260912T194421-run-3346059bd9",
+    "completion_sha256": "c11063107b175c7ce90250c05b4eae9cd3e5bc766866b6fa3229c157d7e1564e",
+    "trades_sha256": "a32f91fcbfdbcb75db5698a095e1afbe5550563c505a48e3805281aa8b5d4547",
+    "summary_sha256": "ac5467c815e18d9eaf7858b93e402d411d239ffeab22b8006a02cd76cc992e24",
+    "trades": 801,
+    "winning_dollars": 98516.12,
+    "losing_dollars": 76626.36,
+    "net": 21889.759999999995,
+    "net_pf": 1.2856687959600326,
+    "definitions": {
+      "sampled_favorable_beyond_cost": "Recorded sampled_mfe exceeds recorded roundtrip costs; descriptive full-life excursion, NOT an available exit fill or an actionable threshold.",
+      "sampled_adverse_gross": "Recorded sampled_mae > 0; excludes mechanical initial commission debit.",
+      "counts": "Full-life fill/close samples inherited unchanged; stop-minute post-exit bars remain excluded. No timing/threshold/return candidate computed."
+    }
+  },
+  "portfolio_provenance": {
+    "path": "/root/Silver-Bullet-ML-BMAD/data/trades.db",
+    "transaction_start_utc": "2026-09-12T21:46:16.726539+00:00",
+    "transaction_end_utc": "2026-09-12T21:46:16.730455+00:00",
+    "open_mode": "mode=ro; BEGIN single read transaction",
+    "sql": [
+      "select trader_id,write_mode,execution_mode,count(*),min(timestamp),max(timestamp) from trades group by trader_id,write_mode,execution_mode",
+      "select id,trader_id,timestamp,execution_mode,metadata from trades where write_mode='realtime' and trader_id in ('trader-yank','trader-mim-nb','trader-gap-fade') order by id"
+    ],
+    "groups": [
+      {
+        "trader_id": "trader-btc-carry",
+        "write_mode": "backfilled",
+        "execution_mode": "paper",
+        "rows": 1,
+        "timestamp_min_text": "2026-06-03T02:57:43.540824+00:00",
+        "timestamp_max_text": "2026-06-03T02:57:43.540824+00:00"
+      },
+      {
+        "trader_id": "trader-gap-fade",
+        "write_mode": "realtime",
+        "execution_mode": "sim",
+        "rows": 26,
+        "timestamp_min_text": "2026-06-25T13:54:00+00:00",
+        "timestamp_max_text": "2026-09-10T17:00:00+00:00"
+      },
+      {
+        "trader_id": "trader-mim-nb",
+        "write_mode": "backfilled",
+        "execution_mode": "live",
+        "rows": 1,
+        "timestamp_min_text": "2026-06-11T13:30:00+00:00",
+        "timestamp_max_text": "2026-06-11T13:30:00+00:00"
+      },
+      {
+        "trader_id": "trader-mim-nb",
+        "write_mode": "realtime",
+        "execution_mode": "live",
+        "rows": 23,
+        "timestamp_min_text": "2026-06-24T18:00:03.542998+00:00",
+        "timestamp_max_text": "2026-09-04T20:00:04.016026+00:00"
+      },
+      {
+        "trader_id": "trader-s26",
+        "write_mode": "backfilled",
+        "execution_mode": "unknown",
+        "rows": 17,
+        "timestamp_min_text": "2026-06-05T01:19:00+00:00",
+        "timestamp_max_text": "2026-06-11T04:16:00+00:00"
+      },
+      {
+        "trader_id": "trader-s26",
+        "write_mode": "realtime",
+        "execution_mode": "paper",
+        "rows": 9,
+        "timestamp_min_text": "2026-09-11T05:54:00+00:00",
+        "timestamp_max_text": "2026-09-12T18:40:00+00:00"
+      },
+      {
+        "trader_id": "trader-s26",
+        "write_mode": "realtime",
+        "execution_mode": "unknown",
+        "rows": 166,
+        "timestamp_min_text": "2026-06-12T04:55:00+00:00",
+        "timestamp_max_text": "2026-09-10T13:02:00+00:00"
+      },
+      {
+        "trader_id": "trader-s26",
+        "write_mode": "unknown",
+        "execution_mode": "unknown",
+        "rows": 4,
+        "timestamp_min_text": "2026-06-15T10:05:00+00:00",
+        "timestamp_max_text": "2026-06-15T16:45:00+00:00"
+      },
+      {
+        "trader_id": "trader-s26-combine",
+        "write_mode": "realtime",
+        "execution_mode": "paper",
+        "rows": 82,
+        "timestamp_min_text": "2026-06-16T06:56:14.633193+00:00",
+        "timestamp_max_text": "2026-09-11T06:07:00+00:00"
+      },
+      {
+        "trader_id": "trader-s27",
+        "write_mode": "backfilled",
+        "execution_mode": "unknown",
+        "rows": 17,
+        "timestamp_min_text": "2026-06-03T15:07:00+00:00",
+        "timestamp_max_text": "2026-06-07T17:46:00+00:00"
+      },
+      {
+        "trader_id": "trader-s27",
+        "write_mode": "realtime",
+        "execution_mode": "unknown",
+        "rows": 42,
+        "timestamp_min_text": "2026-06-21T23:30:00+00:00",
+        "timestamp_max_text": "2026-09-10T23:54:00+00:00"
+      },
+      {
+        "trader_id": "trader-yank",
+        "write_mode": "backfilled",
+        "execution_mode": "unknown",
+        "rows": 1849,
+        "timestamp_min_text": "2025-01-20T13:31:00+00:00",
+        "timestamp_max_text": "2026-06-22T16:53:00+00:00"
+      },
+      {
+        "trader_id": "trader-yank",
+        "write_mode": "realtime",
+        "execution_mode": "unknown",
+        "rows": 5,
+        "timestamp_min_text": "2026-07-13T15:00:10+00:00",
+        "timestamp_max_text": "2026-08-17T14:32:00+00:00"
+      }
+    ],
+    "metadata_key_counts": {
+      "trader-mim-nb": {
+        "pnl_pts": 23,
+        "correction": 1
+      },
+      "trader-gap-fade": {
+        "gap_pct": 26,
+        "gap_abs_pts": 26,
+        "target": 26,
+        "stop": 26,
+        "contracts": 26,
+        "simulated": 26
+      },
+      "trader-yank": {
+        "contracts": 5,
+        "backfill": 1,
+        "note": 1,
+        "bars_held": 4,
+        "gap_size": 4
+      }
+    },
+    "markers": [
+      {
+        "id": 6343,
+        "trader_id": "trader-mim-nb",
+        "timestamp": "2026-07-06T18:00:03.928816+00:00",
+        "execution_mode": "live",
+        "backfill_marker": false,
+        "correction_marker": true
+      },
+      {
+        "id": 6366,
+        "trader_id": "trader-yank",
+        "timestamp": "2026-07-13T15:00:10+00:00",
+        "execution_mode": "unknown",
+        "backfill_marker": true,
+        "correction_marker": false
+      }
+    ],
+    "limitations": [
+      "write_mode=realtime is not proof of actual live execution or authentic broker-net P&L",
+      "SQL timestamp extrema are lexical source metadata, not normalized chronology",
+      "No P&L or prospective efficacy query performed",
+      "Ledger universe may omit strategies with separate ledgers; do not rank portfolio loss dollars from this inventory"
+    ]
+  },
+  "boundaries": {
+    "new_strategy_tests": false,
+    "new_returns": false,
+    "holdout_access": false,
+    "broker_calls": false,
+    "services_changed": false
+  }
+}

@@ -36,3 +36,5 @@ Verification independently checks mandatory inventory, source/data hashes and sn
 ## Prospective readiness and next experiment
 
 [September 12 collection readiness](READINESS.md) documents the paused MIM feed, missing detected scheduler, warmup/roll prerequisites and FOMC eligibility implementation gap. [Timestamped evidence](evidence/readiness-20260912.json) preserves read-only operational checks. The [cash-session benchmark design](../../_bmad-output/preregistration_mim_cash_session_benchmark_design.md) is inactive until collection readiness and a separately calibrated power/activation record pass; it contains no new benchmark returns and changes neither existing prospective protocol.
+
+[Portfolio PF improvement shortlist](PF_SHORTLIST.md) ranks a bounded execution reconciliation, one MIM profit-protection feasibility study and conditional commodity curve carry. It preserves separate ledger provenance and failed-study verdicts; no PF uplift or candidate return is claimed.

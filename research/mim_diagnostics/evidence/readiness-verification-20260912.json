@@ -1,0 +1,45 @@
+{
+  "observed_at_utc": "2026-09-12T21:16:09.056472+00:00",
+  "verified": true,
+  "readiness_evidence_sha256": "95364f2e1918ae00d63dbd2facbfc533bc174106644f88a83b8228c00472ecc0",
+  "independently_rehashed_files": 26,
+  "independently_rehashed_consumed_prefixes": 2,
+  "link_checked_documents": [
+    "research/mim_diagnostics/READINESS.md",
+    "research/mim_diagnostics/README.md",
+    "_bmad-output/preregistration_mim_cash_session_benchmark_design.md"
+  ],
+  "audit_run": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/mim-diagnostics/research/mim_diagnostics/runs/20260912T211038-audit-847291ba09",
+  "audit_verify_result": {
+    "verified": true,
+    "command": "audit"
+  },
+  "strategy_or_collector_execution": false,
+  "limitations": "Hash checks corroborate static evidence; scheduler state and mutable metadata retain original observation timestamps. No efficacy checks.",
+  "audit_verification": {
+    "started_at_utc": "2026-09-12T21:18:05.987642+00:00",
+    "completed_at_utc": "2026-09-12T21:18:07.032221+00:00",
+    "command": [
+      "/root/Silver-Bullet-ML-BMAD/.venv/bin/python",
+      "-m",
+      "research.mim_diagnostics",
+      "verify",
+      "--run",
+      "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/mim-diagnostics/research/mim_diagnostics/runs/20260912T211038-audit-847291ba09"
+    ],
+    "returncode": 0,
+    "result": {
+      "verified": true,
+      "command": "audit"
+    },
+    "manifest_sha256": "5d9f6ab8058fa8b8d23e41620abc5fc23c21399e788a8e5a784b22d184203fe4",
+    "completion_sha256": "9cd890375493f95b3b95c4504f9fe913dd381fb4c26172f5cbf170dba3ab4842",
+    "scope": "Diagnostics audit inventory and frozen inputs only; separately assembled operational observations are corroborated by rehashes and manual source review, not this CLI."
+  },
+  "final_documents": {
+    "research/mim_diagnostics/READINESS.md": "79c5138d1f390be2334e48be5622a55464ccdf34179ad79bad547027105dce09",
+    "research/mim_diagnostics/README.md": "899b9dae32cd81db746038354d96d649672b0b7955a036914b437221c88a5203",
+    "_bmad-output/preregistration_mim_cash_session_benchmark_design.md": "5f6fc64c8fbe9e7fd40590a45b66d01d6eaaf712dd0f3a7f857fc452569b7eed"
+  },
+  "final_link_check_at_utc": "2026-09-12T21:18:07.033200+00:00"
+}

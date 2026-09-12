@@ -1,0 +1,475 @@
+{
+  "boundaries": {
+    "broker_requests": false,
+    "collector_execution": false,
+    "file_mutations": "This new evidence JSON only",
+    "holdout_access": false,
+    "outcome_or_efficacy_queries": false,
+    "service_mutations": false,
+    "strategy_execution": false,
+    "synthetic_evaluate": false
+  },
+  "created_at_utc": "2026-09-12T21:15:15.335359+00:00",
+  "diagnostic_audit_run": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/mim-diagnostics/research/mim_diagnostics/runs/20260912T211038-audit-847291ba09",
+  "fomc": {
+    "calendar": {
+      "first_accrual_basis": {
+        "end_line": 195,
+        "line": 193,
+        "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+      },
+      "first_event": "2026-09-16",
+      "first_scheduled_accrual_utc": "2026-09-17T06:45:00Z",
+      "last_event": "2027-12-08",
+      "observed_at_utc": "2026-09-12T21:12:07.811029+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/data/macro/fomc_calendar_forward.csv",
+      "rows": 11
+    },
+    "import_assessment": {
+      "decision": "Static inspection is sufficient and preserves explicit prohibition on strategy execution. Tracker imports broker-auth module; transitive import safety was not assumed.",
+      "import_executed": false,
+      "synthetic_demonstration_executed": false
+    },
+    "installed_unit_bytes_match_repository": true,
+    "ledger": {
+      "exists": false,
+      "observed_at_utc": "2026-09-12T21:12:07.811029+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/data/evfade_fomc/prospective_events.csv",
+      "stored_event_count": 0
+    },
+    "static_findings": [
+      {
+        "finding": "Only three endpoints are checked. No iteration or gap check verifies intermediate14:00\u201314:33 bars, so endpoint presence with nonzero impulse can accept missing intervals exceeding2minutes. Static proof only; evaluate not executed.",
+        "id": "fomc_coverage_gap",
+        "protocol": {
+          "line": 52,
+          "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/preregistration_evfade_fomc_prospective.md"
+        },
+        "source": {
+          "end_line": 166,
+          "line": 153,
+          "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+        }
+      },
+      {
+        "finding": "Ledger fields omit contract, raw-bar evidence/hash, timestamp convention and interval completeness. Fetch normalizes seconds and collapses duplicates into a timestamp-keyed dict.",
+        "id": "fomc_provenance",
+        "sources": [
+          {
+            "end_line": 73,
+            "line": 72,
+            "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+          },
+          {
+            "end_line": 149,
+            "line": 146,
+            "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+          }
+        ]
+      },
+      {
+        "finding": "STOP_DATE is defined and printed, but due-event comprehension has no upper date bound and main has no automated stop-date guard. This is a future operational gap, not an altered verdict.",
+        "id": "fomc_stop_guard",
+        "sources": [
+          {
+            "line": 67,
+            "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+          },
+          {
+            "end_line": 195,
+            "line": 193,
+            "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+          },
+          {
+            "line": 222,
+            "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+          }
+        ]
+      },
+      {
+        "finding": "Current forward calendar ends2027-12-08 before protocol stopping date2030-12-31; future official calendar maintenance needed.",
+        "id": "fomc_calendar_horizon"
+      },
+      {
+        "finding": "Before first due event, successful timer runs do not reach authentication/data-fetch branch. No credentials read or broker request made during audit.",
+        "id": "fomc_auth_unexercised",
+        "source": {
+          "end_line": 203,
+          "line": 193,
+          "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py"
+        }
+      }
+    ],
+    "verdict": "Scheduler functioning; registered data-eligibility enforcement and provenance readiness deficient"
+  },
+  "hashes": [
+    {
+      "frozen_sha256": "6a870021eaff3033536fb936938d7ededd9a024cc989047957b4d886b524f97a",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/__init__.py",
+      "sha256": "6a870021eaff3033536fb936938d7ededd9a024cc989047957b4d886b524f97a"
+    },
+    {
+      "frozen_sha256": "c531af65bc8f09a0febf15395e44e26cdcd13a93e9e45265de2787950b7e0f20",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/__main__.py",
+      "sha256": "c531af65bc8f09a0febf15395e44e26cdcd13a93e9e45265de2787950b7e0f20"
+    },
+    {
+      "frozen_sha256": "13f939dbea21d82455827a915f453f34439c8888789fc373ec6a6aed921e840f",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/artifacts.py",
+      "sha256": "13f939dbea21d82455827a915f453f34439c8888789fc373ec6a6aed921e840f"
+    },
+    {
+      "frozen_sha256": "fde3a32da289dde772ec5be940c734f198132c268b1741dd503dc30d0e9d6ad8",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/data.py",
+      "sha256": "fde3a32da289dde772ec5be940c734f198132c268b1741dd503dc30d0e9d6ad8"
+    },
+    {
+      "frozen_sha256": "38e8de92ae313ec77b458d86378230506abbc4222171ee0c065991d7b2337211",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/engine.py",
+      "sha256": "38e8de92ae313ec77b458d86378230506abbc4222171ee0c065991d7b2337211"
+    },
+    {
+      "frozen_sha256": "5c685f6c51bd7694aa6e304a75a6ac386f849bc096e4432a67d4836bb6256f62",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/historical.py",
+      "sha256": "5c685f6c51bd7694aa6e304a75a6ac386f849bc096e4432a67d4836bb6256f62"
+    },
+    {
+      "frozen_sha256": "3cb0c979b595797bb3bcc3adbd3c06b9f64354721a96d6b7f8136877d26e9ba5",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/references.py",
+      "sha256": "3cb0c979b595797bb3bcc3adbd3c06b9f64354721a96d6b7f8136877d26e9ba5"
+    },
+    {
+      "frozen_sha256": "cbfaab622a7bc3d6dddac159386f604f2899faf5091a70e34d41009df8b4b4c5",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/shadow.py",
+      "sha256": "cbfaab622a7bc3d6dddac159386f604f2899faf5091a70e34d41009df8b4b4c5"
+    },
+    {
+      "frozen_sha256": "74c55607aacdec3d5bf0a061c039c2729722e99ffd06f7e2d84959dd9a6d2b7c",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/statistics.py",
+      "sha256": "74c55607aacdec3d5bf0a061c039c2729722e99ffd06f7e2d84959dd9a6d2b7c"
+    },
+    {
+      "frozen_sha256": "6c29f3d47c174fe86b4f1fe5843db713a06f6d4dd7469a63a8395e7a5d855275",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/feed_adapter/__init__.py",
+      "sha256": "6c29f3d47c174fe86b4f1fe5843db713a06f6d4dd7469a63a8395e7a5d855275"
+    },
+    {
+      "frozen_sha256": "f81fe5f32cae6f9829e135f57810311c5d4e82cd5e6bf7c4287538f62cd7c1ad",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/feed_adapter/__main__.py",
+      "sha256": "f81fe5f32cae6f9829e135f57810311c5d4e82cd5e6bf7c4287538f62cd7c1ad"
+    },
+    {
+      "frozen_sha256": "d4552fe5a68d28f150aeb91a9b9683ba4a35ead9163a562b61417de719614dd9",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/feed_adapter/adapter.py",
+      "sha256": "d4552fe5a68d28f150aeb91a9b9683ba4a35ead9163a562b61417de719614dd9"
+    },
+    {
+      "frozen_sha256": "e798067ec4fcd415efff7638c2015e0f9bbba3c835dfdf280dc95b390aeb8e2f",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/feed_adapter/sandbox.py",
+      "sha256": "e798067ec4fcd415efff7638c2015e0f9bbba3c835dfdf280dc95b390aeb8e2f"
+    },
+    {
+      "frozen_sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_x/mnq_1min_by_contract.csv",
+      "sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea"
+    },
+    {
+      "frozen_sha256": "60ccaab1bb51dc6a10a92db4135a8dfb0031957d9ba99334ccb948361df46584",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/poll.sh",
+      "sha256": "60ccaab1bb51dc6a10a92db4135a8dfb0031957d9ba99334ccb948361df46584"
+    },
+    {
+      "frozen_sha256": "c88e506bccd841a75f829dd111e2b7f656bd0958a4a3e2a44619e057754df106",
+      "matches": true,
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910-contract-feed/feed.csv",
+      "sha256": "c88e506bccd841a75f829dd111e2b7f656bd0958a4a3e2a44619e057754df106"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/evfade_fomc_prospective_tracker.py",
+      "sha256": "e12fa33a2bdaf2651de5d64a7f6ea88252b703fdd653adc4acd3b97d5ab8bbe1"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/preregistration_evfade_fomc_prospective.md",
+      "sha256": "477f6577d5018b656b8f39e1c84820d6bff899b53b3e0e7cd26297b865859089"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/data/macro/fomc_calendar_forward.csv",
+      "sha256": "ae1f875252454ddedc8d3f4188dbf47d13f096035d810e87a12a9e83e5d38779"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/deploy/systemd/evfade-fomc-prospective.timer",
+      "sha256": "e8882503a8edcf4a65b0d4ecc15b8cf8358606f4e862835e5ba91fa565273f24"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/deploy/systemd/evfade-fomc-prospective.service",
+      "sha256": "6fa8495a30c31c4919d574751d709c07af06db9133e591e351414d190162ab8e"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/etc/systemd/system/evfade-fomc-prospective.timer",
+      "sha256": "e8882503a8edcf4a65b0d4ecc15b8cf8358606f4e862835e5ba91fa565273f24"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/etc/systemd/system/evfade-fomc-prospective.service",
+      "sha256": "6fa8495a30c31c4919d574751d709c07af06db9133e591e351414d190162ab8e"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910T214803-shadow-47055eba62/collector/freeze.json",
+      "sha256": "2741923998bd7947e043514942915014a448d082e286a1f7cbdaf770bbff91e2"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910-contract-feed/freeze.json",
+      "sha256": "6b2c1182772497d896161fcd93898108b9669595a608e61a238dc60d7450efdf"
+    },
+    {
+      "observed_at_utc": "2026-09-12T21:15:15.335359+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910-contract-feed-poll/freeze.json",
+      "sha256": "7ec5e50b39a46b720cebc3b2bc9d8cdad9239a4726f0e4e62c679565ca1e5e78"
+    }
+  ],
+  "kind": "read_only_collection_readiness_evidence",
+  "mim": {
+    "adapter_metadata": {
+      "contract_counts": {
+        "MNQU26": 78658
+      },
+      "excluded": 7814,
+      "exclusion_counts": {
+        "chain_break": 3,
+        "duplicate_or_correction_first_observation_permanent": 1604,
+        "future_receipt_or_event": 1,
+        "unknown_or_contradictory_signal_context": 6206
+      },
+      "mapped": 78658,
+      "observed_at_utc": "2026-09-12T21:10:36.697925+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910-contract-feed/journal.sqlite",
+      "timely_at_adapter": 2
+    },
+    "blockers": [
+      {
+        "finding": "No installed MIM comparison scheduler discovered in bounded search; wrapper is finite and does not schedule itself.",
+        "id": "mim_scheduler"
+      },
+      {
+        "finding": "No available forward observations bridge missing previous-session context after August27; next resumed collection day cannot immediately qualify.",
+        "id": "mim_context",
+        "source": {
+          "end_line": 294,
+          "line": 268,
+          "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/shadow.py"
+        }
+      },
+      {
+        "finding": "Late historical catch-up cannot restore eligibility; receipt and collector wall-clock must each be within60 seconds of event.",
+        "id": "mim_timeliness",
+        "source": {
+          "end_line": 573,
+          "line": 560,
+          "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/shadow.py"
+        }
+      },
+      {
+        "finding": "MNQZ26 coverage absent; cannot infer or fabricate next-contract data.",
+        "id": "mim_roll"
+      }
+    ],
+    "feed": {
+      "committed_bytes": 193356329,
+      "coverage_first": "2026-06-18T02:29:00Z",
+      "coverage_last": "2026-09-10T22:10:00Z",
+      "coverage_origin": "Same feed hash and size as independently read 2026-09-12T19:13:44Z snapshot",
+      "hash_matches_committed": true,
+      "observed_at_utc": "2026-09-12T21:11:48.502386+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910-contract-feed/feed.csv",
+      "sha256": "c88e506bccd841a75f829dd111e2b7f656bd0958a4a3e2a44619e057754df106"
+    },
+    "journal_snapshot": {
+      "available_observations": 0,
+      "collected_max": "2026-09-10T21:51:58.944467+00:00",
+      "collected_min": "2026-09-10T21:48:23.278094+00:00",
+      "eligible_sessions": 0,
+      "event_max": "2026-09-10T16:00:00-04:00",
+      "event_min": "2026-06-18T09:31:00-04:00",
+      "global_session_flags": [],
+      "observations": 21626,
+      "observed_at_utc": "2026-09-12T21:12:07.811029+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910T214803-shadow-47055eba62/collector/journal.sqlite",
+      "reason_counts": {
+        "outside_frozen_horizon": 21626
+      },
+      "session_groups": [],
+      "sqlite_open": "mode=ro"
+    },
+    "protocol": {
+      "deadline": "2027-06-10T21:02:24.363841+00:00",
+      "eligible_sessions_target": 120,
+      "evidence": "/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs/20260910T214803-shadow-47055eba62/collector/freeze.json",
+      "freeze": "2026-09-10T21:02:24.363841+00:00",
+      "no_interim_efficacy": true,
+      "timeliness_seconds": 60
+    },
+    "roll": {
+      "MNQU26_expiry_exclusion_day": "2026-09-18",
+      "MNQZ26_feed_rows": 0,
+      "feed_contracts": [
+        "MNQU26"
+      ],
+      "observed_at_utc": "2026-09-12T21:10:36.697925+00:00",
+      "status": "Next-contract previous-session volume and full timely coverage unproved"
+    },
+    "source_prefixes": {
+      "note": "Live file sizes change; pending bytes are snapshot observations. No raw log content stored.",
+      "observed_at_utc": "2026-09-12T21:11:48.502386+00:00",
+      "records": [
+        {
+          "consumed_bytes": 9721043,
+          "consumed_sha256": "c591d9229222185459ee851fb398219f19117253adfc7ade5b4a9e510a357cf1",
+          "current_bytes": 9894970,
+          "device_inode": [
+            2049,
+            3695921
+          ],
+          "device_inode_matches": true,
+          "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/bars_raw.csv",
+          "pending_bytes": 173927,
+          "prefix_hash_matches": true
+        },
+        {
+          "consumed_bytes": 956325672,
+          "consumed_sha256": "72136114a856574d6384707869555ab2a93d768655b08c1065b502271e301035",
+          "current_bytes": 977395446,
+          "device_inode": [
+            2049,
+            540532
+          ],
+          "device_inode_matches": true,
+          "path": "/root/Silver-Bullet-ML-BMAD/logs/mim_nb_live.log",
+          "pending_bytes": 21069774,
+          "prefix_hash_matches": true
+        }
+      ]
+    },
+    "verdict": "not operationally ready; no eligible prospective session coverage established",
+    "warmup": {
+      "contract": "MNQU26",
+      "last_complete_minute_grid_day": "2026-08-27",
+      "last_timestamp": "2026-08-28T15:19:00Z",
+      "method": "Stream timestamp columns only; UTC13:31..20:00 inclusive is ET09:31..16:00 on these August dates. Completeness here is minute coverage, not a new full OHLC audit.",
+      "observed_at_utc": "2026-09-12T21:11:48.502386+00:00",
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_x/mnq_1min_by_contract.csv",
+      "recent_unique_cash_minute_counts": {
+        "2026-08-24": 390,
+        "2026-08-25": 390,
+        "2026-08-26": 390,
+        "2026-08-27": 390,
+        "2026-08-28": 109
+      }
+    }
+  },
+  "next_work_specifications_only": [
+    "Prepare scheduler/latency and next-contract coverage plan preserving original MIM freeze; no retroactive timely rows.",
+    "Prepare separately reviewed FOMC engineering correction enforcing existing gap rule and recording source provenance before first event.",
+    "Maintain count/coverage-only monitoring; do not evaluate efficacy."
+  ],
+  "read_only_methods": {
+    "commands": [
+      "date -u",
+      "cat frozen protocol and wrapper/adapter freeze JSONs",
+      "systemctl list-timers --all --no-pager",
+      "systemctl list-unit-files --no-pager",
+      "systemctl show evfade-fomc-prospective.timer evfade-fomc-prospective.service -p Id -p ActiveState -p SubState -p LastTriggerUSec -p NextElapseUSecRealtime -p ExecMainStatus -p ExecMainExitTimestamp",
+      "rg source/scheduler searches",
+      "nl -ba source files",
+      "tail -3 frozen warmup CSV",
+      "Python pathlib.stat, hashlib.sha256 streaming reads, CSV header/date metadata reads"
+    ],
+    "forbidden_queries": [
+      "outcomes",
+      "fills",
+      "P&L payloads",
+      "interim efficacy calculations"
+    ],
+    "sql_allowlist": [
+      "select name,sql from sqlite_master where type='table'",
+      "select key,value from meta",
+      "select count(*),min(event),max(event),min(collected),max(collected) from observations",
+      "select available,reason,count(*) from observations group by available,reason",
+      "select eligible,reason,count(*) from sessions group by eligible,reason",
+      "select day,reason from session_flags where day='*'"
+    ],
+    "sqlite_mode": "file URI ?mode=ro; no collector modules imported"
+  },
+  "repository": "/root/Silver-Bullet-ML-BMAD",
+  "schedulers": {
+    "fomc_service": {
+      "ActiveState": "inactive",
+      "ExecMainExitTimestamp": "2026-09-12T06:45:03Z",
+      "ExecMainStatus": 0,
+      "SubState": "dead",
+      "UnitFileState": "disabled",
+      "note": "Timer activation is normal for a disabled oneshot service; successful no-due-event execution does not validate auth/data fetch.",
+      "unit": "evfade-fomc-prospective.service"
+    },
+    "fomc_timer": {
+      "ActiveState": "active",
+      "LastTriggerUSec": "2026-09-12T06:45:03Z",
+      "NextElapseUSecRealtime": "2026-09-13T06:45:00Z",
+      "SubState": "waiting",
+      "UnitFileState": "enabled",
+      "unit": "evfade-fomc-prospective.timer"
+    },
+    "limitations": [
+      "Bounded scheduler search does not prove absence of external orchestration, arbitrary executable names or manually running processes.",
+      "Source prefix checks allow append-only growth after observation.",
+      "No continuous monitor or collector was started."
+    ],
+    "mim_comparison_found": false,
+    "observed_at_utc": "2026-09-12T21:09:57+00:00",
+    "search_scope": [
+      "systemctl list-timers --all --no-pager",
+      "systemctl list-unit-files --no-pager filtered for mim|evfade|comparison|shadow",
+      "rg poll.sh|mim_comparison|evfade in /etc/systemd/system /etc/cron.d /etc/crontab /var/spool/cron/crontabs; globs *.service,*.timer,root,*cron*"
+    ],
+    "unrelated_mim_parity_timer_found": true
+  },
+  "schema_version": 1
+}

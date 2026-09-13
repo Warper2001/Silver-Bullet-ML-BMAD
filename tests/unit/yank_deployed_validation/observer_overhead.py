@@ -1,4 +1,4 @@
-"""Offline subprocess benchmark. Run with --output DIR [--diagnostic].
+"""Offline subprocess benchmark. Run with --output DIR. Use profile_observer_overhead.py for profiles.
 
 Latency cells have no profiler, tracing, or filesystem instrumentation. Each cell
 loads fresh private fixtures; warmup and signed publication are timed separately.
@@ -34,7 +34,7 @@ def schedule():
 
 def pins():
     paths = list((ROOT / 'src/research/yank_deployed_validation').glob('*.py'))
-    paths += [Path(__file__)] + [Path(__file__).with_name(n) for n in
+    paths += [ROOT / 'src/cli/check_yank_deployed_replay.py', Path(__file__)] + [Path(__file__).with_name(n) for n in
         ('test_evidence.py', 'test_observation_benchmark.py', 'test_startup_benchmark.py')]
     return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 
@@ -110,16 +110,19 @@ def main():
     parser.add_argument('--workload', choices=('startup','steady'))
     parser.add_argument('--diagnostic', action='store_true')
     args = parser.parse_args()
+    if args.diagnostic:
+        parser.error('--diagnostic requires profile_observer_overhead.py; direct exports are lossy')
+    if bool(args.cell) != bool(args.workload):
+        parser.error('--cell and --workload must be supplied together')
     if args.cell:
         cell(args.output, args.workload, args.cell, args.diagnostic)
         return
     args.output.mkdir(parents=True, exist_ok=False)
     results = []
-    jobs = [('startup', 0, 'guarded'), ('steady', 0, 'guarded')] if args.diagnostic else schedule()
+    jobs = schedule()
     for workload, repeat, mode in jobs:
         target = args.output/f'{workload}-{repeat}-{mode}'
         command = [sys.executable, str(Path(__file__).resolve()), '--output', str(target), '--cell', mode, '--workload', workload]
-        if args.diagnostic: command.append('--diagnostic')
         print(' '.join(command), flush=True)
         subprocess.run(command, check=True, cwd=ROOT)
         results.append(json.loads((target/'result.json').read_text()))

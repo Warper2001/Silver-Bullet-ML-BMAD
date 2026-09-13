@@ -26,9 +26,9 @@ def _utc_timestamp_parts(timestamp):
 
 def _timestamp_parts(timestamp):
     # Datetime equality merges equal instants with different representations and
-    # can ignore fold. Restrict cache keys to exact UTC datetimes; custom types
+    # can ignore fold. Restrict cache keys to exact, unfolded UTC datetimes; custom types
     # and all other timezones retain their original uncached behavior.
-    if type(timestamp) is datetime and timestamp.tzinfo is timezone.utc:
+    if type(timestamp) is datetime and timestamp.tzinfo is timezone.utc and not timestamp.fold:
         return _utc_timestamp_parts(timestamp)
     return timestamp.isoformat(), timestamp.replace(minute=0, second=0, microsecond=0)
 

@@ -312,3 +312,129 @@ def test_diagnostic_profile_ignores_orphan_caller_edges():
     profile.getstats = lambda:[entry]
     profile.snapshot_stats()
     assert profile.stats == {('~', 0, 'retained'):(2, 3, .2, .4, {})}
+
+
+@pytest.mark.parametrize('folds', [(0, 1), (1, 0)])
+def test_utc_cache_preserves_fold(folds):
+    from datetime import datetime, timezone
+    from src.research.yank_deployed_validation.adapter import _timestamp_parts, _utc_timestamp_parts
+    _utc_timestamp_parts.cache_clear()
+    for fold in folds:
+        stamp = datetime(2025, 5, 19, 13, 59, tzinfo=timezone.utc, fold=fold)
+        text, hour = _timestamp_parts(stamp)
+        assert text == stamp.isoformat()
+        assert hour.fold == fold
+        assert repr(hour) == repr(stamp.replace(minute=0, second=0, microsecond=0))
+    assert _utc_timestamp_parts.cache_info().currsize == 1
+
+
+@pytest.mark.parametrize('flags,message', [
+    (['--cell', 'guarded'], 'supplied together'),
+    (['--workload', 'steady'], 'supplied together'),
+    (['--diagnostic'], 'profile_observer_overhead.py'),
+])
+def test_harness_rejects_ambiguous_cli(tmp_path, monkeypatch, capsys, flags, message):
+    import observer_overhead as harness
+    monkeypatch.setattr('sys.argv', ['observer_overhead.py', '--output', str(tmp_path/'output'), *flags])
+    with pytest.raises(SystemExit) as error:
+        harness.main()
+    assert error.value.code == 2 and message in capsys.readouterr().err
+    assert not (tmp_path/'output').exists()
+
+
+def test_harness_pins_executed_loader():
+    import hashlib
+    import observer_overhead as harness
+    path = 'src/cli/check_yank_deployed_replay.py'
+    assert harness.pins()[path] == hashlib.sha256((harness.ROOT/path).read_bytes()).hexdigest()
+
+
+def historical_rows(label='before'):
+    import json
+    from observer_overhead import ROOT
+    return json.loads((ROOT/f'docs/reports/yank-observer-overhead/latency-{label}.json').read_text())
+
+
+@pytest.mark.parametrize('field,value', [
+    ('capture_closed', False), ('valid_coverage', False), ('enabled', False),
+    ('invalid_reasons', ['queue_overflow']), ('dropped', 1), ('accepted', 0), ('written', 0),
+])
+@pytest.mark.parametrize('workload', ['startup', 'steady'])
+def test_summary_rejects_incomplete_guarded_coverage(field, value, workload):
+    from summarize_observer_overhead import validate
+    rows = historical_rows()
+    next(row for row in rows if row['mode'] == 'guarded' and row['workload'] == workload)['coverage'][field] = value
+    with pytest.raises(AssertionError):
+        validate(rows)
+
+
+@pytest.mark.parametrize('mode', MODES)
+@pytest.mark.parametrize('workload', ['startup', 'steady'])
+def test_summary_requires_exact_parity(mode, workload):
+    from summarize_observer_overhead import validate
+    rows = historical_rows()
+    next(row for row in rows if row['mode'] == mode and row['workload'] == workload)['parity_rows'] = 0
+    with pytest.raises(AssertionError):
+        validate(rows)
+
+
+def test_summary_allows_only_adapter_change():
+    from summarize_observer_overhead import validate, validate_comparison_pins
+    before, after = historical_rows(), historical_rows('after')
+    validate(before); validate(after); validate_comparison_pins(before, after)
+    for mutation in ('modify', 'add', 'remove'):
+        changed = historical_rows('after')
+        for row in changed:
+            key = next(key for key in row['code_sha256'] if key.endswith('/capture.py'))
+            if mutation == 'remove':
+                del row['code_sha256'][key]
+            else:
+                row['code_sha256'][key if mutation == 'modify' else 'new.py'] = 'different'
+        with pytest.raises(AssertionError, match='code changes'):
+            validate_comparison_pins(before, changed)
+
+
+def test_profile_attribution_cli(tmp_path, monkeypatch):
+    import cProfile
+    import json
+    import summarize_observer_overhead as summary
+    for label in ('before', 'after'):
+        for workload in ('startup', 'steady'):
+            directory = tmp_path/label/f'{workload}-0-guarded'
+            directory.mkdir(parents=True)
+            profile = cProfile.Profile()
+            profile.runcall(sum, [1, 2])
+            profile.dump_stats(str(directory/'diagnostic.pstats'))
+            (directory/'result.json').write_text(json.dumps(dict(workload=workload, git_head='test',
+                code_sha256={}, fixture_sha256=[], profile_driver_sha256='test', profile_aggregation='test')))
+    monkeypatch.setattr('sys.argv', ['summary', '--profiles', '--before', str(tmp_path/'before'),
+        '--after', str(tmp_path/'after'), '--output', str(tmp_path/'output')])
+    summary.main()
+    for label in ('before', 'after'):
+        for workload in ('startup', 'steady'):
+            expected = summary.attribution(tmp_path/label/f'{workload}-0-guarded'/'diagnostic.pstats')
+            assert json.loads((tmp_path/'output'/f'profile-{label}-{workload}.json').read_text()) == expected
+
+
+def test_utc_diagnostic_rejects_concurrent_adapter_edit(tmp_path, monkeypatch):
+    import utc_state_diagnostic as diagnostic
+    import test_evidence
+    actual_prepare = test_evidence.prepared_runtime
+    source = diagnostic.subprocess.check_output(
+        ['git', 'show', diagnostic.BASELINE+':'+diagnostic.ADAPTER], cwd=diagnostic.ROOT, text=True)
+    adapter_path = tmp_path/diagnostic.ADAPTER
+    adapter_path.parent.mkdir(parents=True)
+    adapter_path.write_bytes((diagnostic.ROOT/diagnostic.ADAPTER).read_bytes())
+    def changed_during_setup(*args, **kwargs):
+        result = actual_prepare(*args, **kwargs)
+        adapter_path.write_text('concurrent edit')
+        return result
+    monkeypatch.setattr(test_evidence, 'prepared_runtime', changed_during_setup)
+    monkeypatch.setattr(diagnostic, 'ROOT', tmp_path)
+    monkeypatch.setattr(diagnostic.subprocess, 'check_output',
+        lambda command, **kwargs: source if command[1] == 'show' else 'test-commit')
+    output = tmp_path/'result.json'
+    monkeypatch.setattr('sys.argv', ['diagnostic', '--output', str(output)])
+    with pytest.raises(AssertionError, match='adapter changed'):
+        diagnostic.main()
+    assert not output.exists()

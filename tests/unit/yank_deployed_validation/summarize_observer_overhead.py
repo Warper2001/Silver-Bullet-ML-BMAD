@@ -19,6 +19,14 @@ def validate(rows):
         assert all(r['fixture_sha256'] == selected[0]['fixture_sha256'] for r in selected)
         assert len({r['final_state_sha256'] for r in selected}) == 1, 'state mismatch'
         assert all(r['final_bar_count'] == (2880 if workload == 'startup' else 7500) for r in selected)
+        assert all(r['parity_rows'] == (1 if workload == 'startup' else 31) for r in selected), 'parity row count mismatch'
+        for row in selected:
+            if row['mode'] == 'guarded':
+                coverage = row['coverage']
+                count = 1 if workload == 'startup' else 30
+                assert coverage['capture_closed'] is True and coverage['valid_coverage'] is True
+                assert coverage['enabled'] is True and coverage['invalid_reasons'] == []
+                assert coverage['dropped'] == 0 and coverage['accepted'] == coverage['written'] == count
     result = {}
     for workload in ('startup', 'steady'):
         result[workload] = {}
@@ -36,6 +44,12 @@ def validate(rows):
         result[workload]['guarded_minus_baseline_median_seconds'] = guard-base
         result[workload]['guarded_to_baseline_median_ratio'] = guard/base
     return result
+
+
+def validate_comparison_pins(before, after):
+    first, second = before[0]['code_sha256'], after[0]['code_sha256']
+    changed = {path for path in first.keys() | second.keys() if first.get(path) != second.get(path)}
+    assert changed == {'src/research/yank_deployed_validation/adapter.py'}, 'unexpected before/after code changes'
 
 
 def attribution(path):
@@ -71,9 +85,18 @@ def main():
     parser.add_argument('--before', type=Path, required=True)
     parser.add_argument('--after', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--profiles', action='store_true', help='Extract four attribution JSONs from before/after profile directories')
     args = parser.parse_args()
+    if args.profiles:
+        args.output.mkdir(parents=True, exist_ok=True)
+        for label, directory in (('before', args.before), ('after', args.after)):
+            for workload in ('startup', 'steady'):
+                result = attribution(directory / f'{workload}-0-guarded' / 'diagnostic.pstats')
+                (args.output / f'profile-{label}-{workload}.json').write_text(json.dumps(result, indent=2)+'\n')
+        return
     before = json.loads(args.before.read_text()); after = json.loads(args.after.read_text())
     result = dict(before=validate(before), after=validate(after))
+    validate_comparison_pins(before, after)
     assert all(a['fixture_sha256'] == b['fixture_sha256'] and a['final_state_sha256'] == b['final_state_sha256']
                for a,b in zip(before,after)), 'before/after behavior or fixture mismatch'
     result['decision'] = 'HOLD_VALIDATION'

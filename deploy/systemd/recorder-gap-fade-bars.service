@@ -1,0 +1,31 @@
+[Unit]
+Description=GAP-1 bar witness — records TradeStation 1-min bars as they close (data/gap_fade/bars/)
+After=network-online.target
+Wants=network-online.target
+# Same outage tolerance as trader-gap-fade: 20 tries x RestartSec=30s. These MUST live in
+# [Unit]; systemd ignores StartLimitIntervalSec in [Service].
+StartLimitIntervalSec=600
+StartLimitBurst=20
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+# Not a trader: it places no orders and shares no state with gap_fade_live.py. It is the
+# independent record of the bars gap-fade decided on (census 2026-09-13 found the only
+# record was YANK's shadow logger, which had gaps). Stopping it never affects trading.
+#
+# Record both contracts across a roll so the witness is already on the new one before
+# the bot switches. Drop the old contract after it expires (MNQU26: 2026-09-18).
+# Changing this line is not a strategy-parameter change — the recorder has no parameters
+# that reach any trade.
+Environment=RECORDER_SYMBOLS=MNQU26,MNQZ26
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/monitoring/ts_bar_recorder.py
+# always, not on-failure: a clean exit must not leave the witness dark (lesson 2026-08-08).
+Restart=always
+RestartSec=30
+StandardOutput=append:/root/Silver-Bullet-ML-BMAD/logs/ts_bar_recorder.log
+StandardError=append:/root/Silver-Bullet-ML-BMAD/logs/ts_bar_recorder.log
+
+[Install]
+WantedBy=multi-user.target

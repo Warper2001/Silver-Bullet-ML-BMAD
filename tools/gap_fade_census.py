@@ -82,6 +82,26 @@ class Census:
         return p.drop_duplicates("timestamp").set_index("timestamp").sort_index()[["open", "high", "low", "close"]]
 
     @staticmethod
+    def bars_from_recorder(paths: list, live_only: bool = False) -> pd.DataFrame:
+        """Bars from src/monitoring/ts_bar_recorder.py files (data/gap_fade/bars/<SYMBOL>.csv).
+
+        bar_ts is TradeStation's TimeStamp verbatim (bar close time, UTC) — the same convention
+        gap_fade_live.py uses. live_only drops rows recovered after an outage (live == 0).
+        Where files overlap, the first file listed wins. Pass one contract per run: the bot
+        takes its prior close from the contract it is trading, so a mixed series would put
+        a spurious gap at the switch."""
+        frames = []
+        for p in paths:
+            d = pd.read_csv(p, dtype={"live": int})
+            if live_only:
+                d = d[d["live"] == 1]
+            frames.append(d)
+        d = pd.concat(frames, ignore_index=True)
+        d["timestamp"] = pd.to_datetime(d["bar_ts"], utc=True).dt.tz_convert("US/Eastern")
+        d = d.drop_duplicates("timestamp", keep="first").set_index("timestamp").sort_index()
+        return d[["open", "high", "low", "close"]].astype(float)
+
+    @staticmethod
     def bars_from_processed(bars_dir: Path, before_utc: str) -> pd.DataFrame:
         dfs = []
         for f in ("mnq_1min_2025.csv", "mnq_1min_2026_ytd.csv"):
@@ -246,7 +266,13 @@ def decision_parity(dec: pd.DataFrame, sess_ts: dict, sess_px: dict | None) -> t
 def main(argv=None) -> dict:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--sealed-engine", default=str(ROOT / "backtest_gap_fade.py"))
-    ap.add_argument("--recorded-bars", default=str(ROOT / "logs/yank_shadow_parity.csv"))
+    ap.add_argument("--recorded-bars", default=str(ROOT / "logs/yank_shadow_parity.csv"),
+                    help="YANK shadow-logger CSV (ts_* = TradeStation, px_* = ProjectX)")
+    ap.add_argument("--recorder-csv", action="append", default=[],
+                    help="gap-fade's own witness file(s) from ts_bar_recorder (repeatable); "
+                         "when given, it replaces the shadow logger and the ProjectX sensitivity is skipped")
+    ap.add_argument("--recorder-live-only", action="store_true",
+                    help="with --recorder-csv: ignore rows recovered after an outage (live == 0)")
     ap.add_argument("--decisions", default=str(ROOT / "data/gap_fade/decisions.csv"))
     ap.add_argument("--fills", default=str(ROOT / "data/gap_fade/fills.csv"))
     ap.add_argument("--trades-db", default=str(ROOT / "data/trades.db"))
@@ -265,9 +291,14 @@ def main(argv=None) -> dict:
 
     c = Census(load_sealed(Path(a.sealed_engine)), np.random.default_rng(a.seed))
     res = {}
-    days_ts = c.rth_by_day(c.bars_from_recorded(Path(a.recorded_bars), "ts"))
-    days_px = c.rth_by_day(c.bars_from_recorded(Path(a.recorded_bars), "px"))
-    sess_ts, sess_px = c.sessions(days_ts), c.sessions(days_px)
+    if a.recorder_csv:
+        days_ts = c.rth_by_day(c.bars_from_recorder(a.recorder_csv, a.recorder_live_only))
+        sess_ts, sess_px = c.sessions(days_ts), None
+        res["witness"] = {"source": "ts_bar_recorder", "files": a.recorder_csv, "live_only": a.recorder_live_only}
+    else:
+        days_ts = c.rth_by_day(c.bars_from_recorded(Path(a.recorded_bars), "ts"))
+        days_px = c.rth_by_day(c.bars_from_recorded(Path(a.recorded_bars), "px"))
+        sess_ts, sess_px = c.sessions(days_ts), c.sessions(days_px)
 
     dec = pd.read_csv(a.decisions).drop_duplicates("date_et", keep="first")
     q1, res["Q1"] = decision_parity(dec, sess_ts, sess_px)

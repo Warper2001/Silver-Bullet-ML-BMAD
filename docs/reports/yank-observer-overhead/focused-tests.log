@@ -1,5 +1,5 @@
 ......CAPACITY_ONE_OBSERVED_QUEUE_BYTES=200046 TRACEMALLOC_PEAK_BYTES=669231
-...
+................................
 =============================== warnings summary ===============================
 src/detection/models.py:285
   /root/Silver-Bullet-ML-BMAD/src/detection/models.py:285: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
@@ -10,4 +10,4 @@ src/detection/models.py:285
     warnings.warn(
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-9 passed, 2 warnings in 5.31s
+38 passed, 2 warnings in 7.54s

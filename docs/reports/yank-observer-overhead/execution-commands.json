@@ -21,8 +21,8 @@
     "artifact": "raw-diagnostics-after.tar.gz"
   },
   "focused_tests": {
-    "status": "PASS_9",
-    "command": ".venv/bin/python -m pytest -q -s tests/unit/yank_deployed_validation/test_observer_overhead.py --basetemp /tmp/yank-overhead-focused-final",
+    "status": "PASS_38",
+    "command": ".venv/bin/python -m pytest -q -s tests/unit/yank_deployed_validation/test_observer_overhead.py --basetemp /tmp/yank-overhead-review-focused > docs/reports/yank-observer-overhead/focused-tests.log 2>&1",
     "artifact": "focused-tests.log"
   },
   "superseded": [
@@ -52,7 +52,8 @@
     "Steady timing captures combine historical strategy clock and real collector receipt clock; chronology is not admissible live evidence.",
     "Separate signed correctness packages retain synthetic consistent multi-poll clocks, public keys, independent control expectations and verification verdicts.",
     "Correctness tests pace between polls only after an unpaced capacity1 run exposed overflow; official latency runs remain unpaced.",
-    "Private Clock subclasses bypass the cache; full-poll timing changes cannot be attributed to that cache, and profile helper overhead differs. Explicit built-in UTC component diagnostic is separate."
+    "Private Clock subclasses bypass the cache; full-poll timing changes cannot be attributed to that cache, and profile helper overhead differs. Explicit built-in UTC component diagnostic is separate.",
+    "Official latency/profile captures and focused-verification.tar.gz remain historical source-pinned results; the review source commit adds the CLI loader pin for future runs and bypasses folded UTC cache keys. Official private Clock latency batches were not rerun."
   ],
   "decision": "HOLD_VALIDATION",
   "source_commit": "db5aeb5a3411a2bf2861a47e8736702d1954132f",
@@ -62,7 +63,25 @@
   },
   "utc_component_diagnostic": {
     "status": "PASS_COMPLETE_STATE_EQUALITY_AND_CACHE_BOUNDS",
-    "command": ".venv/bin/python tests/unit/yank_deployed_validation/utc_state_diagnostic.py --output docs/reports/yank-observer-overhead/utc-state-diagnostic.json",
-    "artifact": "utc-state-diagnostic.json"
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/utc_state_diagnostic.py --output /tmp/yank-overhead-review-utc.json",
+    "artifact": "utc-state-diagnostic.json",
+    "publication_command": "cp /tmp/yank-overhead-review-utc.json docs/reports/yank-observer-overhead/utc-state-diagnostic.json",
+    "source_commit": "a21a6a7dbe7d2e4e2d6c40ac9f83dff8e5bfb9fc"
+  },
+  "review_source_commit": "a21a6a7dbe7d2e4e2d6c40ac9f83dff8e5bfb9fc",
+  "profile_attribution": {
+    "status": "PASS_FOUR_REGENERATED_FILES_BYTE_IDENTICAL_TO_PUBLISHED",
+    "preparation_commands": [
+      "mkdir -p /tmp/yank-overhead-attribution-replay",
+      "tar -xzf docs/reports/yank-observer-overhead/raw-diagnostics-before.tar.gz -C /tmp/yank-overhead-attribution-replay profile-before",
+      "tar -xzf docs/reports/yank-observer-overhead/raw-diagnostics-after.tar.gz -C /tmp/yank-overhead-attribution-replay profile-after"
+    ],
+    "command": ".venv/bin/python tests/unit/yank_deployed_validation/summarize_observer_overhead.py --profiles --before /tmp/yank-overhead-attribution-replay/profile-before --after /tmp/yank-overhead-attribution-replay/profile-after --output /tmp/yank-overhead-attribution-replay/regenerated",
+    "artifacts": [
+      "profile-before-startup.json",
+      "profile-before-steady.json",
+      "profile-after-startup.json",
+      "profile-after-steady.json"
+    ]
   }
 }

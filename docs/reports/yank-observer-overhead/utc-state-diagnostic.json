@@ -7,77 +7,77 @@
     "misses": 7500
   },
   "cold_optimized": {
-    "cpu_seconds": 0.03590788399999978,
+    "cpu_seconds": 0.042163153999999814,
     "mode": "optimized",
-    "wall_seconds": 0.035908002872020006
+    "wall_seconds": 0.04216236202046275
   },
   "compared_timestamp_type": "datetime.datetime with tzinfo is datetime.timezone.utc",
   "complete_state_equal": true,
   "complete_state_sha256": "350dc0c13f0f5117dece1259f835c9a3a41551eba3d05dbc084b91a223d8ac09",
   "counterbalanced_component_samples": [
     {
-      "cpu_seconds": 0.03035259700000026,
+      "cpu_seconds": 0.030842783000000207,
       "mode": "original",
-      "wall_seconds": 0.030348849017173052
+      "wall_seconds": 0.0308396159671247
     },
     {
-      "cpu_seconds": 0.01500968899999977,
+      "cpu_seconds": 0.017923773000000143,
       "mode": "optimized",
-      "wall_seconds": 0.015017722034826875
+      "wall_seconds": 0.017919966019690037
     },
     {
-      "cpu_seconds": 0.015481356000000002,
+      "cpu_seconds": 0.015707597000000018,
       "mode": "optimized",
-      "wall_seconds": 0.01547813811339438
+      "wall_seconds": 0.01572422217577696
     },
     {
-      "cpu_seconds": 0.033393010999999806,
+      "cpu_seconds": 0.036600484000000044,
       "mode": "original",
-      "wall_seconds": 0.03338970500044525
+      "wall_seconds": 0.03661516890861094
     },
     {
-      "cpu_seconds": 0.032094600999999834,
+      "cpu_seconds": 0.04275882800000019,
       "mode": "original",
-      "wall_seconds": 0.03211536491289735
+      "wall_seconds": 0.042754966067150235
     },
     {
-      "cpu_seconds": 0.016451623000000026,
+      "cpu_seconds": 0.020139378000000097,
       "mode": "optimized",
-      "wall_seconds": 0.01644779392518103
+      "wall_seconds": 0.020136551931500435
     },
     {
-      "cpu_seconds": 0.014221856000000255,
+      "cpu_seconds": 0.019386287000000113,
       "mode": "optimized",
-      "wall_seconds": 0.014218098018318415
+      "wall_seconds": 0.01938269892707467
     },
     {
-      "cpu_seconds": 0.03223388000000016,
+      "cpu_seconds": 0.04133489999999984,
       "mode": "original",
-      "wall_seconds": 0.03224553889594972
+      "wall_seconds": 0.041331151966005564
     },
     {
-      "cpu_seconds": 0.031136092999999754,
+      "cpu_seconds": 0.04033558100000034,
       "mode": "original",
-      "wall_seconds": 0.031132208881899714
+      "wall_seconds": 0.04033163306303322
     },
     {
-      "cpu_seconds": 0.016344322000000133,
+      "cpu_seconds": 0.016849118999999746,
       "mode": "optimized",
-      "wall_seconds": 0.01634030300192535
+      "wall_seconds": 0.016846555983647704
     },
     {
-      "cpu_seconds": 0.015736829000000174,
+      "cpu_seconds": 0.018268200000000068,
       "mode": "optimized",
-      "wall_seconds": 0.015732988016679883
+      "wall_seconds": 0.01831215200945735
     },
     {
-      "cpu_seconds": 0.027450501000000127,
+      "cpu_seconds": 0.03280872399999968,
       "mode": "original",
-      "wall_seconds": 0.027446649968624115
+      "wall_seconds": 0.03282381501048803
     }
   ],
   "decision": "HOLD_VALIDATION",
-  "driver_sha256": "870e8c3553452c9a7c633189b818e0a172838d49746af93319c0796c3b612b0b",
+  "driver_sha256": "f43fa6820a9a7763da7bef5d422ba7b2a9c8de867d29a0f7ca170d38672ca741",
   "fixture_bar_count": 7500,
   "fixture_sha256": "ef1920fcea13e69e1dce5bdb52d11f885223fbfa4a954a176cbd0897b075f741",
   "limitations": [
@@ -87,14 +87,14 @@
     "No extrapolation to production timestamp types, live latency, or complete evidence capacity."
   ],
   "median_seconds": {
-    "optimized": 0.015605563065037131,
-    "original": 0.03162378689739853
+    "optimized": 0.018116059014573693,
+    "original": 0.03847340098582208
   },
-  "optimized_adapter_sha256": "a7c48dc94ce6d3f0d92f6784441c522ab31c65633de7e622b6a6be45a96aa0b2",
+  "optimized_adapter_sha256": "53d48184322834de939928f4cf08fed95bfb203626b44857c8a1134728ca471f",
   "original_adapter_sha256": "e9b5611b5f45138933a530a278ba37d47b8e65d227c0c90b87d3bda889a77ad6",
   "parsed_timestamp_types_before_explicit_conversion": [
     "PrivateSnapshot.__init__.<locals>.Clock"
   ],
   "scope": "COMPONENT_DIAGNOSTIC_EXPLICIT_BUILTIN_UTC_NOT_POLL_LATENCY",
-  "source_commit": "7ffb675e47fb68b11eac74728279cb2e67ec2035"
+  "source_commit": "a21a6a7dbe7d2e4e2d6c40ac9f83dff8e5bfb9fc"
 }

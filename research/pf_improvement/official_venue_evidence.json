@@ -1,0 +1,35 @@
+{
+  "observed_at_utc": "2026-09-13T01:30:00+00:00",
+  "sources": [
+    {
+      "provider": "Topstep",
+      "title": "When and What Products Can I Trade?",
+      "url": "https://help.topstep.com/en/articles/8284206-when-and-what-products-can-i-trade",
+      "page_date": "2026-07-13",
+      "facts": [
+        "The listed permitted products include all twelve roots in the proposed carry universe.",
+        "Positions must be closed each weekday and cannot be held from one session to the next."
+      ]
+    },
+    {
+      "provider": "TradeStation",
+      "title": "Futures Margin Rates",
+      "url": "https://www.tradestation.com/pricing/futures-margin-requirements/",
+      "page_date": null,
+      "facts": [
+        "The public table distinguishes long and short overnight margin by futures root.",
+        "Published margin may change and the trade desk must confirm current account requirements."
+      ]
+    },
+    {
+      "provider": "TradeStation",
+      "title": "Futures Physical Delivery",
+      "url": "https://uploads.tradestation.com/uploads/Futures-Physical-Delivery.pdf",
+      "page_date": null,
+      "facts": [
+        "TradeStation does not accommodate physical commodity delivery.",
+        "Customers must close or roll positions before applicable delivery notice periods."
+      ]
+    }
+  ]
+}

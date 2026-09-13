@@ -20,6 +20,9 @@ Checks, by dollar consequence on the combine:
     - ledger integrity: gap-fade's hash-chained audit trail is broken or incomplete
       (the 2026-08-06 failure class — a git checkout reverted the live ledgers and
       destroyed two sessions; nobody noticed for six days because nothing checked)
+    - bar witness: recorder-gap-fade-bars is not recording the contract gap-fade trades,
+      or (during RTH) its newest bar is stale or backfilled (the 2026-09-13 census
+      failure class — gap-fade's only bar record had holes nobody knew about)
   INFO (paper / non-combine bots):
     - btc-carry, s26-combine, s26, s27, sil-quote-capture active + logs fresh
 
@@ -37,7 +40,7 @@ import subprocess
 import sys
 import time
 import re
-from datetime import datetime, time as dtime, timedelta
+from datetime import datetime, time as dtime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -89,6 +92,11 @@ SERVICES = {
     # every 5s poll instead — kills false flapping AND catches a real 401-loop stall in minutes.
     "sil-quote-capture":     (False, "sil_quote_capture.log",       300, ((9, 25), (16, 0)),
                               "data/quotes/sil_quote_capture.csv"),
+    # Added 2026-09-13 with the recorder itself. It logs a poll line every minute, 24/7
+    # (it polls through closed markets too), so the log alone proves the loop runs.
+    # 240s allows one slow poll (two 30s timeouts). Whether it is recording the RIGHT
+    # bars is checked separately below (witness coverage).
+    "recorder-gap-fade-bars": (False, "ts_bar_recorder.log",        240, None, None),
 }
 
 
@@ -300,6 +308,81 @@ def last_monitor_row():
         return None
 
 
+# --- the bar witness covers the contract gap-fade trades ----------------------------
+# Found 2026-09-13: gap-fade's only record of the bars it decided on was YANK's shadow
+# logger, which had silent holes (2026-09-02..04, the 2026-08-05 open), so parity could
+# not be judged on those sessions. recorder-gap-fade-bars now records them, but a
+# witness can be active and fresh while watching the wrong contract (after a roll) or
+# while every fetch fails. So check the file for the contract gap-fade actually trades.
+WITNESS_SVC = "recorder-gap-fade-bars"
+WITNESS_DIR = "data/gap_fade/bars"
+WITNESS_RTH = ((9, 30), (16, 0))
+WITNESS_MAX_AGE_S = 300     # bars close every minute; one healthcheck period of slack
+WITNESS_TAIL_BYTES = 4096
+
+
+def unit_env(svc: str, key: str):
+    """One Environment= value of a systemd unit, or None if unset/unreadable."""
+    try:
+        r = subprocess.run(["systemctl", "show", f"{svc}.service", "-p", "Environment", "--value"],
+                           capture_output=True, text=True, timeout=10)
+    except Exception:
+        return None
+    for tok in r.stdout.split():
+        k, _, v = tok.partition("=")
+        if k == key:
+            return v
+    return None
+
+
+def newest_witness_bar(symbol: str, now=None):
+    """(age_s, live) of the newest recorded bar for symbol, or None if no file / no rows.
+
+    bar_ts is the bar's close time in UTC (TradeStation's TimeStamp, verbatim)."""
+    p = BASE / WITNESS_DIR / f"{symbol}.csv"
+    if not p.exists():
+        return None
+    try:
+        with p.open("rb") as fh:
+            header = fh.readline().decode().strip().split(",")
+            fh.seek(0, 2)
+            fh.seek(max(0, fh.tell() - WITNESS_TAIL_BYTES))
+            lines = [ln for ln in fh.read().decode("utf-8", "replace").splitlines() if ln]
+    except OSError:
+        return None
+    if not lines or lines[-1].split(",") == header:
+        return None
+    row = dict(zip(header, next(csv.reader([lines[-1]]))))
+    try:
+        ts = datetime.fromisoformat(row["bar_ts"].replace("Z", "+00:00"))
+    except (KeyError, ValueError):
+        return None
+    now = now or datetime.now(timezone.utc)
+    return (now - ts).total_seconds(), row.get("live") == "1"
+
+
+def witness_finding(symbol, in_rth: bool, now=None):
+    """(level, message) for the witness-coverage check."""
+    if symbol is None:
+        return WARN, (f"{WITNESS_SVC}: cannot read GAP_FADE_SYMBOL from trader-gap-fade — "
+                      f"witness coverage unchecked")
+    w = newest_witness_bar(symbol, now)
+    if w is None:
+        return WARN, (f"{WITNESS_SVC}: nothing recorded for {symbol}, the contract gap-fade "
+                      f"trades — add it to RECORDER_SYMBOLS in the unit")
+    age, live = w
+    if not in_rth:
+        return OK, f"{WITNESS_SVC}: recording {symbol} (outside RTH — staleness not checked)"
+    if age > WITNESS_MAX_AGE_S:
+        return WARN, (f"{WITNESS_SVC}: newest {symbol} bar is {age:.0f}s old > "
+                      f"{WITNESS_MAX_AGE_S}s — gap-fade's bars are not being witnessed "
+                      f"(check logs/ts_bar_recorder.log; market holiday?)")
+    if not live:
+        return WARN, (f"{WITNESS_SVC}: newest {symbol} bar arrived late (live=0) — the "
+                      f"recorder is backfilling, not witnessing")
+    return OK, f"{WITNESS_SVC}: witnessing {symbol} (newest bar {age:.0f}s old, live)"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--max-stale", type=int, default=None,
@@ -426,6 +509,9 @@ def main() -> int:
                        " — run .venv/bin/python tools/verify_chain.py --reconcile")
     except Exception as e:
         emit(WARN, f"bot ledgers: verify_chain.py did not run ({e})")
+
+    # 6) Bar witness coverage — the 2026-09-13 census failure class.
+    emit(*witness_finding(unit_env("trader-gap-fade", "GAP_FADE_SYMBOL"), in_window(WITNESS_RTH)))
 
     header = {OK: "ALL OK", WARN: "WARNINGS", CRIT: "CRITICAL"}[worst]
     if not (args.quiet and worst == OK):

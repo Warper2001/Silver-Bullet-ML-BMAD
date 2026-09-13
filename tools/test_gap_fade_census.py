@@ -121,3 +121,17 @@ def test_arms_for_era_scores_the_sealed_fade_and_its_inverse():
     assert df.R_I.iloc[0] == pytest.approx((-0.25 - gf.COST) / (2 * ga))   # follow-the-gap long at 20200.25
     df2 = census(seed=1).arms_for_era(days, c.sessions(days), "2026-07-01", "2026-07-31")
     assert df.R_A.iloc[0] == df2.R_A.iloc[0]                # seed-reproducible random arm
+
+
+def test_recorder_files_load_in_eastern_time_and_can_drop_backfilled_rows(tmp_path):
+    hdr = "bar_ts,open,high,low,close,volume,fetched_at,lag_s,live,chain\n"
+    a = tmp_path / "MNQZ26.csv"
+    a.write_text(hdr + "2026-09-14T13:31:00Z,10,11,9,10.5,5,x,5,1,c1\n"
+                       "2026-09-14T13:32:00Z,10.5,12,10,11,5,x,900,0,c2\n")
+    b = tmp_path / "other.csv"
+    b.write_text(hdr + "2026-09-14T13:31:00Z,99,99,99,99,5,x,5,1,c9\n")
+    bars = gf.Census.bars_from_recorder([a, b])
+    assert str(bars.index[0]) == "2026-09-14 09:31:00-04:00"
+    assert bars.iloc[0]["close"] == 10.5                       # first file listed wins an overlap
+    assert list(bars.columns) == ["open", "high", "low", "close"]
+    assert len(gf.Census.bars_from_recorder([a], live_only=True)) == 1

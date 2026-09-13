@@ -1,0 +1,225 @@
+{
+  "concurrent_drift": "After consolidation and initial verification, the main YANK source changed again outside this task (current hash retained above). No source restoration or attribution to an operator was attempted. The pinned private snapshot and prior benchmark artifacts still match.",
+  "decision": "HOLD_VALIDATION",
+  "files": {
+    "data/thursday_ts/decisions.csv": {
+      "expected_sha256": "24852a9691b5f9167ea6eddbe4a01e617c6fead1f34f1fa6b7f07d441e2b3759",
+      "sha256": "24852a9691b5f9167ea6eddbe4a01e617c6fead1f34f1fa6b7f07d441e2b3759"
+    },
+    "docs/reports/yank-pilot-acquisition/startup-benchmark.json": {
+      "expected_sha256": "64a0329c1c95ef52b28e598f64857fdecd886ad29fd8634cb368bc45b09062df",
+      "sha256": "64a0329c1c95ef52b28e598f64857fdecd886ad29fd8634cb368bc45b09062df"
+    },
+    "docs/reports/yank-pilot-acquisition/startup-benchmark.log": {
+      "expected_sha256": "998faf1526a82833b0f01feab3f93e9dd2bcdb123e66e49c51160df2a58eff51",
+      "sha256": "998faf1526a82833b0f01feab3f93e9dd2bcdb123e66e49c51160df2a58eff51"
+    },
+    "docs/yank-validation/snapshot/v1/manifest.json": {
+      "expected_sha256": "4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92",
+      "sha256": "4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92"
+    },
+    "docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json": {
+      "expected_sha256": "6410625050fe90846fcd2543b426b7bf20d118d36a487a030bafb3eca25a5a24",
+      "sha256": "6410625050fe90846fcd2543b426b7bf20d118d36a487a030bafb3eca25a5a24"
+    },
+    "docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl": {
+      "expected_sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2",
+      "sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2"
+    },
+    "docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json": {
+      "expected_sha256": "f15753530508e2fe73f8f22dfdf7f87bd37647e190caa98e1624e58a5ef04e7e",
+      "sha256": "f15753530508e2fe73f8f22dfdf7f87bd37647e190caa98e1624e58a5ef04e7e"
+    },
+    "docs/yank-validation/snapshot/v1/src/data/models.py": {
+      "expected_sha256": "3126779a590ae05f5f773441cce08c1c9d0b94caf842be7d7970232741abbaf8",
+      "sha256": "3126779a590ae05f5f773441cce08c1c9d0b94caf842be7d7970232741abbaf8"
+    },
+    "docs/yank-validation/snapshot/v1/src/ml/regime_detection/lr_channel_detector.py": {
+      "expected_sha256": "4e1cfd702d658481c42e0cdf1c799939900afaa09fd3b13a1e20e2933f4b06f6",
+      "sha256": "4e1cfd702d658481c42e0cdf1c799939900afaa09fd3b13a1e20e2933f4b06f6"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/config_loader.py": {
+      "expected_sha256": "b290e3f10337573f0982dde22f833d6256e903a291c488a1dc24cfbc1f6f1a92",
+      "sha256": "b290e3f10337573f0982dde22f833d6256e903a291c488a1dc24cfbc1f6f1a92"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/lr_channel.py": {
+      "expected_sha256": "8dd63fc3ee087ab86ddc259b0b944c6292500da92a9fa3ffda2fc17f9f2710ef",
+      "sha256": "8dd63fc3ee087ab86ddc259b0b944c6292500da92a9fa3ffda2fc17f9f2710ef"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/projectx_bars.py": {
+      "expected_sha256": "0be46177fc2775cdcf4e9e3b5c4dbd41a2f0e8601af6b9d5e1f5bb8d0e52f678",
+      "sha256": "0be46177fc2775cdcf4e9e3b5c4dbd41a2f0e8601af6b9d5e1f5bb8d0e52f678"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/projectx_client.py": {
+      "expected_sha256": "401e4515befe4148e1c40bb06486e886a7f7a0965d25b4125c5b8192704ff90d",
+      "sha256": "401e4515befe4148e1c40bb06486e886a7f7a0965d25b4125c5b8192704ff90d"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/shadow_parity.py": {
+      "expected_sha256": "5bf94bd3174a3fc491bdc16d513e6ff0a2e73649c7cc1cc6c536ac50c7ec931f",
+      "sha256": "5bf94bd3174a3fc491bdc16d513e6ff0a2e73649c7cc1cc6c536ac50c7ec931f"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/strategy_core.py": {
+      "expected_sha256": "96e087d8154a99b31da9a7f0239da9dbf49129126cb4553da5d8543870931201",
+      "sha256": "96e087d8154a99b31da9a7f0239da9dbf49129126cb4553da5d8543870931201"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/ts_sim_mirror.py": {
+      "expected_sha256": "a0d5f6b109fc1bdf562d78e9b5f7e38582b1b791f03b3f891546bde96df3f7ad",
+      "sha256": "a0d5f6b109fc1bdf562d78e9b5f7e38582b1b791f03b3f891546bde96df3f7ad"
+    },
+    "docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py": {
+      "expected_sha256": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67",
+      "sha256": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67"
+    },
+    "docs/yank-validation/snapshot/v1/strategy_config.yaml": {
+      "expected_sha256": "293c9d23c69f667564954e30bbb6360ca8af658288978ffa62de1b3c21391abb",
+      "sha256": "293c9d23c69f667564954e30bbb6360ca8af658288978ffa62de1b3c21391abb"
+    },
+    "docs/yank-validation/snapshot/v1/trader-yank.service": {
+      "expected_sha256": "1acfb8632a6cd612456ce602b55402a899f194b84dea5e5a790157a8b7c6fa37",
+      "sha256": "1acfb8632a6cd612456ce602b55402a899f194b84dea5e5a790157a8b7c6fa37"
+    },
+    "src/research/btc_combine_streaming.py": {
+      "expected_sha256": "7594c2678f87e8c0312cd9f72b70faeee8fe1308e6389043afe8adc16f7a8a65",
+      "sha256": "7594c2678f87e8c0312cd9f72b70faeee8fe1308e6389043afe8adc16f7a8a65"
+    },
+    "src/research/tier2_streaming_working.py": {
+      "expected_sha256": "aae67c816918f2e5c566ca2670a80166b70dba92ed82f1857df9973fcda2ce6a",
+      "sha256": "aae67c816918f2e5c566ca2670a80166b70dba92ed82f1857df9973fcda2ce6a"
+    },
+    "src/research/yank_streaming_working.py": {
+      "expected_sha256": "b096c342ce9d22ab250643edad9dd7694cdb01a8e315a0321a3821e5f47a8aa2",
+      "sha256": "3134acae9a897b94c235c64effbb2d0055042bcc6bd31402a8625a23295c7dc4"
+    }
+  },
+  "final_check": {
+    "checked_at": "2026-09-10T21:14:55.992038+00:00",
+    "files": {
+      "data/thursday_ts/decisions.csv": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "24852a9691b5f9167ea6eddbe4a01e617c6fead1f34f1fa6b7f07d441e2b3759"
+      },
+      "docs/reports/yank-pilot-acquisition/startup-benchmark.json": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "64a0329c1c95ef52b28e598f64857fdecd886ad29fd8634cb368bc45b09062df"
+      },
+      "docs/reports/yank-pilot-acquisition/startup-benchmark.log": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "998faf1526a82833b0f01feab3f93e9dd2bcdb123e66e49c51160df2a58eff51"
+      },
+      "docs/yank-validation/snapshot/v1/manifest.json": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92"
+      },
+      "docs/yank-validation/snapshot/v1/models/xgboost/lr_regime_config.json": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "6410625050fe90846fcd2543b426b7bf20d118d36a487a030bafb3eca25a5a24"
+      },
+      "docs/yank-validation/snapshot/v1/models/xgboost/tier2_meta_labeling_model.pkl": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "f58530e1d08b8436e6785b7151cc20e5296c71acd06a44ae5af5388c666f80e2"
+      },
+      "docs/yank-validation/snapshot/v1/models/xgboost/tier2_threshold.json": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "f15753530508e2fe73f8f22dfdf7f87bd37647e190caa98e1624e58a5ef04e7e"
+      },
+      "docs/yank-validation/snapshot/v1/src/data/models.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "3126779a590ae05f5f773441cce08c1c9d0b94caf842be7d7970232741abbaf8"
+      },
+      "docs/yank-validation/snapshot/v1/src/ml/regime_detection/lr_channel_detector.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "4e1cfd702d658481c42e0cdf1c799939900afaa09fd3b13a1e20e2933f4b06f6"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/config_loader.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "b290e3f10337573f0982dde22f833d6256e903a291c488a1dc24cfbc1f6f1a92"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/lr_channel.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "8dd63fc3ee087ab86ddc259b0b944c6292500da92a9fa3ffda2fc17f9f2710ef"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/projectx_bars.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "0be46177fc2775cdcf4e9e3b5c4dbd41a2f0e8601af6b9d5e1f5bb8d0e52f678"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/projectx_client.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "401e4515befe4148e1c40bb06486e886a7f7a0965d25b4125c5b8192704ff90d"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/shadow_parity.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "5bf94bd3174a3fc491bdc16d513e6ff0a2e73649c7cc1cc6c536ac50c7ec931f"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/strategy_core.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "96e087d8154a99b31da9a7f0239da9dbf49129126cb4553da5d8543870931201"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/ts_sim_mirror.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "a0d5f6b109fc1bdf562d78e9b5f7e38582b1b791f03b3f891546bde96df3f7ad"
+      },
+      "docs/yank-validation/snapshot/v1/src/research/yank_streaming_working.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "cf8047323efb20ba14146e2dbd1fff955465787d8c253ec041f5ffee97e74c67"
+      },
+      "docs/yank-validation/snapshot/v1/strategy_config.yaml": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "293c9d23c69f667564954e30bbb6360ca8af658288978ffa62de1b3c21391abb"
+      },
+      "docs/yank-validation/snapshot/v1/trader-yank.service": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "1acfb8632a6cd612456ce602b55402a899f194b84dea5e5a790157a8b7c6fa37"
+      },
+      "src/research/btc_combine_streaming.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "7594c2678f87e8c0312cd9f72b70faeee8fe1308e6389043afe8adc16f7a8a65"
+      },
+      "src/research/tier2_streaming_working.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": true,
+        "sha256": "aae67c816918f2e5c566ca2670a80166b70dba92ed82f1857df9973fcda2ce6a"
+      },
+      "src/research/yank_streaming_working.py": {
+        "matches_previous_observation": true,
+        "matches_task_baseline": false,
+        "sha256": "3134acae9a897b94c235c64effbb2d0055042bcc6bd31402a8625a23295c7dc4"
+      }
+    }
+  },
+  "historical_check": {
+    "checked": 177,
+    "decision": "HOLD_VALIDATION",
+    "mismatches": [
+      {
+        "path": "/root/Silver-Bullet-ML-BMAD/src/research/yank_streaming_working.py",
+        "reason": "digest_mismatch"
+      }
+    ]
+  },
+  "historical_mismatch_explanation": "The main installed YANK source already contained diagnostic edits when this task recorded its baseline. Its task-baseline SHA256 is preserved; the old snapshot and frozen evidence were not rewritten to match it.",
+  "task_baseline_commit": "a0ff173522ee7a8029f53ada7be16ee0f1356e7f",
+  "task_files_checked": 22,
+  "task_mismatches": [
+    "src/research/yank_streaming_working.py"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "account_admission": "UNKNOWN",
+  "authenticated_requests_sent": 0,
+  "candidate_files": [
+    {
+      "path": "docs/reports/yank-pilot-acquisition/acquisition-gate.pending.json",
+      "sha256": "844169e325ab13578a686ac89993e3428e79ef10510737d686e6fe5399362216"
+    },
+    {
+      "path": "docs/reports/yank-pilot-acquisition/acquisition-gate-check.json",
+      "sha256": "1cb7474176b98262424a629b02a33ca86a26fb2f76323f9f52e5143dd8ca9872"
+    },
+    {
+      "path": "docs/reports/yank-pilot-acquisition/provider-findings.md",
+      "sha256": "428200199a4ef9bf7498211ac5bd15d8ed36ca26bd1c8430ca3f075e277709f5"
+    }
+  ],
+  "checked_at": "2026-09-10T19:37:58.317551+00:00",
+  "rechecked_on": "2026-09-13",
+  "recheck_result": "No new TradeStation account-specific zero-cost or expired-MNQ entitlement evidence appeared in repository changes after the initial check.",
+  "credential_reads": 0,
+  "credential_refreshes": 0,
+  "decision": "HOLD_VALIDATION",
+  "gate_blockers": [
+    "missing or invalid operator-reviewed credential_sha256",
+    "missing or unconfirmed incremental_cost_usd",
+    "missing or unconfirmed entitlement_verified",
+    "incremental_cost_usd must be numeric zero",
+    "missing evidence reference: endpoint",
+    "missing evidence reference: zero_cost",
+    "missing evidence reference: entitlement",
+    "missing evidence reference: approval"
+  ],
+  "historical_requests_sent": 0,
+  "new_account_specific_zero_cost_evidence": false,
+  "new_projectx_coherence_evidence": false,
+  "required_evidence": "Account-specific subscription record or provider confirmation binding expired MNQM25 barcharts access to reviewed credentials at zero incremental cost; ProjectX atomic snapshot or cross-entity ordering, missing-event detection and reconnect replay guarantees remain absent.",
+  "scope": "Local repository docs and data/yank filename discovery plus retained acquisition gate/provider findings; no mailbox or provider account query",
+  "status": "BLOCKED"
+}

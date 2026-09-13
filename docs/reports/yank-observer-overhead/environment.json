@@ -1,0 +1,36 @@
+{
+  "affinity_cpu_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "cgroup_limits": {
+    "/sys/fs/cgroup/cpu.max": null,
+    "/sys/fs/cgroup/cpuset.cpus.effective": "0-3",
+    "/sys/fs/cgroup/memory.max": null
+  },
+  "cgroup_v1_limits": {
+    "/sys/fs/cgroup/cpu/cpu.cfs_period_us": null,
+    "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": null,
+    "/sys/fs/cgroup/memory/memory.limit_in_bytes": null
+  },
+  "checked_at": "2026-09-10T20:06:20.499470+00:00",
+  "cpu_models": [
+    "AMD EPYC 9354P 32-Core Processor"
+  ],
+  "decision": "HOLD_VALIDATION",
+  "limitations": [
+    "Other host processes remain active; no affinity, CPU quota, service or scheduling changes were made.",
+    "Load average is a point sample, not a workload-correlated time series.",
+    "Absolute process high-water RSS includes fixture construction, warmup, imports and temporary collector allocations."
+  ],
+  "load_average_sample": [
+    1.734375,
+    1.46728515625,
+    1.2744140625
+  ],
+  "logical_cpus": 4,
+  "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+  "scope": "Read-only host metadata sample during original-code batch; workload not isolated or certified"
+}

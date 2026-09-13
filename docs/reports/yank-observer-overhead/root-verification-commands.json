@@ -1,0 +1,72 @@
+{
+  "broad_regressions": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/unit/yank_bar_provenance",
+    "tests/unit/yank_deployed_validation",
+    "tests/unit/yank_execution_pilot",
+    "tests/unit/yank_native_minute",
+    "tests/research/test_yank_deployed_adapter.py",
+    "tests/research/test_yank_deployed_capture.py",
+    "tests/research/test_yank_deployed_replay.py",
+    "tests/unit/test_strategy_core_consistency.py",
+    "tests/unit/test_strategy_core_detection.py",
+    "tests/unit/test_strategy_core_exits.py",
+    "tests/unit/test_strategy_core_killzone.py",
+    "tests/unit/test_strategy_core_m15.py",
+    "tests/unit/test_strategy_core_metrics.py",
+    "tests/unit/test_strategy_core_scaling.py",
+    "tests/unit/test_strategy_core_tuesday.py",
+    "tests/unit/test_yank_gap_ceiling_config_override.py",
+    "tests/unit/test_yank_recovery.py",
+    "tests/unit/test_yank_shadow_bullish_watcher.py",
+    "tests/unit/test_yank_trade_log_idempotent.py",
+    "tests/unit/test_yank_trades_db_ml_proba.py",
+    "tests/unit/test_config_loader.py",
+    "tests/unit/test_lr_channel.py",
+    "tests/unit/test_projectx_bars.py",
+    "tests/unit/test_projectx_commingling.py",
+    "tests/unit/test_ts_sim_mirror.py",
+    "-k",
+    "not test_startup_7500_bar_original_poller_both_shadow_paths and not test_48_hour_startup_captures_with_explicit_offline_bounds and not test_full_verified_startup_2880_bars",
+    "--basetemp=/tmp/yank-overhead-broad-regressions",
+    "--junitxml=docs/reports/yank-observer-overhead/regressions.xml"
+  ],
+  "full_startup_correctness": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "-s",
+    "tests/unit/yank_deployed_validation/test_startup_benchmark.py",
+    "--basetemp=/tmp/yank-overhead-full-startup-correctness",
+    "--junitxml=docs/reports/yank-observer-overhead/full-startup-correctness.xml"
+  ],
+  "shadow_compatibility_committed": [
+    ".venv/bin/python",
+    "-c",
+    "import os,sys,types,subprocess\nfrom pathlib import Path\nos.environ.setdefault('PROJECTX_ACCOUNT_ID','1')\nimport src.research\nname='src.research.yank_streaming_working'\nmodule=types.ModuleType(name)\nmodule.__file__=str(Path('src/research/yank_streaming_working.py').resolve())\nmodule.__package__='src.research'\nsys.modules[name]=module\nsrc.research.yank_streaming_working=module\nsource=subprocess.check_output(['git','show','a0ff173522ee7a8029f53ada7be16ee0f1356e7f:src/research/yank_streaming_working.py'])\nexec(compile(source,module.__file__,'exec'),module.__dict__)\nimport pytest\nraise SystemExit(pytest.main(['-q','tests/unit/test_yank_shadow_bullish_watcher.py','--junitxml=docs/reports/yank-observer-overhead/shadow-compatibility-committed.xml']))\n"
+  ],
+  "shadow_compatibility_local": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/unit/test_yank_shadow_bullish_watcher.py",
+    "--junitxml=docs/reports/yank-observer-overhead/shadow-compatibility-local.xml"
+  ],
+  "review_final_broad_regressions": {
+    "result": "647 passed, 1 known SL5-versus-SL2 failure, 3 deselected",
+    "log": "regressions-review-final.log",
+    "junit": "regressions-review-final.xml"
+  },
+  "review_final_full_startup": {
+    "command": ".venv/bin/python -m pytest -q -s tests/unit/yank_deployed_validation/test_startup_benchmark.py --basetemp=/tmp/yank-overhead-full-startup-review-final --junitxml=docs/reports/yank-observer-overhead/full-startup-review-final.xml",
+    "log": "full-startup-review-final.log",
+    "junit": "full-startup-review-final.xml",
+    "result": "1 passed; 2,880 transitions; signature, identity, checkpoint and coverage PASS; account UNKNOWN"
+  },
+  "slow_test_exclusions": "The two old direct timing workloads are covered by official fresh-process measurements. The old full guarded startup test runs separately as profiled correctness."
+}

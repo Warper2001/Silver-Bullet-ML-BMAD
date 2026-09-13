@@ -1,0 +1,27 @@
+{
+  "collector_sha256": {
+    "src/research/yank_deployed_validation/account.py": "c3a1d833742da90a231e834e35a0cde58c597a0fdcb38790405926b8ac71e6e3",
+    "src/research/yank_deployed_validation/adapter.py": "53d48184322834de939928f4cf08fed95bfb203626b44857c8a1134728ca471f",
+    "src/research/yank_deployed_validation/capture.py": "ce02581344e0c620647f17004d33dda011ffa0f69ba9c4a4ac6f7b527cda613d",
+    "src/research/yank_deployed_validation/evidence.py": "265ec57b8693f949349a10d1bc19725e444914b9721c38d77ce25ad4d5c47ebf",
+    "src/research/yank_deployed_validation/startup.py": "d6f7a12cdcd0a223b1561a3eb5a042ee61bd7dcf91e331244b10f08a9a734685"
+  },
+  "decision": "HOLD_VALIDATION",
+  "historical_release_status": "Historical tarballs retain previous collector bytes and must not be used as expectations for this candidate. Independent current loaded-code/model/configuration/checkpoint/key review is still required.",
+  "independent_checkpoint": null,
+  "production_expected_runtime": null,
+  "production_launcher": null,
+  "proposed_capture_limits": {
+    "capacity": 1,
+    "max_bytes": 64000000,
+    "max_nodes": 4000000
+  },
+  "release_approved": false,
+  "schema_version": 1,
+  "snapshot_manifest_sha256": "4eb9dbb8be66f2cb4b9824caf318e2e5163d2f14537460429db7db95cf915f92",
+  "source_commit": "a21a6a7dbe7d2e4e2d6c40ac9f83dff8e5bfb9fc",
+  "status": "CANDIDATE_INVENTORY_NOT_APPROVED_RELEASE_EXPECTATIONS",
+  "timestamp_cache_entry_limit_per_loaded_adapter_module": 8192,
+  "timestamp_cache_scope": "Exact built-in UTC datetime values with fold=0 only; all other timestamp types use uncached original derivation.",
+  "trusted_production_public_key": null
+}

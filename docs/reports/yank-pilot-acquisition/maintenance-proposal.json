@@ -1,6 +1,6 @@
 {
   "account_verdict_without_coherent_evidence": "UNKNOWN",
-  "contract_policy": "Reconfirm actual live contract at window; do not copy MNQM25 historical symbol or change MNQU26 automatically.",
+  "contract_policy": "Reconfirm the actual live contract and reconcile the checked-in MNQZ26 unit copy with the running process; do not copy the MNQM25 historical symbol or change a live contract automatically.",
   "decision": "HOLD_VALIDATION",
   "gates": {
     "checkpoint_independently_verified": false,
@@ -45,22 +45,8 @@
   "rollback_artifact": "rollback-candidate.tar.gz",
   "schema_version": 1,
   "service": "trader-yank.service",
-  "sessions": [
-    {
-      "end": "2026-09-14T16:10:00Z",
-      "id": "plumbing-1",
-      "start": "2026-09-14T13:20:00Z"
-    },
-    {
-      "end": "2026-09-16T16:10:00Z",
-      "id": "plumbing-2",
-      "start": "2026-09-16T13:20:00Z"
-    }
-  ],
+  "sessions": [],
+  "scheduling_status": "September 12 maintenance window and September 14/16 evidence-session candidates withdrawn after expiring without approval; propose new dates only after all gates pass.",
   "status": "PROPOSED_NOT_APPROVED",
-  "window_utc": {
-    "abort_enablement_after": "2026-09-12T14:30:00Z",
-    "end": "2026-09-12T15:00:00Z",
-    "start": "2026-09-12T14:00:00Z"
-  }
+  "window_utc": null
 }

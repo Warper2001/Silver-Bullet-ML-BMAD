@@ -22,10 +22,10 @@ WorkingDirectory=/root/Silver-Bullet-ML-BMAD
 # Pre-reg seal 32da5d5 — _bmad-output/preregistration_gap_fade_panic_open.md
 #
 # QUARTERLY ROLL: update GAP_FADE_SYMBOL at each futures roll.
-# Next: ~2026-09-11 → MNQZ26
+# Next: ~2026-12-10 → MNQH27
 #
 # TS SIM toggle: set GAP_FADE_TS_SIM=0 to revert to internal-sim-only mode.
-Environment=GAP_FADE_SYMBOL=MNQU26
+Environment=GAP_FADE_SYMBOL=MNQZ26
 Environment=GAP_FADE_TS_SIM=1
 Environment=GAP_FADE_TS_SIM_ACCOUNT=SIM2797251F
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/research/gap_fade_live.py

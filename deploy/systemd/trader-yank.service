@@ -15,7 +15,7 @@ Environment=PROJECTX_ACCOUNT_ID=26556101
 Environment=YANK_CONTRACTS=2
 # Active front month. YANK has NO autoroll (unlike MIM-NB) — update manually at the
 # quarterly roll (~2026-09-11 -> MNQZ26) or orders will reject like the 06-16 MIM incident.
-Environment=SYMBOL=MNQU26
+Environment=SYMBOL=MNQZ26
 # Stage-1 ProjectX data-feed migration (shadow): fetch+log ProjectX bars in parallel
 # while TradeStation stays the SIGNAL source. Observation only; remove to disable.
 Environment=YANK_DATA_SHADOW=1

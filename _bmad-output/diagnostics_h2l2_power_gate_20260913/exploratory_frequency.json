@@ -1,0 +1,78 @@
+{
+  "MNQ_5min": {
+    "A_plan_primary (prox 1.00pt)": {
+      "N": 56,
+      "per_session": 0.18855218855218855,
+      "R_usd_median": 76.5,
+      "sigma_cluster_usd_1R": 102.93975765440382,
+      "power_pessimistic": 0.05869811397777312,
+      "years80_pessimistic": 1165.8529569855796,
+      "power_central": 0.14341476263638803,
+      "years80_central": 21.6790839108889,
+      "power_optimistic": 0.4745988481985042,
+      "years80_optimistic": 2.9146323924639517
+    },
+    "B_prox_price_scaled (4.00pt ~ 1 ES pt x NQ/ES ratio ~3.7-4)": {
+      "N": 61,
+      "per_session": 0.2053872053872054,
+      "R_usd_median": 74.0,
+      "sigma_cluster_usd_1R": 99.93907490948945,
+      "power_pessimistic": 0.05585376183864553,
+      "years80_pessimistic": 2472.3224731232453,
+      "power_central": 0.13940297234818017,
+      "years80_central": 23.08268411377278,
+      "power_optimistic": 0.47293783211538687,
+      "years80_optimistic": 2.9300767450359655
+    },
+    "C_no_proximity": {
+      "N": 136,
+      "per_session": 0.45791245791245794,
+      "R_usd_median": 61.75,
+      "sigma_cluster_usd_1R": 85.111793577106,
+      "power_pessimistic": 0.036756709435615285,
+      "years80_pessimistic": null,
+      "power_central": 0.12720605528731815,
+      "years80_central": 28.554449257514012,
+      "power_optimistic": 0.5636247269967684,
+      "years80_optimistic": 2.2364559050305672
+    },
+    "D_raw_H2L2_no_filters": {
+      "N": 1019,
+      "per_session": 3.430976430976431,
+      "R_usd_median": 56.0,
+      "sigma_cluster_usd_1R": 66.36494991670287,
+      "power_pessimistic": 0.0037951466654529255,
+      "years80_pessimistic": null,
+      "power_central": 0.1827676425095579,
+      "years80_central": 13.30692062175568,
+      "power_optimistic": 0.9956667668953726,
+      "years80_optimistic": 0.39967835009792957
+    }
+  },
+  "ES_5min_as_MES": {
+    "A_literal_4tick": {
+      "N": 49,
+      "per_session": 0.22790697674418606,
+      "R_usd_median": 26.25,
+      "sigma_cluster_usd_1R": 36.380984357110165,
+      "power_pessimistic": 0.008756439029459247,
+      "years80_pessimistic": null,
+      "power_central": 0.023257073358687277,
+      "years80_central": null,
+      "power_optimistic": 0.11112369762634,
+      "years80_optimistic": 29.30228534278297
+    },
+    "D_raw_H2L2_no_filters": {
+      "N": 774,
+      "per_session": 3.6,
+      "R_usd_median": 26.25,
+      "sigma_cluster_usd_1R": 29.314172412995063,
+      "power_pessimistic": 8.496338480260427e-09,
+      "years80_pessimistic": null,
+      "power_central": 1.8070523534480248e-05,
+      "years80_central": null,
+      "power_optimistic": 0.13299889050796304,
+      "years80_optimistic": 18.60041534702324
+    }
+  }
+}

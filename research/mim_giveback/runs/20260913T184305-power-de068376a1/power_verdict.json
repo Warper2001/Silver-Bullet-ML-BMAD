@@ -1,0 +1,12 @@
+{
+  "aligned_candidate_returns_evaluated": false,
+  "endpoint_sessions": 500,
+  "family_size": 9,
+  "identity_pairings_evaluated": 0,
+  "minimum_effect_definition": "PF 1.40 with 90% baseline winning-dollar retention; prospective net retention is a separate 90%-of-baseline-net gate",
+  "minimum_effect_usd_per_session": 2.602385919447149,
+  "minimum_family_power": 0.016068012859803693,
+  "required_power": 0.8,
+  "terminal": true,
+  "verdict": "UNDERPOWERED"
+}

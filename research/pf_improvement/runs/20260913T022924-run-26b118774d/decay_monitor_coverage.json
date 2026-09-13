@@ -1,0 +1,14 @@
+{
+  "efficacy_interpreted": false,
+  "monitor_invoked": false,
+  "observation_timestamps": [
+    "2026-09-12T21:23:28.451376+00:00"
+  ],
+  "rows": 4,
+  "strategy_rows": {
+    "GAP-1": 1,
+    "Kraken Thursday-short": 1,
+    "MIM-NB": 1,
+    "YANK": 1
+  }
+}

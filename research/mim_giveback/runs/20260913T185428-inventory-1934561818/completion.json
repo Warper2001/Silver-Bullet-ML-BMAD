@@ -1,0 +1,26 @@
+{
+  "sha256": {
+    "definitions.md": "32ff48ce448b367d55ad555424463825a237c033f896e33a9d4ba57b28f0d697",
+    "failure.json": "2cf1cfca3f714679b9c6013bb0ef9f92a5620f5dc3b77ac3cfe222c0d72ac332",
+    "manifest.json": "ec22ec962b8f4b62621a8f65d70465dfe2e99f50ca918a2b1063bb6d0b289221",
+    "report.md": "2986c499c03615e3ba7563b77bf564d77af4d49a4d67952dec319dc16582aa3b",
+    "source/research/mim_comparison/data.py": "fde3a32da289dde772ec5be940c734f198132c268b1741dd503dc30d0e9d6ad8",
+    "source/research/mim_comparison/references.py": "3cb0c979b595797bb3bcc3adbd3c06b9f64354721a96d6b7f8136877d26e9ba5",
+    "source/research/mim_giveback/__init__.py": "bd981a26cf7bfbedcb6f2419b6fec5dbf3ed39d44f3648e82273f2fe23b5f9f5",
+    "source/research/mim_giveback/__main__.py": "f7670bcc3b27e46ced67acda89ca3ad698494c984e2722d029d266223ddcf34c",
+    "source/research/mim_giveback/artifacts.py": "69c83fe8045b05dc79551adf54f2baf1ce4ccc03b880a5e5d37490f5bdd8e205",
+    "source/research/mim_giveback/config.py": "eb4e94be1bd5537e2615a205d9deb551abb6eb4d10f231aee766e60fc0db25e8",
+    "source/research/mim_giveback/data.py": "e23cdfbe9a1f33f0f0cb774126f57ddd08206cbe2fad83fef7f4345314c3c30f",
+    "source/research/mim_giveback/definitions.md": "32ff48ce448b367d55ad555424463825a237c033f896e33a9d4ba57b28f0d697",
+    "source/research/mim_giveback/engine.py": "765aaa8f57b21159dfa6e6d63f054923edb218f7428c0c73099e554a0c5976bc",
+    "source/research/mim_giveback/prospective.py": "9934686076821ced203d8a3006fb3d9460f30eca99e70939ba704c38d0427e2b",
+    "source/research/mim_giveback/report.py": "c699eb675043bdbf240630d895aa370d84f2fffe0d0eb1dbca8c114af4977f3c",
+    "source/research/mim_giveback/statistics.py": "cc83eb1754d0a075d3215751b4d2fa0cc2bcb61a2a2811551e67498bc0b275dc",
+    "source/research/mim_giveback/study.py": "adb0a576bf353606836d4ac18fce1bd371ccc1e701243b5de92a4b8f094448eb",
+    "source/research/mim_giveback/workflow.py": "0f7f9d637396c4908f71e625bf9c4d7bbe444f9fcd5b084851fc6aa3189603db",
+    "source/research/mim_robustness/artifacts.py": "7dbb36f37cd5577b08bacab83bd86486f9be674ee8cc17e04ef190fe72c702d3",
+    "source/research/mim_robustness/engine.py": "61b70857b290f4455af57d544e6e1f8c011fa786c1e89417394c1ec2d314eefc",
+    "source/research/mim_robustness/features.py": "1b8ad1402241b68875d88ef5d178e293ebeba5cd9fe55093bcf0f5ad1fd40c4f",
+    "source/research/mim_robustness/study.py": "9fd99d32bfd4c7d411b175921dab2c4df92af73e93ad98d01166881783b190f3"
+  }
+}

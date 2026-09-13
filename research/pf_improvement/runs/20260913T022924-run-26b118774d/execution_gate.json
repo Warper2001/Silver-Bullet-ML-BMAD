@@ -1,0 +1,25 @@
+{
+  "broker_net_round_trips_all_shared_account": 7,
+  "broker_net_round_trips_attributed_to_mim": 5,
+  "causally_decomposable_round_trips": 0,
+  "complete_current_coverage": false,
+  "current_repair_specification": null,
+  "exact_causality": false,
+  "gap_round_trips": 21,
+  "mim_exact_order_round_trips": 5,
+  "mim_local_reference_trades": 25,
+  "mim_saved_shared_account_round_trips": 7,
+  "mim_unattributed_shared_account_round_trips": 2,
+  "reasons": [
+    "MIM saved export contains 7 complete shared-account round trips; 5 have both order IDs and one unique local MIM trade, while 2 remain unattributed.",
+    "No executable quote series binds decision-to-arrival and arrival-to-fill movement for MIM.",
+    "GAP has exact entry/exit order IDs and gross differences, but no fill timestamps, executable quotes, or complete costs.",
+    "2 MIM source chains have unregistered historical breaks; chain validity does not establish record completeness.",
+    "Local trade rows do not carry broker order IDs, so missing broker observations remain explicit rather than being repaired by inferred price matching."
+  ],
+  "recoverable_dollars": null,
+  "recurring_current_economic_defect": false,
+  "stops_later_stages": false,
+  "unchanged_intended_behavior": false,
+  "verdict": "INSUFFICIENT_CAUSAL_EVIDENCE"
+}

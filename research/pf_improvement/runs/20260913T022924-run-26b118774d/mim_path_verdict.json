@@ -1,0 +1,21 @@
+{
+  "candidate_returns_calculated": false,
+  "coverage_complete": true,
+  "descriptive_only": true,
+  "predictive_value_established": false,
+  "prior_rule_duplicate": false,
+  "reasons": [
+    "Profit giveback at the existing scheduled decisions is distinct from V1/V2 band stops and the exposed neutral-sample exit.",
+    "The lifecycle study supplied the measurement boundary and explicitly left this giveback mechanism untested.",
+    "Winner/loss labels and top-trade membership are retrospective descriptions and cannot validate a decision rule."
+  ],
+  "required_next_gates": [
+    "carry-specific work remains separate",
+    "derive any rule from a declared sweep rather than hand-setting a threshold",
+    "run an appropriate power gate before a new strategy test",
+    "commit a preregistration before independent unseen-data evaluation"
+  ],
+  "scheduled_marks": 6673,
+  "threshold_selected": false,
+  "verdict": "DISTINCT_HYPOTHESIS_REMAINS"
+}

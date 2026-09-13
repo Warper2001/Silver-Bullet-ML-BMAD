@@ -1,0 +1,8 @@
+{
+  "alternative_strategy_returns_calculated": false,
+  "input_files": 30,
+  "raw_account_evidence_copied": false,
+  "sealed_holdout_accessed": false,
+  "strategy_simulator_invoked": false,
+  "valid": true
+}

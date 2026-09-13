@@ -1,0 +1,5 @@
+{
+  "deployment_authorized": false,
+  "error": "Power verdict is terminal; threshold inventory denied",
+  "type": "ValueError"
+}

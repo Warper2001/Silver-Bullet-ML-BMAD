@@ -1,0 +1,8 @@
+source,configuration_era,rows,chain_present,chain_missing,duplicate_chain_values,duplicate_business_keys,first_chain_break_row,first_chain_break_key,chain_valid_from_genesis,integrity_status,first_observation_utc,last_observation_utc,chain_interpretation
+mim_decisions,mixed_history_local_schema,790,790,0,0,,128.0,2026-06-29T10:00:00-04:00,False,BROKEN_UNREGISTERED,2026-06-11T14:30:00+00:00,2026-09-11T20:00:00+00:00,ordered SHA-256 prefix; integrity does not establish completeness
+mim_orders,local_id_logging,145,145,0,0,,79.0,2026-07-29T19:30:04.533815+00:00,False,BROKEN_UNREGISTERED,2026-06-11T14:30:03.460766+00:00,2026-09-04T20:00:07.242985+00:00,ordered SHA-256 prefix; integrity does not establish completeness
+mim_trades,mixed_history_trade_log,25,25,0,0,,,,True,VALID,,,ordered SHA-256 prefix; integrity does not establish completeness
+mim_saved_broker_export,saved_export_2026-08-13_through_2026-08-28,14,0,14,0,,,,,NOT_APPLICABLE,2026-08-13T17:00:03.877460+00:00,2026-08-28T20:00:02.925043+00:00,broker IDs present; no local hash chain
+gap_decisions,mixed_history_decision_log,56,56,0,0,,30.0,2026-08-07,False,KNOWN_SCAR,,,ordered SHA-256 prefix; integrity does not establish completeness
+gap_fills,id_reconciliation_gross_only,21,21,0,0,,,,True,VALID,,,ordered SHA-256 prefix; integrity does not establish completeness
+gap_trades,mixed_history_trade_log,27,27,0,0,2026-06-25,,,True,KNOWN_SCAR,,,ordered SHA-256 prefix; integrity does not establish completeness

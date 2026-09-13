@@ -1,0 +1,22 @@
+{
+  "bound_evidence_files": 11,
+  "matrix_rows": 36,
+  "overall": [
+    "PARK_ACCOUNT",
+    "PARK_DATA",
+    "PARK_POWER",
+    "SOURCE_CLARIFICATION_REQUIRED"
+  ],
+  "preserved_prior_verdicts": {
+    "COT": "FAIL",
+    "TSC-1": "FAIL",
+    "TSMOM-1": "FAIL",
+    "VRP-1": "UNDERPOWERED",
+    "XSMOM-1": "UNDERPOWERED"
+  },
+  "purchase_authorized": false,
+  "questions_prepared_not_sent": true,
+  "roots": 12,
+  "strategy_returns_calculated": false,
+  "venues": 3
+}

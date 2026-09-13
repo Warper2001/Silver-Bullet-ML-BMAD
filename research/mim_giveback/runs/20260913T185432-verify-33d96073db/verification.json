@@ -1,0 +1,6 @@
+{
+  "command": "inventory",
+  "expected_failure": true,
+  "failed_run_evidence": true,
+  "verified": true
+}

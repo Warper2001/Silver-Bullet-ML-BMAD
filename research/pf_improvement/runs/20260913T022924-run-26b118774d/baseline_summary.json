@@ -1,0 +1,24 @@
+{
+  "accounting_tolerance": 1e-08,
+  "closed_trade_net_pf": 1.285668795960033,
+  "daily_max_drawdown": 2437.26,
+  "exit_labels": {
+    "CAT_STOP": 71,
+    "EOD_CLOSE_PROXY": 723,
+    "REVERSAL": 7
+  },
+  "exposure_contract_minutes_lower": 222077.0,
+  "exposure_contract_minutes_upper": 222148.0,
+  "losers": 339,
+  "losing_dollars": 76626.35999999999,
+  "net_profit": 21889.759999999995,
+  "sessions": 1323,
+  "top_5pct_trade_count": 41,
+  "top_5pct_trade_fraction_of_net": 1.3490627581115557,
+  "top_5pct_trade_net": 29530.660000000003,
+  "top_67_day_fraction_of_net": 1.806914283208223,
+  "top_67_day_net": 39552.92000000002,
+  "trades": 801,
+  "winners": 462,
+  "winning_dollars": 98516.12000000002
+}

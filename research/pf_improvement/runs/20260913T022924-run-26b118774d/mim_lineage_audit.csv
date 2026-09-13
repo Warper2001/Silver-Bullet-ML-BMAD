@@ -1,0 +1,5 @@
+reference,mechanism,overlap,distinctness,candidate_returns_calculated,source_path,source_marker
+MIM V1,tight VWAP/band stop,uses adverse path state,not the scheduled-mark giveback description,False,_bmad-output/preregistration_mim_noise_bands.md,"V1 (primary, tight stop)"
+MIM V2,opposite-band stop,uses adverse path state,not the scheduled-mark giveback description,False,_bmad-output/preregistration_mim_noise_bands.md,V2 (wide stop)
+published neutral exit,flat on neutral sample,acts at sampled decisions,already exposed; excluded as a new hypothesis,False,research/mim_comparison/RESULTS.md,neutral-sample exit accounts
+MIM lifecycle,held-interval excursions and stop censoring,same causal measurement boundary,measurement method only; no exit rule,False,research/mim_lifecycle/RESULTS.md,catastrophe-stop minute has unknown price ordering

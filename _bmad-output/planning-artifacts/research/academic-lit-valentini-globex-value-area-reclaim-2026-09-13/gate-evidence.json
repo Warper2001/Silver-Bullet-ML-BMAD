@@ -1,0 +1,42 @@
+{
+  "as_of": "2026-09-14",
+  "independent_calibration": null,
+  "kind": "valentini_research_evidence",
+  "native_pilot": "Existing May 19-31 2025 MNQM5 request is a future measurement candidate; metadata alone do not certify full-session coverage or representative power.",
+  "reason": "No exact-strategy transferable effect or representative admitted calibration sample established; synthetic MDE utility cannot estimate market power.",
+  "source_artifacts": [
+    {
+      "path": "digests/mechanism-r1.md",
+      "sha256": "fe566a3bfa775acca576e328ac9f60db0fb8e5731116ffd0df18a0d2a0d315c1"
+    },
+    {
+      "path": "digests/test-validity-r1.md",
+      "sha256": "3aac97b98cff6cc394927b6c8b9679508cf0f812d7bd603e3ffd68331d5a554b"
+    },
+    {
+      "path": "digests/measurement-r1.md",
+      "sha256": "bcb5e5be3e774b28d30b90d5f0390db8013a969ae07c7f6a01cebb608326adda"
+    },
+    {
+      "path": "digests/measurement-r2.md",
+      "sha256": "2bc9fc45a21e7b396e38a3acd6d0e0053ec136117cd2edc22d87d798191ec52e"
+    },
+    {
+      "path": "digests/citation-check.md",
+      "sha256": "b50d1b49f03a50dc99f2a6ec71d57478c10ecc8d8f702beefccabb54ef7beb1f"
+    },
+    {
+      "path": "imports/local-data-inventory.json",
+      "sha256": "19572525c17b2a762bdb670850adc7fe899080af3c74d182357ef16cf4da9c12"
+    },
+    {
+      "path": "imports/additional-native-metadata.json",
+      "sha256": "7f9c857f7952b6074810e7d274b3cd20d9b0b67c5a08c96653eef1f83f9162b2"
+    },
+    {
+      "path": "imports/local-evidence.md",
+      "sha256": "237442a10ec46b4720426522f1288d6616155b200628d5e35b88ba497b52bab0"
+    }
+  ],
+  "transferable_effect": null
+}

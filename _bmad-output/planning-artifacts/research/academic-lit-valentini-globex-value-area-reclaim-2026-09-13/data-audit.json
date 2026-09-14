@@ -1,0 +1,154 @@
+{
+  "admitted": false,
+  "code_sha256": "2513a0359adf52afa86998dd25176e8e102dcc0ae59085a377f23b07dd03448e",
+  "inputs": [
+    {
+      "admitted": false,
+      "bytes": 22318944,
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "notional"
+      ],
+      "duplicate_timestamps": 0,
+      "evidence": {
+        "contract_provenance": "UNKNOWN",
+        "fixed_minute_source_provenance": "UNKNOWN",
+        "session_calendar": "UNKNOWN",
+        "timestamp_label_semantics": "UNKNOWN"
+      },
+      "findings": [
+        "gaps_require_independent_session_calendar",
+        "known_dollar_aggregated_not_fixed_minute"
+      ],
+      "first_timestamp": "2025-01-01T23:01:00+00:00",
+      "gap_intervals": 29737,
+      "invalid_examples": [],
+      "invalid_rows": 0,
+      "last_timestamp": "2025-12-31T22:00:00+00:00",
+      "missing_clock_minutes": 234870,
+      "missing_columns": [],
+      "nonincreasing_timestamps": 0,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+      "requested_path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+      "row_count": 289230,
+      "sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+      "valid_rows": 289230
+    },
+    {
+      "admitted": false,
+      "bytes": 9545409,
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "notional"
+      ],
+      "duplicate_timestamps": 0,
+      "evidence": {
+        "contract_provenance": "UNKNOWN",
+        "fixed_minute_source_provenance": "UNKNOWN",
+        "session_calendar": "UNKNOWN",
+        "timestamp_label_semantics": "UNKNOWN"
+      },
+      "findings": [
+        "gaps_require_independent_session_calendar"
+      ],
+      "first_timestamp": "2026-01-01T23:01:00+00:00",
+      "gap_intervals": 10777,
+      "invalid_examples": [],
+      "invalid_rows": 0,
+      "last_timestamp": "2026-06-11T23:32:00+00:00",
+      "missing_clock_minutes": 104322,
+      "missing_columns": [],
+      "nonincreasing_timestamps": 0,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv",
+      "requested_path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv",
+      "row_count": 127550,
+      "sha256": "6be65aa599d811e7463ff3fa0bce8761b62b0ec4492097f2ad3c04cfba30ffc5",
+      "valid_rows": 127550
+    },
+    {
+      "admitted": false,
+      "bytes": 6694070,
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "notional"
+      ],
+      "duplicate_timestamps": 0,
+      "evidence": {
+        "contract_provenance": "UNKNOWN",
+        "fixed_minute_source_provenance": "UNKNOWN",
+        "session_calendar": "UNKNOWN",
+        "timestamp_label_semantics": "UNKNOWN"
+      },
+      "findings": [
+        "gaps_require_independent_session_calendar"
+      ],
+      "first_timestamp": "2024-09-01T22:01:00+00:00",
+      "gap_intervals": 756,
+      "invalid_examples": [],
+      "invalid_rows": 0,
+      "last_timestamp": "2024-11-29T18:15:00+00:00",
+      "missing_clock_minutes": 40212,
+      "missing_columns": [],
+      "nonincreasing_timestamps": 0,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2024_sepnov.csv",
+      "requested_path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2024_sepnov.csv",
+      "row_count": 87723,
+      "sha256": "2bc03d33ff856c6aa7f82e9eaf248e46db3eb2b438bd1e30e186f6926c73e50d",
+      "valid_rows": 87723
+    },
+    {
+      "admitted": false,
+      "bytes": 6628197,
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "notional"
+      ],
+      "duplicate_timestamps": 0,
+      "evidence": {
+        "contract_provenance": "UNKNOWN",
+        "fixed_minute_source_provenance": "UNKNOWN",
+        "session_calendar": "UNKNOWN",
+        "timestamp_label_semantics": "UNKNOWN"
+      },
+      "findings": [
+        "gaps_require_independent_session_calendar"
+      ],
+      "first_timestamp": "2023-09-01T00:01:00+00:00",
+      "gap_intervals": 957,
+      "invalid_examples": [],
+      "invalid_rows": 0,
+      "last_timestamp": "2023-12-01T00:00:00+00:00",
+      "missing_clock_minutes": 44113,
+      "missing_columns": [],
+      "nonincreasing_timestamps": 0,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2023_sepnov.csv",
+      "requested_path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2023_sepnov.csv",
+      "row_count": 86927,
+      "sha256": "cb9a346af16ad4432a8035143113130b1f62717f45928f9e5417e68dab2e9058",
+      "valid_rows": 86927
+    }
+  ],
+  "kind": "valentini_audit",
+  "performance_computed": false,
+  "version": "valentini-terminal-v1"
+}

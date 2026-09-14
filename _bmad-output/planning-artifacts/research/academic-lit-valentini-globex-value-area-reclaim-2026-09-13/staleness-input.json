@@ -1,0 +1,74 @@
+[
+  {
+    "claim": "Published Fabio-associated playbook differs from requested rule; exact video attribution unresolved",
+    "class": "attribution",
+    "pub_date": "2026-09-13",
+    "date_basis": "last_access_not_publication"
+  },
+  {
+    "claim": "Order-flow imbalance association is distinct from raw total-volume signal and not transferable MNQ expectancy",
+    "class": "seminal",
+    "pub_date": "2014-01",
+    "date_basis": "publication"
+  },
+  {
+    "claim": "OHLCV does not uniquely identify traded volume-at-price; uniform allocation is an approximation",
+    "class": "measurement",
+    "pub_date": "2026-09-13",
+    "date_basis": "last_access_not_publication"
+  },
+  {
+    "claim": "Trade records contain price size and aggressor-side fields absent from OHLCV",
+    "class": "vendor_schema",
+    "pub_date": "2026-09-13",
+    "date_basis": "last_access_not_publication"
+  },
+  {
+    "claim": "CME regular session and halt require explicit date-aware schedules; historical applicability unverified",
+    "class": "exchange_schedule",
+    "pub_date": "2026-09-13",
+    "date_basis": "last_access_not_publication"
+  },
+  {
+    "claim": "Current general calendar page does not establish full historical MNQ session coverage",
+    "class": "exchange_schedule",
+    "pub_date": "2026-09-13",
+    "date_basis": "last_access_not_publication"
+  },
+  {
+    "claim": "Power is conditional on justified effect and nuisance assumptions; absent exact effect needs sensitivity or undetermined status",
+    "class": "seminal",
+    "pub_date": "2022-03",
+    "date_basis": "publication"
+  },
+  {
+    "claim": "Specification searches on reused data can create chance findings; prior exposure is not fresh validation",
+    "class": "seminal",
+    "pub_date": "2000-09",
+    "date_basis": "publication"
+  },
+  {
+    "claim": "Stationary bootstrap requires weak dependence and stationarity assumptions",
+    "class": "seminal",
+    "pub_date": "1994-12",
+    "date_basis": "publication"
+  },
+  {
+    "claim": "Mismatched-pair surrogate is not exact permutation significance without justified invariance and transformation structure",
+    "class": "seminal",
+    "pub_date": "2018-12",
+    "date_basis": "publication"
+  },
+  {
+    "claim": "Taiwan futures TPO neural-network study is adjacent evidence not exact volume reclaim validation",
+    "class": "seminal",
+    "pub_date": "2014-08",
+    "date_basis": "publication"
+  },
+  {
+    "claim": "Missing-data ignorability requires assumptions; selected tick windows do not establish representative event frequency",
+    "class": "seminal",
+    "pub_date": "1976-12",
+    "date_basis": "publication"
+  }
+]

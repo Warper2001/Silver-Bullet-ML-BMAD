@@ -1,0 +1,42 @@
+{
+  "audit_sha256": "4a55a40692938e3868710bf92e300909124dfc9bea5e463b7ba39f1cbe6c810d",
+  "code_sha256": "2513a0359adf52afa86998dd25176e8e102dcc0ae59085a377f23b07dd03448e",
+  "data_blockers": [
+    "Independent timestamp-label, fixed-minute-source, calendar, and contract evidence has not been validated by this version.",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv: gaps_require_independent_session_calendar",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv: known_dollar_aggregated_not_fixed_minute",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv: gaps_require_independent_session_calendar",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2024_sepnov.csv: gaps_require_independent_session_calendar",
+    "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2023_sepnov.csv: gaps_require_independent_session_calendar"
+  ],
+  "evidence_sha256": "e16977280c57cb0a7989f7b092c10ae0e43dfb6f9ca875e64a66117c154bac6f",
+  "input_hashes": [
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+      "sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv",
+      "sha256": "6be65aa599d811e7463ff3fa0bce8761b62b0ec4492097f2ad3c04cfba30ffc5"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2024_sepnov.csv",
+      "sha256": "2bc03d33ff856c6aa7f82e9eaf248e46db3eb2b438bd1e30e186f6926c73e50d"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2023_sepnov.csv",
+      "sha256": "cb9a346af16ad4432a8035143113130b1f62717f45928f9e5417e68dab2e9058"
+    }
+  ],
+  "kind": "valentini_power",
+  "null_computed": false,
+  "performance_computed": false,
+  "power_blockers": [
+    "No transferable, independently justified effect estimate.",
+    "No independent dependence-aware calibration.",
+    "This terminal-only gate cannot validate or promote submitted evidence."
+  ],
+  "power_status": "POWER_UNDETERMINED",
+  "verdict": "DATA_UNSUITABLE",
+  "version": "valentini-terminal-v1"
+}

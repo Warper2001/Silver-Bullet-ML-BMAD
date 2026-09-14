@@ -1,0 +1,60 @@
+[
+  {
+    "argv": [
+      "/root/Silver-Bullet-ML-BMAD/.venv/bin/python",
+      "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/valentini-globex/tools/valentini_reclaim.py",
+      "audit",
+      "--csv",
+      "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+      "--csv",
+      "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv",
+      "--csv",
+      "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2024_sepnov.csv",
+      "--csv",
+      "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2023_sepnov.csv",
+      "--output",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/data-audit.json"
+    ],
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "stdout": "{\n  \"output\": \"/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/data-audit.json\",\n  \"verdict\": \"NOT_ADMITTED\"\n}\n",
+    "stderr": "",
+    "wall_seconds": 6.257
+  },
+  {
+    "argv": [
+      "/root/Silver-Bullet-ML-BMAD/.venv/bin/python",
+      "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/valentini-globex/tools/valentini_reclaim.py",
+      "power",
+      "--audit",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/data-audit.json",
+      "--evidence",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/gate-evidence.json",
+      "--output",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/power-verdict.json"
+    ],
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "stdout": "{\n  \"output\": \"/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/power-verdict.json\",\n  \"verdict\": \"DATA_UNSUITABLE\"\n}\n",
+    "stderr": "",
+    "wall_seconds": 0.134
+  },
+  {
+    "argv": [
+      "/root/Silver-Bullet-ML-BMAD/.venv/bin/python",
+      "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/valentini-globex/tools/valentini_reclaim.py",
+      "evaluate",
+      "--audit",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/data-audit.json",
+      "--gate",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/power-verdict.json",
+      "--evidence",
+      "/root/Silver-Bullet-ML-BMAD/_bmad-output/planning-artifacts/research/academic-lit-valentini-globex-value-area-reclaim-2026-09-13/gate-evidence.json"
+    ],
+    "exit_code": 2,
+    "expected_exit_code": 2,
+    "stdout": "",
+    "stderr": "{\n  \"error\": \"Evaluation refused: gate is not POWERED\",\n  \"performance_computed\": false\n}\n",
+    "wall_seconds": 0.087
+  }
+]

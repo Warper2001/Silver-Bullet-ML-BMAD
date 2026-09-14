@@ -1,0 +1,80 @@
+[
+  {
+    "id": "blind-1",
+    "verdict": "high",
+    "evidence": "Hard-link output aliases can truncate a CSV despite string path guard. Verified by reviewer synthetic samefile reproduction; duplicate of edge-1.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-2",
+    "verdict": "medium",
+    "evidence": "Permissive DictReader accepts unterminated quote as clean valid row. Strict parsing and regression required.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-3",
+    "verdict": "medium",
+    "evidence": "Duplicate JSON keys have divergent consumer semantics and last-wins acceptance. Reject duplicates.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-4",
+    "verdict": "medium",
+    "evidence": "Finite volume inputs can overflow accumulated profile values, violating finite-calculation expectations. Reject derived nonfinite values.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-5",
+    "verdict": "medium",
+    "evidence": "Doubled finite commissions may overflow and produce nonfinite trade output. Reject derived nonfinite results.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-6",
+    "verdict": "medium",
+    "evidence": "Repeated single derangement or zero spread is a degenerate calibration and must not imply zero detectable effect. Reject explicitly.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-7",
+    "verdict": "medium",
+    "evidence": "Session-close price was stamped at minute start; intrabar timestamps are not known from OHLCV. Correct known close timing and explicitly retain unknown event timing.",
+    "route": "patch"
+  },
+  {
+    "id": "blind-8",
+    "verdict": "low",
+    "evidence": "Audit kind/version unchecked during evaluate. Refusal remains unconditional; add direct artifact field checks for accurate reason.",
+    "route": "patch"
+  },
+  {
+    "id": "edge-1",
+    "verdict": "high",
+    "evidence": "Same hard-link overwrite as blind-1; demonstrated temp-file source truncation.",
+    "route": "patch"
+  },
+  {
+    "id": "edge-2",
+    "verdict": "medium",
+    "evidence": "Intermediate symlink target can traverse protected directory despite clean final resolution. Add intermediate resolution guard.",
+    "route": "patch"
+  },
+  {
+    "id": "verification-1",
+    "verdict": "medium",
+    "evidence": "Power CLI audited-data overwrite guard was disabled in memory and all tests still passed. Add collision regression for this distinct guard.",
+    "route": "patch"
+  },
+  {
+    "id": "verification-2",
+    "verdict": "medium",
+    "evidence": "Replacing MDE quantile multiplier with 1.0 leaves tests passing. Add independent numeric oracle.",
+    "route": "patch"
+  },
+  {
+    "id": "lead-1",
+    "verdict": "medium",
+    "evidence": "An already-open position with bar open above target has known target-first chronology even if the later low touches stop. Intrabar stop-first is only appropriate when opening price does not resolve ordering.",
+    "route": "patch"
+  }
+]

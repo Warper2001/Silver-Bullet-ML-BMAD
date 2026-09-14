@@ -1,0 +1,34 @@
+{
+  "as_of": "2026-09-14",
+  "baseline_commit": "099044ef23e1e8a7bc6662fd2b9315c822538017",
+  "implementation_commit": "530aedd5d835cbce9da7525871e14c7b5b3f2b9c",
+  "merged_into_main": true,
+  "main_test_results": {
+    "tests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "quality_checks": {
+    "black_check": "passed",
+    "mypy_strict_follow_imports_skip": "passed",
+    "flake8_88_E203_ignored": "passed"
+  },
+  "changed_file_hashes": {
+    "tools/valentini_reclaim.py": "2513a0359adf52afa86998dd25176e8e102dcc0ae59085a377f23b07dd03448e",
+    "tests/unit/test_valentini_reclaim.py": "9547bb622a64e27429e961f7da8907e7384770394a4c3281f5fa3c21e7f6d029",
+    "docs/valentini-reclaim.md": "9d53a7511449de5ea94f19031205759595fb587d3eed45d3eaec3495f1198681"
+  },
+  "input_audit_gate_evidence_hash_bindings": "all matched after merge",
+  "main_evaluation_refusal": {
+    "exit_code": 2,
+    "stderr": "{\n  \"error\": \"Evaluation refused: gate is not POWERED\",\n  \"performance_computed\": false\n}\n"
+  },
+  "review_findings_recorded": 13,
+  "review_findings_fixed": 13,
+  "deferred_review_findings": 0,
+  "market_performance_computed": false,
+  "market_null_computed": false,
+  "market_power_numeric_estimate": null,
+  "market_evaluation_capability": "unavailable; requires independently calibrated gate and provenance validator"
+}

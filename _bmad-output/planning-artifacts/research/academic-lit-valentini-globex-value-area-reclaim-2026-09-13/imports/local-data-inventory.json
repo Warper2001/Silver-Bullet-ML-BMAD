@@ -1,0 +1,114 @@
+{
+  "accessed": "2026-09-13",
+  "method": "Read timestamp column and file bytes for hashes only; no signal, return, performance, or sealed_holdout access. Inspected named provenance artifacts as imported local evidence, not independent research.",
+  "files": [
+    {
+      "path": "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+      "sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+      "bytes": 22318944,
+      "rows": 289230,
+      "first_timestamp": "2025-01-01 23:01:00+00:00",
+      "last_timestamp": "2025-12-31 22:00:00+00:00",
+      "invalid_timestamps": 0,
+      "duplicate_timestamps": 0,
+      "one_minute_steps": 259492,
+      "steps_over_one_minute_including_scheduled_closures": 29737,
+      "subminute_steps": 0,
+      "interval_semantics": "unverified",
+      "contract_identity": "absent from CSV columns",
+      "calendar_admission": "unverified; timestamp gaps alone do not classify missing data",
+      "research_role": "previously exposed or not established as untouched; not confirmatory"
+    },
+    {
+      "path": "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv",
+      "sha256": "6be65aa599d811e7463ff3fa0bce8761b62b0ec4492097f2ad3c04cfba30ffc5",
+      "bytes": 9545409,
+      "rows": 127550,
+      "first_timestamp": "2026-01-01 23:01:00+00:00",
+      "last_timestamp": "2026-06-11 23:32:00+00:00",
+      "invalid_timestamps": 0,
+      "duplicate_timestamps": 0,
+      "one_minute_steps": 116772,
+      "steps_over_one_minute_including_scheduled_closures": 10777,
+      "subminute_steps": 0,
+      "interval_semantics": "unverified",
+      "contract_identity": "absent from CSV columns",
+      "calendar_admission": "unverified; timestamp gaps alone do not classify missing data",
+      "research_role": "previously exposed or not established as untouched; not confirmatory"
+    },
+    {
+      "path": "data/processed/dollar_bars/1_minute/mnq_1min_2024_sepnov.csv",
+      "sha256": "2bc03d33ff856c6aa7f82e9eaf248e46db3eb2b438bd1e30e186f6926c73e50d",
+      "bytes": 6694070,
+      "rows": 87723,
+      "first_timestamp": "2024-09-01 22:01:00+00:00",
+      "last_timestamp": "2024-11-29 18:15:00+00:00",
+      "invalid_timestamps": 0,
+      "duplicate_timestamps": 0,
+      "one_minute_steps": 86966,
+      "steps_over_one_minute_including_scheduled_closures": 756,
+      "subminute_steps": 0,
+      "interval_semantics": "unverified",
+      "contract_identity": "absent from CSV columns",
+      "calendar_admission": "unverified; timestamp gaps alone do not classify missing data",
+      "research_role": "previously exposed or not established as untouched; not confirmatory"
+    },
+    {
+      "path": "data/processed/dollar_bars/1_minute/mnq_1min_2023_sepnov.csv",
+      "sha256": "cb9a346af16ad4432a8035143113130b1f62717f45928f9e5417e68dab2e9058",
+      "bytes": 6628197,
+      "rows": 86927,
+      "first_timestamp": "2023-09-01 00:01:00+00:00",
+      "last_timestamp": "2023-12-01 00:00:00+00:00",
+      "invalid_timestamps": 0,
+      "duplicate_timestamps": 0,
+      "one_minute_steps": 85969,
+      "steps_over_one_minute_including_scheduled_closures": 957,
+      "subminute_steps": 0,
+      "interval_semantics": "unverified",
+      "contract_identity": "absent from CSV columns",
+      "calendar_admission": "unverified; timestamp gaps alone do not classify missing data",
+      "research_role": "previously exposed or not established as untouched; not confirmatory"
+    }
+  ],
+  "tick_manifest": {
+    "source": "data/tick/mnq_mbo_parity/windows_manifest.json",
+    "derivation": "prereg Amendment 8/9 Mode C -- parity fills +/-90min, merged",
+    "n_windows": 28,
+    "total_minutes": 5154.0,
+    "first_window_start": "2026-06-11T12:00:00+00:00",
+    "last_window_end": "2026-08-28T21:30:02.989814+00:00",
+    "limitations": "Selected around pre-existing fills; not contiguous full sessions."
+  },
+  "source_artifacts": [
+    {
+      "path": "data/tick/mnq_mbo_parity/windows_manifest.json",
+      "sha256": "34191ec871cf50390be11db9b84825ea647e8ef95c37e911a9f064d3bac8b8e5"
+    },
+    {
+      "path": "docs/reports/yank-provenance-closure/historical-writer.py.txt",
+      "sha256": "8f603a91acce9dfcec199b73e5f1ecb3f2d19904bbafeb0eb0bb018523c8f27e"
+    },
+    {
+      "path": "docs/reports/yank-provenance-closure/verification.json",
+      "sha256": "0ac1aa45de61c2a08200e616827896246e3cd78169c58d61bb8c5ee02f9a04aa"
+    },
+    {
+      "path": "docs/reports/yank-provenance-closure/README.md",
+      "sha256": "b1fd369b4ccc6fc2a02fa97d4eb958a3f4f54dbdd17011e1e1612469f8efac93"
+    },
+    {
+      "path": "scripts/update_eod_data.py",
+      "sha256": "3ffe53941efbf6f831da20859e4dd5c3f9ac9b0cfb10af8432c6330d3cd68415"
+    },
+    {
+      "path": "study_volume_profile_poc.py",
+      "sha256": "435dabf9740c8d301e62b73749e0f8c932c94151f4638f6f5eb18341a1603323"
+    },
+    {
+      "path": "_bmad-output/preregistration_vpoc1_volume_profile_fade.md",
+      "sha256": "2f12593bba7743c4f5fb737604d2a20e984bfe6ab5d9dffe2b78a8d10fd58bbc"
+    }
+  ],
+  "2025_identity_matches_prior_audit": true
+}

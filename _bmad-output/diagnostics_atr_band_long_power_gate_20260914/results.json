@@ -1,0 +1,2138 @@
+{
+  "plan_sha256": "a900bd8808dc84841efda17fe9147677ec498a0d90876fd756125ed79ba55968",
+  "script_sha256": "105482cdfcd774c1029668d28bcd9cd664a72e0442611d904f98c4b56d9b6184",
+  "inputs": {
+    "/root/mnq_historical.json": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924"
+  },
+  "raw": {
+    "records_kept": 788780,
+    "records_skipped_post_cutoff": 62277,
+    "first": "2023-11-30 19:01:00-05:00",
+    "last": "2026-02-27 17:00:00-05:00"
+  },
+  "variants": {
+    "RTH": {
+      "window": {
+        "sessions_all": 576,
+        "sessions_eligible": 516,
+        "bars": 40248,
+        "first_bar": "2023-12-01 09:35:00-05:00",
+        "last_bar": "2026-02-27 16:00:00-05:00"
+      },
+      "through": {
+        "events": {
+          "N_upper": 79,
+          "N_lower": 68,
+          "per_session_upper": 0.15310077519379844,
+          "per_session_lower": 0.13178294573643412,
+          "sessions_with_event": 68,
+          "max_events_one_session": 2,
+          "by_fill_hour_ET": {
+            "9": 14,
+            "10": 12,
+            "11": 6,
+            "12": 4,
+            "13": 12,
+            "14": 20,
+            "15": 11
+          }
+        },
+        "geometry": {
+          "atr_pts_median": 23.02467760487286,
+          "R_usd_mean": 71.39240506329114,
+          "R_usd_median": 69.0,
+          "R_usd_p10": 43.7,
+          "R_usd_p90": 105.10000000000001
+        },
+        "cost": {
+          "low": {
+            "usd": 2.22,
+            "mean_c_over_R": 0.03498586415133598,
+            "breakeven_theta_R": 0.031095744680851068
+          },
+          "primary": {
+            "usd": 5.8,
+            "mean_c_over_R": 0.09140450994493182,
+            "breakeven_theta_R": 0.08124113475177305
+          },
+          "double": {
+            "usd": 11.6,
+            "mean_c_over_R": 0.18280901988986364,
+            "breakeven_theta_R": 0.1624822695035461
+          }
+        },
+        "placebo": {
+          "n_shifts": 507,
+          "sd_iid_usd": 81.40680559635933,
+          "sigma_cluster_usd": 84.4035367119534,
+          "sd_iid_R": 1.088672668159737,
+          "sigma_cluster_R": 1.123287220008298,
+          "placebo_mean_usd": -0.7025316455696202,
+          "placebo_flatten_share": 0.13924050632911392,
+          "sigma_cluster_p10_p90": [
+            78.37711259821441,
+            89.82466586975447
+          ]
+        },
+        "bracket_bound": {
+          "sigma_bb_usd": 88.43124268007318,
+          "sigma_bb_R": 1.166703453622669
+        },
+        "cluster_ratio_usd": 1.0368118008517961,
+        "cluster_ratio_R": 1.0317951877188876,
+        "sigma_used": {
+          "contract": {
+            "placebo": 84.4035367119534,
+            "v": 91.68655597468889
+          },
+          "risk": {
+            "placebo": 1.123287220008298,
+            "v": 1.2037990089428763
+          }
+        },
+        "grid": {
+          "contract|low|pessimistic|placebo": {
+            "mu_net": 1.3496202531645567,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.06645426589749051,
+            "power_IS_lower": 0.06514034295890707,
+            "power_HOLD_upper": 0.054971064640264106,
+            "power_HOLD_lower": 0.05459939690361382,
+            "N_for_80": 24180.554822135407,
+            "years_for_80_upper_rate": 626.741324503811,
+            "years_for_80_lower_rate": 728.1259505264863,
+            "verdict": null
+          },
+          "contract|low|pessimistic|v": {
+            "mu_net": 1.3496202531645567,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.06501038702176075,
+            "power_IS_lower": 0.06382058990616851,
+            "power_HOLD_upper": 0.05456243067344167,
+            "power_HOLD_lower": 0.05422222760305581,
+            "N_for_80": 28533.58173471721,
+            "years_for_80_upper_rate": 739.5684235038216,
+            "years_for_80_lower_rate": 859.2044920117926,
+            "verdict": null
+          },
+          "contract|low|central|placebo": {
+            "mu_net": 4.919240506329114,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.1299075321334528,
+            "power_IS_lower": 0.12216243770830021,
+            "power_HOLD_upper": 0.07000836010225585,
+            "power_HOLD_lower": 0.06838277278441963,
+            "N_for_80": 1820.0919255635902,
+            "years_for_80_upper_rate": 47.17537842027389,
+            "years_for_80_lower_rate": 54.806689635318186,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|central|v": {
+            "mu_net": 4.919240506329114,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.12140800025624787,
+            "power_IS_lower": 0.11460017060894312,
+            "power_HOLD_upper": 0.06822222419299181,
+            "power_HOLD_lower": 0.06675432899315473,
+            "N_for_80": 2147.7481432819,
+            "years_for_80_upper_rate": 55.66797478066408,
+            "years_for_80_lower_rate": 64.67308834812444,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|optimistic|placebo": {
+            "mu_net": 12.058481012658227,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.3538213620727849,
+            "power_IS_lower": 0.3203422122592584,
+            "power_HOLD_upper": 0.1092961940353882,
+            "power_HOLD_lower": 0.10379431170637216,
+            "N_for_80": 302.9034553588401,
+            "years_for_80_upper_rate": 7.851023858004898,
+            "years_for_80_lower_rate": 9.121042423270396,
+            "verdict": null
+          },
+          "contract|low|optimistic|v": {
+            "mu_net": 12.058481012658227,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.31707588619584504,
+            "power_IS_lower": 0.2876292131240673,
+            "power_HOLD_upper": 0.1032566972898355,
+            "power_HOLD_lower": 0.09839059750651596,
+            "N_for_80": 357.4326794725905,
+            "years_for_80_upper_rate": 9.264379275058102,
+            "years_for_80_lower_rate": 10.763028863670442,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|placebo": {
+            "mu_net": -2.230379746835443,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.03007272330426596,
+            "power_IS_lower": 0.03124792497555561,
+            "power_HOLD_upper": 0.04257692012236846,
+            "power_HOLD_lower": 0.04308137571593527,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|v": {
+            "mu_net": -2.230379746835443,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.031367212094006044,
+            "power_IS_lower": 0.03248590057843017,
+            "power_HOLD_upper": 0.04313196111904494,
+            "power_HOLD_lower": 0.04360104742230807,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|central|placebo": {
+            "mu_net": 1.339240506329114,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.06631339175571774,
+            "power_IS_lower": 0.06501164449727759,
+            "power_HOLD_upper": 0.05493139487330736,
+            "power_HOLD_lower": 0.054562788544653004,
+            "N_for_80": 24556.828798550647,
+            "years_for_80_upper_rate": 636.4940556586364,
+            "years_for_80_lower_rate": 739.4563293681216,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|primary|central|v": {
+            "mu_net": 1.339240506329114,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.06488288510878207,
+            "power_IS_lower": 0.06370397701261414,
+            "power_HOLD_upper": 0.05452612599366698,
+            "power_HOLD_lower": 0.05418871078288809,
+            "N_for_80": 28977.593228236077,
+            "years_for_80_upper_rate": 751.0768588391509,
+            "years_for_80_lower_rate": 872.5745860043075,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|primary|optimistic|placebo": {
+            "mu_net": 8.478481012658229,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.22601977149036212,
+            "power_IS_lower": 0.20710497729511013,
+            "power_HOLD_upper": 0.0879701514857894,
+            "power_HOLD_lower": 0.08465640573199901,
+            "N_for_80": 612.7076904997878,
+            "years_for_80_upper_rate": 15.880910603671413,
+            "years_for_80_lower_rate": 18.449881436618256,
+            "verdict": null
+          },
+          "contract|primary|optimistic|v": {
+            "mu_net": 8.478481012658229,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.20527092646834805,
+            "power_IS_lower": 0.18880561689654085,
+            "power_HOLD_upper": 0.08433105052483392,
+            "power_HOLD_lower": 0.08137272700516074,
+            "N_for_80": 723.0084294989551,
+            "years_for_80_upper_rate": 18.739820656091062,
+            "years_for_80_lower_rate": 21.771262232811672,
+            "verdict": null
+          },
+          "contract|double|pessimistic|placebo": {
+            "mu_net": -8.030379746835443,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.006378168040006068,
+            "power_IS_lower": 0.007561493302786858,
+            "power_HOLD_upper": 0.027369615800396072,
+            "power_HOLD_lower": 0.028651076703628604,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|pessimistic|v": {
+            "mu_net": -8.030379746835443,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.007689530344712674,
+            "power_IS_lower": 0.008964063713003243,
+            "power_HOLD_upper": 0.028781601418136814,
+            "power_HOLD_lower": 0.030009615535448838,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|central|placebo": {
+            "mu_net": -4.460759493670886,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.017232106480522685,
+            "power_IS_lower": 0.018732103302618416,
+            "power_HOLD_upper": 0.036071409761912594,
+            "power_HOLD_lower": 0.036957542993722114,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|central|v": {
+            "mu_net": -4.460759493670886,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.018887654309471535,
+            "power_IS_lower": 0.020375698213367422,
+            "power_HOLD_upper": 0.03704690652563791,
+            "power_HOLD_lower": 0.03787994513157617,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|optimistic|placebo": {
+            "mu_net": 2.678481012658228,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.08647377715845994,
+            "power_IS_lower": 0.08330691175374899,
+            "power_HOLD_upper": 0.06023944009376903,
+            "power_HOLD_lower": 0.05944873626035983,
+            "N_for_80": 6139.207199637662,
+            "years_for_80_upper_rate": 159.1235139146591,
+            "years_for_80_lower_rate": 184.8640823420304,
+            "verdict": null
+          },
+          "contract|double|optimistic|v": {
+            "mu_net": 2.678481012658228,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.08299584903907214,
+            "power_IS_lower": 0.08016637647812985,
+            "power_HOLD_upper": 0.05937030844012382,
+            "power_HOLD_lower": 0.058650373868127305,
+            "N_for_80": 7244.398307059019,
+            "years_for_80_upper_rate": 187.76921470978772,
+            "years_for_80_lower_rate": 218.1436465010769,
+            "verdict": null
+          },
+          "risk|low|pessimistic|placebo": {
+            "mu_net": 0.015014135848664026,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.06349848056857677,
+            "power_IS_lower": 0.062437035339741216,
+            "power_HOLD_upper": 0.05412957077489536,
+            "power_HOLD_lower": 0.053822526059612186,
+            "N_for_80": 34605.816359066164,
+            "years_for_80_upper_rate": 896.9560599396293,
+            "years_for_80_lower_rate": 1042.0518931651575,
+            "verdict": null
+          },
+          "risk|low|pessimistic|v": {
+            "mu_net": 0.015014135848664026,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.06251514031218267,
+            "power_IS_lower": 0.06153625597994712,
+            "power_HOLD_upper": 0.05384521019664417,
+            "power_HOLD_lower": 0.053559851240384475,
+            "N_for_80": 39744.35250584536,
+            "years_for_80_upper_rate": 1030.1429522310732,
+            "years_for_80_lower_rate": 1196.7837239155112,
+            "verdict": null
+          },
+          "risk|low|central|placebo": {
+            "mu_net": 0.06501413584866403,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.12914993787563195,
+            "power_IS_lower": 0.12148899686130155,
+            "power_HOLD_upper": 0.06985109957906956,
+            "power_HOLD_lower": 0.06823948029152378,
+            "N_for_80": 1845.5855964664581,
+            "years_for_80_upper_rate": 47.83615470045672,
+            "years_for_80_lower_rate": 55.574356196118835,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|central|v": {
+            "mu_net": 0.06501413584866403,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.12204496797711395,
+            "power_IS_lower": 0.11516744507652371,
+            "power_HOLD_upper": 0.06835780130861206,
+            "power_HOLD_lower": 0.06687801067516819,
+            "N_for_80": 2119.6322538554086,
+            "years_for_80_upper_rate": 54.93923261951933,
+            "years_for_80_lower_rate": 63.82646142561804,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|optimistic|placebo": {
+            "mu_net": 0.16501413584866403,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.36724753646415964,
+            "power_IS_lower": 0.3323398067016733,
+            "power_HOLD_upper": 0.11150404100826528,
+            "power_HOLD_lower": 0.10576701419759565,
+            "N_for_80": 286.48869035768837,
+            "years_for_80_upper_rate": 7.425565813972635,
+            "years_for_80_lower_rate": 8.626760283879971,
+            "verdict": null
+          },
+          "risk|low|optimistic|v": {
+            "mu_net": 0.16501413584866403,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.33487928809732903,
+            "power_IS_lower": 0.3034578633580559,
+            "power_HOLD_upper": 0.10618428797498408,
+            "power_HOLD_lower": 0.1010114072182493,
+            "N_for_80": 329.0287210788749,
+            "years_for_80_upper_rate": 8.528170588542267,
+            "years_for_80_lower_rate": 9.90772759551234,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|placebo": {
+            "mu_net": -0.04140450994493182,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.02427778330271748,
+            "power_IS_lower": 0.02565905814321232,
+            "power_HOLD_upper": 0.039902814133378664,
+            "power_HOLD_lower": 0.040571760539375605,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|v": {
+            "mu_net": -0.04140450994493182,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.025554590705645037,
+            "power_IS_lower": 0.026897663417373544,
+            "power_HOLD_upper": 0.040521926242050046,
+            "power_HOLD_lower": 0.04115368603830406,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|central|placebo": {
+            "mu_net": 0.008595490055068183,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.057416126366582144,
+            "power_IS_lower": 0.05685299421081044,
+            "power_HOLD_upper": 0.05233226461015394,
+            "power_HOLD_lower": 0.05216096411916735,
+            "N_for_80": 105586.52492704413,
+            "years_for_80_upper_rate": 2736.721260917961,
+            "years_for_80_lower_rate": 3179.426170772337,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|primary|central|v": {
+            "mu_net": 0.008595490055068183,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.056894535052575045,
+            "power_IS_lower": 0.05637269712598406,
+            "power_HOLD_upper": 0.052173630763724645,
+            "power_HOLD_lower": 0.052014158291570536,
+            "N_for_80": 121264.81927273661,
+            "years_for_80_upper_rate": 3143.0905537840113,
+            "years_for_80_lower_rate": 3651.531672778483,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|primary|optimistic|placebo": {
+            "mu_net": 0.10859549005506819,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.21605855210281932,
+            "power_IS_lower": 0.19831961059607034,
+            "power_HOLD_upper": 0.0862340552229916,
+            "power_HOLD_lower": 0.0830906263937628,
+            "N_for_80": 661.494445746799,
+            "years_for_80_upper_rate": 17.145425658295576,
+            "years_for_80_lower_rate": 19.9189503971375,
+            "verdict": null
+          },
+          "risk|primary|optimistic|v": {
+            "mu_net": 0.10859549005506819,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.19960196320106283,
+            "power_IS_lower": 0.18380544338610366,
+            "power_HOLD_upper": 0.08332034955245127,
+            "power_HOLD_lower": 0.08045964095666974,
+            "N_for_80": 759.7181976471956,
+            "years_for_80_upper_rate": 19.691309523103925,
+            "years_for_80_lower_rate": 22.8766684165472,
+            "verdict": null
+          },
+          "risk|double|pessimistic|placebo": {
+            "mu_net": -0.13280901988986366,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.0035117624356028787,
+            "power_IS_lower": 0.004398763923580116,
+            "power_HOLD_upper": 0.023409017834942685,
+            "power_HOLD_lower": 0.02481369189553387,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|pessimistic|v": {
+            "mu_net": -0.13280901988986366,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.004326816160391477,
+            "power_IS_lower": 0.005315247666329197,
+            "power_HOLD_upper": 0.024707330204434476,
+            "power_HOLD_lower": 0.026076248165459906,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|central|placebo": {
+            "mu_net": -0.08280901988986364,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.010721459387352332,
+            "power_IS_lower": 0.012136940256271498,
+            "power_HOLD_upper": 0.03152942483591916,
+            "power_HOLD_lower": 0.03264078981141502,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|central|v": {
+            "mu_net": -0.08280901988986364,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.012026857147792072,
+            "power_IS_lower": 0.013479589712836979,
+            "power_HOLD_upper": 0.03255741924217346,
+            "power_HOLD_lower": 0.03362116317462965,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|optimistic|placebo": {
+            "mu_net": 0.017190980110136367,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.0656714769198242,
+            "power_IS_lower": 0.06442503257419761,
+            "power_HOLD_upper": 0.0547500913344192,
+            "power_HOLD_lower": 0.0543954579011083,
+            "N_for_80": 26396.63123176103,
+            "years_for_80_upper_rate": 684.1803152294902,
+            "years_for_80_lower_rate": 794.8565426930843,
+            "verdict": null
+          },
+          "risk|double|optimistic|v": {
+            "mu_net": 0.017190980110136367,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.06451667623526804,
+            "power_IS_lower": 0.06336897749657491,
+            "power_HOLD_upper": 0.05442165012321336,
+            "power_HOLD_lower": 0.05409225073898503,
+            "N_for_80": 30316.204818184153,
+            "years_for_80_upper_rate": 785.7726384460028,
+            "years_for_80_lower_rate": 912.8829181946207,
+            "verdict": null
+          }
+        }
+      },
+      "touch": {
+        "events": {
+          "N_upper": 79,
+          "N_lower": 68,
+          "per_session_upper": 0.15310077519379844,
+          "per_session_lower": 0.13178294573643412,
+          "sessions_with_event": 68,
+          "max_events_one_session": 2,
+          "by_fill_hour_ET": {
+            "9": 14,
+            "10": 12,
+            "11": 6,
+            "12": 4,
+            "13": 12,
+            "14": 20,
+            "15": 11
+          }
+        },
+        "geometry": {
+          "atr_pts_median": 23.02467760487286,
+          "R_usd_mean": 71.39240506329114,
+          "R_usd_median": 69.0,
+          "R_usd_p10": 43.7,
+          "R_usd_p90": 105.10000000000001
+        },
+        "cost": {
+          "low": {
+            "usd": 2.22,
+            "mean_c_over_R": 0.03498586415133598,
+            "breakeven_theta_R": 0.031095744680851068
+          },
+          "primary": {
+            "usd": 5.8,
+            "mean_c_over_R": 0.09140450994493182,
+            "breakeven_theta_R": 0.08124113475177305
+          },
+          "double": {
+            "usd": 11.6,
+            "mean_c_over_R": 0.18280901988986364,
+            "breakeven_theta_R": 0.1624822695035461
+          }
+        },
+        "placebo": {
+          "n_shifts": 507,
+          "sd_iid_usd": 81.40680559635933,
+          "sigma_cluster_usd": 84.4035367119534,
+          "sd_iid_R": 1.088672668159737,
+          "sigma_cluster_R": 1.123287220008298,
+          "placebo_mean_usd": -0.7025316455696202,
+          "placebo_flatten_share": 0.13924050632911392,
+          "sigma_cluster_p10_p90": [
+            78.37711259821441,
+            89.82466586975447
+          ]
+        },
+        "bracket_bound": {
+          "sigma_bb_usd": 88.43124268007318,
+          "sigma_bb_R": 1.166703453622669
+        },
+        "cluster_ratio_usd": 1.0368118008517961,
+        "cluster_ratio_R": 1.0317951877188876,
+        "sigma_used": {
+          "contract": {
+            "placebo": 84.4035367119534,
+            "v": 91.68655597468889
+          },
+          "risk": {
+            "placebo": 1.123287220008298,
+            "v": 1.2037990089428763
+          }
+        },
+        "grid": {
+          "contract|low|pessimistic|placebo": {
+            "mu_net": 1.3496202531645567,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.06645426589749051,
+            "power_IS_lower": 0.06514034295890707,
+            "power_HOLD_upper": 0.054971064640264106,
+            "power_HOLD_lower": 0.05459939690361382,
+            "N_for_80": 24180.554822135407,
+            "years_for_80_upper_rate": 626.741324503811,
+            "years_for_80_lower_rate": 728.1259505264863,
+            "verdict": null
+          },
+          "contract|low|pessimistic|v": {
+            "mu_net": 1.3496202531645567,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.06501038702176075,
+            "power_IS_lower": 0.06382058990616851,
+            "power_HOLD_upper": 0.05456243067344167,
+            "power_HOLD_lower": 0.05422222760305581,
+            "N_for_80": 28533.58173471721,
+            "years_for_80_upper_rate": 739.5684235038216,
+            "years_for_80_lower_rate": 859.2044920117926,
+            "verdict": null
+          },
+          "contract|low|central|placebo": {
+            "mu_net": 4.919240506329114,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.1299075321334528,
+            "power_IS_lower": 0.12216243770830021,
+            "power_HOLD_upper": 0.07000836010225585,
+            "power_HOLD_lower": 0.06838277278441963,
+            "N_for_80": 1820.0919255635902,
+            "years_for_80_upper_rate": 47.17537842027389,
+            "years_for_80_lower_rate": 54.806689635318186,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|central|v": {
+            "mu_net": 4.919240506329114,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.12140800025624787,
+            "power_IS_lower": 0.11460017060894312,
+            "power_HOLD_upper": 0.06822222419299181,
+            "power_HOLD_lower": 0.06675432899315473,
+            "N_for_80": 2147.7481432819,
+            "years_for_80_upper_rate": 55.66797478066408,
+            "years_for_80_lower_rate": 64.67308834812444,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|optimistic|placebo": {
+            "mu_net": 12.058481012658227,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.3538213620727849,
+            "power_IS_lower": 0.3203422122592584,
+            "power_HOLD_upper": 0.1092961940353882,
+            "power_HOLD_lower": 0.10379431170637216,
+            "N_for_80": 302.9034553588401,
+            "years_for_80_upper_rate": 7.851023858004898,
+            "years_for_80_lower_rate": 9.121042423270396,
+            "verdict": null
+          },
+          "contract|low|optimistic|v": {
+            "mu_net": 12.058481012658227,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.31707588619584504,
+            "power_IS_lower": 0.2876292131240673,
+            "power_HOLD_upper": 0.1032566972898355,
+            "power_HOLD_lower": 0.09839059750651596,
+            "N_for_80": 357.4326794725905,
+            "years_for_80_upper_rate": 9.264379275058102,
+            "years_for_80_lower_rate": 10.763028863670442,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|placebo": {
+            "mu_net": -2.230379746835443,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.03007272330426596,
+            "power_IS_lower": 0.03124792497555561,
+            "power_HOLD_upper": 0.04257692012236846,
+            "power_HOLD_lower": 0.04308137571593527,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|v": {
+            "mu_net": -2.230379746835443,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.031367212094006044,
+            "power_IS_lower": 0.03248590057843017,
+            "power_HOLD_upper": 0.04313196111904494,
+            "power_HOLD_lower": 0.04360104742230807,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|central|placebo": {
+            "mu_net": 1.339240506329114,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.06631339175571774,
+            "power_IS_lower": 0.06501164449727759,
+            "power_HOLD_upper": 0.05493139487330736,
+            "power_HOLD_lower": 0.054562788544653004,
+            "N_for_80": 24556.828798550647,
+            "years_for_80_upper_rate": 636.4940556586364,
+            "years_for_80_lower_rate": 739.4563293681216,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|primary|central|v": {
+            "mu_net": 1.339240506329114,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.06488288510878207,
+            "power_IS_lower": 0.06370397701261414,
+            "power_HOLD_upper": 0.05452612599366698,
+            "power_HOLD_lower": 0.05418871078288809,
+            "N_for_80": 28977.593228236077,
+            "years_for_80_upper_rate": 751.0768588391509,
+            "years_for_80_lower_rate": 872.5745860043075,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|primary|optimistic|placebo": {
+            "mu_net": 8.478481012658229,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.22601977149036212,
+            "power_IS_lower": 0.20710497729511013,
+            "power_HOLD_upper": 0.0879701514857894,
+            "power_HOLD_lower": 0.08465640573199901,
+            "N_for_80": 612.7076904997878,
+            "years_for_80_upper_rate": 15.880910603671413,
+            "years_for_80_lower_rate": 18.449881436618256,
+            "verdict": null
+          },
+          "contract|primary|optimistic|v": {
+            "mu_net": 8.478481012658229,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.20527092646834805,
+            "power_IS_lower": 0.18880561689654085,
+            "power_HOLD_upper": 0.08433105052483392,
+            "power_HOLD_lower": 0.08137272700516074,
+            "N_for_80": 723.0084294989551,
+            "years_for_80_upper_rate": 18.739820656091062,
+            "years_for_80_lower_rate": 21.771262232811672,
+            "verdict": null
+          },
+          "contract|double|pessimistic|placebo": {
+            "mu_net": -8.030379746835443,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.006378168040006068,
+            "power_IS_lower": 0.007561493302786858,
+            "power_HOLD_upper": 0.027369615800396072,
+            "power_HOLD_lower": 0.028651076703628604,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|pessimistic|v": {
+            "mu_net": -8.030379746835443,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.007689530344712674,
+            "power_IS_lower": 0.008964063713003243,
+            "power_HOLD_upper": 0.028781601418136814,
+            "power_HOLD_lower": 0.030009615535448838,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|central|placebo": {
+            "mu_net": -4.460759493670886,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.017232106480522685,
+            "power_IS_lower": 0.018732103302618416,
+            "power_HOLD_upper": 0.036071409761912594,
+            "power_HOLD_lower": 0.036957542993722114,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|central|v": {
+            "mu_net": -4.460759493670886,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.018887654309471535,
+            "power_IS_lower": 0.020375698213367422,
+            "power_HOLD_upper": 0.03704690652563791,
+            "power_HOLD_lower": 0.03787994513157617,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|optimistic|placebo": {
+            "mu_net": 2.678481012658228,
+            "sigma": 84.4035367119534,
+            "power_IS_upper": 0.08647377715845994,
+            "power_IS_lower": 0.08330691175374899,
+            "power_HOLD_upper": 0.06023944009376903,
+            "power_HOLD_lower": 0.05944873626035983,
+            "N_for_80": 6139.207199637662,
+            "years_for_80_upper_rate": 159.1235139146591,
+            "years_for_80_lower_rate": 184.8640823420304,
+            "verdict": null
+          },
+          "contract|double|optimistic|v": {
+            "mu_net": 2.678481012658228,
+            "sigma": 91.68655597468889,
+            "power_IS_upper": 0.08299584903907214,
+            "power_IS_lower": 0.08016637647812985,
+            "power_HOLD_upper": 0.05937030844012382,
+            "power_HOLD_lower": 0.058650373868127305,
+            "N_for_80": 7244.398307059019,
+            "years_for_80_upper_rate": 187.76921470978772,
+            "years_for_80_lower_rate": 218.1436465010769,
+            "verdict": null
+          },
+          "risk|low|pessimistic|placebo": {
+            "mu_net": 0.015014135848664026,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.06349848056857677,
+            "power_IS_lower": 0.062437035339741216,
+            "power_HOLD_upper": 0.05412957077489536,
+            "power_HOLD_lower": 0.053822526059612186,
+            "N_for_80": 34605.816359066164,
+            "years_for_80_upper_rate": 896.9560599396293,
+            "years_for_80_lower_rate": 1042.0518931651575,
+            "verdict": null
+          },
+          "risk|low|pessimistic|v": {
+            "mu_net": 0.015014135848664026,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.06251514031218267,
+            "power_IS_lower": 0.06153625597994712,
+            "power_HOLD_upper": 0.05384521019664417,
+            "power_HOLD_lower": 0.053559851240384475,
+            "N_for_80": 39744.35250584536,
+            "years_for_80_upper_rate": 1030.1429522310732,
+            "years_for_80_lower_rate": 1196.7837239155112,
+            "verdict": null
+          },
+          "risk|low|central|placebo": {
+            "mu_net": 0.06501413584866403,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.12914993787563195,
+            "power_IS_lower": 0.12148899686130155,
+            "power_HOLD_upper": 0.06985109957906956,
+            "power_HOLD_lower": 0.06823948029152378,
+            "N_for_80": 1845.5855964664581,
+            "years_for_80_upper_rate": 47.83615470045672,
+            "years_for_80_lower_rate": 55.574356196118835,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|central|v": {
+            "mu_net": 0.06501413584866403,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.12204496797711395,
+            "power_IS_lower": 0.11516744507652371,
+            "power_HOLD_upper": 0.06835780130861206,
+            "power_HOLD_lower": 0.06687801067516819,
+            "N_for_80": 2119.6322538554086,
+            "years_for_80_upper_rate": 54.93923261951933,
+            "years_for_80_lower_rate": 63.82646142561804,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|optimistic|placebo": {
+            "mu_net": 0.16501413584866403,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.36724753646415964,
+            "power_IS_lower": 0.3323398067016733,
+            "power_HOLD_upper": 0.11150404100826528,
+            "power_HOLD_lower": 0.10576701419759565,
+            "N_for_80": 286.48869035768837,
+            "years_for_80_upper_rate": 7.425565813972635,
+            "years_for_80_lower_rate": 8.626760283879971,
+            "verdict": null
+          },
+          "risk|low|optimistic|v": {
+            "mu_net": 0.16501413584866403,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.33487928809732903,
+            "power_IS_lower": 0.3034578633580559,
+            "power_HOLD_upper": 0.10618428797498408,
+            "power_HOLD_lower": 0.1010114072182493,
+            "N_for_80": 329.0287210788749,
+            "years_for_80_upper_rate": 8.528170588542267,
+            "years_for_80_lower_rate": 9.90772759551234,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|placebo": {
+            "mu_net": -0.04140450994493182,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.02427778330271748,
+            "power_IS_lower": 0.02565905814321232,
+            "power_HOLD_upper": 0.039902814133378664,
+            "power_HOLD_lower": 0.040571760539375605,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|v": {
+            "mu_net": -0.04140450994493182,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.025554590705645037,
+            "power_IS_lower": 0.026897663417373544,
+            "power_HOLD_upper": 0.040521926242050046,
+            "power_HOLD_lower": 0.04115368603830406,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|central|placebo": {
+            "mu_net": 0.008595490055068183,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.057416126366582144,
+            "power_IS_lower": 0.05685299421081044,
+            "power_HOLD_upper": 0.05233226461015394,
+            "power_HOLD_lower": 0.05216096411916735,
+            "N_for_80": 105586.52492704413,
+            "years_for_80_upper_rate": 2736.721260917961,
+            "years_for_80_lower_rate": 3179.426170772337,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|primary|central|v": {
+            "mu_net": 0.008595490055068183,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.056894535052575045,
+            "power_IS_lower": 0.05637269712598406,
+            "power_HOLD_upper": 0.052173630763724645,
+            "power_HOLD_lower": 0.052014158291570536,
+            "N_for_80": 121264.81927273661,
+            "years_for_80_upper_rate": 3143.0905537840113,
+            "years_for_80_lower_rate": 3651.531672778483,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|primary|optimistic|placebo": {
+            "mu_net": 0.10859549005506819,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.21605855210281932,
+            "power_IS_lower": 0.19831961059607034,
+            "power_HOLD_upper": 0.0862340552229916,
+            "power_HOLD_lower": 0.0830906263937628,
+            "N_for_80": 661.494445746799,
+            "years_for_80_upper_rate": 17.145425658295576,
+            "years_for_80_lower_rate": 19.9189503971375,
+            "verdict": null
+          },
+          "risk|primary|optimistic|v": {
+            "mu_net": 0.10859549005506819,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.19960196320106283,
+            "power_IS_lower": 0.18380544338610366,
+            "power_HOLD_upper": 0.08332034955245127,
+            "power_HOLD_lower": 0.08045964095666974,
+            "N_for_80": 759.7181976471956,
+            "years_for_80_upper_rate": 19.691309523103925,
+            "years_for_80_lower_rate": 22.8766684165472,
+            "verdict": null
+          },
+          "risk|double|pessimistic|placebo": {
+            "mu_net": -0.13280901988986366,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.0035117624356028787,
+            "power_IS_lower": 0.004398763923580116,
+            "power_HOLD_upper": 0.023409017834942685,
+            "power_HOLD_lower": 0.02481369189553387,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|pessimistic|v": {
+            "mu_net": -0.13280901988986366,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.004326816160391477,
+            "power_IS_lower": 0.005315247666329197,
+            "power_HOLD_upper": 0.024707330204434476,
+            "power_HOLD_lower": 0.026076248165459906,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|central|placebo": {
+            "mu_net": -0.08280901988986364,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.010721459387352332,
+            "power_IS_lower": 0.012136940256271498,
+            "power_HOLD_upper": 0.03152942483591916,
+            "power_HOLD_lower": 0.03264078981141502,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|central|v": {
+            "mu_net": -0.08280901988986364,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.012026857147792072,
+            "power_IS_lower": 0.013479589712836979,
+            "power_HOLD_upper": 0.03255741924217346,
+            "power_HOLD_lower": 0.03362116317462965,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|optimistic|placebo": {
+            "mu_net": 0.017190980110136367,
+            "sigma": 1.123287220008298,
+            "power_IS_upper": 0.0656714769198242,
+            "power_IS_lower": 0.06442503257419761,
+            "power_HOLD_upper": 0.0547500913344192,
+            "power_HOLD_lower": 0.0543954579011083,
+            "N_for_80": 26396.63123176103,
+            "years_for_80_upper_rate": 684.1803152294902,
+            "years_for_80_lower_rate": 794.8565426930843,
+            "verdict": null
+          },
+          "risk|double|optimistic|v": {
+            "mu_net": 0.017190980110136367,
+            "sigma": 1.2037990089428763,
+            "power_IS_upper": 0.06451667623526804,
+            "power_IS_lower": 0.06336897749657491,
+            "power_HOLD_upper": 0.05442165012321336,
+            "power_HOLD_lower": 0.05409225073898503,
+            "N_for_80": 30316.204818184153,
+            "years_for_80_upper_rate": 785.7726384460028,
+            "years_for_80_lower_rate": 912.8829181946207,
+            "verdict": null
+          }
+        }
+      }
+    },
+    "GLOBEX": {
+      "window": {
+        "sessions_all": 578,
+        "sessions_eligible": 474,
+        "bars": 125136,
+        "first_bar": "2023-12-07 18:05:00-05:00",
+        "last_bar": "2026-02-27 16:00:00-05:00"
+      },
+      "through": {
+        "events": {
+          "N_upper": 462,
+          "N_lower": 289,
+          "per_session_upper": 0.9746835443037974,
+          "per_session_lower": 0.609704641350211,
+          "sessions_with_event": 289,
+          "max_events_one_session": 5,
+          "by_fill_hour_ET": {
+            "0": 19,
+            "1": 20,
+            "2": 25,
+            "3": 35,
+            "4": 14,
+            "5": 4,
+            "6": 18,
+            "7": 18,
+            "8": 49,
+            "9": 149,
+            "10": 19,
+            "11": 6,
+            "12": 4,
+            "13": 11,
+            "14": 18,
+            "15": 11,
+            "18": 2,
+            "19": 3,
+            "20": 17,
+            "21": 9,
+            "22": 7,
+            "23": 4
+          }
+        },
+        "geometry": {
+          "atr_pts_median": 13.86861244805031,
+          "R_usd_mean": 46.47727272727273,
+          "R_usd_median": 41.75,
+          "R_usd_p10": 21.0,
+          "R_usd_p90": 75.5
+        },
+        "cost": {
+          "low": {
+            "usd": 2.22,
+            "mean_c_over_R": 0.06275261190236658,
+            "breakeven_theta_R": 0.04776528117359414
+          },
+          "primary": {
+            "usd": 5.8,
+            "mean_c_over_R": 0.16394826533050727,
+            "breakeven_theta_R": 0.1247921760391198
+          },
+          "double": {
+            "usd": 11.6,
+            "mean_c_over_R": 0.32789653066101454,
+            "breakeven_theta_R": 0.2495843520782396
+          }
+        },
+        "placebo": {
+          "n_shifts": 465,
+          "sd_iid_usd": 59.268964708527214,
+          "sigma_cluster_usd": 62.47239067876721,
+          "sd_iid_R": 1.1366513694501066,
+          "sigma_cluster_R": 1.1872365779612524,
+          "placebo_mean_usd": -1.844155844155844,
+          "placebo_flatten_share": 0.023809523809523808,
+          "sigma_cluster_p10_p90": [
+            59.533526497904845,
+            65.07944601052151
+          ]
+        },
+        "bracket_bound": {
+          "sigma_bb_usd": 61.89052831665707,
+          "sigma_bb_R": 1.1667060497003758
+        },
+        "cluster_ratio_usd": 1.054048961138326,
+        "cluster_ratio_R": 1.044503714921505,
+        "sigma_used": {
+          "contract": {
+            "placebo": 62.47239067876721,
+            "v": 65.23564707647452
+          },
+          "risk": {
+            "placebo": 1.1872365779612524,
+            "v": 1.2186288031334367
+          }
+        },
+        "grid": {
+          "contract|low|pessimistic|placebo": {
+            "mu_net": 0.10386363636363605,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.053795225873383985,
+            "power_IS_lower": 0.05298338084180587,
+            "power_HOLD_upper": 0.051268065276076746,
+            "power_HOLD_lower": 0.05100083341043432,
+            "N_for_80": 2236749.503643666,
+            "years_for_80_upper_rate": 9106.535291066255,
+            "years_for_80_lower_rate": 14557.852264611105,
+            "verdict": null
+          },
+          "contract|low|pessimistic|v": {
+            "mu_net": 0.10386363636363605,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.05362996783740008,
+            "power_IS_lower": 0.05285420969239137,
+            "power_HOLD_upper": 0.05121383845245553,
+            "power_HOLD_lower": 0.05095811904141482,
+            "N_for_80": 2438995.7706701355,
+            "years_for_80_upper_rate": 9929.945675270083,
+            "years_for_80_lower_rate": 15874.169210985394,
+            "verdict": null
+          },
+          "contract|low|central|placebo": {
+            "mu_net": 2.4277272727272723,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.20909300937035669,
+            "power_IS_lower": 0.16250368336843707,
+            "power_HOLD_upper": 0.086863443011306,
+            "power_HOLD_lower": 0.07783045635144914,
+            "N_for_80": 4093.9694968165795,
+            "years_for_80_upper_rate": 16.667882408189538,
+            "years_for_80_lower_rate": 26.64554211966632,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|central|v": {
+            "mu_net": 2.4277272727272723,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.19906847535601224,
+            "power_IS_lower": 0.1557204666625413,
+            "power_HOLD_upper": 0.08497293894927033,
+            "power_HOLD_lower": 0.07645193306955443,
+            "N_for_80": 4464.1450782585725,
+            "years_for_80_upper_rate": 18.174987692353493,
+            "years_for_80_lower_rate": 29.05482461545784,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|optimistic|placebo": {
+            "mu_net": 7.075454545454544,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.7850958831180824,
+            "power_IS_lower": 0.6104609161032464,
+            "power_HOLD_upper": 0.20736010589901643,
+            "power_HOLD_lower": 0.16133171500467464,
+            "N_for_80": 481.9874233763748,
+            "years_for_80_upper_rate": 1.9623276874218516,
+            "years_for_80_lower_rate": 3.137008275394102,
+            "verdict": null
+          },
+          "contract|low|optimistic|v": {
+            "mu_net": 7.075454545454544,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.7537709584107624,
+            "power_IS_lower": 0.5788550946260995,
+            "power_HOLD_upper": 0.19745684002345876,
+            "power_HOLD_lower": 0.15462901773464194,
+            "N_for_80": 525.5685919304676,
+            "years_for_80_upper_rate": 2.139760810271436,
+            "years_for_80_lower_rate": 3.420655689776482,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|placebo": {
+            "mu_net": -3.4761363636363636,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.002249677304593837,
+            "power_IS_lower": 0.00478792625392429,
+            "power_HOLD_upper": 0.020072472919687945,
+            "power_HOLD_lower": 0.024587477868419822,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|v": {
+            "mu_net": -3.4761363636363636,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.002633860965544702,
+            "power_IS_lower": 0.005375141566193797,
+            "power_HOLD_upper": 0.02092555318176401,
+            "power_HOLD_lower": 0.02538474201666857,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|central|placebo": {
+            "mu_net": -1.1522727272727273,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.02061034096941098,
+            "power_IS_lower": 0.02509094226399446,
+            "power_HOLD_upper": 0.037546230175406516,
+            "power_HOLD_lower": 0.039915909883808595,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|primary|central|v": {
+            "mu_net": -1.1522727272727273,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.02145882502795642,
+            "power_IS_lower": 0.025879747382209887,
+            "power_HOLD_upper": 0.038016779973656954,
+            "power_HOLD_lower": 0.04030665839456336,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|primary|optimistic|placebo": {
+            "mu_net": 3.495454545454545,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.32916819121793023,
+            "power_IS_lower": 0.24394465279749988,
+            "power_HOLD_upper": 0.10838012628991556,
+            "power_HOLD_lower": 0.09327653266534197,
+            "N_for_80": 1974.8634805409613,
+            "years_for_80_upper_rate": 8.040312047141617,
+            "years_for_80_lower_rate": 12.85337081584577,
+            "verdict": null
+          },
+          "contract|primary|optimistic|v": {
+            "mu_net": 3.495454545454545,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.310952306786395,
+            "power_IS_lower": 0.23148652167349215,
+            "power_HOLD_upper": 0.10518632669386652,
+            "power_HOLD_lower": 0.09100866878422936,
+            "N_for_80": 2153.43008631227,
+            "years_for_80_upper_rate": 8.767314822648387,
+            "years_for_80_lower_rate": 14.015569024441367,
+            "verdict": null
+          },
+          "contract|double|pessimistic|placebo": {
+            "mu_net": -9.276136363636363,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 6.610873382112932e-07,
+            "power_IS_lower": 1.529172991975992e-05,
+            "power_HOLD_upper": 0.003147458066944759,
+            "power_HOLD_lower": 0.0061277911266054445,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|pessimistic|v": {
+            "mu_net": -9.276136363636363,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 1.293159920471384e-06,
+            "power_IS_lower": 2.4310729222713795e-05,
+            "power_HOLD_upper": 0.0036160819591017023,
+            "power_HOLD_lower": 0.006788258776683362,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|central|placebo": {
+            "mu_net": -6.952272727272727,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 2.7087383746452943e-05,
+            "power_IS_lower": 0.000202574024219231,
+            "power_HOLD_upper": 0.006953528475624884,
+            "power_HOLD_lower": 0.01103126600406553,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|central|v": {
+            "mu_net": -6.952272727272727,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 4.150748769520408e-05,
+            "power_IS_lower": 0.00027354626742705543,
+            "power_HOLD_upper": 0.0076512055983509845,
+            "power_HOLD_lower": 0.011848932543780739,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|optimistic|placebo": {
+            "mu_net": -2.3045454545454547,
+            "sigma": 62.47239067876721,
+            "power_IS_upper": 0.007389431713180043,
+            "power_IS_lower": 0.011544251260429829,
+            "power_HOLD_upper": 0.027749774857452,
+            "power_HOLD_lower": 0.031551020396091534,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|optimistic|v": {
+            "mu_net": -2.3045454545454547,
+            "sigma": 65.23564707647452,
+            "power_IS_upper": 0.008104673840855938,
+            "power_IS_lower": 0.012371113999552968,
+            "power_HOLD_upper": 0.028487392283496345,
+            "power_HOLD_lower": 0.03219835174796082,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|low|pessimistic|placebo": {
+            "mu_net": -0.012752611902366581,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 0.030346059031144942,
+            "power_IS_lower": 0.03381547973096415,
+            "power_HOLD_upper": 0.042399132507313524,
+            "power_HOLD_lower": 0.04390587514770625,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|low|pessimistic|v": {
+            "mu_net": -0.012752611902366581,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 0.03075688837950251,
+            "power_IS_lower": 0.0341703360244349,
+            "power_HOLD_upper": 0.04258247742943068,
+            "power_HOLD_lower": 0.044054976726243936,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|low|central|placebo": {
+            "mu_net": 0.03724738809763342,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 0.16589550841617767,
+            "power_IS_lower": 0.13317454099265208,
+            "power_HOLD_upper": 0.07851256002670629,
+            "power_HOLD_lower": 0.07170951021228526,
+            "N_for_80": 6281.321665042531,
+            "years_for_80_upper_rate": 25.57330506794269,
+            "years_for_80_lower_rate": 40.88189253075959,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|central|v": {
+            "mu_net": 0.03724738809763342,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 0.16160476129088674,
+            "power_IS_lower": 0.13024184250622506,
+            "power_HOLD_upper": 0.07764889711832673,
+            "power_HOLD_lower": 0.07107156241212656,
+            "N_for_80": 6617.887416812205,
+            "years_for_80_upper_rate": 26.943573795514542,
+            "years_for_80_lower_rate": 43.07242592916165,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|optimistic|placebo": {
+            "mu_net": 0.13724738809763343,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 0.7995249484739531,
+            "power_IS_lower": 0.6256625234900527,
+            "power_HOLD_upper": 0.2123060927212692,
+            "power_HOLD_lower": 0.16467613290594052,
+            "N_for_80": 462.630760312374,
+            "years_for_80_upper_rate": 1.8835204114964723,
+            "years_for_80_lower_rate": 3.0110257097279245,
+            "verdict": null
+          },
+          "risk|low|optimistic|v": {
+            "mu_net": 0.13724738809763343,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 0.7811009966382312,
+            "power_IS_lower": 0.6063282724756904,
+            "power_HOLD_upper": 0.20603711052663293,
+            "power_HOLD_lower": 0.1604368100951209,
+            "N_for_80": 487.41943981956405,
+            "years_for_80_upper_rate": 1.9844431944828675,
+            "years_for_80_lower_rate": 3.172362476993373,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|placebo": {
+            "mu_net": -0.11394826533050727,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 0.00010452697546461969,
+            "power_IS_lower": 0.0005255581909939078,
+            "power_HOLD_upper": 0.009448015825749627,
+            "power_HOLD_lower": 0.013880594253536693,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|v": {
+            "mu_net": -0.11394826533050727,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 0.00012875443314880002,
+            "power_IS_lower": 0.000609399277666648,
+            "power_HOLD_upper": 0.009917000165369822,
+            "power_HOLD_lower": 0.014395832784931976,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|central|placebo": {
+            "mu_net": -0.06394826533050726,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 0.0025346446336812775,
+            "power_IS_lower": 0.00522568230782041,
+            "power_HOLD_upper": 0.02071382111344164,
+            "power_HOLD_lower": 0.025187493422390864,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|primary|central|v": {
+            "mu_net": -0.06394826533050726,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 0.0027790380616112857,
+            "power_IS_lower": 0.005591327377228097,
+            "power_HOLD_upper": 0.021225822726636305,
+            "power_HOLD_lower": 0.02566377626364774,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|primary|optimistic|placebo": {
+            "mu_net": 0.03605173466949274,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 0.1605599288897379,
+            "power_IS_lower": 0.12952696015021997,
+            "power_HOLD_upper": 0.07743744514591042,
+            "power_HOLD_lower": 0.07091522294875481,
+            "N_for_80": 6704.869818154689,
+            "years_for_80_upper_rate": 27.297707464142466,
+            "years_for_80_lower_rate": 43.63854964855993,
+            "verdict": null
+          },
+          "risk|primary|optimistic|v": {
+            "mu_net": 0.03605173466949274,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 0.15649383421178759,
+            "power_IS_lower": 0.12674194621007984,
+            "power_HOLD_upper": 0.07661011217823008,
+            "power_HOLD_lower": 0.07030295111846951,
+            "N_for_80": 7064.130125332373,
+            "years_for_80_upper_rate": 28.760373113855778,
+            "years_for_80_lower_rate": 45.97679023737498,
+            "verdict": null
+          },
+          "risk|double|pessimistic|placebo": {
+            "mu_net": -0.27789653066101455,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 1.2277703474014293e-11,
+            "power_IS_lower": 9.326875177687395e-09,
+            "power_HOLD_upper": 0.00039162212566268794,
+            "power_HOLD_lower": 0.0013485053411341251,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|pessimistic|v": {
+            "mu_net": -0.27789653066101455,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 2.9471275452821074e-11,
+            "power_IS_lower": 1.68021158673142e-08,
+            "power_HOLD_upper": 0.00045903369330251107,
+            "power_HOLD_lower": 0.0015114610965775341,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|central|placebo": {
+            "mu_net": -0.22789653066101453,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 3.9452808007541655e-09,
+            "power_IS_lower": 4.598235756477941e-07,
+            "power_HOLD_upper": 0.0011430727030741544,
+            "power_HOLD_lower": 0.0029217548811795733,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|central|v": {
+            "mu_net": -0.22789653066101453,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 7.372925915521166e-09,
+            "power_IS_lower": 7.034163799825126e-07,
+            "power_HOLD_upper": 0.0012887431401873057,
+            "power_HOLD_lower": 0.003187902499489958,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|optimistic|placebo": {
+            "mu_net": -0.12789653066101453,
+            "sigma": 1.1872365779612524,
+            "power_IS_upper": 3.7421350847290104e-05,
+            "power_IS_lower": 0.00025428673596323306,
+            "power_HOLD_upper": 0.007474854601692049,
+            "power_HOLD_lower": 0.011643946196250293,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|optimistic|v": {
+            "mu_net": -0.12789653066101453,
+            "sigma": 1.2186288031334367,
+            "power_IS_upper": 4.7958717140009164e-05,
+            "power_IS_lower": 0.0003028783322893372,
+            "power_HOLD_upper": 0.007904902620624012,
+            "power_HOLD_lower": 0.012141923647540381,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          }
+        }
+      },
+      "touch": {
+        "events": {
+          "N_upper": 472,
+          "N_lower": 293,
+          "per_session_upper": 0.9957805907172996,
+          "per_session_lower": 0.6181434599156118,
+          "sessions_with_event": 293,
+          "max_events_one_session": 5,
+          "by_fill_hour_ET": {
+            "0": 20,
+            "1": 21,
+            "2": 26,
+            "3": 36,
+            "4": 14,
+            "5": 4,
+            "6": 18,
+            "7": 18,
+            "8": 50,
+            "9": 150,
+            "10": 19,
+            "11": 6,
+            "12": 4,
+            "13": 11,
+            "14": 18,
+            "15": 11,
+            "18": 2,
+            "19": 4,
+            "20": 18,
+            "21": 9,
+            "22": 7,
+            "23": 6
+          }
+        },
+        "geometry": {
+          "atr_pts_median": 13.614153492407564,
+          "R_usd_mean": 46.014830508474574,
+          "R_usd_median": 41.0,
+          "R_usd_p10": 20.0,
+          "R_usd_p90": 75.45000000000002
+        },
+        "cost": {
+          "low": {
+            "usd": 2.22,
+            "mean_c_over_R": 0.06404807554223499,
+            "breakeven_theta_R": 0.04824531516183987
+          },
+          "primary": {
+            "usd": 5.8,
+            "mean_c_over_R": 0.1673328099752085,
+            "breakeven_theta_R": 0.12604631889129334
+          },
+          "double": {
+            "usd": 11.6,
+            "mean_c_over_R": 0.334665619950417,
+            "breakeven_theta_R": 0.25209263778258667
+          }
+        },
+        "placebo": {
+          "n_shifts": 465,
+          "sd_iid_usd": 58.814005599211924,
+          "sigma_cluster_usd": 61.96026742529998,
+          "sd_iid_R": 1.1369582606815352,
+          "sigma_cluster_R": 1.1863064286203693,
+          "placebo_mean_usd": -1.902542372881356,
+          "placebo_flatten_share": 0.023305084745762712,
+          "sigma_cluster_p10_p90": [
+            59.15763202152622,
+            64.54200547529359
+          ]
+        },
+        "bracket_bound": {
+          "sigma_bb_usd": 61.4292089584091,
+          "sigma_bb_R": 1.1666904891169514
+        },
+        "cluster_ratio_usd": 1.0534951121596487,
+        "cluster_ratio_R": 1.043403675970702,
+        "sigma_used": {
+          "contract": {
+            "placebo": 61.96026742529998,
+            "v": 64.7153713815177
+          },
+          "risk": {
+            "placebo": 1.1863064286203693,
+            "v": 1.2173291450646833
+          }
+        },
+        "grid": {
+          "contract|low|pessimistic|placebo": {
+            "mu_net": 0.0807415254237287,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.05298851863108992,
+            "power_IS_lower": 0.05234304882999637,
+            "power_HOLD_upper": 0.05100253125657352,
+            "power_HOLD_lower": 0.05078855309100673,
+            "N_for_80": 3640833.4462021873,
+            "years_for_80_upper_rate": 14508.971057807343,
+            "years_for_80_lower_rate": 23372.81344465893,
+            "verdict": null
+          },
+          "contract|low|pessimistic|v": {
+            "mu_net": 0.0807415254237287,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.05285846551172021,
+            "power_IS_lower": 0.052241552976312805,
+            "power_HOLD_upper": 0.0509595272216864,
+            "power_HOLD_lower": 0.05075478168145052,
+            "N_for_80": 3971816.179801656,
+            "years_for_80_upper_rate": 15827.959957845582,
+            "years_for_80_lower_rate": 25497.601024242715,
+            "verdict": null
+          },
+          "contract|low|central|placebo": {
+            "mu_net": 2.3814830508474576,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.20902250648549625,
+            "power_IS_lower": 0.16183570728470092,
+            "power_HOLD_upper": 0.08685022976643464,
+            "power_HOLD_lower": 0.0776955742123904,
+            "N_for_80": 4185.041052392636,
+            "years_for_80_upper_rate": 16.67767570313853,
+            "years_for_80_lower_rate": 26.866426388673673,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|central|v": {
+            "mu_net": 2.3814830508474576,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.19895290096377793,
+            "power_IS_lower": 0.15506474412424842,
+            "power_HOLD_upper": 0.08495099880188561,
+            "power_HOLD_lower": 0.07631760554657445,
+            "N_for_80": 4565.496887083952,
+            "years_for_80_upper_rate": 18.19381830506619,
+            "years_for_80_lower_rate": 29.30881310577216,
+            "verdict": "UNDERPOWERED"
+          },
+          "contract|low|optimistic|placebo": {
+            "mu_net": 6.982966101694915,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.7891953792654466,
+            "power_IS_lower": 0.6118989439991953,
+            "power_HOLD_upper": 0.20873797744000339,
+            "power_HOLD_lower": 0.16164450654349777,
+            "N_for_80": 486.7599578351959,
+            "years_for_80_upper_rate": 1.939771825513543,
+            "years_for_80_lower_rate": 3.124820142124206,
+            "verdict": null
+          },
+          "contract|low|optimistic|v": {
+            "mu_net": 6.982966101694915,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.7578470822085068,
+            "power_IS_lower": 0.5800978559863047,
+            "power_HOLD_upper": 0.19868838291102703,
+            "power_HOLD_lower": 0.15488674318262036,
+            "N_for_80": 531.0105789722629,
+            "years_for_80_upper_rate": 2.116113586501653,
+            "years_for_80_lower_rate": 3.4088928765487383,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|placebo": {
+            "mu_net": -3.499258474576271,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.002040557095566683,
+            "power_IS_lower": 0.004506450801976592,
+            "power_HOLD_upper": 0.019565572247950115,
+            "power_HOLD_lower": 0.02418226815135766,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|pessimistic|v": {
+            "mu_net": -3.499258474576271,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.0024042692748613677,
+            "power_IS_lower": 0.005078926152220514,
+            "power_HOLD_upper": 0.02042684480495758,
+            "power_HOLD_lower": 0.024990165883159762,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|primary|central|placebo": {
+            "mu_net": -1.198516949152542,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.019456864829220412,
+            "power_IS_lower": 0.02407977620212497,
+            "power_HOLD_upper": 0.03688763908022255,
+            "power_HOLD_lower": 0.039404385879610024,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|primary|central|v": {
+            "mu_net": -1.198516949152542,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.02031887834587387,
+            "power_IS_lower": 0.024889284604750043,
+            "power_HOLD_upper": 0.03738193750774585,
+            "power_HOLD_lower": 0.03981487065641251,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|primary|optimistic|placebo": {
+            "mu_net": 3.4029661016949158,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.32576133787065265,
+            "power_IS_lower": 0.24048454592316598,
+            "power_HOLD_upper": 0.1077832849579467,
+            "power_HOLD_lower": 0.09264902417404275,
+            "N_for_80": 2049.6488656306187,
+            "years_for_80_upper_rate": 8.16799134305987,
+            "years_for_80_lower_rate": 13.157992880287573,
+            "verdict": null
+          },
+          "contract|primary|optimistic|v": {
+            "mu_net": 3.4029661016949158,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.307676988701799,
+            "power_IS_lower": 0.22820609086665639,
+            "power_HOLD_upper": 0.10461112283826002,
+            "power_HOLD_lower": 0.09040734762497976,
+            "N_for_80": 2235.9793843125767,
+            "years_for_80_upper_rate": 8.910531242972839,
+            "years_for_80_lower_rate": 14.354166370932356,
+            "verdict": null
+          },
+          "contract|double|pessimistic|placebo": {
+            "mu_net": -9.29925847457627,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 4.659066005049753e-07,
+            "power_IS_lower": 1.2550941385375521e-05,
+            "power_HOLD_upper": 0.002929612016845652,
+            "power_HOLD_lower": 0.005868402738721778,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|pessimistic|v": {
+            "mu_net": -9.29925847457627,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 9.363276858966315e-07,
+            "power_IS_lower": 2.025851649990299e-05,
+            "power_HOLD_upper": 0.00338173117185224,
+            "power_HOLD_lower": 0.0065194555225905875,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|central|placebo": {
+            "mu_net": -6.998516949152542,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 2.0765560556691632e-05,
+            "power_IS_lower": 0.00017293462841680017,
+            "power_HOLD_upper": 0.0065551917657301895,
+            "power_HOLD_lower": 0.010626794874898824,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|central|v": {
+            "mu_net": -6.998516949152542,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 3.2439845116815896e-05,
+            "power_IS_lower": 0.00023617595984472218,
+            "power_HOLD_upper": 0.007239192370122764,
+            "power_HOLD_lower": 0.011440645374130186,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "contract|double|optimistic|placebo": {
+            "mu_net": -2.397033898305084,
+            "sigma": 61.96026742529998,
+            "power_IS_upper": 0.0064713449397711745,
+            "power_IS_lower": 0.01052568051935671,
+            "power_HOLD_upper": 0.026731917675268363,
+            "power_HOLD_lower": 0.030712307239095942,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "contract|double|optimistic|v": {
+            "mu_net": -2.397033898305084,
+            "sigma": 64.7153713815177,
+            "power_IS_upper": 0.0071515333366282,
+            "power_IS_lower": 0.011337394305814326,
+            "power_HOLD_upper": 0.027494268045705265,
+            "power_HOLD_lower": 0.031384569055441715,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|low|pessimistic|placebo": {
+            "mu_net": -0.014048075542234986,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 0.028577427352042852,
+            "power_IS_lower": 0.03233347133993227,
+            "power_HOLD_upper": 0.04159320085391244,
+            "power_HOLD_lower": 0.04327347259314028,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|low|pessimistic|v": {
+            "mu_net": -0.014048075542234986,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 0.029008573812962037,
+            "power_IS_lower": 0.032709209710116836,
+            "power_HOLD_upper": 0.041792237550783866,
+            "power_HOLD_lower": 0.04343532611668504,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|low|central|placebo": {
+            "mu_net": 0.03595192445776502,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 0.16195767314454362,
+            "power_IS_lower": 0.13006107194460886,
+            "power_HOLD_upper": 0.07772021612128956,
+            "power_HOLD_lower": 0.07103206050269836,
+            "N_for_80": 6731.58955627425,
+            "years_for_80_upper_rate": 26.825846193788628,
+            "years_for_80_lower_rate": 43.21433243504516,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|central|v": {
+            "mu_net": 0.03595192445776502,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 0.15787665186395905,
+            "power_IS_lower": 0.1272843411920455,
+            "power_HOLD_upper": 0.0768922819061135,
+            "power_HOLD_lower": 0.07042260059814368,
+            "N_for_80": 7088.264257792256,
+            "years_for_80_upper_rate": 28.247219348546622,
+            "years_for_80_lower_rate": 45.50405301199319,
+            "verdict": "UNDERPOWERED"
+          },
+          "risk|low|optimistic|placebo": {
+            "mu_net": 0.13595192445776502,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 0.8009216266168512,
+            "power_IS_lower": 0.6243022499080051,
+            "power_HOLD_upper": 0.2127996670404319,
+            "power_HOLD_lower": 0.16437337370285782,
+            "N_for_80": 470.7509377940523,
+            "years_for_80_upper_rate": 1.8759747823713744,
+            "years_for_80_lower_rate": 3.02204811358119,
+            "verdict": null
+          },
+          "risk|low|optimistic|v": {
+            "mu_net": 0.13595192445776502,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 0.7827363049656884,
+            "power_IS_lower": 0.6051917184461635,
+            "power_HOLD_upper": 0.20657637269407825,
+            "power_HOLD_lower": 0.16019172208568672,
+            "N_for_80": 495.69377615687523,
+            "years_for_80_upper_rate": 1.9753737044185402,
+            "years_for_80_lower_rate": 3.1821719743534165,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|placebo": {
+            "mu_net": -0.1173328099752085,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 7.422692098280379e-05,
+            "power_IS_lower": 0.0004221443799594848,
+            "power_HOLD_upper": 0.008731517808341688,
+            "power_HOLD_lower": 0.013156805339165592,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|pessimistic|v": {
+            "mu_net": -0.1173328099752085,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 9.242042542967273e-05,
+            "power_IS_lower": 0.0004926223303608701,
+            "power_HOLD_upper": 0.009182947693562045,
+            "power_HOLD_lower": 0.01366209289109938,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|primary|central|placebo": {
+            "mu_net": -0.06733280997520849,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 0.0020012738121333545,
+            "power_IS_lower": 0.004443115666078813,
+            "power_HOLD_upper": 0.019466424258352332,
+            "power_HOLD_lower": 0.02408879385089069,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|primary|central|v": {
+            "mu_net": -0.06733280997520849,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 0.002209886043259706,
+            "power_IS_lower": 0.004775967331422244,
+            "power_HOLD_upper": 0.01997858203629282,
+            "power_HOLD_lower": 0.024570587329909504,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|primary|optimistic|placebo": {
+            "mu_net": 0.032667190024791515,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 0.14764222703723118,
+            "power_IS_lower": 0.12029808120967284,
+            "power_HOLD_upper": 0.07478303589231308,
+            "power_HOLD_lower": 0.0688656926771937,
+            "N_for_80": 8153.392610092048,
+            "years_for_80_upper_rate": 32.49182890422073,
+            "years_for_80_lower_rate": 52.341785811577424,
+            "verdict": null
+          },
+          "risk|primary|optimistic|v": {
+            "mu_net": 0.032667190024791515,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 0.1441529605885179,
+            "power_IS_lower": 0.11790790523690109,
+            "power_HOLD_upper": 0.07405224938065137,
+            "power_HOLD_lower": 0.06832481239667541,
+            "N_for_80": 8585.401848215184,
+            "years_for_80_upper_rate": 34.213415355579066,
+            "years_for_80_lower_rate": 55.11512644311714,
+            "verdict": null
+          },
+          "risk|double|pessimistic|placebo": {
+            "mu_net": -0.284665619950417,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 3.488861018997812e-12,
+            "power_IS_lower": 4.401858853033837e-09,
+            "power_HOLD_upper": 0.00031232013023473537,
+            "power_HOLD_lower": 0.0011672635984162794,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|pessimistic|v": {
+            "mu_net": -0.284665619950417,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 8.764278254721067e-12,
+            "power_IS_lower": 8.133966767131154e-09,
+            "power_HOLD_upper": 0.0003685053814498912,
+            "power_HOLD_lower": 0.0013133657939115454,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|central|placebo": {
+            "mu_net": -0.234665619950417,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 1.4041396931490188e-09,
+            "power_IS_lower": 2.441559848842603e-07,
+            "power_HOLD_upper": 0.0009393449995157483,
+            "power_HOLD_lower": 0.0025690166502313583,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|central|v": {
+            "mu_net": -0.234665619950417,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 2.723458944640365e-09,
+            "power_IS_lower": 3.815807402454129e-07,
+            "power_HOLD_upper": 0.0010650681148722872,
+            "power_HOLD_lower": 0.0028126700526264793,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": "COST-BOUND"
+          },
+          "risk|double|optimistic|placebo": {
+            "mu_net": -0.13466561995041698,
+            "sigma": 1.1863064286203693,
+            "power_IS_upper": 1.9691646612435604e-05,
+            "power_IS_lower": 0.00016664603559893006,
+            "power_HOLD_upper": 0.006478695821803202,
+            "power_HOLD_lower": 0.010534557645319397,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          },
+          "risk|double|optimistic|v": {
+            "mu_net": -0.13466561995041698,
+            "sigma": 1.2173291450646833,
+            "power_IS_upper": 2.580447520429198e-05,
+            "power_IS_lower": 0.0002012579951875961,
+            "power_HOLD_upper": 0.006878832428322337,
+            "power_HOLD_lower": 0.011014256368562745,
+            "N_for_80": null,
+            "years_for_80_upper_rate": null,
+            "years_for_80_lower_rate": null,
+            "verdict": null
+          }
+        }
+      }
+    }
+  },
+  "verdict_primary": "UNDERPOWERED",
+  "verdict_table": {
+    "RTH|through|contract|low|central|placebo": "UNDERPOWERED",
+    "RTH|through|contract|low|central|v": "UNDERPOWERED",
+    "RTH|through|contract|primary|central|placebo": "UNDERPOWERED",
+    "RTH|through|contract|primary|central|v": "UNDERPOWERED",
+    "RTH|through|contract|double|central|placebo": "COST-BOUND",
+    "RTH|through|contract|double|central|v": "COST-BOUND",
+    "RTH|through|risk|low|central|placebo": "UNDERPOWERED",
+    "RTH|through|risk|low|central|v": "UNDERPOWERED",
+    "RTH|through|risk|primary|central|placebo": "UNDERPOWERED",
+    "RTH|through|risk|primary|central|v": "UNDERPOWERED",
+    "RTH|through|risk|double|central|placebo": "COST-BOUND",
+    "RTH|through|risk|double|central|v": "COST-BOUND",
+    "RTH|touch|contract|low|central|placebo": "UNDERPOWERED",
+    "RTH|touch|contract|low|central|v": "UNDERPOWERED",
+    "RTH|touch|contract|primary|central|placebo": "UNDERPOWERED",
+    "RTH|touch|contract|primary|central|v": "UNDERPOWERED",
+    "RTH|touch|contract|double|central|placebo": "COST-BOUND",
+    "RTH|touch|contract|double|central|v": "COST-BOUND",
+    "RTH|touch|risk|low|central|placebo": "UNDERPOWERED",
+    "RTH|touch|risk|low|central|v": "UNDERPOWERED",
+    "RTH|touch|risk|primary|central|placebo": "UNDERPOWERED",
+    "RTH|touch|risk|primary|central|v": "UNDERPOWERED",
+    "RTH|touch|risk|double|central|placebo": "COST-BOUND",
+    "RTH|touch|risk|double|central|v": "COST-BOUND",
+    "GLOBEX|through|contract|low|central|placebo": "UNDERPOWERED",
+    "GLOBEX|through|contract|low|central|v": "UNDERPOWERED",
+    "GLOBEX|through|contract|primary|central|placebo": "COST-BOUND",
+    "GLOBEX|through|contract|primary|central|v": "COST-BOUND",
+    "GLOBEX|through|contract|double|central|placebo": "COST-BOUND",
+    "GLOBEX|through|contract|double|central|v": "COST-BOUND",
+    "GLOBEX|through|risk|low|central|placebo": "UNDERPOWERED",
+    "GLOBEX|through|risk|low|central|v": "UNDERPOWERED",
+    "GLOBEX|through|risk|primary|central|placebo": "COST-BOUND",
+    "GLOBEX|through|risk|primary|central|v": "COST-BOUND",
+    "GLOBEX|through|risk|double|central|placebo": "COST-BOUND",
+    "GLOBEX|through|risk|double|central|v": "COST-BOUND",
+    "GLOBEX|touch|contract|low|central|placebo": "UNDERPOWERED",
+    "GLOBEX|touch|contract|low|central|v": "UNDERPOWERED",
+    "GLOBEX|touch|contract|primary|central|placebo": "COST-BOUND",
+    "GLOBEX|touch|contract|primary|central|v": "COST-BOUND",
+    "GLOBEX|touch|contract|double|central|placebo": "COST-BOUND",
+    "GLOBEX|touch|contract|double|central|v": "COST-BOUND",
+    "GLOBEX|touch|risk|low|central|placebo": "UNDERPOWERED",
+    "GLOBEX|touch|risk|low|central|v": "UNDERPOWERED",
+    "GLOBEX|touch|risk|primary|central|placebo": "COST-BOUND",
+    "GLOBEX|touch|risk|primary|central|v": "COST-BOUND",
+    "GLOBEX|touch|risk|double|central|placebo": "COST-BOUND",
+    "GLOBEX|touch|risk|double|central|v": "COST-BOUND"
+  }
+}

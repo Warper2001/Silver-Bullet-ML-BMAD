@@ -1,0 +1,46 @@
+{
+  "checks": [
+    {
+      "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/black --check tools/valentini_native_audit.py tests/unit/test_valentini_native_audit.py",
+      "status": "fulfilled",
+      "value": {
+        "chunk_id": "1f48e9",
+        "wall_time_seconds": 0.086612468,
+        "exit_code": 0,
+        "original_token_count": 14,
+        "output": "All done! ✨ 🍰 ✨\n2 files would be left unchanged.\n"
+      }
+    },
+    {
+      "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/mypy --follow-imports=skip tools/valentini_native_audit.py",
+      "status": "fulfilled",
+      "value": {
+        "chunk_id": "300d28",
+        "wall_time_seconds": 3.689777229,
+        "exit_code": 1,
+        "original_token_count": 65,
+        "output": "tools/valentini_native_audit.py:101: error: Need type annotation for \"sums\"  [var-annotated]\ntools/valentini_native_audit.py:159: error: Returning Any from function declared to return \"Path\"  [no-any-return]\nFound 2 errors in 1 file (checked 1 source file)\n"
+      }
+    },
+    {
+      "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/flake8 --max-line-length=100 --extend-ignore=E203 tools/valentini_native_audit.py tests/unit/test_valentini_native_audit.py",
+      "status": "fulfilled",
+      "value": {
+        "chunk_id": "073be1",
+        "wall_time_seconds": 0.188784435,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "command": "/root/Silver-Bullet-ML-BMAD/.venv/bin/mypy tools/valentini_native_audit.py",
+      "status": "fulfilled",
+      "value": {
+        "exit_code": 0,
+        "output": "Success: no issues found in 1 source file\n"
+      }
+    }
+  ],
+  "note": "Default strict mypy follows imported typed helpers and passes. The exploratory follow-imports=skip invocation loses imported typing and reports two errors; no suppressions or config changes were added."
+}

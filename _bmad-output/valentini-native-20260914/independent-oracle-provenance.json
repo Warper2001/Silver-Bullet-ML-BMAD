@@ -1,0 +1,10 @@
+{
+  "kind": "independent_native_histogram_oracle",
+  "method": "standard-library struct at DBNv3 byte offsets; no production decoder or histogram imports",
+  "minutes": 120,
+  "oracle_sha256": "d502f9869a42930f386859406f9ac617c4689434c6d26597bdf502c7a0e5f5c2",
+  "saved_bar_volume_count_digest_match": true,
+  "script_sha256": "2d0488f39e43a5eefffea42aaa84a79c045ce075ef2c755bfebac811156213c6",
+  "selection": "first UTC hour of May20 and May27 fixed before full scan",
+  "trade_records": 24164
+}

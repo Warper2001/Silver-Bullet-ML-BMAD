@@ -1,0 +1,668 @@
+[
+  {
+    "eligible": false,
+    "end_ns": 1747688400000000000,
+    "evidence": {
+      "boundary_status_exceptions": [],
+      "breaks": [],
+      "end": "2025-05-19T21:00:00Z",
+      "name": "2025-05-19",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-18T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {
+      "CALENDAR_STATUS_CONFLICT": [
+        1747663560000000000,
+        1747663620000000000
+      ],
+      "MISSING_SCHEDULED_MINUTE": [
+        1747605600000000000,
+        1747605660000000000,
+        1747605720000000000,
+        1747605780000000000,
+        1747605840000000000,
+        1747605900000000000,
+        1747605960000000000,
+        1747606020000000000,
+        1747606080000000000,
+        1747606140000000000,
+        1747606200000000000,
+        1747606260000000000,
+        1747606320000000000,
+        1747606380000000000,
+        1747606440000000000,
+        1747606500000000000,
+        1747606560000000000,
+        1747606620000000000,
+        1747606680000000000,
+        1747606740000000000,
+        1747606800000000000,
+        1747606860000000000,
+        1747606920000000000,
+        1747606980000000000,
+        1747607040000000000,
+        1747607100000000000,
+        1747607160000000000,
+        1747607220000000000,
+        1747607280000000000,
+        1747607340000000000,
+        1747607400000000000,
+        1747607460000000000,
+        1747607520000000000,
+        1747607580000000000,
+        1747607640000000000,
+        1747607700000000000,
+        1747607760000000000,
+        1747607820000000000,
+        1747607880000000000,
+        1747607940000000000,
+        1747608000000000000,
+        1747608060000000000,
+        1747608120000000000,
+        1747608180000000000,
+        1747608240000000000,
+        1747608300000000000,
+        1747608360000000000,
+        1747608420000000000,
+        1747608480000000000,
+        1747608540000000000,
+        1747608600000000000,
+        1747608660000000000,
+        1747608720000000000,
+        1747608780000000000,
+        1747608840000000000,
+        1747608900000000000,
+        1747608960000000000,
+        1747609020000000000,
+        1747609080000000000,
+        1747609140000000000,
+        1747609200000000000,
+        1747609260000000000,
+        1747609320000000000,
+        1747609380000000000,
+        1747609440000000000,
+        1747609500000000000,
+        1747609560000000000,
+        1747609620000000000,
+        1747609680000000000,
+        1747609740000000000,
+        1747609800000000000,
+        1747609860000000000,
+        1747609920000000000,
+        1747609980000000000,
+        1747610040000000000,
+        1747610100000000000,
+        1747610160000000000,
+        1747610220000000000,
+        1747610280000000000,
+        1747610340000000000,
+        1747610400000000000,
+        1747610460000000000,
+        1747610520000000000,
+        1747610580000000000,
+        1747610640000000000,
+        1747610700000000000,
+        1747610760000000000,
+        1747610820000000000,
+        1747610880000000000,
+        1747610940000000000,
+        1747611000000000000,
+        1747611060000000000,
+        1747611120000000000,
+        1747611180000000000,
+        1747611240000000000,
+        1747611300000000000,
+        1747611360000000000,
+        1747611420000000000,
+        1747611480000000000,
+        1747611540000000000,
+        1747611600000000000,
+        1747611660000000000,
+        1747611720000000000,
+        1747611780000000000,
+        1747611840000000000,
+        1747611900000000000,
+        1747611960000000000,
+        1747612020000000000,
+        1747612080000000000,
+        1747612140000000000,
+        1747612200000000000,
+        1747612260000000000,
+        1747612320000000000,
+        1747612380000000000,
+        1747612440000000000,
+        1747612500000000000,
+        1747612560000000000,
+        1747612620000000000,
+        1747612680000000000,
+        1747612740000000000
+      ],
+      "OUTSIDE_ACQUIRED_RANGE": [
+        1747605600000000000,
+        1747605660000000000,
+        1747605720000000000,
+        1747605780000000000,
+        1747605840000000000,
+        1747605900000000000,
+        1747605960000000000,
+        1747606020000000000,
+        1747606080000000000,
+        1747606140000000000,
+        1747606200000000000,
+        1747606260000000000,
+        1747606320000000000,
+        1747606380000000000,
+        1747606440000000000,
+        1747606500000000000,
+        1747606560000000000,
+        1747606620000000000,
+        1747606680000000000,
+        1747606740000000000,
+        1747606800000000000,
+        1747606860000000000,
+        1747606920000000000,
+        1747606980000000000,
+        1747607040000000000,
+        1747607100000000000,
+        1747607160000000000,
+        1747607220000000000,
+        1747607280000000000,
+        1747607340000000000,
+        1747607400000000000,
+        1747607460000000000,
+        1747607520000000000,
+        1747607580000000000,
+        1747607640000000000,
+        1747607700000000000,
+        1747607760000000000,
+        1747607820000000000,
+        1747607880000000000,
+        1747607940000000000,
+        1747608000000000000,
+        1747608060000000000,
+        1747608120000000000,
+        1747608180000000000,
+        1747608240000000000,
+        1747608300000000000,
+        1747608360000000000,
+        1747608420000000000,
+        1747608480000000000,
+        1747608540000000000,
+        1747608600000000000,
+        1747608660000000000,
+        1747608720000000000,
+        1747608780000000000,
+        1747608840000000000,
+        1747608900000000000,
+        1747608960000000000,
+        1747609020000000000,
+        1747609080000000000,
+        1747609140000000000,
+        1747609200000000000,
+        1747609260000000000,
+        1747609320000000000,
+        1747609380000000000,
+        1747609440000000000,
+        1747609500000000000,
+        1747609560000000000,
+        1747609620000000000,
+        1747609680000000000,
+        1747609740000000000,
+        1747609800000000000,
+        1747609860000000000,
+        1747609920000000000,
+        1747609980000000000,
+        1747610040000000000,
+        1747610100000000000,
+        1747610160000000000,
+        1747610220000000000,
+        1747610280000000000,
+        1747610340000000000,
+        1747610400000000000,
+        1747610460000000000,
+        1747610520000000000,
+        1747610580000000000,
+        1747610640000000000,
+        1747610700000000000,
+        1747610760000000000,
+        1747610820000000000,
+        1747610880000000000,
+        1747610940000000000,
+        1747611000000000000,
+        1747611060000000000,
+        1747611120000000000,
+        1747611180000000000,
+        1747611240000000000,
+        1747611300000000000,
+        1747611360000000000,
+        1747611420000000000,
+        1747611480000000000,
+        1747611540000000000,
+        1747611600000000000,
+        1747611660000000000,
+        1747611720000000000,
+        1747611780000000000,
+        1747611840000000000,
+        1747611900000000000,
+        1747611960000000000,
+        1747612020000000000,
+        1747612080000000000,
+        1747612140000000000,
+        1747612200000000000,
+        1747612260000000000,
+        1747612320000000000,
+        1747612380000000000,
+        1747612440000000000,
+        1747612500000000000,
+        1747612560000000000,
+        1747612620000000000,
+        1747612680000000000,
+        1747612740000000000
+      ]
+    },
+    "expected_minutes": 1380,
+    "observed_minutes": 1260,
+    "session": "2025-05-19",
+    "start_ns": 1747605600000000000
+  },
+  {
+    "eligible": true,
+    "end_ns": 1747774800000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-19T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+              "record_index": 7,
+              "ts_event_ns": 1747692000000000000,
+              "ts_recv_ns": 1747692000015568626
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+              "record_index": 8,
+              "ts_event_ns": 1747692000000000000,
+              "ts_recv_ns": 1747692000016450120
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-20T21:00:00Z",
+      "name": "2025-05-20",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-19T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {},
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-20",
+    "start_ns": 1747692000000000000
+  },
+  {
+    "eligible": true,
+    "end_ns": 1747861200000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-20T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+              "record_index": 4,
+              "ts_event_ns": 1747778400000000000,
+              "ts_recv_ns": 1747778400011028031
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+              "record_index": 5,
+              "ts_event_ns": 1747778400000000000,
+              "ts_recv_ns": 1747778400012025849
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-21T21:00:00Z",
+      "name": "2025-05-21",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-20T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {},
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-21",
+    "start_ns": 1747778400000000000
+  },
+  {
+    "eligible": true,
+    "end_ns": 1747947600000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-21T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+              "record_index": 4,
+              "ts_event_ns": 1747864800000000000,
+              "ts_recv_ns": 1747864800012398328
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+              "record_index": 5,
+              "ts_event_ns": 1747864800000000000,
+              "ts_recv_ns": 1747864800013371318
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-22T21:00:00Z",
+      "name": "2025-05-22",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-21T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {},
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-22",
+    "start_ns": 1747864800000000000
+  },
+  {
+    "eligible": true,
+    "end_ns": 1748034000000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-22T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+              "record_index": 4,
+              "ts_event_ns": 1747951200000000000,
+              "ts_recv_ns": 1747951200010704275
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+              "record_index": 5,
+              "ts_event_ns": 1747951200000000000,
+              "ts_recv_ns": 1747951200011841977
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-23T21:00:00Z",
+      "name": "2025-05-23",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-22T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {},
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-23",
+    "start_ns": 1747951200000000000
+  },
+  {
+    "eligible": false,
+    "end_ns": 1748278800000000000,
+    "evidence": {
+      "boundary_status_exceptions": [],
+      "breaks": [],
+      "end": "2025-05-26T17:00:00Z",
+      "name": "2025-05-26",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq",
+        "cme-2025-holiday",
+        "native-status-reviewed"
+      ],
+      "start": "2025-05-25T22:00:00Z",
+      "unresolved_evidence": [
+        "Dated official holiday halt and trade-date/session-reset schedule not recovered. End at 17:00 UTC is a native-status-observed candidate only."
+      ],
+      "verification": "UNVERIFIED"
+    },
+    "exclusions": {
+      "CALENDAR_STATUS_CONFLICT": [
+        1748210400000000000
+      ],
+      "UNVERIFIED_CALENDAR": []
+    },
+    "expected_minutes": 1140,
+    "observed_minutes": 1140,
+    "session": "2025-05-26",
+    "start_ns": 1748210400000000000
+  },
+  {
+    "eligible": false,
+    "end_ns": 1748379600000000000,
+    "evidence": {
+      "boundary_status_exceptions": [],
+      "breaks": [],
+      "end": "2025-05-27T21:00:00Z",
+      "name": "2025-05-27",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq",
+        "cme-2025-holiday",
+        "native-status-reviewed"
+      ],
+      "start": "2025-05-26T22:00:00Z",
+      "unresolved_evidence": [
+        "Native status shows May 26 22:00 UTC reopening after a PAUSE, without a session close. Whether the profile resets here or carries from May 25 is unresolved."
+      ],
+      "verification": "UNVERIFIED"
+    },
+    "exclusions": {
+      "CALENDAR_STATUS_CONFLICT": [
+        1748296800000000000
+      ],
+      "UNVERIFIED_CALENDAR": []
+    },
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-27",
+    "start_ns": 1748296800000000000
+  },
+  {
+    "eligible": false,
+    "end_ns": 1748466000000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-27T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+              "record_index": 4,
+              "ts_event_ns": 1748383200000000000,
+              "ts_recv_ns": 1748383200012141927
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+              "record_index": 5,
+              "ts_event_ns": 1748383200000000000,
+              "ts_recv_ns": 1748383200013093774
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-28T21:00:00Z",
+      "name": "2025-05-28",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-27T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {
+      "CALENDAR_STATUS_CONFLICT": [
+        1748463600000000000
+      ]
+    },
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-28",
+    "start_ns": 1748383200000000000
+  },
+  {
+    "eligible": true,
+    "end_ns": 1748552400000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-28T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+              "record_index": 7,
+              "ts_event_ns": 1748469600000000000,
+              "ts_recv_ns": 1748469600012420840
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+              "record_index": 8,
+              "ts_event_ns": 1748469600000000000,
+              "ts_recv_ns": 1748469600013753273
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-29T21:00:00Z",
+      "name": "2025-05-29",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-28T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {},
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-29",
+    "start_ns": 1748469600000000000
+  },
+  {
+    "eligible": true,
+    "end_ns": 1748638800000000000,
+    "evidence": {
+      "boundary_status_exceptions": [
+        {
+          "expected_trading": true,
+          "minute": "2025-05-29T22:00:00Z",
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+              "record_index": 4,
+              "ts_event_ns": 1748556000000000000,
+              "ts_recv_ns": 1748556000010239536
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+              "record_index": 5,
+              "ts_event_ns": 1748556000000000000,
+              "ts_recv_ns": 1748556000011201321
+            }
+          ]
+        }
+      ],
+      "breaks": [],
+      "end": "2025-05-30T21:00:00Z",
+      "name": "2025-05-30",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "start": "2025-05-29T22:00:00Z",
+      "unresolved_evidence": [],
+      "verification": "VERIFIED"
+    },
+    "exclusions": {},
+    "expected_minutes": 1380,
+    "observed_minutes": 1380,
+    "session": "2025-05-30",
+    "start_ns": 1748556000000000000
+  }
+]

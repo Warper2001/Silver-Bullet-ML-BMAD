@@ -1,0 +1,18 @@
+{
+  "args": [
+    "nohup",
+    "/usr/bin/time",
+    "-v",
+    "/root/Silver-Bullet-ML-BMAD/.venv/bin/python",
+    "tools/valentini_native_audit.py",
+    "--source-root",
+    "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907",
+    "--reconstruction",
+    "/root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a",
+    "--calendar",
+    "docs/valentini-native/calendar-2025-05.json",
+    "--output-dir",
+    "_bmad-output/valentini-native-20260914/run-final"
+  ],
+  "pid": 2431767
+}

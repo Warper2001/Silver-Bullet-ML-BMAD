@@ -1,0 +1,53 @@
+{
+  "completed_at_utc": "2026-09-14T23:14:58.427793+00:00",
+  "request": {
+    "compression": "zstd",
+    "dataset": "GLBX.MDP3",
+    "delivery": "download",
+    "encoding": "dbn",
+    "end": "2025-09-13T00:00:00Z",
+    "schema": "status",
+    "split_duration": "day",
+    "start": "2025-06-22T00:00:00Z",
+    "stype_in": "raw_symbol",
+    "stype_out": "instrument_id",
+    "symbols": [
+      "MNQU5"
+    ]
+  },
+  "response": {
+    "actual_size": null,
+    "bill_id": null,
+    "billed_size": null,
+    "compression": "zstd",
+    "cost_usd": null,
+    "dataset": "GLBX.MDP3",
+    "delivery": "download",
+    "encoding": "dbn",
+    "end": "2025-09-13T00:00:00.000000000Z",
+    "id": "GLBX-20260914-UBWNKWNUUF",
+    "limit": null,
+    "map_symbols": false,
+    "package_size": null,
+    "packaging": null,
+    "pretty_px": false,
+    "pretty_ts": false,
+    "record_count": null,
+    "schema": "status",
+    "split_duration": "day",
+    "split_size": null,
+    "split_symbols": false,
+    "start": "2025-06-22T00:00:00.000000000Z",
+    "state": "queued",
+    "stype_in": "raw_symbol",
+    "stype_out": "instrument_id",
+    "symbols": "MNQU5",
+    "ts_expiration": null,
+    "ts_process_done": null,
+    "ts_process_start": null,
+    "ts_queued": null,
+    "ts_received": "2026-09-14T23:14:58.156106000Z",
+    "user_id": "C9TR4YM3"
+  },
+  "submitted_at_utc": "2026-09-14T23:14:57.773314+00:00"
+}

@@ -1,0 +1,62 @@
+{
+  "all_expected_present": true,
+  "jobs": [
+    {
+      "actual_size": null,
+      "billed_size": null,
+      "cost_usd": null,
+      "dataset": "GLBX.MDP3",
+      "end": "2025-09-13T00:00:00.000000000Z",
+      "id": "GLBX-20260914-CJGEGG4USC",
+      "record_count": null,
+      "schema": "mbo",
+      "start": "2025-06-22T00:00:00.000000000Z",
+      "state": "queued",
+      "symbols": "MNQU5",
+      "ts_expiration": null,
+      "ts_process_done": null,
+      "ts_process_start": null,
+      "ts_received": "2026-09-14T23:14:57.475871000Z"
+    },
+    {
+      "actual_size": null,
+      "billed_size": null,
+      "cost_usd": null,
+      "dataset": "GLBX.MDP3",
+      "end": "2025-09-13T00:00:00.000000000Z",
+      "id": "GLBX-20260914-UBWNKWNUUF",
+      "record_count": null,
+      "schema": "status",
+      "start": "2025-06-22T00:00:00.000000000Z",
+      "state": "queued",
+      "symbols": "MNQU5",
+      "ts_expiration": null,
+      "ts_process_done": null,
+      "ts_process_start": null,
+      "ts_received": "2026-09-14T23:14:58.156106000Z"
+    },
+    {
+      "actual_size": null,
+      "billed_size": null,
+      "cost_usd": null,
+      "dataset": "GLBX.MDP3",
+      "end": "2025-09-13T00:00:00.000000000Z",
+      "id": "GLBX-20260914-VHQSMXJ9CP",
+      "record_count": null,
+      "schema": "definition",
+      "start": "2025-06-22T00:00:00.000000000Z",
+      "state": "queued",
+      "symbols": "MNQU5",
+      "ts_expiration": null,
+      "ts_process_done": null,
+      "ts_process_start": null,
+      "ts_received": "2026-09-14T23:14:58.662172000Z"
+    }
+  ],
+  "polled_at_utc": "2026-09-14T23:15:10.384004+00:00",
+  "target_ids": [
+    "GLBX-20260914-VHQSMXJ9CP",
+    "GLBX-20260914-UBWNKWNUUF",
+    "GLBX-20260914-CJGEGG4USC"
+  ]
+}

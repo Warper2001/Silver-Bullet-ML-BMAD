@@ -1,0 +1,45 @@
+{
+  "all_expected_present": true,
+  "jobs": [
+    {
+      "actual_size": null,
+      "billed_size": null,
+      "cost_usd": null,
+      "id": "GLBX-20260914-CJGEGG4USC",
+      "package_size": null,
+      "record_count": null,
+      "schema": "mbo",
+      "state": "queued",
+      "ts_expiration": null,
+      "ts_process_done": null,
+      "ts_process_start": null
+    },
+    {
+      "actual_size": null,
+      "billed_size": null,
+      "cost_usd": null,
+      "id": "GLBX-20260914-UBWNKWNUUF",
+      "package_size": null,
+      "record_count": null,
+      "schema": "status",
+      "state": "queued",
+      "ts_expiration": null,
+      "ts_process_done": null,
+      "ts_process_start": null
+    },
+    {
+      "actual_size": null,
+      "billed_size": null,
+      "cost_usd": null,
+      "id": "GLBX-20260914-VHQSMXJ9CP",
+      "package_size": null,
+      "record_count": null,
+      "schema": "definition",
+      "state": "queued",
+      "ts_expiration": null,
+      "ts_process_done": null,
+      "ts_process_start": null
+    }
+  ],
+  "polled_at_utc": "2026-09-14T23:15:33.086383+00:00"
+}

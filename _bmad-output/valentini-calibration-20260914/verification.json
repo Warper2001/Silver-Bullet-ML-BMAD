@@ -1,0 +1,16 @@
+{
+  "admitted_sessions_from_new_archive": null,
+  "candidate_weekday_count": 60,
+  "editorial_structure_and_prose": "Applied8 direct changes; no deferred findings",
+  "fresh_citation_review": "No material mismatch; notice date clarification applied",
+  "imported_file_hashes": "MATCH",
+  "local_document_links": "VALID",
+  "metadata_and_symbology_requests": 19,
+  "paid_requests": 0,
+  "purchase_authorized": false,
+  "read_only_account_inventory_requests": 2,
+  "request_parameters_and_quote_arithmetic": "VERIFIED",
+  "strategy_outcomes_computed": false,
+  "tests": "No live/strategy tests: documents plus one-off read-only provider metadata probes.",
+  "verified_utc": "2026-09-14T22:37:03.205778+00:00"
+}

@@ -1,0 +1,19 @@
+{"endpoint": "https://hist.databento.com/v0/metadata.get_cost", "http_status": 200, "response": 46.429425895214}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_record_count", "http_status": 200, "response": 37093167}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_billable_size", "http_status": 200, "response": 1780472016}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_cost", "http_status": 200, "response": 102.96799993515}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_record_count", "http_status": 200, "response": 767785056}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_billable_size", "http_status": 200, "response": 61422804480}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_cost", "http_status": 200, "response": 77.382376492023}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_record_count", "http_status": 200, "response": 37093167}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_billable_size", "http_status": 200, "response": 2967453360}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_cost", "http_status": 200, "response": 117.344993287325}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_record_count", "http_status": 200, "response": 1249982412}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_billable_size", "http_status": 200, "response": 69999015072}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_cost", "http_status": 200, "response": 6.2137842e-05}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_record_count", "http_status": 200, "response": 417}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_billable_size", "http_status": 200, "response": 16680}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_cost", "http_status": 200, "response": 5.9276819e-05}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_record_count", "http_status": 200, "response": 72}
+{"endpoint": "https://hist.databento.com/v0/metadata.get_billable_size", "http_status": 200, "response": 37440}
+{"endpoint": "https://hist.databento.com/v0/symbology.resolve", "http_status": 200, "response": {"result": {"MNQU5": [{"d0": "2025-06-20", "d1": "2025-09-13", "s": "42003472"}]}, "partial": [], "not_found": []}}

@@ -1,0 +1,57 @@
+[
+  {
+    "ref": 15,
+    "publisher": "CME Group",
+    "publication_date": "2021-06-24",
+    "accessed": "2026-09-14",
+    "url": "https://www.cmegroup.com/notices/electronic-trading/2021/06/20210621.html",
+    "claim": "The dated notice eliminates the 15:15-15:30 CT equity-index pause effective June27 2021. It supersedes the earlier living-FAQ assumption for regular 2025 sessions.",
+    "confidence": "medium; authoritative single source; no independent corroboration this slice",
+    "title_date": "2021-06-21"
+  },
+  {
+    "ref": 16,
+    "publisher": "Databento",
+    "publication_date": null,
+    "accessed": "2026-09-14",
+    "url": "https://databento.com/docs/api-reference-historical?historical=http",
+    "claim": "Metadata and symbology requests are free; get_cost returns account-plan-adjusted estimates. Billed amounts depend on actual bytes; estimates are not purchase receipts. Batch jobs can be redownloaded without another usage charge for30 days.",
+    "confidence": "medium; primary vendor documentation"
+  },
+  {
+    "ref": 17,
+    "publisher": "Topstep",
+    "publication_date": "2026-07-28",
+    "accessed": "2026-09-14",
+    "url": "https://help.topstep.com/en/articles/8284213-topstepx-commissions-and-fees",
+    "claim": "Current TopstepX product table lists MNQ round-turn commissions and fees at $1.22 across Combine, Express and Live accounts. This is a prospective cost input candidate, not proof of historical2025 charges or slippage.",
+    "confidence": "medium; current product-specific provider table; reconcile actual account receipts before use"
+  },
+  {
+    "ref": 18,
+    "publisher": "CME Group",
+    "publication_date": null,
+    "accessed": "2026-09-14",
+    "url": "https://www.cmegroup.com/trading/equity-index/rolldates.html",
+    "claim": "Historical rows list June2025 equity-index expiry June20/roll June16 and September expiry September19/roll September15. The proposed June23-Sept12 calibration block avoids those roll dates.",
+    "confidence": "medium; primary exchange table"
+  },
+  {
+    "ref": "schema-mbp1",
+    "publisher": "Databento",
+    "publication_date": null,
+    "accessed": "2026-09-14",
+    "url": "https://databento.com/docs/schemas-and-data-formats/mbp-1",
+    "claim": "MBP-1 contains trades and changes at the best bid/offer. TBBO is sampled at trades; time-sampled BBO differs. Inference: trade-only data cannot reconstruct arbitrary-boundary spreads, and neither feed demonstrates the operator actual latency or fills.",
+    "confidence": "medium; primary specification; applicability inference explicit"
+  },
+  {
+    "ref": "schema-trades",
+    "publisher": "Databento",
+    "publication_date": null,
+    "accessed": "2026-09-14",
+    "url": "https://databento.com/docs/schemas-and-data-formats/trades",
+    "claim": "Trades contains individual trade events with price, quantity and capture/event timestamps. It can supply traded volume at price but lacks continuous BBO updates.",
+    "confidence": "medium; primary specification"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "lens": "structure",
+    "finding": "Initial and current study stages mixed",
+    "fix": "Moved initial assessment and initial implementation into explicitly dated historical section; completed follow-ups and current decision precede it."
+  },
+  {
+    "lens": "structure",
+    "finding": "Purchase approval scope buried at end",
+    "fix": "Moved exact approval scope under Decision required below opening recommendation."
+  },
+  {
+    "lens": "structure",
+    "finding": "Source appendices split narrative",
+    "fix": "Merged source lists at end with separate access-date labels."
+  },
+  {
+    "lens": "prose",
+    "finding": "Directional reference after section move",
+    "fix": "Applied direct wording correction; scientific findings preserved."
+  },
+  {
+    "lens": "prose",
+    "finding": "Mixed source access dates",
+    "fix": "Applied direct wording correction; scientific findings preserved."
+  },
+  {
+    "lens": "prose",
+    "finding": "Nonparallel processing instructions",
+    "fix": "Applied direct wording correction; scientific findings preserved."
+  },
+  {
+    "lens": "prose",
+    "finding": "CME removed pause, not assumption",
+    "fix": "Applied direct wording correction; scientific findings preserved."
+  },
+  {
+    "lens": "prose",
+    "finding": "Missing spaces in dates and count",
+    "fix": "Applied direct wording correction; scientific findings preserved."
+  }
+]

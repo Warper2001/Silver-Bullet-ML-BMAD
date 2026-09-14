@@ -1,0 +1,17 @@
+{
+  "endpoint": "https://hist.databento.com/v0/metadata.get_record_count",
+  "http_status": 200,
+  "method": "GET",
+  "params": {
+    "dataset": "GLBX.MDP3",
+    "end": "2025-09-13T00:00:00Z",
+    "schema": "status",
+    "start": "2025-06-22T00:00:00Z",
+    "stype_in": "raw_symbol",
+    "symbols": "MNQU5"
+  },
+  "raw_response_sha256": "afcf8bc077e68eb94dfe783205f32cabdeead61fd32ff5710947b6111ff2ff77",
+  "received_at": "2026-09-14T22:25:39.506067+00:00",
+  "requested_at": "2026-09-14T22:25:39.209079+00:00",
+  "response": 417
+}

@@ -1,0 +1,29 @@
+{
+  "endpoint": "https://hist.databento.com/v0/symbology.resolve",
+  "http_status": 200,
+  "method": "GET",
+  "params": {
+    "dataset": "GLBX.MDP3",
+    "end_date": "2025-09-13",
+    "start_date": "2025-06-22",
+    "stype_in": "raw_symbol",
+    "stype_out": "instrument_id",
+    "symbols": "MNQU5"
+  },
+  "raw_response_sha256": "f7e0ba4d9c8f6ef533f6480dc534bb5c561452ddac7cbd151520cd3ad56386f9",
+  "received_at": "2026-09-14T22:25:41.511889+00:00",
+  "requested_at": "2026-09-14T22:25:40.988269+00:00",
+  "response": {
+    "not_found": [],
+    "partial": [],
+    "result": {
+      "MNQU5": [
+        {
+          "d0": "2025-06-20",
+          "d1": "2025-09-13",
+          "s": "42003472"
+        }
+      ]
+    }
+  }
+}

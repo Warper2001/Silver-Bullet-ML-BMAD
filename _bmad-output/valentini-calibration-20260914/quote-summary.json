@@ -1,0 +1,49 @@
+{
+  "dataset": "GLBX.MDP3",
+  "end": "2025-09-13T00:00:00Z",
+  "metadata_requests": 19,
+  "package_estimated_usd": {
+    "mbo": 117.34511470198599,
+    "mbp-1": 102.968121349811,
+    "tbbo": 77.382497906684,
+    "trades": 46.429547309875005
+  },
+  "paid_requests": 0,
+  "queried_at_utc": "2026-09-14T22:25:17.773609+00:00",
+  "quotes_are_not_entitlement_or_coverage": true,
+  "raw_instrument_id": "42003472",
+  "schemas": {
+    "definition": {
+      "get_billable_size": 37440,
+      "get_cost": 5.9276819e-05,
+      "get_record_count": 72
+    },
+    "mbo": {
+      "get_billable_size": 69999015072,
+      "get_cost": 117.344993287325,
+      "get_record_count": 1249982412
+    },
+    "mbp-1": {
+      "get_billable_size": 61422804480,
+      "get_cost": 102.96799993515,
+      "get_record_count": 767785056
+    },
+    "status": {
+      "get_billable_size": 16680,
+      "get_cost": 6.2137842e-05,
+      "get_record_count": 417
+    },
+    "tbbo": {
+      "get_billable_size": 2967453360,
+      "get_cost": 77.382376492023,
+      "get_record_count": 37093167
+    },
+    "trades": {
+      "get_billable_size": 1780472016,
+      "get_cost": 46.429425895214,
+      "get_record_count": 37093167
+    }
+  },
+  "start": "2025-06-22T00:00:00Z",
+  "symbol": "MNQU5"
+}

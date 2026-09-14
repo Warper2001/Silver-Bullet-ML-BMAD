@@ -1,0 +1,26 @@
+{
+  "purpose": "Free metadata quotes and raw-symbol resolution only; no time series request, order or purchase",
+  "dataset": "GLBX.MDP3",
+  "symbol": "MNQU5",
+  "stype_in": "raw_symbol",
+  "start": "2025-06-22T00:00:00Z",
+  "end": "2025-09-13T00:00:00Z",
+  "schemas": [
+    "trades",
+    "mbp-1",
+    "tbbo",
+    "mbo",
+    "status",
+    "definition"
+  ],
+  "choice_basis": "Contiguous raw-contract block after June expiry and before September customary roll; chosen before provider quotes or strategy outcomes. Includes all candidate June23-Sept12 sessions, holidays subject to later calendar audit. Calibration only, never untouched validation.",
+  "sampling_claim": "One historical contract quarter is a calibration candidate, not proof of regime representativeness or independence",
+  "allowed_endpoints": [
+    "metadata.get_cost",
+    "metadata.get_record_count",
+    "metadata.get_billable_size",
+    "symbology.resolve"
+  ],
+  "paid_download_authorized": false,
+  "strategy_outcomes_authorized": false
+}

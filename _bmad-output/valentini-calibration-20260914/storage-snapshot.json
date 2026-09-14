@@ -1,0 +1,6 @@
+{
+  "free_disk_bytes": 128666279936,
+  "billable_bytes_not_compressed_disk_estimate": 69999069192,
+  "compression_ratio": "NOT_ESTIMATED",
+  "execution_rule": "Stream and process daily compressed chunks; benchmark a slice on this host before long processing."
+}

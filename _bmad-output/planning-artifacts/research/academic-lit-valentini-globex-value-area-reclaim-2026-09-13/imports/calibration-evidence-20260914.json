@@ -1,0 +1,17 @@
+{
+  "observations": [
+    "Native measurement admitted six complete regular sessions; earlier CSV provenance objections remain.",
+    "Conditional power study returned POWER_UNDETERMINED; no strategy outcomes calculated.",
+    "Nineteen free metadata/symbology requests supplied exact schema quotes and instrument mapping.",
+    "Two read-only batch inventory calls returned identical raw hashes; eight jobs, five MNQ requests, none covers proposed quarter. Other three requests are MSFT examples.",
+    "Sixty candidate weekdays are not sixty certified sessions; dated holiday and feed coverage remain unaudited."
+  ],
+  "source_files": {
+    "_bmad-output/valentini-calibration-20260914/account-inventory-all-requests.json": "511da25eb74f05ae6f283f350284f546d1cc78f8b82e9768739f3ce6cb27204c",
+    "_bmad-output/valentini-calibration-20260914/candidate-calendar-dates.json": "2df4bce613161980a343779b416982666897e051e448035586535d70e121e86d",
+    "_bmad-output/valentini-calibration-20260914/quote-summary.json": "e27acfa3d129939fa431f5c5ee7ae5728536fe49533f8e4507e7389639020ebf",
+    "_bmad-output/valentini-native-20260914/run-final/report.json": "d7d5b6b2451e9e20d3ae7c2862efbd187404bba2156e21c10746720521ff005c",
+    "_bmad-output/valentini-power-20260914/run-final/report.json": "add7feaef6f5e9fee811a7529ef5de82a57eeb20c11c838eabf910bab4c02a17"
+  },
+  "type": "Explicit local measurements and authenticated metadata imports; not generic project context"
+}

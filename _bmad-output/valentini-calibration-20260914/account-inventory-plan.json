@@ -1,0 +1,9 @@
+{
+  "endpoint": "https://hist.databento.com/v0/batch.list_jobs",
+  "method": "GET",
+  "params": {
+    "states": "queued,processing,done,expired",
+    "short": "false"
+  },
+  "purpose": "Find an existing downloadable copy before proposing purchase; metadata only, no job submission or file download"
+}

@@ -1,0 +1,69 @@
+{
+  "before_submission": [
+    "Obtain approval for these exact three requests and spending scope.",
+    "Requote same requests and verify agreement with approved spending scope; do not change date range or schemas to fit favorable outcomes.",
+    "Inspect current SDK and provider batch terms and retain receipts; a metadata estimate is not a guaranteed final charge.",
+    "Recheck free disk and use compressed daily chunks; no unbounded in-memory table or duplicate uncompressed archive."
+  ],
+  "billable_uncompressed_bytes": 69999069192,
+  "credentials_included": false,
+  "estimated_total_usd": 117.34511470198599,
+  "incremental_estimate_over_mbp1_usd": 14.376993352174992,
+  "instrument_id_metadata": "42003472",
+  "post_acquisition": [
+    "Retain original provider files, metadata, hashes and receipts.",
+    "Audit contract/calendar/feed coverage and event completion before deriving strategy observations.",
+    "Keep this entire historical period in calibration/development role.",
+    "Commit a separate finalized preregistration before any nuisance outcome calculation; existing performance gate remains terminal."
+  ],
+  "purchase_authorized": false,
+  "purpose": "Historical calibration candidate; no confirmatory performance claim",
+  "requests": [
+    {
+      "compression": "zstd",
+      "dataset": "GLBX.MDP3",
+      "delivery": "download",
+      "encoding": "dbn",
+      "end": "2025-09-13T00:00:00Z",
+      "schema": "mbo",
+      "split_duration": "day",
+      "start": "2025-06-22T00:00:00Z",
+      "stype_in": "raw_symbol",
+      "stype_out": "instrument_id",
+      "symbols": [
+        "MNQU5"
+      ]
+    },
+    {
+      "compression": "zstd",
+      "dataset": "GLBX.MDP3",
+      "delivery": "download",
+      "encoding": "dbn",
+      "end": "2025-09-13T00:00:00Z",
+      "schema": "status",
+      "split_duration": "day",
+      "start": "2025-06-22T00:00:00Z",
+      "stype_in": "raw_symbol",
+      "stype_out": "instrument_id",
+      "symbols": [
+        "MNQU5"
+      ]
+    },
+    {
+      "compression": "zstd",
+      "dataset": "GLBX.MDP3",
+      "delivery": "download",
+      "encoding": "dbn",
+      "end": "2025-09-13T00:00:00Z",
+      "schema": "definition",
+      "split_duration": "day",
+      "start": "2025-06-22T00:00:00Z",
+      "stype_in": "raw_symbol",
+      "stype_out": "instrument_id",
+      "symbols": [
+        "MNQU5"
+      ]
+    }
+  ],
+  "status": "AWAITING_PAID_PURCHASE_APPROVAL"
+}

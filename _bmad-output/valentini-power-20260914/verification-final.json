@@ -1,0 +1,81 @@
+{
+  "code_hashes_match": true,
+  "frontier_checks": [
+    {
+      "d": 5.792801491690289,
+      "independent_integral_power": 0.7999999999999999,
+      "n": 2,
+      "quadrature_error": 1.8438862593201085e-12
+    },
+    {
+      "d": 2.2972747673051703,
+      "independent_integral_power": 0.8000000000000003,
+      "n": 3,
+      "quadrature_error": 3.221376505109242e-12
+    },
+    {
+      "d": 1.6497245749750253,
+      "independent_integral_power": 0.8000000000000038,
+      "n": 4,
+      "quadrature_error": 7.936847648702847e-12
+    },
+    {
+      "d": 1.3594179588547293,
+      "independent_integral_power": 0.7999999999998925,
+      "n": 5,
+      "quadrature_error": 1.722840184440587e-12
+    },
+    {
+      "d": 1.1857905817847647,
+      "independent_integral_power": 0.8000000000000003,
+      "n": 6,
+      "quadrature_error": 5.275620343028968e-12
+    }
+  ],
+  "implementation_commit": "a9509494b8f6b20456f75824c94833e05e188c98",
+  "independent_oracle": "Integrate over u=sqrt(chi-square), explicit chi density; no gate functions imported",
+  "manifest_sha256": "3b8ee78bf5888b1da369ce66e142476a59ba410a30f30f9f5800026acd935139",
+  "minimum_n_verification": "Exhaustively evaluate every integer n from2 through declared minimum with direct scipy.stats nct",
+  "pre_run_verification_sha256": "2d9ab904eeb3f198e5c128ecca3494c27c5eafae8e11f6242be05773eac65628",
+  "report_sha256": "add7feaef6f5e9fee811a7529ef5de82a57eeb20c11c838eabf910bab4c02a17",
+  "scenario_checks": [
+    {
+      "all_smaller_n_below_target": true,
+      "d": 0.1,
+      "independent_integral_power_at_six": 0.07623007807536643,
+      "minimum_n": 620,
+      "quadrature_error": 8.857281123941366e-12
+    },
+    {
+      "all_smaller_n_below_target": true,
+      "d": 0.2,
+      "independent_integral_power_at_six": 0.11166307336871648,
+      "minimum_n": 156,
+      "quadrature_error": 6.263966194971797e-13
+    },
+    {
+      "all_smaller_n_below_target": true,
+      "d": 0.3,
+      "independent_integral_power_at_six": 0.1573611300096082,
+      "minimum_n": 71,
+      "quadrature_error": 1.120367593016008e-12
+    },
+    {
+      "all_smaller_n_below_target": true,
+      "d": 0.5,
+      "independent_integral_power_at_six": 0.27994273621384097,
+      "minimum_n": 27,
+      "quadrature_error": 9.383327380480682e-12
+    },
+    {
+      "all_smaller_n_below_target": true,
+      "d": 1.0,
+      "independent_integral_power_at_six": 0.676944951409112,
+      "minimum_n": 8,
+      "quadrature_error": 1.9379087217663368e-12
+    }
+  ],
+  "strategy_outcomes_computed": false,
+  "verdict": "VERIFIED_CONDITIONAL_CALCULATIONS_ONLY",
+  "verified_utc": "2026-09-14T22:13:56.257881+00:00"
+}

@@ -2,7 +2,7 @@
 title: Native reclaim conditional power feasibility gate
 type: feature
 created: 2026-09-14
-status: in-review
+status: done
 route: dispatch
 review_loop_iteration: 0
 baseline_commit: 42d905e2914a0d901e933dfa86651c223e0594f3
@@ -45,12 +45,12 @@ Read `_bmad-output/preregistration_valentini_native_power_20260914.md` fully. It
 
 ## Tasks & Acceptance
 
-- [ ] Implement CLI --audit-dir --prereg --inventory --output-dir, requiring new output directory; pin the above input hashes and emit canonical JSON with code/dependency/input hashes and prereg commit. No promotion option. Valid terminal report exit0; bad input exit2.
-- [ ] Read registration and implement exact noncentral-t power, bracketed80%-MDE, minimum-n search, and separate known-variance normal cross-check. No borrowed effect estimate; fixed scenario grid0.1/0.2/0.3/0.5/1.0. Normalized net session outcomes are hypothetical, not returns produced by this code. All outputs finite or explicit null/unassessable.
-- [ ] Validate pinned metadata/count consistency, eligible booleans, unique nonoverlapping session IDs, counts vs report and per-session summaries. Preserve original exclusions and verify provenance code hashes against current repo files. Data-source bytes were already audited; record that no new raw-native decode/reconciliation occurs here. Existing trading admission remains NOT_ADMITTED.
-- [ ] Include session-based MDE frontier, all hypothetical effect scenarios, assumptions, blockers, and next required evidence. The six profiles are not independent trades or a calibrated effective sample size. The iid-normal assumption is a scenario, not a demonstrated bound.
-- [ ] Test independent chi-square integral oracle for nct power (synthetic n7/d0.4 and n12/d0.7, avoiding actual-ledger calculations), alpha under null, monotonicity, minimum-n minimality, MDE target inversion, invalid/nonfinite types, data/schema tampering, artifact mutation, output collisions and structural no-price/no-trade calls.
-- [ ] Write concise docs and exact command. Parent runs numerical gate only after reviewed script/tests committed, verifies outputs and writes results.
+- [x] Implement CLI --audit-dir --prereg --inventory --output-dir, requiring new output directory; pin the above input hashes and emit canonical JSON with code/dependency/input hashes and prereg commit. No promotion option. Valid terminal report exit0; bad input exit2.
+- [x] Read registration and implement exact noncentral-t power, bracketed80%-MDE, minimum-n search, and separate known-variance normal cross-check. No borrowed effect estimate; fixed scenario grid0.1/0.2/0.3/0.5/1.0. Normalized net session outcomes are hypothetical, not returns produced by this code. All outputs finite or explicit null/unassessable.
+- [x] Validate pinned metadata/count consistency, eligible booleans, unique nonoverlapping session IDs, counts vs report and per-session summaries. Preserve original exclusions and verify provenance code hashes against current repo files. Data-source bytes were already audited; record that no new raw-native decode/reconciliation occurs here. Existing trading admission remains NOT_ADMITTED.
+- [x] Include session-based MDE frontier, all hypothetical effect scenarios, assumptions, blockers, and next required evidence. The six profiles are not independent trades or a calibrated effective sample size. The iid-normal assumption is a scenario, not a demonstrated bound.
+- [x] Test independent chi-square integral oracle for nct power (synthetic n7/d0.4 and n12/d0.7, avoiding actual-ledger calculations), alpha under null, monotonicity, minimum-n minimality, MDE target inversion, invalid/nonfinite types, data/schema tampering, artifact mutation, output collisions and structural no-price/no-trade calls.
+- [x] Write concise docs and exact command. Parent runs numerical gate only after reviewed script/tests committed, verifies outputs and writes results.
 
 Acceptance criteria:
 - Given a committed registration, when a valid gate runs, then all prespecified scenarios are reported with immutable evidence bindings and no strategy result is calculated.
@@ -90,3 +90,5 @@ Review execution: the host refused additional fresh reviewer threads. Two agents
 Run the new unit suite with the repository interpreter, Black/flake8 and default strict mypy if installed. Do not use --follow-imports=skip because it discards typed helpers; do not add overrides. Parent rechecks the unchanged existing119 native+simulator tests when integrating. Actual CLI result generated only after code/prereg commits; independently check minimum sample boundaries and all model/operational verdict distinctions.
 
 Pre-run implementation verification: 214 focused tests passed; Black, flake8 and strict mypy passed. Reviewed fixes are implemented. Actual ledger run remains pending code commit.
+
+Completed after reviewed-code commit a9509494b8f6b20456f75824c94833e05e188c98: actual metadata gate returned POWER_UNDETERMINED/evaluation_allowed=false. Independent integration verified all five frontier cells and all five scenario powers; exhaustive integer checks confirmed minimum counts620/156/71/27/8. All model/code/input hashes matched; pre-run committed-byte verification and final evidence are retained. No strategy outcomes calculated. No findings deferred.

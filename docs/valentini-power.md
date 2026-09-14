@@ -60,3 +60,5 @@ Synthetic verification (no actual-ledger calculation):
 Tests independently integrate the chi-square representation of noncentral t
 power and cover null alpha, monotonicity, MDE inversion, adjacent sample-size
 boundaries, malformed inputs, artifact mutation and output protection.
+
+The completed [2026-09-14 feasibility result](valentini-power-results.md) reports all scenarios and immutable execution evidence.

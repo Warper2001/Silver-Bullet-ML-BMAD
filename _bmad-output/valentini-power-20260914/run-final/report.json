@@ -1,0 +1,1747 @@
+{
+  "assumptions": [
+    "Hypothetical iid normal session net outcomes; unknown population variance.",
+    "d is hypothetical mean net session dollars / population standard deviation.",
+    "No mean, variance, cost or transferable effect is estimated here.",
+    "One contract; include complete zero-trade sessions in the proposed test.",
+    "Observed profiles are neither independent trades nor calibrated effective n.",
+    "Dependence, nonnormality and selection remain uncalibrated; no bound claimed.",
+    "Scenario sample sizes are not guaranteed horizons or purchase authorization."
+  ],
+  "blockers": [
+    "No transferable net effect for this exact construct in inspected evidence.",
+    "No independent full-session calibration sample in the scoped inventory.",
+    "No calibrated dependence model or validated net-cost mapping."
+  ],
+  "code_sha256": {
+    "src/research/yank_native_minute/builder.py": "2bc6b98ae77c4d0a41b6fa9d89ed4daf6c6aaad0879597fa6669efa66663d82c",
+    "src/research/yank_native_minute/pins.json": "95826f072e2feec678a58ef9ca9af69f5f20650673cd25d228abe1187aff2e3b",
+    "tools/valentini_native_audit.py": "e5f7867d6a0b91ff17df14b9f42401600daaa6c4e210f920209c7a39c4383c67",
+    "tools/valentini_power_gate.py": "a3bafc264a8a42ca486075453d9447680b75c18b25081e5eb71c79cf7442868a",
+    "tools/valentini_reclaim.py": "2513a0359adf52afa86998dd25176e8e102dcc0ae59085a377f23b07dd03448e"
+  },
+  "conditional_model": {
+    "alpha": 0.05,
+    "hypothetical_scenarios": [
+      {
+        "d": 0.1,
+        "hypothetical": true,
+        "known_variance_crosscheck": {
+          "mde_at_n": 1.015099111090453,
+          "model": "known_variance_normal",
+          "power_at_n": 0.08077093630022797,
+          "required_n_continuous": 618.2557232019765,
+          "required_n_integer": 619
+        },
+        "minimum_independent_sessions": {
+          "cap": 1000000,
+          "n": 620,
+          "power_at_n": 0.8002190323328289,
+          "power_at_previous_n": 0.7996559053592631,
+          "previous_n_status": "BELOW_TARGET",
+          "status": "CONDITIONAL_MODEL"
+        },
+        "power_at_observed_count": 0.07623007807536647
+      },
+      {
+        "d": 0.2,
+        "hypothetical": true,
+        "known_variance_crosscheck": {
+          "mde_at_n": 1.015099111090453,
+          "model": "known_variance_normal",
+          "power_at_n": 0.1240542884461846,
+          "required_n_continuous": 154.56393080049412,
+          "required_n_integer": 155
+        },
+        "minimum_independent_sessions": {
+          "cap": 1000000,
+          "n": 156,
+          "power_at_n": 0.8001673227327252,
+          "power_at_previous_n": 0.7979057437003841,
+          "previous_n_status": "BELOW_TARGET",
+          "status": "CONDITIONAL_MODEL"
+        },
+        "power_at_observed_count": 0.11166307336871646
+      },
+      {
+        "d": 0.3,
+        "hypothetical": true,
+        "known_variance_crosscheck": {
+          "mde_at_n": 1.015099111090453,
+          "model": "known_variance_normal",
+          "power_at_n": 0.1814094871018307,
+          "required_n_continuous": 68.69508035577519,
+          "required_n_integer": 69
+        },
+        "minimum_independent_sessions": {
+          "cap": 1000000,
+          "n": 71,
+          "power_at_n": 0.8046742657994839,
+          "power_at_previous_n": 0.7996556141952003,
+          "previous_n_status": "BELOW_TARGET",
+          "status": "CONDITIONAL_MODEL"
+        },
+        "power_at_observed_count": 0.1573611300096082
+      },
+      {
+        "d": 0.5,
+        "hypothetical": true,
+        "known_variance_crosscheck": {
+          "mde_at_n": 1.015099111090453,
+          "model": "known_variance_normal",
+          "power_at_n": 0.33720300340909964,
+          "required_n_continuous": 24.730228928079065,
+          "required_n_integer": 25
+        },
+        "minimum_independent_sessions": {
+          "cap": 1000000,
+          "n": 27,
+          "power_at_n": 0.8118315517081682,
+          "power_at_previous_n": 0.7980537143957398,
+          "previous_n_status": "BELOW_TARGET",
+          "status": "CONDITIONAL_MODEL"
+        },
+        "power_at_observed_count": 0.2799427362138409
+      },
+      {
+        "d": 1.0,
+        "hypothetical": true,
+        "known_variance_crosscheck": {
+          "mde_at_n": 1.015099111090453,
+          "model": "known_variance_normal",
+          "power_at_n": 0.7894851526869222,
+          "required_n_continuous": 6.182557232019766,
+          "required_n_integer": 7
+        },
+        "minimum_independent_sessions": {
+          "cap": 1000000,
+          "n": 8,
+          "power_at_n": 0.8150194415569083,
+          "power_at_previous_n": 0.7543958742229309,
+          "previous_n_status": "BELOW_TARGET",
+          "status": "CONDITIONAL_MODEL"
+        },
+        "power_at_observed_count": 0.6769449514091119
+      }
+    ],
+    "mde_frontier": [
+      {
+        "conditional_power": 0.7999999999999997,
+        "d": 5.792801491690289,
+        "n": 2,
+        "status": "CONDITIONAL_MODEL"
+      },
+      {
+        "conditional_power": 0.8000000000000002,
+        "d": 2.2972747673051703,
+        "n": 3,
+        "status": "CONDITIONAL_MODEL"
+      },
+      {
+        "conditional_power": 0.8000000000000035,
+        "d": 1.6497245749750253,
+        "n": 4,
+        "status": "CONDITIONAL_MODEL"
+      },
+      {
+        "conditional_power": 0.7999999999998921,
+        "d": 1.3594179588547293,
+        "n": 5,
+        "status": "CONDITIONAL_MODEL"
+      },
+      {
+        "conditional_power": 0.8000000000000003,
+        "d": 1.1857905817847647,
+        "n": 6,
+        "status": "CONDITIONAL_MODEL"
+      }
+    ],
+    "observed_count_mde": {
+      "conditional_power": 0.8000000000000003,
+      "d": 1.1857905817847647,
+      "n": 6,
+      "status": "CONDITIONAL_MODEL"
+    },
+    "observed_session_count": 6,
+    "sample_search_cap": 1000000,
+    "status": "CONDITIONAL_MODEL",
+    "target_power": 0.8
+  },
+  "data_boundary": {
+    "all_six_artifacts_hashed": true,
+    "historical_provenance": {
+      "calendar": {
+        "instrument": "MNQM5",
+        "schema_version": 1,
+        "sessions": [
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": false,
+                "minute": "2025-05-19T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1747688400000000000,
+                    "ts_recv_ns": 1747688400011264258
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-19T21:00:00Z",
+            "name": "2025-05-19",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-18T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-19T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+                    "record_index": 7,
+                    "ts_event_ns": 1747692000000000000,
+                    "ts_recv_ns": 1747692000015568626
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+                    "record_index": 8,
+                    "ts_event_ns": 1747692000000000000,
+                    "ts_recv_ns": 1747692000016450120
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-20T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+                    "record_index": 1,
+                    "ts_event_ns": 1747774800000000000,
+                    "ts_recv_ns": 1747774800011945389
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-20T21:00:00Z",
+            "name": "2025-05-20",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-19T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-20T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1747778400000000000,
+                    "ts_recv_ns": 1747778400011028031
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+                    "record_index": 5,
+                    "ts_event_ns": 1747778400000000000,
+                    "ts_recv_ns": 1747778400012025849
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-21T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+                    "record_index": 1,
+                    "ts_event_ns": 1747861200000000000,
+                    "ts_recv_ns": 1747861200010806251
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-21T21:00:00Z",
+            "name": "2025-05-21",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-20T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-21T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1747864800000000000,
+                    "ts_recv_ns": 1747864800012398328
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+                    "record_index": 5,
+                    "ts_event_ns": 1747864800000000000,
+                    "ts_recv_ns": 1747864800013371318
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-22T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+                    "record_index": 1,
+                    "ts_event_ns": 1747947600000000000,
+                    "ts_recv_ns": 1747947600011277534
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-22T21:00:00Z",
+            "name": "2025-05-22",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-21T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-22T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1747951200000000000,
+                    "ts_recv_ns": 1747951200010704275
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+                    "record_index": 5,
+                    "ts_event_ns": 1747951200000000000,
+                    "ts_recv_ns": 1747951200011841977
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-23T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250523.status.dbn.zst",
+                    "record_index": 1,
+                    "ts_event_ns": 1748034000000000000,
+                    "ts_recv_ns": 1748034000010727275
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-23T21:00:00Z",
+            "name": "2025-05-23",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-22T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [],
+            "breaks": [],
+            "end": "2025-05-26T17:00:00Z",
+            "name": "2025-05-26",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "cme-2025-holiday",
+              "native-status-reviewed"
+            ],
+            "start": "2025-05-25T22:00:00Z",
+            "unresolved_evidence": [
+              "Dated official holiday halt and trade-date/session-reset schedule not recovered. End at 17:00 UTC is a native-status-observed candidate only."
+            ],
+            "verification": "UNVERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [],
+            "breaks": [],
+            "end": "2025-05-27T21:00:00Z",
+            "name": "2025-05-27",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "cme-2025-holiday",
+              "native-status-reviewed"
+            ],
+            "start": "2025-05-26T22:00:00Z",
+            "unresolved_evidence": [
+              "Native status shows May 26 22:00 UTC reopening after a PAUSE, without a session close. Whether the profile resets here or carries from May 25 is unresolved."
+            ],
+            "verification": "UNVERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-27T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1748383200000000000,
+                    "ts_recv_ns": 1748383200012141927
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+                    "record_index": 5,
+                    "ts_event_ns": 1748383200000000000,
+                    "ts_recv_ns": 1748383200013093774
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-28T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1748466000000000000,
+                    "ts_recv_ns": 1748466000010594326
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-28T21:00:00Z",
+            "name": "2025-05-28",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-27T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-28T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+                    "record_index": 7,
+                    "ts_event_ns": 1748469600000000000,
+                    "ts_recv_ns": 1748469600012420840
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+                    "record_index": 8,
+                    "ts_event_ns": 1748469600000000000,
+                    "ts_recv_ns": 1748469600013753273
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-29T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+                    "record_index": 1,
+                    "ts_event_ns": 1748552400000000000,
+                    "ts_recv_ns": 1748552400010629014
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-29T21:00:00Z",
+            "name": "2025-05-29",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-28T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          },
+          {
+            "boundary_status_exceptions": [
+              {
+                "expected_trading": true,
+                "minute": "2025-05-29T22:00:00Z",
+                "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+                    "record_index": 4,
+                    "ts_event_ns": 1748556000000000000,
+                    "ts_recv_ns": 1748556000010239536
+                  },
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+                    "record_index": 5,
+                    "ts_event_ns": 1748556000000000000,
+                    "ts_recv_ns": 1748556000011201321
+                  }
+                ]
+              },
+              {
+                "expected_trading": false,
+                "minute": "2025-05-30T21:00:00Z",
+                "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+                "sources": [
+                  "cme-2021-hours",
+                  "cme-cftc-2021-mnq",
+                  "native-status-reviewed"
+                ],
+                "transition_refs": [
+                  {
+                    "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250530.status.dbn.zst",
+                    "record_index": 1,
+                    "ts_event_ns": 1748638800000000000,
+                    "ts_recv_ns": 1748638800011130530
+                  }
+                ]
+              }
+            ],
+            "breaks": [],
+            "end": "2025-05-30T21:00:00Z",
+            "name": "2025-05-30",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq"
+            ],
+            "start": "2025-05-29T22:00:00Z",
+            "unresolved_evidence": [],
+            "verification": "VERIFIED"
+          }
+        ],
+        "sources": [
+          {
+            "accessed": "2026-09-14",
+            "date": "2021-06-24",
+            "evidence": "Product Changes: effective June 27, 2021, affected equity futures trade Sunday-Friday 17:00-16:00 CT with 16:00-17:00 maintenance; former 15:15-15:30 CT pause eliminated.",
+            "id": "cme-2021-hours",
+            "title": "CME Globex Notices: June 21, 2021 (notice date June 24)",
+            "url": "https://www.cmegroup.com/notices/electronic-trading/2021/06/20210621.html"
+          },
+          {
+            "accessed": "2026-09-14",
+            "date": "2021-06-11",
+            "evidence": "PDF page 2 states June 27 effective date; Exhibit A on PDF page 4 explicitly includes Micro E-mini Nasdaq 100 Index Futures, chapter 361, MNQ.",
+            "id": "cme-cftc-2021-mnq",
+            "title": "CME Submission 20-244 (1 of 2), elimination of equity trading halt",
+            "url": "https://www.cftc.gov/sites/default/files/filings/orgrules/21/06/rule061421cmedcm001.pdf"
+          },
+          {
+            "accessed": "2026-09-14",
+            "date": null,
+            "evidence": "Still displays 16:15-16:30 ET halt. Superseded for MNQ by dated 2021 notice and filing; not used to define May 2025 breaks.",
+            "id": "cme-current-faq-conflict",
+            "title": "Micro E-mini Equity Index Futures FAQ, question 8",
+            "url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html"
+          },
+          {
+            "accessed": "2026-09-14",
+            "date": null,
+            "evidence": "Identifies May 26, 2025 holiday and clearing arrangements. Does not supply MNQ Globex halt, reopening or session-reset boundaries; cannot verify holiday sessions.",
+            "id": "cme-2025-holiday",
+            "title": "CME Clearing Memorial Day May 26, 2025 advisory",
+            "url": "https://www.cmegroup.com/tools-information/holiday-calendar/files/2025/2025-memorial-day-clearing-advisory.pdf"
+          },
+          {
+            "accessed": "2026-09-14",
+            "date": "2025-05-19/2025-05-30",
+            "evidence": "Exact status transition references are bound to the independently supplied reconstruction/status.json bytes. Native status corroborates regular opening and closing hours; it is not an independent historical holiday calendar.",
+            "id": "native-status-reviewed",
+            "sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930",
+            "title": "Saved native MNQM5 status reconstruction",
+            "url": "local:status.json"
+          }
+        ],
+        "timezone": "America/New_York",
+        "unresolved_evidence": [
+          "May 26 and May 27 holiday session identity is unverified and both candidates must be excluded from admitted measurements.",
+          "VERIFIED covers scheduled regular hours only; source completeness, native status consistency and availability are separate audit gates. May 19 starts two hours before the acquisition and is incomplete.",
+          "No regular 16:15-16:30 ET break is scheduled: the dated CME 2021 change supersedes the conflicting living FAQ."
+        ]
+      },
+      "calendar_sha256": "2ff6414c10d1c91ac27e685521babc0947f4dde82b421338a6debaf88199e3eb",
+      "code_sha256": {
+        "src/research/yank_native_minute/builder.py": "2bc6b98ae77c4d0a41b6fa9d89ed4daf6c6aaad0879597fa6669efa66663d82c",
+        "src/research/yank_native_minute/pins.json": "95826f072e2feec678a58ef9ca9af69f5f20650673cd25d228abe1187aff2e3b",
+        "tools/valentini_native_audit.py": "e5f7867d6a0b91ff17df14b9f42401600daaa6c4e210f920209c7a39c4383c67",
+        "tools/valentini_reclaim.py": "2513a0359adf52afa86998dd25176e8e102dcc0ae59085a377f23b07dd03448e"
+      },
+      "contract": {
+        "action": "T excluding SNAPSHOT and F",
+        "clock": "native ts_recv",
+        "native_area": "70% exact integer volume; lower-price POC and adjacent ties",
+        "price_unit": "integer ticks",
+        "proxy": "existing Profile uniform OHLCV allocation",
+        "snapshot": "pre-bar boundary, preceding completed available bars only",
+        "volume_unit": "integer contracts"
+      },
+      "reconstruction_sha256": {
+        "bars.jsonl": "efffa1e196d65aab61865361c719fbf4ec44a14cf29643c557a277e50f9bf1af",
+        "coverage.jsonl": "8a014f618087fee2980983119887119fc4c7cd7e53f98ba297d3acecf7122df5",
+        "definitions.json": "bf1f6c3b3338be32403cff1be1d48d67e52aa6b6d4940c42d498751610ef3959",
+        "delayed-events.json": "b18902ca6b02a7dce28ad759cdd707e57ef30531c0c2f8924279a37cf082cd81",
+        "exchange-diagnostic.jsonl": "3e62d01009764a4e919d68bfbe6dad6b51d9321f3b3a506323c6ee72da7f616e",
+        "manifest.json": "d5bb4fab04363c2c9149313d4cbc82ad702df3883472906d07d3b3e4feec50f0",
+        "report.json": "10a1676ebaba2e4a9562fd5139f50bb78abaaf4dd036070ec6a9e6169b0bb713",
+        "status.json": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930"
+      },
+      "runtime": {
+        "packages": {
+          "databento_dbn": "0.68.0",
+          "numpy": "2.4.6",
+          "zstandard": "0.25.0"
+        },
+        "python": "3.12.3"
+      },
+      "source_sha256": {
+        "manifest.json": "3ddb0268a5e224be817eb95a68bad4544ad927ef8129317ed6fc3d0445159156",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst": "bde71af6e7dd122176c8af53bec813921709059303ace434cfabf909c15e6749",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst": "c9b96c9469f98fb54ac163feaedc9a8bc6104640cd6c7e20cf022fd364eb8a7e",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst": "08d0757e4448634fff7e39169817c989a4e9edff17a2b058443cdce4e6d1b021",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst": "f6687005d7edc74a4e6d2b141ec2c81b828394ecd51740d74e643963b490215c",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250523.status.dbn.zst": "82cd5f3e695ad76a8be2e1f9701c3180ebcb1ddcbbe382315176db89df850c9c",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250525.status.dbn.zst": "e7b8099b94a88cd42da3aed93d5f0fbc7800f2530eb30d30cac1e3632dce65ca",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250526.status.dbn.zst": "c9246d4b2fa3ff58d6272536318c8578c0ee4c15f3422b5ab4248e7bf51481db",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst": "2160412a161b4de5bcaf52bd0e2b708ad0d81737d3f3e2995df99e16be1bd490",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst": "d84d6a2f9c2ecf4436f2a7e347956d2e062bbb910e078472136a3a5ca9d2b180",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst": "4bb3cd581a131c7a3459d537622980d410cad5a32b48c225be09a13ba48fab45",
+        "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250530.status.dbn.zst": "b76cfc7bc3e7353041d7c91b300f5204d080a0adc12bcd332d3f0b20177148c9",
+        "native/GLBX-20260907-5JPUQQJ9P5/metadata.json": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250519.definition.dbn.zst": "b0e77ce84ce918246616fb8fc709027464e800178abd8700cbd6d80f833a587b",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250520.definition.dbn.zst": "0225e3ca550f9c1893244bcd9bea25384f09e578dbe28ba67aa49ce03b1e0da1",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250521.definition.dbn.zst": "e2c9018a96c08e93a73284362ff74cc1a6496ce8905d06452f9b6eba1d3f6594",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250522.definition.dbn.zst": "f35a6841b07cf9fc78f026420651820488ef818b4bcb726db81c636874d11cb1",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250523.definition.dbn.zst": "fc4ea840e7d1228e7ba5174a2c8c13f48d4eb38e58c6771c244c64db8e6b3002",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250525.definition.dbn.zst": "25c44abdf94caab6802aadccc554801a97ae28bdfa06b33ad723d3979fa2386f",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250526.definition.dbn.zst": "2bf61cb9dc674415a6eb87433ef89a389bdefd9621cd388774156946bc06d503",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250527.definition.dbn.zst": "8e6671683a0a81797ec1786d62c005ac5dad80ffd5c972165bb3bc4c740f82d7",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250528.definition.dbn.zst": "309afad712652a31734d962128da97adf9721d619f4b3f3c0df46d1946178e7b",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250529.definition.dbn.zst": "0f679012f75cfa779522ef4c6db2adf121ce7728ef0515371c5a843135d0d862",
+        "native/GLBX-20260907-GVLS77PESW/glbx-mdp3-20250530.definition.dbn.zst": "e90ba1030ecb0dd93875ccb178fc07c70912f992bbb84954aa2bbe21fd5b275a",
+        "native/GLBX-20260907-GVLS77PESW/metadata.json": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250519.mbo.dbn.zst": "857b4d466347f6af1e0b7f3582de3f6e57713a7a152c1eaf27504bf10d2535d6",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250520.mbo.dbn.zst": "5a94a963312c1fdd2bcaf43f499151e5b3ff3158da2d657920942f37170790ff",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250521.mbo.dbn.zst": "00c3fabee823390ec5be236281553952754f65b801d07632ee9ba964c91bae65",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250522.mbo.dbn.zst": "ec707e9c975326828004e1629753198941f990755aee604509ad257793f3d942",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250523.mbo.dbn.zst": "7261b656c9fcc3f877e520aa9f76e15970aa58c1c4b8d69f900c3f16e99da79e",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250525.mbo.dbn.zst": "338da0db1fb132a641c022931e15da058fca6a6cd775c3998fdf49fff5864f45",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250526.mbo.dbn.zst": "c792f119361844e17ff40fe4d4e99b5ce91b11d19608c759c0ecedcae306ef64",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250527.mbo.dbn.zst": "a1583a621327b4638da219b1e44379d66071a8d4aa0dbb84ba3fd88a4b4c8be3",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250528.mbo.dbn.zst": "02455ebfc50b8597234a39bbdd78bc06a99a3a5bef22cb7c77395056b7502f8e",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250529.mbo.dbn.zst": "a21a4734b7a54406111fd609ff32556a65ca5efb0132b1a3d796b6f0682952da",
+        "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250530.mbo.dbn.zst": "42d98c3c66062b6f87c04c4e8215f84d6db5617bc0c99b9124a9ebc821618df2",
+        "native/GLBX-20260907-NWS3PA9QPX/metadata.json": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9"
+      },
+      "version": "valentini-native-measurement-v1"
+    },
+    "parsed_measurement_artifacts": [
+      "report.json",
+      "sessions.json",
+      "provenance.json"
+    ],
+    "raw_native_decode": false,
+    "raw_native_reconciliation": false,
+    "raw_source_hashes": "Historical audit provenance only; not re-read here",
+    "strategy_outcomes_computed": false
+  },
+  "evaluation_allowed": false,
+  "input_sha256": {
+    "inventory": "25c368725646fa9018a526a4a1f1782ce57f55e36381f0478656dfc783dc82a5",
+    "measurement": {
+      "histograms.jsonl": "2fa6270dfbddc5d4d97dcbda850a9d8e6d48a77030c9088839125cfcb39fee55",
+      "manifest.json": "23f2205518d7be751fa147274441efe0af89c2a2aec52f76a8810e443a4b1667",
+      "observed-bars.jsonl": "f907835e95205886b504e014e72c69bf6b853df959c42870a88c247237911913",
+      "provenance.json": "83743ae81f27b50b3a36ecea706e63078c2e3a1573c7cee9b13ccdc4c2098f86",
+      "report.json": "d7d5b6b2451e9e20d3ae7c2862efbd187404bba2156e21c10746720521ff005c",
+      "sessions.json": "fb1a8174913c5bc16aeefde43a1399146b1515e265c6dc0f97accde03ee42e0b",
+      "snapshots.jsonl": "266194af9a841055a252db57de22b9edc41f2bebadf21acd09991cc035361ecc"
+    },
+    "prereg": "8defef100fe89382f331858e5d02e5cc495d8280189a2fe37fabca2acac09005"
+  },
+  "inventory_evidence": {
+    "independent_full_session_calibration_found": false,
+    "metadata_requests": [
+      {
+        "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/metadata.json",
+        "query": {
+          "compression": "zstd",
+          "dataset": "GLBX.MDP3",
+          "encoding": "dbn",
+          "end": 1748649600000000000,
+          "limit": null,
+          "schema": "status",
+          "start": 1747612800000000000,
+          "stype_in": "raw_symbol",
+          "stype_out": "instrument_id",
+          "symbols": [
+            "MNQM5"
+          ]
+        },
+        "requested_minutes": 17280.0,
+        "sha256": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9"
+      },
+      {
+        "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/metadata.json",
+        "query": {
+          "compression": "zstd",
+          "dataset": "GLBX.MDP3",
+          "encoding": "dbn",
+          "end": 1748649600000000000,
+          "limit": null,
+          "schema": "definition",
+          "start": 1747612800000000000,
+          "stype_in": "raw_symbol",
+          "stype_out": "instrument_id",
+          "symbols": [
+            "MNQM5"
+          ]
+        },
+        "requested_minutes": 17280.0,
+        "sha256": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33"
+      },
+      {
+        "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/metadata.json",
+        "query": {
+          "compression": "zstd",
+          "dataset": "GLBX.MDP3",
+          "encoding": "dbn",
+          "end": 1748649600000000000,
+          "limit": null,
+          "schema": "mbo",
+          "start": 1747612800000000000,
+          "stype_in": "raw_symbol",
+          "stype_out": "instrument_id",
+          "symbols": [
+            "MNQM5"
+          ]
+        },
+        "requested_minutes": 17280.0,
+        "sha256": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9"
+      },
+      {
+        "path": "/root/Silver-Bullet-ML-BMAD/data/tick/_test/metadata.json",
+        "query": {
+          "compression": "zstd",
+          "dataset": "GLBX.MDP3",
+          "encoding": "dbn",
+          "end": 1782147600000000000,
+          "limit": null,
+          "schema": "mbo",
+          "start": 1782138600000000000,
+          "stype_in": "parent",
+          "stype_out": "instrument_id",
+          "symbols": [
+            "MNQ.FUT"
+          ]
+        },
+        "requested_minutes": 150.0,
+        "sha256": "cf80aae01755404c41529899a8ca98f871324c2690c20efbfed8bacdbc7841c5"
+      },
+      {
+        "path": "/root/Silver-Bullet-ML-BMAD/data/tick/mnq_mbo_parity/partb_20260622/GLBX-20260901-V4YDQLGVGJ/metadata.json",
+        "query": {
+          "compression": null,
+          "dataset": "GLBX.MDP3",
+          "encoding": "dbn",
+          "end": 1782135600000000000,
+          "limit": null,
+          "schema": "mbo",
+          "start": 1782132600000000000,
+          "stype_in": "parent",
+          "stype_out": "instrument_id",
+          "symbols": [
+            "MNQ.FUT"
+          ]
+        },
+        "requested_minutes": 50.0,
+        "sha256": "d8191e56565c152c0d1129ed7280a145f0769c0bbc1aa77c166601be87eb7657"
+      }
+    ],
+    "qualifications": [
+      "Scoped metadata inventory, not an exhaustive filesystem search or data-quality audit.",
+      "Requested intervals are metadata; they do not prove complete observed coverage.",
+      "No prices or strategy returns were calculated."
+    ],
+    "scope": [
+      "data/yank",
+      "data/tick"
+    ],
+    "selected_windows": {
+      "derivation": "prereg Amendment 8/9 Mode C -- parity fills +/-90min, merged",
+      "maximum_window_minutes": 294.0,
+      "n_windows": 28,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/tick/mnq_mbo_parity/windows_manifest.json",
+      "sha256": "34191ec871cf50390be11db9b84825ea647e8ef95c37e911a9f064d3bac8b8e5",
+      "total_minutes": 5154.0
+    }
+  },
+  "market_evaluation": "NOT_ADMITTED",
+  "next_required_evidence": [
+    "Representative full native sessions with contract/calendar/feed evidence.",
+    "Separate calibration and validation roles fixed before outcomes.",
+    "Defensible net effect and cost assumptions and a dependence-aware test.",
+    "Subsequent preregistration before any strategy outcome test."
+  ],
+  "prereg_commit": "42d905e2914a0d901e933dfa86651c223e0594f3",
+  "preserved_session_ledger": [
+    {
+      "eligible": false,
+      "end_ns": 1747688400000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": false,
+            "minute": "2025-05-19T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1747688400000000000,
+                "ts_recv_ns": 1747688400011264258
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-19T21:00:00Z",
+        "name": "2025-05-19",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-18T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {
+        "CALENDAR_STATUS_CONFLICT": [
+          1747663560000000000,
+          1747663620000000000
+        ],
+        "MISSING_SCHEDULED_MINUTE": [
+          1747605600000000000,
+          1747605660000000000,
+          1747605720000000000,
+          1747605780000000000,
+          1747605840000000000,
+          1747605900000000000,
+          1747605960000000000,
+          1747606020000000000,
+          1747606080000000000,
+          1747606140000000000,
+          1747606200000000000,
+          1747606260000000000,
+          1747606320000000000,
+          1747606380000000000,
+          1747606440000000000,
+          1747606500000000000,
+          1747606560000000000,
+          1747606620000000000,
+          1747606680000000000,
+          1747606740000000000,
+          1747606800000000000,
+          1747606860000000000,
+          1747606920000000000,
+          1747606980000000000,
+          1747607040000000000,
+          1747607100000000000,
+          1747607160000000000,
+          1747607220000000000,
+          1747607280000000000,
+          1747607340000000000,
+          1747607400000000000,
+          1747607460000000000,
+          1747607520000000000,
+          1747607580000000000,
+          1747607640000000000,
+          1747607700000000000,
+          1747607760000000000,
+          1747607820000000000,
+          1747607880000000000,
+          1747607940000000000,
+          1747608000000000000,
+          1747608060000000000,
+          1747608120000000000,
+          1747608180000000000,
+          1747608240000000000,
+          1747608300000000000,
+          1747608360000000000,
+          1747608420000000000,
+          1747608480000000000,
+          1747608540000000000,
+          1747608600000000000,
+          1747608660000000000,
+          1747608720000000000,
+          1747608780000000000,
+          1747608840000000000,
+          1747608900000000000,
+          1747608960000000000,
+          1747609020000000000,
+          1747609080000000000,
+          1747609140000000000,
+          1747609200000000000,
+          1747609260000000000,
+          1747609320000000000,
+          1747609380000000000,
+          1747609440000000000,
+          1747609500000000000,
+          1747609560000000000,
+          1747609620000000000,
+          1747609680000000000,
+          1747609740000000000,
+          1747609800000000000,
+          1747609860000000000,
+          1747609920000000000,
+          1747609980000000000,
+          1747610040000000000,
+          1747610100000000000,
+          1747610160000000000,
+          1747610220000000000,
+          1747610280000000000,
+          1747610340000000000,
+          1747610400000000000,
+          1747610460000000000,
+          1747610520000000000,
+          1747610580000000000,
+          1747610640000000000,
+          1747610700000000000,
+          1747610760000000000,
+          1747610820000000000,
+          1747610880000000000,
+          1747610940000000000,
+          1747611000000000000,
+          1747611060000000000,
+          1747611120000000000,
+          1747611180000000000,
+          1747611240000000000,
+          1747611300000000000,
+          1747611360000000000,
+          1747611420000000000,
+          1747611480000000000,
+          1747611540000000000,
+          1747611600000000000,
+          1747611660000000000,
+          1747611720000000000,
+          1747611780000000000,
+          1747611840000000000,
+          1747611900000000000,
+          1747611960000000000,
+          1747612020000000000,
+          1747612080000000000,
+          1747612140000000000,
+          1747612200000000000,
+          1747612260000000000,
+          1747612320000000000,
+          1747612380000000000,
+          1747612440000000000,
+          1747612500000000000,
+          1747612560000000000,
+          1747612620000000000,
+          1747612680000000000,
+          1747612740000000000
+        ],
+        "OUTSIDE_ACQUIRED_RANGE": [
+          1747605600000000000,
+          1747605660000000000,
+          1747605720000000000,
+          1747605780000000000,
+          1747605840000000000,
+          1747605900000000000,
+          1747605960000000000,
+          1747606020000000000,
+          1747606080000000000,
+          1747606140000000000,
+          1747606200000000000,
+          1747606260000000000,
+          1747606320000000000,
+          1747606380000000000,
+          1747606440000000000,
+          1747606500000000000,
+          1747606560000000000,
+          1747606620000000000,
+          1747606680000000000,
+          1747606740000000000,
+          1747606800000000000,
+          1747606860000000000,
+          1747606920000000000,
+          1747606980000000000,
+          1747607040000000000,
+          1747607100000000000,
+          1747607160000000000,
+          1747607220000000000,
+          1747607280000000000,
+          1747607340000000000,
+          1747607400000000000,
+          1747607460000000000,
+          1747607520000000000,
+          1747607580000000000,
+          1747607640000000000,
+          1747607700000000000,
+          1747607760000000000,
+          1747607820000000000,
+          1747607880000000000,
+          1747607940000000000,
+          1747608000000000000,
+          1747608060000000000,
+          1747608120000000000,
+          1747608180000000000,
+          1747608240000000000,
+          1747608300000000000,
+          1747608360000000000,
+          1747608420000000000,
+          1747608480000000000,
+          1747608540000000000,
+          1747608600000000000,
+          1747608660000000000,
+          1747608720000000000,
+          1747608780000000000,
+          1747608840000000000,
+          1747608900000000000,
+          1747608960000000000,
+          1747609020000000000,
+          1747609080000000000,
+          1747609140000000000,
+          1747609200000000000,
+          1747609260000000000,
+          1747609320000000000,
+          1747609380000000000,
+          1747609440000000000,
+          1747609500000000000,
+          1747609560000000000,
+          1747609620000000000,
+          1747609680000000000,
+          1747609740000000000,
+          1747609800000000000,
+          1747609860000000000,
+          1747609920000000000,
+          1747609980000000000,
+          1747610040000000000,
+          1747610100000000000,
+          1747610160000000000,
+          1747610220000000000,
+          1747610280000000000,
+          1747610340000000000,
+          1747610400000000000,
+          1747610460000000000,
+          1747610520000000000,
+          1747610580000000000,
+          1747610640000000000,
+          1747610700000000000,
+          1747610760000000000,
+          1747610820000000000,
+          1747610880000000000,
+          1747610940000000000,
+          1747611000000000000,
+          1747611060000000000,
+          1747611120000000000,
+          1747611180000000000,
+          1747611240000000000,
+          1747611300000000000,
+          1747611360000000000,
+          1747611420000000000,
+          1747611480000000000,
+          1747611540000000000,
+          1747611600000000000,
+          1747611660000000000,
+          1747611720000000000,
+          1747611780000000000,
+          1747611840000000000,
+          1747611900000000000,
+          1747611960000000000,
+          1747612020000000000,
+          1747612080000000000,
+          1747612140000000000,
+          1747612200000000000,
+          1747612260000000000,
+          1747612320000000000,
+          1747612380000000000,
+          1747612440000000000,
+          1747612500000000000,
+          1747612560000000000,
+          1747612620000000000,
+          1747612680000000000,
+          1747612740000000000
+        ]
+      },
+      "expected_minutes": 1380,
+      "observed_minutes": 1260,
+      "session": "2025-05-19",
+      "start_ns": 1747605600000000000
+    },
+    {
+      "eligible": true,
+      "end_ns": 1747774800000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-19T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+                "record_index": 7,
+                "ts_event_ns": 1747692000000000000,
+                "ts_recv_ns": 1747692000015568626
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+                "record_index": 8,
+                "ts_event_ns": 1747692000000000000,
+                "ts_recv_ns": 1747692000016450120
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-20T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+                "record_index": 1,
+                "ts_event_ns": 1747774800000000000,
+                "ts_recv_ns": 1747774800011945389
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-20T21:00:00Z",
+        "name": "2025-05-20",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-19T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {},
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-20",
+      "start_ns": 1747692000000000000
+    },
+    {
+      "eligible": true,
+      "end_ns": 1747861200000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-20T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1747778400000000000,
+                "ts_recv_ns": 1747778400011028031
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+                "record_index": 5,
+                "ts_event_ns": 1747778400000000000,
+                "ts_recv_ns": 1747778400012025849
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-21T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+                "record_index": 1,
+                "ts_event_ns": 1747861200000000000,
+                "ts_recv_ns": 1747861200010806251
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-21T21:00:00Z",
+        "name": "2025-05-21",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-20T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {},
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-21",
+      "start_ns": 1747778400000000000
+    },
+    {
+      "eligible": true,
+      "end_ns": 1747947600000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-21T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1747864800000000000,
+                "ts_recv_ns": 1747864800012398328
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+                "record_index": 5,
+                "ts_event_ns": 1747864800000000000,
+                "ts_recv_ns": 1747864800013371318
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-22T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+                "record_index": 1,
+                "ts_event_ns": 1747947600000000000,
+                "ts_recv_ns": 1747947600011277534
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-22T21:00:00Z",
+        "name": "2025-05-22",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-21T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {},
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-22",
+      "start_ns": 1747864800000000000
+    },
+    {
+      "eligible": true,
+      "end_ns": 1748034000000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-22T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1747951200000000000,
+                "ts_recv_ns": 1747951200010704275
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+                "record_index": 5,
+                "ts_event_ns": 1747951200000000000,
+                "ts_recv_ns": 1747951200011841977
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-23T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250523.status.dbn.zst",
+                "record_index": 1,
+                "ts_event_ns": 1748034000000000000,
+                "ts_recv_ns": 1748034000010727275
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-23T21:00:00Z",
+        "name": "2025-05-23",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-22T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {},
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-23",
+      "start_ns": 1747951200000000000
+    },
+    {
+      "eligible": false,
+      "end_ns": 1748278800000000000,
+      "evidence": {
+        "boundary_status_exceptions": [],
+        "breaks": [],
+        "end": "2025-05-26T17:00:00Z",
+        "name": "2025-05-26",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq",
+          "cme-2025-holiday",
+          "native-status-reviewed"
+        ],
+        "start": "2025-05-25T22:00:00Z",
+        "unresolved_evidence": [
+          "Dated official holiday halt and trade-date/session-reset schedule not recovered. End at 17:00 UTC is a native-status-observed candidate only."
+        ],
+        "verification": "UNVERIFIED"
+      },
+      "exclusions": {
+        "CALENDAR_STATUS_CONFLICT": [
+          1748210400000000000
+        ],
+        "CLOSING_STATUS_CONFLICT": [
+          1748278800000000000
+        ],
+        "UNVERIFIED_CALENDAR": []
+      },
+      "expected_minutes": 1140,
+      "observed_minutes": 1140,
+      "session": "2025-05-26",
+      "start_ns": 1748210400000000000
+    },
+    {
+      "eligible": false,
+      "end_ns": 1748379600000000000,
+      "evidence": {
+        "boundary_status_exceptions": [],
+        "breaks": [],
+        "end": "2025-05-27T21:00:00Z",
+        "name": "2025-05-27",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq",
+          "cme-2025-holiday",
+          "native-status-reviewed"
+        ],
+        "start": "2025-05-26T22:00:00Z",
+        "unresolved_evidence": [
+          "Native status shows May 26 22:00 UTC reopening after a PAUSE, without a session close. Whether the profile resets here or carries from May 25 is unresolved."
+        ],
+        "verification": "UNVERIFIED"
+      },
+      "exclusions": {
+        "CALENDAR_STATUS_CONFLICT": [
+          1748296800000000000
+        ],
+        "CLOSING_STATUS_CONFLICT": [
+          1748379600000000000
+        ],
+        "UNVERIFIED_CALENDAR": []
+      },
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-27",
+      "start_ns": 1748296800000000000
+    },
+    {
+      "eligible": false,
+      "end_ns": 1748466000000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-27T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1748383200000000000,
+                "ts_recv_ns": 1748383200012141927
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+                "record_index": 5,
+                "ts_event_ns": 1748383200000000000,
+                "ts_recv_ns": 1748383200013093774
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-28T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1748466000000000000,
+                "ts_recv_ns": 1748466000010594326
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-28T21:00:00Z",
+        "name": "2025-05-28",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-27T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {
+        "CALENDAR_STATUS_CONFLICT": [
+          1748463600000000000
+        ]
+      },
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-28",
+      "start_ns": 1748383200000000000
+    },
+    {
+      "eligible": true,
+      "end_ns": 1748552400000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-28T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+                "record_index": 7,
+                "ts_event_ns": 1748469600000000000,
+                "ts_recv_ns": 1748469600012420840
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+                "record_index": 8,
+                "ts_event_ns": 1748469600000000000,
+                "ts_recv_ns": 1748469600013753273
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-29T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+                "record_index": 1,
+                "ts_event_ns": 1748552400000000000,
+                "ts_recv_ns": 1748552400010629014
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-29T21:00:00Z",
+        "name": "2025-05-29",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-28T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {},
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-29",
+      "start_ns": 1748469600000000000
+    },
+    {
+      "eligible": true,
+      "end_ns": 1748638800000000000,
+      "evidence": {
+        "boundary_status_exceptions": [
+          {
+            "expected_trading": true,
+            "minute": "2025-05-29T22:00:00Z",
+            "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+                "record_index": 4,
+                "ts_event_ns": 1748556000000000000,
+                "ts_recv_ns": 1748556000010239536
+              },
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+                "record_index": 5,
+                "ts_event_ns": 1748556000000000000,
+                "ts_recv_ns": 1748556000011201321
+              }
+            ]
+          },
+          {
+            "expected_trading": false,
+            "minute": "2025-05-30T21:00:00Z",
+            "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+            "sources": [
+              "cme-2021-hours",
+              "cme-cftc-2021-mnq",
+              "native-status-reviewed"
+            ],
+            "transition_refs": [
+              {
+                "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250530.status.dbn.zst",
+                "record_index": 1,
+                "ts_event_ns": 1748638800000000000,
+                "ts_recv_ns": 1748638800011130530
+              }
+            ]
+          }
+        ],
+        "breaks": [],
+        "end": "2025-05-30T21:00:00Z",
+        "name": "2025-05-30",
+        "sources": [
+          "cme-2021-hours",
+          "cme-cftc-2021-mnq"
+        ],
+        "start": "2025-05-29T22:00:00Z",
+        "unresolved_evidence": [],
+        "verification": "VERIFIED"
+      },
+      "exclusions": {},
+      "expected_minutes": 1380,
+      "observed_minutes": 1380,
+      "session": "2025-05-30",
+      "start_ns": 1748556000000000000
+    }
+  ],
+  "runtime": {
+    "dependency_hash_scope": "Selected loaded module files; not entire environments",
+    "dependency_module_sha256": {
+      "numpy": "92a46f791e453926d3292af2582b89995a289475f0eaaea71a949823200b838a",
+      "scipy": "335bc6e0a9909dc7534f9569a3685a92dc8001cb8c63a6da4c239849ff02d4d0",
+      "scipy.optimize._zeros": "a3ad9ddbc1bd584848f32d27b149d15d9d99ca78a2fe4c6cacc50db98e17c4dd",
+      "scipy.special._ufuncs": "3013f3e2797e50dd415c37e517ff803d651b88633e797895585bd6dd8a9c5da7",
+      "scipy.stats._continuous_distns": "8bdf1788046aa1bbaad92184494cccfcc9122cc1fd792e27783e82200ac2da44"
+    },
+    "executable_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "package_versions": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1"
+    },
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  "verdict": "POWER_UNDETERMINED",
+  "version": "valentini-conditional-power-v1"
+}

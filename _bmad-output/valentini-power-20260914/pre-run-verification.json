@@ -1,0 +1,24 @@
+{
+  "ahead_origin_main": 7,
+  "behind_origin_main": 0,
+  "checks": [
+    "Black",
+    "flake8 max-line-length88",
+    "strict mypy explicit-package-bases"
+  ],
+  "committed_bytes_match": true,
+  "committed_file_sha256": {
+    "_bmad-output/preregistration_valentini_native_power_20260914.md": "8defef100fe89382f331858e5d02e5cc495d8280189a2fe37fabca2acac09005",
+    "_bmad-output/valentini-power-20260914/inventory.json": "25c368725646fa9018a526a4a1f1782ce57f55e36381f0478656dfc783dc82a5",
+    "docs/valentini-power.md": "baed79ce6f62c867a4bd487558e17becf4355e456b0f49210debbbcef6a837a7",
+    "tests/unit/test_valentini_power_gate.py": "a972fcdab0dea30459323518682d972a6f338f71d7d37da417e9b0e26f21861c",
+    "tools/valentini_power_gate.py": "a3bafc264a8a42ca486075453d9447680b75c18b25081e5eb71c79cf7442868a"
+  },
+  "focused_tests_passed": 214,
+  "git_status": "",
+  "implementation_commit": "a9509494b8f6b20456f75824c94833e05e188c98",
+  "prereg_ancestor": true,
+  "prereg_commit": "42d905e2914a0d901e933dfa86651c223e0594f3",
+  "strategy_outcomes_computed": false,
+  "verified_before_actual_gate_utc": "2026-09-14T22:13:12.328039+00:00"
+}

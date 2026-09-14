@@ -1,0 +1,11 @@
+{
+  "artifacts": {
+    "histograms.jsonl": "2fa6270dfbddc5d4d97dcbda850a9d8e6d48a77030c9088839125cfcb39fee55",
+    "observed-bars.jsonl": "f907835e95205886b504e014e72c69bf6b853df959c42870a88c247237911913",
+    "provenance.json": "ba577c0731523d26712c00701653eafba7bcd24e425360e9e42c0220ebee2aed",
+    "report.json": "508b4f719d0341b058d0acf7eae485a23e87870c34e2f6d7a80b04b318aa370b",
+    "sessions.json": "ca7e9a5e7b7d99d86e7d14c48499e5d3a0e114e5285e76d2b0b53ee483f1687c",
+    "snapshots.jsonl": "266194af9a841055a252db57de22b9edc41f2bebadf21acd09991cc035361ecc"
+  },
+  "version": "valentini-native-measurement-v1"
+}

@@ -1,0 +1,8 @@
+{
+  "bars": 145,
+  "elapsed_seconds": 0.35199532797560096,
+  "included_T_records": 48104,
+  "observed_at": "2026-09-14",
+  "purpose": "decoder throughput only; incomplete slice has no session verdict",
+  "records": 1048576
+}

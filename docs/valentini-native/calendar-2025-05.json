@@ -1,0 +1,513 @@
+{
+  "schema_version": 1,
+  "timezone": "America/New_York",
+  "instrument": "MNQM5",
+  "sources": [
+    {
+      "id": "cme-2021-hours",
+      "url": "https://www.cmegroup.com/notices/electronic-trading/2021/06/20210621.html",
+      "title": "CME Globex Notices: June 21, 2021 (notice date June 24)",
+      "date": "2021-06-24",
+      "accessed": "2026-09-14",
+      "evidence": "Product Changes: effective June 27, 2021, affected equity futures trade Sunday-Friday 17:00-16:00 CT with 16:00-17:00 maintenance; former 15:15-15:30 CT pause eliminated."
+    },
+    {
+      "id": "cme-cftc-2021-mnq",
+      "url": "https://www.cftc.gov/sites/default/files/filings/orgrules/21/06/rule061421cmedcm001.pdf",
+      "title": "CME Submission 20-244 (1 of 2), elimination of equity trading halt",
+      "date": "2021-06-11",
+      "accessed": "2026-09-14",
+      "evidence": "PDF page 2 states June 27 effective date; Exhibit A on PDF page 4 explicitly includes Micro E-mini Nasdaq 100 Index Futures, chapter 361, MNQ."
+    },
+    {
+      "id": "cme-current-faq-conflict",
+      "url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html",
+      "title": "Micro E-mini Equity Index Futures FAQ, question 8",
+      "date": null,
+      "accessed": "2026-09-14",
+      "evidence": "Still displays 16:15-16:30 ET halt. Superseded for MNQ by dated 2021 notice and filing; not used to define May 2025 breaks."
+    },
+    {
+      "id": "cme-2025-holiday",
+      "url": "https://www.cmegroup.com/tools-information/holiday-calendar/files/2025/2025-memorial-day-clearing-advisory.pdf",
+      "title": "CME Clearing Memorial Day May 26, 2025 advisory",
+      "date": null,
+      "accessed": "2026-09-14",
+      "evidence": "Identifies May 26, 2025 holiday and clearing arrangements. Does not supply MNQ Globex halt, reopening or session-reset boundaries; cannot verify holiday sessions."
+    },
+    {
+      "id": "native-status-reviewed",
+      "url": "local:status.json",
+      "title": "Saved native MNQM5 status reconstruction",
+      "date": "2025-05-19/2025-05-30",
+      "accessed": "2026-09-14",
+      "sha256": "f2e506da30092c2305d3717e4dfee1986a7484e59ad947582a24d9527ed24930",
+      "evidence": "Exact status transition references are bound to the independently supplied reconstruction/status.json bytes. Native status corroborates regular opening and closing hours; it is not an independent historical holiday calendar."
+    }
+  ],
+  "unresolved_evidence": [
+    "May 26 and May 27 holiday session identity is unverified and both candidates must be excluded from admitted measurements.",
+    "VERIFIED covers scheduled regular hours only; source completeness, native status consistency and availability are separate audit gates. May 19 starts two hours before the acquisition and is incomplete.",
+    "No regular 16:15-16:30 ET break is scheduled: the dated CME 2021 change supersedes the conflicting living FAQ."
+  ],
+  "sessions": [
+    {
+      "name": "2025-05-19",
+      "start": "2025-05-18T22:00:00Z",
+      "end": "2025-05-19T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-19T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1747688400011264258,
+              "ts_event_ns": 1747688400000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-20",
+      "start": "2025-05-19T22:00:00Z",
+      "end": "2025-05-20T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-19T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+              "record_index": 7,
+              "ts_recv_ns": 1747692000015568626,
+              "ts_event_ns": 1747692000000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250519.status.dbn.zst",
+              "record_index": 8,
+              "ts_recv_ns": 1747692000016450120,
+              "ts_event_ns": 1747692000000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-20T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+              "record_index": 1,
+              "ts_recv_ns": 1747774800011945389,
+              "ts_event_ns": 1747774800000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-21",
+      "start": "2025-05-20T22:00:00Z",
+      "end": "2025-05-21T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-20T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1747778400011028031,
+              "ts_event_ns": 1747778400000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250520.status.dbn.zst",
+              "record_index": 5,
+              "ts_recv_ns": 1747778400012025849,
+              "ts_event_ns": 1747778400000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-21T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+              "record_index": 1,
+              "ts_recv_ns": 1747861200010806251,
+              "ts_event_ns": 1747861200000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-22",
+      "start": "2025-05-21T22:00:00Z",
+      "end": "2025-05-22T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-21T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1747864800012398328,
+              "ts_event_ns": 1747864800000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250521.status.dbn.zst",
+              "record_index": 5,
+              "ts_recv_ns": 1747864800013371318,
+              "ts_event_ns": 1747864800000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-22T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+              "record_index": 1,
+              "ts_recv_ns": 1747947600011277534,
+              "ts_event_ns": 1747947600000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-23",
+      "start": "2025-05-22T22:00:00Z",
+      "end": "2025-05-23T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-22T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1747951200010704275,
+              "ts_event_ns": 1747951200000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250522.status.dbn.zst",
+              "record_index": 5,
+              "ts_recv_ns": 1747951200011841977,
+              "ts_event_ns": 1747951200000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-23T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250523.status.dbn.zst",
+              "record_index": 1,
+              "ts_recv_ns": 1748034000010727275,
+              "ts_event_ns": 1748034000000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-26",
+      "start": "2025-05-25T22:00:00Z",
+      "end": "2025-05-26T17:00:00Z",
+      "verification": "UNVERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq",
+        "cme-2025-holiday",
+        "native-status-reviewed"
+      ],
+      "unresolved_evidence": [
+        "Dated official holiday halt and trade-date/session-reset schedule not recovered. End at 17:00 UTC is a native-status-observed candidate only."
+      ],
+      "breaks": [],
+      "boundary_status_exceptions": []
+    },
+    {
+      "name": "2025-05-27",
+      "start": "2025-05-26T22:00:00Z",
+      "end": "2025-05-27T21:00:00Z",
+      "verification": "UNVERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq",
+        "cme-2025-holiday",
+        "native-status-reviewed"
+      ],
+      "unresolved_evidence": [
+        "Native status shows May 26 22:00 UTC reopening after a PAUSE, without a session close. Whether the profile resets here or carries from May 25 is unresolved."
+      ],
+      "breaks": [],
+      "boundary_status_exceptions": []
+    },
+    {
+      "name": "2025-05-28",
+      "start": "2025-05-27T22:00:00Z",
+      "end": "2025-05-28T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-27T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1748383200012141927,
+              "ts_event_ns": 1748383200000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250527.status.dbn.zst",
+              "record_index": 5,
+              "ts_recv_ns": 1748383200013093774,
+              "ts_event_ns": 1748383200000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-28T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1748466000010594326,
+              "ts_event_ns": 1748466000000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-29",
+      "start": "2025-05-28T22:00:00Z",
+      "end": "2025-05-29T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-28T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+              "record_index": 7,
+              "ts_recv_ns": 1748469600012420840,
+              "ts_event_ns": 1748469600000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250528.status.dbn.zst",
+              "record_index": 8,
+              "ts_recv_ns": 1748469600013753273,
+              "ts_event_ns": 1748469600000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-29T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+              "record_index": 1,
+              "ts_recv_ns": 1748552400010629014,
+              "ts_event_ns": 1748552400000000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2025-05-30",
+      "start": "2025-05-29T22:00:00Z",
+      "end": "2025-05-30T21:00:00Z",
+      "verification": "VERIFIED",
+      "sources": [
+        "cme-2021-hours",
+        "cme-cftc-2021-mnq"
+      ],
+      "unresolved_evidence": [],
+      "breaks": [],
+      "boundary_status_exceptions": [
+        {
+          "minute": "2025-05-29T22:00:00Z",
+          "expected_trading": true,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled opening is exactly the exchange-event timestamp; capture receipt of these opening status messages occurs later inside this minute. This exception is restricted to the listed records and minute, with no timing tolerance.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+              "record_index": 4,
+              "ts_recv_ns": 1748556000010239536,
+              "ts_event_ns": 1748556000000000000
+            },
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250529.status.dbn.zst",
+              "record_index": 5,
+              "ts_recv_ns": 1748556000011201321,
+              "ts_event_ns": 1748556000000000000
+            }
+          ]
+        },
+        {
+          "minute": "2025-05-30T21:00:00Z",
+          "expected_trading": false,
+          "sources": [
+            "cme-2021-hours",
+            "cme-cftc-2021-mnq",
+            "native-status-reviewed"
+          ],
+          "reason": "Scheduled closing exactly matches the exchange-event timestamp; the referenced closing status is captured later within that minute. This reference corroborates the session end, not the entire following nontrading interval.",
+          "transition_refs": [
+            {
+              "file": "native/GLBX-20260907-5JPUQQJ9P5/glbx-mdp3-20250530.status.dbn.zst",
+              "record_index": 1,
+              "ts_recv_ns": 1748638800011130530,
+              "ts_event_ns": 1748638800000000000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -180,3 +180,71 @@ mechanics only, not data suitability, statistical power or trading profitability
 JSON artifacts use sorted keys, no timestamps/random run IDs, explicit code/input
 hashes, and reject nonfinite numbers; deterministic fields match for identical
 paths, bytes and code.
+
+## Native measurement audit
+
+`tools/valentini_native_audit.py` measures MNQM5 native traded volume at price
+against this harness's uniform OHLCV profile. It never invokes the simulator,
+replay runners, broker code, or market-evaluation admission. From the isolated
+`valentini-native` worktree, using an output directory that does not yet exist:
+
+```bash
+/root/Silver-Bullet-ML-BMAD/.venv/bin/python tools/valentini_native_audit.py \
+  --source-root /root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907 \
+  --reconstruction /root/Silver-Bullet-ML-BMAD-yank-minute/data/yank/native-minute-reviewed-a \
+  --calendar docs/valentini-native/calendar-2025-05.json \
+  --output-dir /tmp/valentini-native-measurement
+```
+
+For a full scan, use `nohup` with an operational log outside the output directory.
+The parent directory must exist. The audit rejects existing output paths,
+symlink/hardlink aliases and outputs inside supplied input directories. It hashes
+all pinned acquisition files before and after the scan, validates definitions and
+status, and reconciles six reconstructed data artifacts plus saved counts against
+seven frozen core artifact hashes. It deliberately does not load saved replay
+results. Acquisition pins must also match the saved report's acquisition list.
+A mismatch exits 2 and publishes no result directory. Cached decoder code is
+bound to the bytes loaded. Publication holds a directory descriptor opened
+without following symlinks, so a later parent swap cannot redirect writes.
+
+The dated [calendar evidence](valentini-native/calendar-sources.md) defines explicit
+UTC sessions and breaks for MNQM5 in America/New_York. Other instruments or
+timezones and nonzero fractional minute boundaries are rejected. The parser
+does not infer a session from observed rows.
+Unverified calendar sessions, partial acquisition, unexplained missing minutes,
+and calendar/status conflicts are excluded in `sessions.json`. Exact source-bound
+exchange transitions at calendar edges can explain nanosecond-late capture status;
+there is no arbitrary timing tolerance. The closing boundary also needs coverage
+and nontrading evidence; an exact sourced closing transition can explain mixed
+capture status. Missing source files during scheduled breaks exclude the session.
+Entire inter-session nontrading intervals are not certified. Observed bars outside
+the calendar remain visible in `observed-bars.jsonl`.
+
+Eligible sessions compare developing profiles before each bar. Both profiles use
+the same preceding bars, preserve profiles across explicit breaks and reset at
+session boundaries. A cumulative LAST-event availability watermark excludes an
+unavailable snapshot permanently; later boundaries may include the completed
+prefix. Native volume is summed in integer contract/tick histograms. The native
+70% area uses exact integer arithmetic and the existing lower-price POC/adjacent
+expansion tie rules; the proxy uses the existing `Profile` implementation.
+
+`histograms.jsonl` retains sorted native tick-volume pairs per capture minute;
+`snapshots.jsonl` reports native and proxy VAL/VAH/POC in ticks, signed differences
+(proxy minus native), absolute differences, prior-bar counts and integer volume
+denominators. `report.json` summarizes agreement, mean, median and linearly
+interpolated quantiles both pooled and per session, with explicit denominators
+and snapshot exclusions. Excluded sessions retain zero-comparison summaries.
+`provenance.json` binds code, runtime, calendar and input hashes; `manifest.json`
+hashes every published artifact. Artifacts exclude timing logs and output paths,
+so identical code/input bytes produce identical results in different output
+directories. `NO_ELIGIBLE_COMPARISONS` publishes the explanatory artifacts but
+exits 3. A completed measurement with comparisons exits 0.
+
+A completed measurement still reports `market_evaluation: NOT_ADMITTED`.
+Reconciliation proves agreement with the saved native reconstruction, not
+independent exchange-feed completeness, strategy suitability or statistical
+power. Calendar evidence, measurement exclusions, future independent testing,
+and the existing market-evaluation refusal remain distinct.
+
+The completed pilot's [measurements and recommendation](valentini-native/results.md)
+include all six admitted sessions and links to committed evidence.

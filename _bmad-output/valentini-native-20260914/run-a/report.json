@@ -1,0 +1,164 @@
+{
+  "conservation": {
+    "bar_count": 13440,
+    "counts": {
+      "F_records": 12065931,
+      "action_A": 99442117,
+      "action_C": 99375993,
+      "action_F": 12065931,
+      "action_M": 17060496,
+      "action_N": 1675689,
+      "action_R": 11,
+      "action_T": 7526752,
+      "bad_capture_flag_records": 69661,
+      "cross_clock_minute_T_records": 65,
+      "included_T_records": 7526752,
+      "records": 237146989,
+      "snapshot_records": 69660,
+      "zero_size_T_records": 0
+    },
+    "exact": true,
+    "integer_contract_volume": 13318999,
+    "native_record_count": 237146989,
+    "raw_trade_digests": "exact per-bar native ordered bytes",
+    "reconciled_artifacts": [
+      "bars.jsonl",
+      "coverage.jsonl",
+      "definitions.json",
+      "delayed-events.json",
+      "exchange-diagnostic.jsonl",
+      "status.json"
+    ],
+    "trade_count": 7526752
+  },
+  "delayed_events": [
+    {
+      "availability_ns": 1748349300000002948,
+      "completion_ref": {
+        "file": "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250527.mbo.dbn.zst",
+        "record_index": 4106159,
+        "sequence": 19727870,
+        "ts_event_ns": 1748349299999778819,
+        "ts_recv_ns": 1748349300000002948
+      },
+      "next_start_ns": 1748349300000000000,
+      "start_ns": 1748349240000000000
+    }
+  ],
+  "eligible_sessions": 6,
+  "excluded_sessions": 4,
+  "kind": "native_volume_profile_measurement",
+  "limitations": [
+    "Reconciliation does not independently prove exchange feed completeness.",
+    "Calendar uncertainty excludes sessions; no empty bars are fabricated.",
+    "Native capture clock and cumulative LAST availability govern eligibility.",
+    "Unavailable snapshots remain excluded, even after later completion.",
+    "Measurement does not unlock strategy tests; independent methodology and data admission remain required."
+  ],
+  "market_evaluation": "NOT_ADMITTED",
+  "measurement_status": "MEASURED_WITH_EXCLUSIONS",
+  "observed_bar_classifications": {
+    "ELIGIBLE_SESSION": 8280,
+    "EXCLUDED_SESSION": 5160
+  },
+  "profile_summary": {
+    "all_levels_exact_count": 0,
+    "comparison_count": 8274,
+    "difference_convention": "proxy minus native",
+    "levels": {
+      "POC": {
+        "absolute_ticks": {
+          "maximum": 1432,
+          "mean": 35.706792361614696,
+          "median": 11.0,
+          "minimum": 0,
+          "quantiles": {
+            "0.05": 2.0,
+            "0.25": 5.0,
+            "0.75": 29.0,
+            "0.95": 112.19999999999345
+          }
+        },
+        "denominator": 8274,
+        "exact_agreement_count": 202,
+        "exact_agreement_fraction": 0.024413826444283297,
+        "signed_ticks": {
+          "maximum": 885,
+          "mean": -15.862702441382645,
+          "median": -8.0,
+          "minimum": -1432,
+          "quantiles": {
+            "0.05": -48.0,
+            "0.25": -21.0,
+            "0.75": 3.0,
+            "0.95": 51.0
+          }
+        }
+      },
+      "VAH": {
+        "absolute_ticks": {
+          "maximum": 639,
+          "mean": 12.971114334058496,
+          "median": 3.0,
+          "minimum": 0,
+          "quantiles": {
+            "0.05": 0.0,
+            "0.25": 1.0,
+            "0.75": 8.0,
+            "0.95": 41.0
+          }
+        },
+        "denominator": 8274,
+        "exact_agreement_count": 1260,
+        "exact_agreement_fraction": 0.15228426395939088,
+        "signed_ticks": {
+          "maximum": 216,
+          "mean": -3.097051003142374,
+          "median": 0.0,
+          "minimum": -639,
+          "quantiles": {
+            "0.05": -19.0,
+            "0.25": -3.0,
+            "0.75": 3.0,
+            "0.95": 20.0
+          }
+        }
+      },
+      "VAL": {
+        "absolute_ticks": {
+          "maximum": 603,
+          "mean": 13.141527677060672,
+          "median": 3.0,
+          "minimum": 0,
+          "quantiles": {
+            "0.05": 0.0,
+            "0.25": 1.0,
+            "0.75": 8.0,
+            "0.95": 53.0
+          }
+        },
+        "denominator": 8274,
+        "exact_agreement_count": 1090,
+        "exact_agreement_fraction": 0.1317379743775683,
+        "signed_ticks": {
+          "maximum": 401,
+          "mean": 1.0924583031182016,
+          "median": 1.0,
+          "minimum": -603,
+          "quantiles": {
+            "0.05": -15.349999999999966,
+            "0.25": -2.0,
+            "0.75": 4.0,
+            "0.95": 24.0
+          }
+        }
+      }
+    },
+    "quantile_method": "linear interpolation at (N-1)*p",
+    "snapshot_status_counts": {
+      "COMPARED": 8274,
+      "EMPTY_PREFIX": 6
+    }
+  },
+  "version": "valentini-native-measurement-v1"
+}

@@ -1,0 +1,10 @@
+{
+  "byte_identical_artifacts": [
+    "histograms.jsonl",
+    "snapshots.jsonl",
+    "observed-bars.jsonl"
+  ],
+  "conservation_equal_initial_final": true,
+  "final_manifest_sha256": "23f2205518d7be751fa147274441efe0af89c2a2aec52f76a8810e443a4b1667",
+  "pooled_summary_equal_initial_final": true
+}

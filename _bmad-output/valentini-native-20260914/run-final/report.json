@@ -1,0 +1,881 @@
+{
+  "conservation": {
+    "bar_count": 13440,
+    "counts": {
+      "F_records": 12065931,
+      "action_A": 99442117,
+      "action_C": 99375993,
+      "action_F": 12065931,
+      "action_M": 17060496,
+      "action_N": 1675689,
+      "action_R": 11,
+      "action_T": 7526752,
+      "bad_capture_flag_records": 69661,
+      "cross_clock_minute_T_records": 65,
+      "included_T_records": 7526752,
+      "records": 237146989,
+      "snapshot_records": 69660,
+      "zero_size_T_records": 0
+    },
+    "exact": true,
+    "integer_contract_volume": 13318999,
+    "native_record_count": 237146989,
+    "raw_trade_digests": "exact per-bar native ordered bytes",
+    "reconciled_artifacts": [
+      "bars.jsonl",
+      "coverage.jsonl",
+      "definitions.json",
+      "delayed-events.json",
+      "exchange-diagnostic.jsonl",
+      "status.json"
+    ],
+    "trade_count": 7526752
+  },
+  "delayed_events": [
+    {
+      "availability_ns": 1748349300000002948,
+      "completion_ref": {
+        "file": "native/GLBX-20260907-NWS3PA9QPX/glbx-mdp3-20250527.mbo.dbn.zst",
+        "record_index": 4106159,
+        "sequence": 19727870,
+        "ts_event_ns": 1748349299999778819,
+        "ts_recv_ns": 1748349300000002948
+      },
+      "next_start_ns": 1748349300000000000,
+      "start_ns": 1748349240000000000
+    }
+  ],
+  "eligible_sessions": 6,
+  "excluded_sessions": 4,
+  "kind": "native_volume_profile_measurement",
+  "limitations": [
+    "Reconciliation does not independently prove exchange feed completeness.",
+    "Calendar uncertainty excludes sessions; no empty bars are fabricated.",
+    "Closing boundaries are corroborated; entire inter-session nontrading intervals are not certified.",
+    "Native capture clock and cumulative LAST availability govern eligibility.",
+    "Unavailable snapshots remain excluded, even after later completion.",
+    "Measurement does not unlock strategy tests; independent methodology and data admission remain required."
+  ],
+  "market_evaluation": "NOT_ADMITTED",
+  "measurement_status": "MEASURED_WITH_EXCLUSIONS",
+  "observed_bar_classifications": {
+    "ELIGIBLE_SESSION": 8280,
+    "EXCLUDED_SESSION": 5160
+  },
+  "profile_summary": {
+    "all_levels_exact_count": 0,
+    "comparison_count": 8274,
+    "difference_convention": "proxy minus native",
+    "levels": {
+      "POC": {
+        "absolute_ticks": {
+          "maximum": 1432,
+          "mean": 35.706792361614696,
+          "median": 11.0,
+          "minimum": 0,
+          "quantiles": {
+            "0.05": 2.0,
+            "0.25": 5.0,
+            "0.75": 29.0,
+            "0.95": 112.19999999999345
+          }
+        },
+        "denominator": 8274,
+        "exact_agreement_count": 202,
+        "exact_agreement_fraction": 0.024413826444283297,
+        "signed_ticks": {
+          "maximum": 885,
+          "mean": -15.862702441382645,
+          "median": -8.0,
+          "minimum": -1432,
+          "quantiles": {
+            "0.05": -48.0,
+            "0.25": -21.0,
+            "0.75": 3.0,
+            "0.95": 51.0
+          }
+        }
+      },
+      "VAH": {
+        "absolute_ticks": {
+          "maximum": 639,
+          "mean": 12.971114334058496,
+          "median": 3.0,
+          "minimum": 0,
+          "quantiles": {
+            "0.05": 0.0,
+            "0.25": 1.0,
+            "0.75": 8.0,
+            "0.95": 41.0
+          }
+        },
+        "denominator": 8274,
+        "exact_agreement_count": 1260,
+        "exact_agreement_fraction": 0.15228426395939088,
+        "signed_ticks": {
+          "maximum": 216,
+          "mean": -3.097051003142374,
+          "median": 0.0,
+          "minimum": -639,
+          "quantiles": {
+            "0.05": -19.0,
+            "0.25": -3.0,
+            "0.75": 3.0,
+            "0.95": 20.0
+          }
+        }
+      },
+      "VAL": {
+        "absolute_ticks": {
+          "maximum": 603,
+          "mean": 13.141527677060672,
+          "median": 3.0,
+          "minimum": 0,
+          "quantiles": {
+            "0.05": 0.0,
+            "0.25": 1.0,
+            "0.75": 8.0,
+            "0.95": 53.0
+          }
+        },
+        "denominator": 8274,
+        "exact_agreement_count": 1090,
+        "exact_agreement_fraction": 0.1317379743775683,
+        "signed_ticks": {
+          "maximum": 401,
+          "mean": 1.0924583031182016,
+          "median": 1.0,
+          "minimum": -603,
+          "quantiles": {
+            "0.05": -15.349999999999966,
+            "0.25": -2.0,
+            "0.75": 4.0,
+            "0.95": 24.0
+          }
+        }
+      }
+    },
+    "quantile_method": "linear interpolation at (N-1)*p",
+    "snapshot_status_counts": {
+      "COMPARED": 8274,
+      "EMPTY_PREFIX": 6
+    }
+  },
+  "session_profile_summaries": {
+    "2025-05-19": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 0,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAH": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAL": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {}
+    },
+    "2025-05-20": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 1379,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": {
+            "maximum": 364,
+            "mean": 18.232052211747643,
+            "median": 12,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 4.0,
+              "0.75": 29.0,
+              "0.95": 35.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 142,
+          "exact_agreement_fraction": 0.10297316896301668,
+          "signed_ticks": {
+            "maximum": 364,
+            "mean": 5.367657722987672,
+            "median": 3,
+            "minimum": -108,
+            "quantiles": {
+              "0.05": -35.0,
+              "0.25": -4.0,
+              "0.75": 27.0,
+              "0.95": 29.0
+            }
+          }
+        },
+        "VAH": {
+          "absolute_ticks": {
+            "maximum": 112,
+            "mean": 4.773749093546048,
+            "median": 2,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 5.0,
+              "0.95": 13.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 157,
+          "exact_agreement_fraction": 0.11385061638868746,
+          "signed_ticks": {
+            "maximum": 112,
+            "mean": -0.025380710659898477,
+            "median": -1,
+            "minimum": -19,
+            "quantiles": {
+              "0.05": -11.0,
+              "0.25": -4.0,
+              "0.75": 1.0,
+              "0.95": 8.0
+            }
+          }
+        },
+        "VAL": {
+          "absolute_ticks": {
+            "maximum": 154,
+            "mean": 4.667150108774474,
+            "median": 2,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 5.0,
+              "0.95": 14.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 243,
+          "exact_agreement_fraction": 0.17621464829586658,
+          "signed_ticks": {
+            "maximum": 154,
+            "mean": 1.4880348078317622,
+            "median": 0,
+            "minimum": -16,
+            "quantiles": {
+              "0.05": -6.0,
+              "0.25": -2.0,
+              "0.75": 3.0,
+              "0.95": 10.0
+            }
+          }
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {
+        "COMPARED": 1379,
+        "EMPTY_PREFIX": 1
+      }
+    },
+    "2025-05-21": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 1379,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": {
+            "maximum": 192,
+            "mean": 23.883248730964468,
+            "median": 12,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 1.0,
+              "0.25": 8.0,
+              "0.75": 46.0,
+              "0.95": 61.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 45,
+          "exact_agreement_fraction": 0.032632342277012324,
+          "signed_ticks": {
+            "maximum": 192,
+            "mean": -7.2160986221899925,
+            "median": -8,
+            "minimum": -120,
+            "quantiles": {
+              "0.05": -46.0,
+              "0.25": -15.0,
+              "0.75": -2.0,
+              "0.95": 61.0
+            }
+          }
+        },
+        "VAH": {
+          "absolute_ticks": {
+            "maximum": 140,
+            "mean": 10.319796954314722,
+            "median": 3,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 2.0,
+              "0.75": 13.0,
+              "0.95": 41.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 91,
+          "exact_agreement_fraction": 0.06598984771573604,
+          "signed_ticks": {
+            "maximum": 140,
+            "mean": 4.90572878897752,
+            "median": 3,
+            "minimum": -58,
+            "quantiles": {
+              "0.05": -20.099999999999994,
+              "0.25": -1.0,
+              "0.75": 4.0,
+              "0.95": 41.0
+            }
+          }
+        },
+        "VAL": {
+          "absolute_ticks": {
+            "maximum": 119,
+            "mean": 8.774474256707759,
+            "median": 3,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 10.0,
+              "0.95": 38.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 204,
+          "exact_agreement_fraction": 0.14793328498912256,
+          "signed_ticks": {
+            "maximum": 119,
+            "mean": 2.870195794053662,
+            "median": 1,
+            "minimum": -79,
+            "quantiles": {
+              "0.05": -22.0,
+              "0.25": -1.0,
+              "0.75": 7.0,
+              "0.95": 22.0
+            }
+          }
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {
+        "COMPARED": 1379,
+        "EMPTY_PREFIX": 1
+      }
+    },
+    "2025-05-22": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 1379,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": {
+            "maximum": 159,
+            "mean": 41.07324147933285,
+            "median": 15,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 8.0,
+              "0.25": 8.0,
+              "0.75": 41.0,
+              "0.95": 159.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 11,
+          "exact_agreement_fraction": 0.007976794778825236,
+          "signed_ticks": {
+            "maximum": 159,
+            "mean": -11.190717911530093,
+            "median": -10,
+            "minimum": -132,
+            "quantiles": {
+              "0.05": -132.0,
+              "0.25": -41.0,
+              "0.75": 8.0,
+              "0.95": 159.0
+            }
+          }
+        },
+        "VAH": {
+          "absolute_ticks": {
+            "maximum": 45,
+            "mean": 3.469180565627266,
+            "median": 2,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 4.0,
+              "0.95": 14.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 227,
+          "exact_agreement_fraction": 0.1646120377084844,
+          "signed_ticks": {
+            "maximum": 37,
+            "mean": 0.5250181290790428,
+            "median": 1,
+            "minimum": -45,
+            "quantiles": {
+              "0.05": -7.0,
+              "0.25": -2.0,
+              "0.75": 2.0,
+              "0.95": 12.0
+            }
+          }
+        },
+        "VAL": {
+          "absolute_ticks": {
+            "maximum": 60,
+            "mean": 4.218999274836838,
+            "median": 3,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 5.0,
+              "0.95": 16.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 127,
+          "exact_agreement_fraction": 0.09209572153734591,
+          "signed_ticks": {
+            "maximum": 48,
+            "mean": 1.9376359680928208,
+            "median": 2,
+            "minimum": -60,
+            "quantiles": {
+              "0.05": -5.099999999999994,
+              "0.25": 0.0,
+              "0.75": 3.0,
+              "0.95": 13.099999999999909
+            }
+          }
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {
+        "COMPARED": 1379,
+        "EMPTY_PREFIX": 1
+      }
+    },
+    "2025-05-23": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 1379,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": {
+            "maximum": 945,
+            "mean": 23.03263234227701,
+            "median": 6,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 2.0,
+              "0.25": 4.0,
+              "0.75": 11.0,
+              "0.95": 124.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 1,
+          "exact_agreement_fraction": 0.0007251631617113851,
+          "signed_ticks": {
+            "maximum": 185,
+            "mean": -10.258158085569253,
+            "median": -4,
+            "minimum": -945,
+            "quantiles": {
+              "0.05": -124.0,
+              "0.25": -11.0,
+              "0.75": -2.0,
+              "0.95": 52.0
+            }
+          }
+        },
+        "VAH": {
+          "absolute_ticks": {
+            "maximum": 639,
+            "mean": 10.396664249456128,
+            "median": 4,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 16.0,
+              "0.95": 25.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 146,
+          "exact_agreement_fraction": 0.10587382160986222,
+          "signed_ticks": {
+            "maximum": 54,
+            "mean": -3.5859318346627993,
+            "median": -1,
+            "minimum": -639,
+            "quantiles": {
+              "0.05": -19.0,
+              "0.25": -5.0,
+              "0.75": 3.0,
+              "0.95": 20.0
+            }
+          }
+        },
+        "VAL": {
+          "absolute_ticks": {
+            "maximum": 603,
+            "mean": 10.691805656272662,
+            "median": 4,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 11.0,
+              "0.95": 40.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 185,
+          "exact_agreement_fraction": 0.13415518491660625,
+          "signed_ticks": {
+            "maximum": 53,
+            "mean": 0.7643219724437998,
+            "median": 0,
+            "minimum": -603,
+            "quantiles": {
+              "0.05": -18.0,
+              "0.25": -3.0,
+              "0.75": 6.0,
+              "0.95": 38.09999999999991
+            }
+          }
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {
+        "COMPARED": 1379,
+        "EMPTY_PREFIX": 1
+      }
+    },
+    "2025-05-26": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 0,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAH": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAL": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {}
+    },
+    "2025-05-27": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 0,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAH": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAL": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {}
+    },
+    "2025-05-28": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 0,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAH": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        },
+        "VAL": {
+          "absolute_ticks": null,
+          "denominator": 0,
+          "exact_agreement_count": 0,
+          "exact_agreement_fraction": null,
+          "signed_ticks": null
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {}
+    },
+    "2025-05-29": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 1379,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": {
+            "maximum": 1432,
+            "mean": 84.16751269035532,
+            "median": 9,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 4.0,
+              "0.25": 4.0,
+              "0.75": 28.0,
+              "0.95": 191.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 1,
+          "exact_agreement_fraction": 0.0007251631617113851,
+          "signed_ticks": {
+            "maximum": 885,
+            "mean": -74.93763596809282,
+            "median": -4,
+            "minimum": -1432,
+            "quantiles": {
+              "0.05": -191.0,
+              "0.25": -28.0,
+              "0.75": -4.0,
+              "0.95": 9.0
+            }
+          }
+        },
+        "VAH": {
+          "absolute_ticks": {
+            "maximum": 519,
+            "mean": 45.153734590282816,
+            "median": 7,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 2.0,
+              "0.75": 26.5,
+              "0.95": 172.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 239,
+          "exact_agreement_fraction": 0.17331399564902103,
+          "signed_ticks": {
+            "maximum": 216,
+            "mean": -18.678027556200146,
+            "median": 1,
+            "minimum": -519,
+            "quantiles": {
+              "0.05": -158.2,
+              "0.25": -4.0,
+              "0.75": 8.0,
+              "0.95": 158.0
+            }
+          }
+        },
+        "VAL": {
+          "absolute_ticks": {
+            "maximum": 463,
+            "mean": 46.48730964467005,
+            "median": 6,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 3.0,
+              "0.75": 26.0,
+              "0.95": 266.69999999999845
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 99,
+          "exact_agreement_fraction": 0.07179115300942712,
+          "signed_ticks": {
+            "maximum": 401,
+            "mean": 0.4176939811457578,
+            "median": 2,
+            "minimum": -463,
+            "quantiles": {
+              "0.05": -175.09999999999994,
+              "0.25": -4.0,
+              "0.75": 10.0,
+              "0.95": 247.0
+            }
+          }
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {
+        "COMPARED": 1379,
+        "EMPTY_PREFIX": 1
+      }
+    },
+    "2025-05-30": {
+      "all_levels_exact_count": 0,
+      "comparison_count": 1379,
+      "difference_convention": "proxy minus native",
+      "levels": {
+        "POC": {
+          "absolute_ticks": {
+            "maximum": 94,
+            "mean": 23.852066715010878,
+            "median": 25,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 3.0,
+              "0.25": 8.0,
+              "0.75": 42.0,
+              "0.95": 51.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 2,
+          "exact_agreement_fraction": 0.0014503263234227702,
+          "signed_ticks": {
+            "maximum": 94,
+            "mean": 3.058738216098622,
+            "median": -8,
+            "minimum": -72,
+            "quantiles": {
+              "0.05": -26.0,
+              "0.25": -25.0,
+              "0.75": 42.0,
+              "0.95": 51.0
+            }
+          }
+        },
+        "VAH": {
+          "absolute_ticks": {
+            "maximum": 27,
+            "mean": 3.713560551124003,
+            "median": 2,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 0.0,
+              "0.75": 5.0,
+              "0.95": 16.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 400,
+          "exact_agreement_fraction": 0.290065264684554,
+          "signed_ticks": {
+            "maximum": 20,
+            "mean": -1.7237128353879623,
+            "median": 0,
+            "minimum": -27,
+            "quantiles": {
+              "0.05": -13.0,
+              "0.25": -3.0,
+              "0.75": 0.0,
+              "0.95": 5.0
+            }
+          }
+        },
+        "VAL": {
+          "absolute_ticks": {
+            "maximum": 28,
+            "mean": 4.009427121102248,
+            "median": 2,
+            "minimum": 0,
+            "quantiles": {
+              "0.05": 0.0,
+              "0.25": 1.0,
+              "0.75": 5.0,
+              "0.95": 15.0
+            }
+          },
+          "denominator": 1379,
+          "exact_agreement_count": 232,
+          "exact_agreement_fraction": 0.16823785351704135,
+          "signed_ticks": {
+            "maximum": 24,
+            "mean": -0.9231327048585932,
+            "median": 0,
+            "minimum": -28,
+            "quantiles": {
+              "0.05": -14.0,
+              "0.25": -3.0,
+              "0.75": 2.0,
+              "0.95": 6.0
+            }
+          }
+        }
+      },
+      "quantile_method": "linear interpolation at (N-1)*p",
+      "snapshot_status_counts": {
+        "COMPARED": 1379,
+        "EMPTY_PREFIX": 1
+      }
+    }
+  },
+  "version": "valentini-native-measurement-v1"
+}

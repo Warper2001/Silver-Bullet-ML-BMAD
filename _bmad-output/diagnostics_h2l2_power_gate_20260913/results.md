@@ -77,3 +77,17 @@ A holdout-only confirmation (55 sessions, projected) would have 8.2% power at th
 - `exploratory_frequency.py`
 - `exploratory_frequency.json`
 - this file
+
+## Correction note (appended 2026-09-14)
+
+**The input CSVs were contaminated.** 27 of the 297 sessions are 2025 roll weeks, where the 1-minute input alternates between two contracts minute by minute. That produces fake bars of at least 234.5 points. Those sessions hold all 8 events that risk more than $400. Separately, Jan–Feb 2026 is a thin deferred contract, not the front month.
+
+A corrected re-run on raw front-month bars (C1b, 270 sessions) **supersedes this file's numbers**:
+- The verdict stays **UNDERPOWERED**.
+- N = 47, mean R$ = $81.4, μ_net at 0.10R = +$2.34.
+- Power at the central edge is 7.4%, and 80% power would need about **173 years**, not 22.
+- The optimistic 0.20R would need about 8.6 years, not 2.9.
+- The double-cost cells are now COST-BOUND.
+- "20% of events risk more than $150, mostly the high-volatility months of 2025" was mostly roll splices; on clean data it is 10.6%.
+
+The exploratory variants were not re-run. See `../diagnostics_h2l2_contamination_20260914/results.md`.

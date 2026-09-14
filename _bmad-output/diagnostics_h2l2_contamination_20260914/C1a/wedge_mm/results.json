@@ -1,0 +1,926 @@
+{
+  "plan_sha256": "b5287cb3835ea3936b207ef9b7e2954caae1d0e71772dd3481abd1d51784b601",
+  "script_sha256": "255c61dee7ac4768990b8730ff0367378933919f8a9c42440f69446e2cd15333",
+  "inherited_gate_sha256": "35bc2de44b11435464196d929fea7cd33ebac446c7d0dc7f2f08ef5bd81787ef",
+  "inputs": {
+    "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+    "data/processed/dollar_bars/1_minute/mnq_1min_2026_ytd.csv": "6be65aa599d811e7463ff3fa0bce8761b62b0ec4492097f2ad3c04cfba30ffc5"
+  },
+  "window": {
+    "first": "2025-01-02 09:35:00-05:00",
+    "last": "2026-02-27 16:00:00-05:00",
+    "sessions": 270,
+    "bars": 20578
+  },
+  "W_wedge": {
+    "s1_primary": {
+      "events": {
+        "N_upper": 341,
+        "N_lower": 265,
+        "per_session_upper": 1.262962962962963,
+        "long": 164,
+        "short": 177,
+        "sessions_with_event": 197
+      },
+      "risk": {
+        "R_usd_mean": 88.03225806451613,
+        "R_usd_median": 72.5,
+        "R_usd_p10": 31.5,
+        "R_usd_p90": 160.0,
+        "share_R_over_150": 0.11730205278592376
+      },
+      "cost": {
+        "primary": {
+          "mean_c_over_R": 0.0977876436429903,
+          "breakeven_theta_R": 0.06588493953829241
+        },
+        "double": {
+          "mean_c_over_R": 0.1955752872859806,
+          "breakeven_theta_R": 0.13176987907658483
+        }
+      },
+      "placebo": {
+        "1R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 81.01697703272859,
+          "sigma_cluster_usd": 79.57907098571779,
+          "sd_R": 0.9110134302738578,
+          "placebo_mean_usd": -1.3459214501510575,
+          "sigma_cluster_p10_p90": [
+            73.60761849166505,
+            88.27119850574006
+          ]
+        },
+        "2R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 98.42996317630293,
+          "sigma_cluster_usd": 96.62294165588929,
+          "sd_R": 1.1912451846881886,
+          "placebo_mean_usd": -0.515015015015015,
+          "sigma_cluster_p10_p90": [
+            88.31873839155165,
+            106.70864612867484
+          ]
+        }
+      },
+      "grid": {
+        "1R|primary|pessimistic": {
+          "mu_net_usd": -1.3983870967741936,
+          "power_IS_upper": 0.024456632984653708,
+          "power_IS_lower": 0.026747097675138852,
+          "power_HOLD_upper": 0.03662186442323381,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|primary|central": {
+          "mu_net_usd": 3.0032258064516126,
+          "power_IS_upper": 0.17157483497211767,
+          "power_IS_lower": 0.1513855631335454,
+          "power_HOLD_upper": 0.09170627411407739,
+          "N_for_80": 4341.001148206199,
+          "years_for_80_upper_rate": 13.639509263320692
+        },
+        "1R|primary|optimistic": {
+          "mu_net_usd": 11.806451612903224,
+          "power_IS_upper": 0.8632007105954081,
+          "power_IS_lower": 0.7794368820855674,
+          "power_HOLD_upper": 0.34151023256967294,
+          "N_for_80": 280.88405866257233,
+          "years_for_80_upper_rate": 0.8825431252489704
+        },
+        "1R|double|pessimistic": {
+          "mu_net_usd": -7.198387096774193,
+          "power_IS_upper": 0.0004578438956368771,
+          "power_IS_lower": 0.000912371070939059,
+          "power_HOLD_upper": 0.008225519225268282,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|central": {
+          "mu_net_usd": -2.796774193548387,
+          "power_IS_upper": 0.010899838979306443,
+          "power_IS_lower": 0.013312701404849038,
+          "power_HOLD_upper": 0.026325992793637357,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|optimistic": {
+          "mu_net_usd": 6.006451612903225,
+          "power_IS_upper": 0.4008811721703354,
+          "power_IS_lower": 0.33864485865994287,
+          "power_HOLD_upper": 0.15486511191468677,
+          "N_for_80": 1085.2502870515498,
+          "years_for_80_upper_rate": 3.409877315830173
+        },
+        "2R|primary|pessimistic": {
+          "mu_net_usd": -1.3983870967741936,
+          "power_IS_upper": 0.02793119034053153,
+          "power_IS_lower": 0.03002333231611564,
+          "power_HOLD_upper": 0.03874199491953364,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|primary|central": {
+          "mu_net_usd": 3.0032258064516126,
+          "power_IS_upper": 0.1421096098310506,
+          "power_IS_lower": 0.12737728179035374,
+          "power_HOLD_upper": 0.08290350902323596,
+          "N_for_80": 6399.597818040645,
+          "years_for_80_upper_rate": 20.107659671263022
+        },
+        "2R|primary|optimistic": {
+          "mu_net_usd": 11.806451612903224,
+          "power_IS_upper": 0.7295814394576142,
+          "power_IS_lower": 0.6346788901087108,
+          "power_HOLD_upper": 0.2655067215674095,
+          "N_for_80": 414.0853567113625,
+          "years_for_80_upper_rate": 1.3010641706473476
+        },
+        "2R|double|pessimistic": {
+          "mu_net_usd": -7.198387096774193,
+          "power_IS_upper": 0.0012614543454308855,
+          "power_IS_lower": 0.0021341422873713723,
+          "power_HOLD_upper": 0.01173280101295671,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|central": {
+          "mu_net_usd": -2.796774193548387,
+          "power_IS_upper": 0.014652401355460604,
+          "power_IS_lower": 0.01717036316768679,
+          "power_HOLD_upper": 0.029641001819248523,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|optimistic": {
+          "mu_net_usd": 6.006451612903225,
+          "power_IS_upper": 0.3096209990678523,
+          "power_IS_lower": 0.2633995143600183,
+          "power_HOLD_upper": 0.12992352962084747,
+          "N_for_80": 1599.8994545101611,
+          "years_for_80_upper_rate": 5.0269149178157555
+        }
+      },
+      "verdict_rule_applied": "UNDERPOWERED"
+    },
+    "s2_sensitivity": {
+      "events": {
+        "N_upper": 160,
+        "N_lower": 143,
+        "per_session_upper": 0.5925925925925926,
+        "long": 80,
+        "short": 80,
+        "sessions_with_event": 130
+      },
+      "risk": {
+        "R_usd_mean": 119.303125,
+        "R_usd_median": 95.0,
+        "R_usd_p10": 42.0,
+        "R_usd_p90": 228.05,
+        "share_R_over_150": 0.25
+      },
+      "cost": {
+        "primary": {
+          "mean_c_over_R": 0.07296443522431661,
+          "breakeven_theta_R": 0.04861565864263824
+        },
+        "double": {
+          "mean_c_over_R": 0.14592887044863323,
+          "breakeven_theta_R": 0.09723131728527648
+        }
+      },
+      "placebo": {
+        "1R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 95.36228245023365,
+          "sigma_cluster_usd": 91.66072525127659,
+          "sd_R": 0.8551242625575111,
+          "placebo_mean_usd": -1.2258064516129032,
+          "sigma_cluster_p10_p90": [
+            83.58376156001951,
+            101.55815487150518
+          ]
+        },
+        "2R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 110.89342382430644,
+          "sigma_cluster_usd": 107.26502308739623,
+          "sd_R": 1.0888129132567332,
+          "placebo_mean_usd": -0.8289473684210527,
+          "sigma_cluster_p10_p90": [
+            96.92813414080213,
+            120.0487992481939
+          ]
+        }
+      },
+      "grid": {
+        "1R|primary|pessimistic": {
+          "mu_net_usd": 0.1651562499999999,
+          "power_IS_upper": 0.05239501648443099,
+          "power_IS_lower": 0.05226189934042469,
+          "power_HOLD_upper": 0.05106992060562347,
+          "N_for_80": 1904340.9093604707,
+          "years_for_80_upper_rate": 12752.282875181725
+        },
+        "1R|primary|central": {
+          "mu_net_usd": 6.1303125,
+          "power_IS_upper": 0.2121814057630787,
+          "power_IS_lower": 0.19903322296180626,
+          "power_HOLD_upper": 0.10328856419055221,
+          "N_for_80": 1382.1955684589186,
+          "years_for_80_upper_rate": 9.25577389593026
+        },
+        "1R|primary|optimistic": {
+          "mu_net_usd": 18.060624999999998,
+          "power_IS_upper": 0.8016414611644036,
+          "power_IS_lower": 0.7615741854847875,
+          "power_HOLD_upper": 0.30154345607487487,
+          "N_for_80": 159.24623496372917,
+          "years_for_80_upper_rate": 1.0663810377035436
+        },
+        "1R|double|pessimistic": {
+          "mu_net_usd": -5.63484375,
+          "power_IS_upper": 0.007707958169875258,
+          "power_IS_lower": 0.0086566057861561,
+          "power_HOLD_upper": 0.022977087952717818,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|central": {
+          "mu_net_usd": 0.3303124999999998,
+          "power_IS_upper": 0.05488022767545867,
+          "power_IS_lower": 0.05460430942369288,
+          "power_HOLD_upper": 0.052157982906190295,
+          "N_for_80": 476085.2273401177,
+          "years_for_80_upper_rate": 3188.0707187954313
+        },
+        "1R|double|optimistic": {
+          "mu_net_usd": 12.260625,
+          "power_IS_upper": 0.5187845649904328,
+          "power_IS_lower": 0.48193194193084193,
+          "power_HOLD_upper": 0.18910115258924298,
+          "N_for_80": 345.54889211472965,
+          "years_for_80_upper_rate": 2.313943473982565
+        },
+        "2R|primary|pessimistic": {
+          "mu_net_usd": 0.1651562499999999,
+          "power_IS_upper": 0.052041046228538675,
+          "power_IS_lower": 0.051927888523639644,
+          "power_HOLD_upper": 0.050913151637157046,
+          "N_for_80": 2607920.6898595807,
+          "years_for_80_upper_rate": 17463.754619595406
+        },
+        "2R|primary|central": {
+          "mu_net_usd": 6.1303125,
+          "power_IS_upper": 0.17827909573834316,
+          "power_IS_lower": 0.16816899685431969,
+          "power_HOLD_upper": 0.0936550289041736,
+          "N_for_80": 1892.862986190209,
+          "years_for_80_upper_rate": 12.675421782523722
+        },
+        "2R|primary|optimistic": {
+          "mu_net_usd": 18.060624999999998,
+          "power_IS_upper": 0.6861355245755592,
+          "power_IS_lower": 0.6437888353959615,
+          "power_HOLD_upper": 0.24711117124909887,
+          "N_for_80": 218.0815151860698,
+          "years_for_80_upper_rate": 1.4603672891924318
+        },
+        "2R|double|pessimistic": {
+          "mu_net_usd": -5.63484375,
+          "power_IS_upper": 0.010462460106789584,
+          "power_IS_lower": 0.011511742945397805,
+          "power_HOLD_upper": 0.02590203887202875,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|central": {
+          "mu_net_usd": 0.3303124999999998,
+          "power_IS_upper": 0.054147734509406645,
+          "power_IS_lower": 0.053914381658483425,
+          "power_HOLD_upper": 0.05183953032939044,
+          "N_for_80": 651980.1724648952,
+          "years_for_80_upper_rate": 4365.938654898851
+        },
+        "2R|double|optimistic": {
+          "mu_net_usd": 12.260625,
+          "power_IS_upper": 0.42111853543181804,
+          "power_IS_lower": 0.39050676896862496,
+          "power_HOLD_upper": 0.1605247681576873,
+          "N_for_80": 473.21574654755227,
+          "years_for_80_upper_rate": 3.1688554456309306
+        }
+      },
+      "verdict_rule_applied": "UNDERPOWERED"
+    },
+    "s3_sensitivity": {
+      "events": {
+        "N_upper": 88,
+        "N_lower": 84,
+        "per_session_upper": 0.32592592592592595,
+        "long": 44,
+        "short": 44,
+        "sessions_with_event": 78
+      },
+      "risk": {
+        "R_usd_mean": 124.75568181818181,
+        "R_usd_median": 112.25,
+        "R_usd_p10": 51.1,
+        "R_usd_p90": 220.39999999999998,
+        "share_R_over_150": 0.3068181818181818
+      },
+      "cost": {
+        "primary": {
+          "mean_c_over_R": 0.06398669125105651,
+          "breakeven_theta_R": 0.0464908685157353
+        },
+        "double": {
+          "mean_c_over_R": 0.12797338250211301,
+          "breakeven_theta_R": 0.0929817370314706
+        }
+      },
+      "placebo": {
+        "1R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 98.43954229574089,
+          "sigma_cluster_usd": 95.49254831346848,
+          "sd_R": 0.8171780809794151,
+          "placebo_mean_usd": -1.5470588235294118,
+          "sigma_cluster_p10_p90": [
+            86.4851489094214,
+            108.13449315628102
+          ]
+        },
+        "2R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 115.49831961865894,
+          "sigma_cluster_usd": 112.07906818345708,
+          "sd_R": 1.028024906335917,
+          "placebo_mean_usd": -1.7093023255813953,
+          "sigma_cluster_p10_p90": [
+            97.86870081347561,
+            129.08384865936605
+          ]
+        }
+      },
+      "grid": {
+        "1R|primary|pessimistic": {
+          "mu_net_usd": 0.43778409090909154,
+          "power_IS_upper": 0.05459468453620666,
+          "power_IS_lower": 0.05448541845072779,
+          "power_HOLD_upper": 0.052034060586997805,
+          "N_for_80": 294162.40054999624,
+          "years_for_80_upper_rate": 3581.52273396911
+        },
+        "1R|primary|central": {
+          "mu_net_usd": 6.675568181818183,
+          "power_IS_upper": 0.16131426972745694,
+          "power_IS_lower": 0.15765359046279803,
+          "power_HOLD_upper": 0.08868847220622944,
+          "N_for_80": 1265.1168482095636,
+          "years_for_80_upper_rate": 15.403208379174881
+        },
+        "1R|primary|optimistic": {
+          "mu_net_usd": 19.151136363636365,
+          "power_IS_upper": 0.5934708681230276,
+          "power_IS_lower": 0.5766096529623003,
+          "power_HOLD_upper": 0.21309161660023257,
+          "N_for_80": 153.71562463590558,
+          "years_for_80_upper_rate": 1.8715376376124868
+        },
+        "1R|double|pessimistic": {
+          "mu_net_usd": -5.362215909090908,
+          "power_IS_upper": 0.014942255285951491,
+          "power_IS_lower": 0.015405444265929706,
+          "power_HOLD_upper": 0.02987723463367823,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|central": {
+          "mu_net_usd": 0.8755681818181831,
+          "power_IS_upper": 0.05951699964911143,
+          "power_IS_lower": 0.05928327391652115,
+          "power_HOLD_upper": 0.05413331736675776,
+          "N_for_80": 73540.60013749906,
+          "years_for_80_upper_rate": 895.3806834922775
+        },
+        "1R|double|optimistic": {
+          "mu_net_usd": 13.351136363636366,
+          "power_IS_upper": 0.36945851484410963,
+          "power_IS_lower": 0.35813707003538214,
+          "power_HOLD_upper": 0.14619399454281035,
+          "N_for_80": 316.2792120523909,
+          "years_for_80_upper_rate": 3.8508020947937203
+        },
+        "2R|primary|pessimistic": {
+          "mu_net_usd": 0.43778409090909154,
+          "power_IS_upper": 0.053894396890997474,
+          "power_IS_lower": 0.05380223662802945,
+          "power_HOLD_upper": 0.05172896167562372,
+          "N_for_80": 405225.9210443624,
+          "years_for_80_upper_rate": 4933.757155572594
+        },
+        "2R|primary|central": {
+          "mu_net_usd": 6.675568181818183,
+          "power_IS_upper": 0.138713023806654,
+          "power_IS_lower": 0.1358914801990696,
+          "power_HOLD_upper": 0.08185871630183955,
+          "N_for_80": 1742.7724926297278,
+          "years_for_80_upper_rate": 21.218820932991814
+        },
+        "2R|primary|optimistic": {
+          "mu_net_usd": 19.151136363636365,
+          "power_IS_upper": 0.48327510653050043,
+          "power_IS_lower": 0.468600226638116,
+          "power_HOLD_upper": 0.17842087415964542,
+          "N_for_80": 211.75226832365857,
+          "years_for_80_upper_rate": 2.5781526175770115
+        },
+        "2R|double|pessimistic": {
+          "mu_net_usd": -5.362215909090908,
+          "power_IS_upper": 0.018145042277971993,
+          "power_IS_lower": 0.018609968579582553,
+          "power_HOLD_upper": 0.03234337497125071,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|central": {
+          "mu_net_usd": 0.8755681818181831,
+          "power_IS_upper": 0.058025151106704066,
+          "power_IS_lower": 0.05782990008822549,
+          "power_HOLD_upper": 0.05350511344769282,
+          "N_for_80": 101306.4802610906,
+          "years_for_80_upper_rate": 1233.4392888931484
+        },
+        "2R|double|optimistic": {
+          "mu_net_usd": 13.351136363636366,
+          "power_IS_upper": 0.2989628761753771,
+          "power_IS_lower": 0.29010497296958787,
+          "power_HOLD_upper": 0.12703887414940374,
+          "N_for_80": 435.69312315743196,
+          "years_for_80_upper_rate": 5.304705233247954
+        }
+      },
+      "verdict_rule_applied": "UNDERPOWERED"
+    }
+  },
+  "M_measured_move_fade": {
+    "s1_primary": {
+      "events": {
+        "N_upper": 846,
+        "N_lower": 469,
+        "per_session_upper": 3.1333333333333333,
+        "long": 438,
+        "short": 408,
+        "sessions_with_event": 264
+      },
+      "risk": {
+        "R_usd_mean": 86.03014184397163,
+        "R_usd_median": 70.25,
+        "R_usd_p10": 30.5,
+        "R_usd_p90": 162.75,
+        "share_R_over_150": 0.11702127659574468
+      },
+      "cost": {
+        "primary": {
+          "mean_c_over_R": 0.1036546503619378,
+          "breakeven_theta_R": 0.06741823128130088
+        },
+        "double": {
+          "mean_c_over_R": 0.2073093007238756,
+          "breakeven_theta_R": 0.13483646256260176
+        }
+      },
+      "placebo": {
+        "1R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 80.42097768019077,
+          "sigma_cluster_usd": 83.19060100515743,
+          "sd_R": 0.9147043482263094,
+          "placebo_mean_usd": -0.8152173913043478,
+          "sigma_cluster_p10_p90": [
+            76.39948616075864,
+            90.10100673919018
+          ]
+        },
+        "2R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 98.07192324060367,
+          "sigma_cluster_usd": 102.14377668179708,
+          "sd_R": 1.1940667981686324,
+          "placebo_mean_usd": -0.9394484412470024,
+          "sigma_cluster_p10_p90": [
+            93.13278839303733,
+            110.77009738671678
+          ]
+        }
+      },
+      "grid": {
+        "1R|primary|pessimistic": {
+          "mu_net_usd": -1.4984929078014178,
+          "power_IS_upper": 0.015049908161406205,
+          "power_IS_lower": 0.020928180853491667,
+          "power_HOLD_upper": 0.029964360736202303,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|primary|central": {
+          "mu_net_usd": 2.8030141843971643,
+          "power_IS_upper": 0.2530793772598322,
+          "power_IS_lower": 0.18005245391923846,
+          "power_HOLD_upper": 0.11457824560539825,
+          "N_for_80": 5445.855054155387,
+          "years_for_80_upper_rate": 6.896979551868524
+        },
+        "1R|primary|optimistic": {
+          "mu_net_usd": 11.406028368794328,
+          "power_IS_upper": 0.9904367579049442,
+          "power_IS_lower": 0.907314101211653,
+          "power_HOLD_upper": 0.5616018257489205,
+          "N_for_80": 328.8878078914546,
+          "years_for_80_upper_rate": 0.4165245793964724
+        },
+        "1R|double|pessimistic": {
+          "mu_net_usd": -7.298492907801418,
+          "power_IS_upper": 1.3545272990010675e-05,
+          "power_IS_lower": 0.0001964424834398452,
+          "power_HOLD_upper": 0.0025824527823313124,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|central": {
+          "mu_net_usd": -2.9969858156028355,
+          "power_IS_upper": 0.0035438520631479262,
+          "power_IS_lower": 0.007653407387857459,
+          "power_HOLD_upper": 0.017096781073612115,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|optimistic": {
+          "mu_net_usd": 5.606028368794329,
+          "power_IS_upper": 0.6236921110744481,
+          "power_IS_lower": 0.42642754396181987,
+          "power_HOLD_upper": 0.22356290313882443,
+          "N_for_80": 1361.4637635388467,
+          "years_for_80_upper_rate": 1.724244887967131
+        },
+        "2R|primary|pessimistic": {
+          "mu_net_usd": -1.4984929078014178,
+          "power_IS_upper": 0.01915330028947643,
+          "power_IS_lower": 0.024848521892085362,
+          "power_HOLD_upper": 0.0330724220132132,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|primary|central": {
+          "mu_net_usd": 2.8030141843971643,
+          "power_IS_upper": 0.19858736523180687,
+          "power_IS_lower": 0.1467299616784955,
+          "power_HOLD_upper": 0.09946455087613959,
+          "N_for_80": 8209.966355245893,
+          "years_for_80_upper_rate": 10.397627096309389
+        },
+        "2R|primary|optimistic": {
+          "mu_net_usd": 11.406028368794328,
+          "power_IS_upper": 0.9455419755103319,
+          "power_IS_lower": 0.7803688655136531,
+          "power_HOLD_upper": 0.4289908143357429,
+          "N_for_80": 495.81889539625155,
+          "years_for_80_upper_rate": 0.6279367976143004
+        },
+        "2R|double|pessimistic": {
+          "mu_net_usd": -7.298492907801418,
+          "power_IS_upper": 9.837817522714205e-05,
+          "power_IS_lower": 0.0007057921118811068,
+          "power_HOLD_upper": 0.004899249666152293,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|central": {
+          "mu_net_usd": -2.9969858156028355,
+          "power_IS_upper": 0.0062401591769404244,
+          "power_IS_lower": 0.011295805447007479,
+          "power_HOLD_upper": 0.02117684499850798,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|optimistic": {
+          "mu_net_usd": 5.606028368794329,
+          "power_IS_upper": 0.4806580881309907,
+          "power_IS_lower": 0.3240979736498578,
+          "power_HOLD_upper": 0.1776485414829202,
+          "N_for_80": 2052.4915888114733,
+          "years_for_80_upper_rate": 2.599406774077347
+        }
+      },
+      "verdict_rule_applied": "UNDERPOWERED",
+      "same_bar_ambiguous_cancelled": 8
+    },
+    "s2_sensitivity": {
+      "events": {
+        "N_upper": 437,
+        "N_lower": 333,
+        "per_session_upper": 1.6185185185185185,
+        "long": 222,
+        "short": 215,
+        "sessions_with_event": 243
+      },
+      "risk": {
+        "R_usd_mean": 114.37643020594966,
+        "R_usd_median": 90.5,
+        "R_usd_p10": 43.1,
+        "R_usd_p90": 211.20000000000002,
+        "share_R_over_150": 0.21967963386727687
+      },
+      "cost": {
+        "primary": {
+          "mean_c_over_R": 0.07586626332062878,
+          "breakeven_theta_R": 0.05070974841194418
+        },
+        "double": {
+          "mean_c_over_R": 0.15173252664125755,
+          "breakeven_theta_R": 0.10141949682388836
+        }
+      },
+      "placebo": {
+        "1R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 94.79801201513428,
+          "sigma_cluster_usd": 95.85876307768018,
+          "sd_R": 0.8633078509863376,
+          "placebo_mean_usd": -1.1514084507042253,
+          "sigma_cluster_p10_p90": [
+            89.16387561789055,
+            104.52866736179958
+          ]
+        },
+        "2R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 112.37507192371993,
+          "sigma_cluster_usd": 114.6498307049945,
+          "sd_R": 1.1016806430387813,
+          "placebo_mean_usd": -0.8466042154566745,
+          "sigma_cluster_p10_p90": [
+            105.35258543584723,
+            125.23647070145704
+          ]
+        }
+      },
+      "grid": {
+        "1R|primary|pessimistic": {
+          "mu_net_usd": -0.08117848970251629,
+          "power_IS_upper": 0.0482005974215712,
+          "power_IS_lower": 0.048426325591889044,
+          "power_HOLD_upper": 0.04918134151309317,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|primary|central": {
+          "mu_net_usd": 5.637643020594967,
+          "power_IS_upper": 0.3389186665828729,
+          "power_IS_lower": 0.2837843604015443,
+          "power_HOLD_upper": 0.13786431175372332,
+          "N_for_80": 1787.461274805814,
+          "years_for_80_upper_rate": 4.382464714299968
+        },
+        "1R|primary|optimistic": {
+          "mu_net_usd": 17.075286041189933,
+          "power_IS_upper": 0.98118513085597,
+          "power_IS_lower": 0.945830859469156,
+          "power_HOLD_upper": 0.5142761998216009,
+          "N_for_80": 194.8479368234972,
+          "years_for_80_upper_rate": 0.4777245917542429
+        },
+        "1R|double|pessimistic": {
+          "mu_net_usd": -5.881178489702516,
+          "power_IS_upper": 0.001709041864190119,
+          "power_IS_lower": 0.0028510960372568166,
+          "power_HOLD_upper": 0.013083895682096712,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|central": {
+          "mu_net_usd": -0.16235697940503258,
+          "power_IS_upper": 0.04645338252507184,
+          "power_IS_lower": 0.04689251386201074,
+          "power_HOLD_upper": 0.04837342334134733,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|optimistic": {
+          "mu_net_usd": 11.275286041189934,
+          "power_IS_upper": 0.7921836701816789,
+          "power_IS_lower": 0.692019201280899,
+          "power_HOLD_upper": 0.29629862019402253,
+          "N_for_80": 446.8653187014535,
+          "years_for_80_upper_rate": 1.095616178574992
+        },
+        "2R|primary|pessimistic": {
+          "mu_net_usd": -0.08117848970251629,
+          "power_IS_upper": 0.0484919170182005,
+          "power_IS_lower": 0.04868150163895781,
+          "power_HOLD_upper": 0.04931478105814672,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|primary|central": {
+          "mu_net_usd": 5.637643020594967,
+          "power_IS_upper": 0.26864359090132844,
+          "power_IS_lower": 0.22737008543575732,
+          "power_HOLD_upper": 0.1188190529790813,
+          "N_for_80": 2556.935869986282,
+          "years_for_80_upper_rate": 6.269048389963097
+        },
+        "2R|primary|optimistic": {
+          "mu_net_usd": 17.075286041189933,
+          "power_IS_upper": 0.9290224225500319,
+          "power_IS_lower": 0.8583512770303094,
+          "power_HOLD_upper": 0.4052951417017685,
+          "N_for_80": 278.72697768568213,
+          "years_for_80_upper_rate": 0.6833776831129834
+        },
+        "2R|double|pessimistic": {
+          "mu_net_usd": -5.881178489702516,
+          "power_IS_upper": 0.003291924679872081,
+          "power_IS_lower": 0.004926673342957621,
+          "power_HOLD_upper": 0.01663384284829823,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|central": {
+          "mu_net_usd": -0.16235697940503258,
+          "power_IS_upper": 0.047020428899974355,
+          "power_IS_lower": 0.04739094452436901,
+          "power_HOLD_upper": 0.048637080585745486,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|optimistic": {
+          "mu_net_usd": 11.275286041189934,
+          "power_IS_upper": 0.6594683813436483,
+          "power_IS_lower": 0.5595316653683968,
+          "power_HOLD_upper": 0.2366968445545496,
+          "N_for_80": 639.2339674965705,
+          "years_for_80_upper_rate": 1.5672620974907743
+        }
+      },
+      "verdict_rule_applied": "UNDERPOWERED",
+      "same_bar_ambiguous_cancelled": 3
+    },
+    "s3_sensitivity": {
+      "events": {
+        "N_upper": 246,
+        "N_lower": 210,
+        "per_session_upper": 0.9111111111111111,
+        "long": 106,
+        "short": 140,
+        "sessions_with_event": 175
+      },
+      "risk": {
+        "R_usd_mean": 135.96747967479675,
+        "R_usd_median": 111.5,
+        "R_usd_p10": 53.0,
+        "R_usd_p90": 243.25,
+        "share_R_over_150": 0.33739837398373984
+      },
+      "cost": {
+        "primary": {
+          "mean_c_over_R": 0.061529802021233926,
+          "breakeven_theta_R": 0.04265725902894044
+        },
+        "double": {
+          "mean_c_over_R": 0.12305960404246785,
+          "breakeven_theta_R": 0.08531451805788089
+        }
+      },
+      "placebo": {
+        "1R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 102.29664425528598,
+          "sigma_cluster_usd": 104.21390383799553,
+          "sd_R": 0.8165092246218862,
+          "placebo_mean_usd": 0.33125,
+          "sigma_cluster_p10_p90": [
+            94.38809313217382,
+            114.09364031068363
+          ]
+        },
+        "2R": {
+          "n_shifts": 261,
+          "sd_iid_usd": 119.8676911528765,
+          "sigma_cluster_usd": 122.84398074308304,
+          "sd_R": 1.0245141023669044,
+          "placebo_mean_usd": 0.08298755186721991,
+          "sigma_cluster_p10_p90": [
+            110.9517994742338,
+            135.82679607892118
+          ]
+        }
+      },
+      "grid": {
+        "1R|primary|pessimistic": {
+          "mu_net_usd": 0.998373983739838,
+          "power_IS_upper": 0.06750989294559008,
+          "power_IS_lower": 0.06603030456136476,
+          "power_HOLD_upper": 0.057393477520747097,
+          "N_for_80": 67364.79061147005,
+          "years_for_80_upper_rate": 293.40065597330164
+        },
+        "1R|primary|central": {
+          "mu_net_usd": 7.796747967479676,
+          "power_IS_upper": 0.3186673846143001,
+          "power_IS_lower": 0.28750669412989904,
+          "power_HOLD_upper": 0.13237267038751616,
+          "N_for_80": 1104.5680665953428,
+          "years_for_80_upper_rate": 4.8108365269832
+        },
+        "1R|primary|optimistic": {
+          "mu_net_usd": 21.39349593495935,
+          "power_IS_upper": 0.942361097044131,
+          "power_IS_lower": 0.9082410219543553,
+          "power_HOLD_upper": 0.4240037797104449,
+          "N_for_80": 146.70872983834255,
+          "years_for_80_upper_rate": 0.6389753041739659
+        },
+        "1R|double|pessimistic": {
+          "mu_net_usd": -4.801626016260162,
+          "power_IS_upper": 0.008954183147842056,
+          "power_IS_lower": 0.010373980243931028,
+          "power_HOLD_upper": 0.024361202210218636,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "1R|double|central": {
+          "mu_net_usd": 1.996747967479676,
+          "power_IS_upper": 0.08941934161596049,
+          "power_IS_lower": 0.08578170159642723,
+          "power_HOLD_upper": 0.06562117479296574,
+          "N_for_80": 16841.19765286751,
+          "years_for_80_upper_rate": 73.35016399332541
+        },
+        "1R|double|optimistic": {
+          "mu_net_usd": 15.593495934959352,
+          "power_IS_upper": 0.7586593678453795,
+          "power_IS_lower": 0.699682244915346,
+          "power_HOLD_upper": 0.27905978305321866,
+          "N_for_80": 276.1420166488357,
+          "years_for_80_upper_rate": 1.2027091317458
+        },
+        "2R|primary|pessimistic": {
+          "mu_net_usd": 0.998373983739838,
+          "power_IS_upper": 0.06458488846671231,
+          "power_IS_lower": 0.06337059252338888,
+          "power_HOLD_upper": 0.05621986353831762,
+          "N_for_80": 93602.92001515532,
+          "years_for_80_upper_rate": 407.6782230625232
+        },
+        "2R|primary|central": {
+          "mu_net_usd": 7.796747967479676,
+          "power_IS_upper": 0.2580444753095914,
+          "power_IS_lower": 0.23419388245837552,
+          "power_HOLD_upper": 0.11593342176082788,
+          "N_for_80": 1534.789842740408,
+          "years_for_80_upper_rate": 6.684624750611533
+        },
+        "2R|primary|optimistic": {
+          "mu_net_usd": 21.39349593495935,
+          "power_IS_upper": 0.8613954113760257,
+          "power_IS_lower": 0.8102573912927569,
+          "power_HOLD_upper": 0.34015241814654074,
+          "N_for_80": 203.8507858472469,
+          "years_for_80_upper_rate": 0.8878518547353959
+        },
+        "2R|double|pessimistic": {
+          "mu_net_usd": -4.801626016260162,
+          "power_IS_upper": 0.011975565456569312,
+          "power_IS_lower": 0.013508198233938978,
+          "power_HOLD_upper": 0.02733128284027478,
+          "N_for_80": null,
+          "years_for_80_upper_rate": null
+        },
+        "2R|double|central": {
+          "mu_net_usd": 1.996747967479676,
+          "power_IS_upper": 0.08227745923248936,
+          "power_IS_lower": 0.07937237546905446,
+          "power_HOLD_upper": 0.06303430393597387,
+          "N_for_80": 23400.73000378883,
+          "years_for_80_upper_rate": 101.9195557656308
+        },
+        "2R|double|optimistic": {
+          "mu_net_usd": 15.593495934959352,
+          "power_IS_upper": 0.6353593608995828,
+          "power_IS_lower": 0.5771642150678165,
+          "power_HOLD_upper": 0.2277509936489419,
+          "N_for_80": 383.697460685102,
+          "years_for_80_upper_rate": 1.6711561876528833
+        }
+      },
+      "verdict_rule_applied": "UNDERPOWERED",
+      "same_bar_ambiguous_cancelled": 2
+    }
+  },
+  "VERDICT": {
+    "W_wedge": "UNDERPOWERED",
+    "M_measured_move_fade": "UNDERPOWERED"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "independent_full_session_calibration_found": false,
+  "metadata_requests": [
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-5JPUQQJ9P5/metadata.json",
+      "query": {
+        "compression": "zstd",
+        "dataset": "GLBX.MDP3",
+        "encoding": "dbn",
+        "end": 1748649600000000000,
+        "limit": null,
+        "schema": "status",
+        "start": 1747612800000000000,
+        "stype_in": "raw_symbol",
+        "stype_out": "instrument_id",
+        "symbols": [
+          "MNQM5"
+        ]
+      },
+      "requested_minutes": 17280.0,
+      "sha256": "f253e0d48c4d3d9e06e431f0e417ec31fa2e7a6e48a1abcc7a72e677ab6ea2d9"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-GVLS77PESW/metadata.json",
+      "query": {
+        "compression": "zstd",
+        "dataset": "GLBX.MDP3",
+        "encoding": "dbn",
+        "end": 1748649600000000000,
+        "limit": null,
+        "schema": "definition",
+        "start": 1747612800000000000,
+        "stype_in": "raw_symbol",
+        "stype_out": "instrument_id",
+        "symbols": [
+          "MNQM5"
+        ]
+      },
+      "requested_minutes": 17280.0,
+      "sha256": "5a69ac2f1e26b9146659ebde4d8bda027db3a0f785e4b23ff8c94d1c0af85b33"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/yank/databento-pilot-20260907/native/GLBX-20260907-NWS3PA9QPX/metadata.json",
+      "query": {
+        "compression": "zstd",
+        "dataset": "GLBX.MDP3",
+        "encoding": "dbn",
+        "end": 1748649600000000000,
+        "limit": null,
+        "schema": "mbo",
+        "start": 1747612800000000000,
+        "stype_in": "raw_symbol",
+        "stype_out": "instrument_id",
+        "symbols": [
+          "MNQM5"
+        ]
+      },
+      "requested_minutes": 17280.0,
+      "sha256": "e8c39fd388365ab9137c8033d4a846443d54e99e8652b1c1a0ace4e01bd1e2c9"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/tick/_test/metadata.json",
+      "query": {
+        "compression": "zstd",
+        "dataset": "GLBX.MDP3",
+        "encoding": "dbn",
+        "end": 1782147600000000000,
+        "limit": null,
+        "schema": "mbo",
+        "start": 1782138600000000000,
+        "stype_in": "parent",
+        "stype_out": "instrument_id",
+        "symbols": [
+          "MNQ.FUT"
+        ]
+      },
+      "requested_minutes": 150.0,
+      "sha256": "cf80aae01755404c41529899a8ca98f871324c2690c20efbfed8bacdbc7841c5"
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/data/tick/mnq_mbo_parity/partb_20260622/GLBX-20260901-V4YDQLGVGJ/metadata.json",
+      "query": {
+        "compression": null,
+        "dataset": "GLBX.MDP3",
+        "encoding": "dbn",
+        "end": 1782135600000000000,
+        "limit": null,
+        "schema": "mbo",
+        "start": 1782132600000000000,
+        "stype_in": "parent",
+        "stype_out": "instrument_id",
+        "symbols": [
+          "MNQ.FUT"
+        ]
+      },
+      "requested_minutes": 50.0,
+      "sha256": "d8191e56565c152c0d1129ed7280a145f0769c0bbc1aa77c166601be87eb7657"
+    }
+  ],
+  "qualifications": [
+    "Scoped metadata inventory, not an exhaustive filesystem search or data-quality audit.",
+    "Requested intervals are metadata; they do not prove complete observed coverage.",
+    "No prices or strategy returns were calculated."
+  ],
+  "scope": [
+    "data/yank",
+    "data/tick"
+  ],
+  "selected_windows": {
+    "derivation": "prereg Amendment 8/9 Mode C -- parity fills +/-90min, merged",
+    "maximum_window_minutes": 294.0,
+    "n_windows": 28,
+    "path": "/root/Silver-Bullet-ML-BMAD/data/tick/mnq_mbo_parity/windows_manifest.json",
+    "sha256": "34191ec871cf50390be11db9b84825ea647e8ef95c37e911a9f064d3bac8b8e5",
+    "total_minutes": 5154.0
+  }
+}

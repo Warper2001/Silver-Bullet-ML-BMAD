@@ -76,3 +76,16 @@ No post-hoc analyses were run.
 - `power_gate.py`
 - `results.json`
 - this file
+
+## Correction note (appended 2026-09-14)
+
+**The input CSVs (inherited from the H2/L2 gate) were contaminated.** 27 of the 297 sessions are 2025 roll weeks, where the 1-minute input alternates between two contracts minute by minute. That produces fake bars of at least 234.5 points. Those sessions hold 14 of 17 (wedge) and 20 of 23 (MM) events that risk more than $400. Separately, Jan–Feb 2026 is a thin deferred contract.
+
+A corrected re-run on raw front-month bars (C1b, 270 sessions) **supersedes this file's numbers**. Both verdicts stay **UNDERPOWERED**.
+
+| | Power at central edge | Years for 80% power | Power at optimistic edge |
+|---|---|---|---|
+| Wedge | 18.0% (was 28%) | about 12.4 (was 6.4) | 87% |
+| MM fade | 27.8% (was 37%) | about 6.0 (was 4.3) | 99% |
+
+"4–6 years" of data needed becomes about 6–12 years. See `../diagnostics_h2l2_contamination_20260914/results.md`.

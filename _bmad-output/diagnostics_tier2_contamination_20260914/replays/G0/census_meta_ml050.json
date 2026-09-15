@@ -1,0 +1,16 @@
+{
+  "tag": "ml050",
+  "ml_threshold": 0.5,
+  "start": "2025-05-19",
+  "end": "2026-02-28",
+  "pins": {
+    "max_daily_loss": -750
+  },
+  "bars": 205575,
+  "signals": 77,
+  "filled": 68,
+  "trades": 68,
+  "wall_seconds": 1390.4,
+  "live_files_unchanged": true,
+  "changed_files": []
+}

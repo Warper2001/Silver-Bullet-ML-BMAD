@@ -1,0 +1,16 @@
+{
+  "tag": "noml",
+  "ml_threshold": 0.0,
+  "start": "2025-05-19",
+  "end": "2026-02-28",
+  "pins": {
+    "max_daily_loss": -750
+  },
+  "bars": 232518,
+  "signals": 65,
+  "filled": 56,
+  "trades": 56,
+  "wall_seconds": 1465.5,
+  "live_files_unchanged": true,
+  "changed_files": []
+}

@@ -1,12 +1,22 @@
-# DRAFT pre-registration: yank_frontmonth_revalidation
+# Pre-Registration: yank_frontmonth_revalidation
 
-> **DRAFT: NOT SEALED. It authorises nothing.**
-> - This file deliberately does not match `_bmad-output/preregistration*.md`, so no commit containing it can pass the holdout gate in `backtest_tier2_1year_validation.py`.
-> - To seal it: Alex approves or edits the draft. The harness in section 6 is built and tested. `prereg_seal.py --name yank_frontmonth_revalidation` generates the sealed document with these sections merged in. The sealed document and the harness are committed together, and the run cites that commit.
+**Generated:** 2026-09-15
+**Experiment ID:** yank_frontmonth_revalidation
 
-**Drafted:** 2026-09-15
+---
+
+**Sealed:** 2026-09-15. Approved by Alex from `draft_preregistration_yank_frontmonth_revalidation.md` (`396033d`) without changes. This document supersedes the draft.
 **Re-validates:** seal `138cab1` (`_bmad-output/preregistration_yank_sl2tp8_ml050.md`, verdict `_bmad-output/results_yank_sl2tp8_ml050.md`: "KEEP ml_threshold = 0.50")
 **Evidence that prompted it:** `_bmad-output/diagnostics_tier2_contamination_20260914/results.md` (merged to main as `043a188`)
+
+**Sealed with this commit:**
+
+| File | SHA-256 |
+|---|---|
+| `tools/yank_frontmonth_revalidation.py` | `6a0f6dc6180cc3cf40775059fc46eb0398200cff781279489ab317f9976f7ecd` |
+| `tests/unit/test_yank_frontmonth_revalidation.py` | `0659f7e7e36de169ad8a5ea39236faab49001366278e614d7321dd146f4343af` |
+
+**The harness refuses to run** unless the cited commit contains this document, and its own bytes equal the copy in that commit. It appends the `ACCESS_LOG` row before any holdout-period byte is read.
 
 ---
 
@@ -83,7 +93,7 @@ Scored on trades whose entry falls in 2026 (S1 + S2 + S3), from the corrected ML
 ## 5. Frozen configuration
 
 - **StrategyConfig:** the `138cab1` snapshot (`strategy_config.yaml` at `138cab1`, sha256 `faef1c74…8b52`).
-  - Today's YAML differs in `max_daily_loss` (−300, sealed later in `preregistration_yank_daily_breaker_2ct.md`). The harness pins `max_daily_loss = -750` in memory.
+  - Today's YAML differs in `max_daily_loss` (−300, sealed later in `preregistration_yank_daily_breaker_2ct.md`). The harness points the engine's `STRATEGY_CONFIG_PATH` at `138cab1`'s own `strategy_config.yaml` (sha256 re-verified), which carries `max_daily_loss = -750`. No in-memory override is used.
   - The harness **asserts** that the effective StrategyConfig equals the `138cab1` snapshot field for field before running.
 - **Model:** `models/xgboost/tier2_meta_labeling_model.pkl` sha256 `f58530e1…80e2`, unchanged since `31669a7` (2026-05-31), before the seal.
 - **Thresholds:**
@@ -94,12 +104,13 @@ Scored on trades whose entry falls in 2026 (S1 + S2 + S3), from the corrected ML
 
 ## 6. Procedure
 
-1. **Before sealing,** build and test the harness `tools/yank_frontmonth_revalidation.py` (synthetic tests; no holdout read). Given a data mode (`original` | `corrected`) and an ML threshold, it:
+1. **Done in this commit:** the harness `tools/yank_frontmonth_revalidation.py`, tested by `tests/unit/test_yank_frontmonth_revalidation.py` (11 synthetic tests; no holdout read). Given a data mode (`original` | `corrected`) and an ML threshold, it:
    - calls `backtest_tier2_1year_validation.verify_preregistration(<sha>)` and `append_access_log(<sha>, argv)`, and refuses to run otherwise;
-   - builds S1–S3 per section 2 (corrected mode) in a scratch replay root. The replay root is a git worktree at the sealing commit, with its own `data/` and `logs/`, and `data/sealed_holdout/ACCESS_LOG.md` linked to the main checkout's copy;
-   - asserts the config snapshot (section 5), then runs `run_backtest` with `max_daily_loss = -750`;
+   - runs with a git worktree at the sealing commit as its engine root, so engine writes land there, never in the live checkout. It reads the two CSVs and the raw JSON from the main checkout by explicit path, writes corrected bars and outputs to its `--out-dir`, and appends to the main checkout's `data/sealed_holdout/ACCESS_LOG.md`. The engine root's `models/xgboost` must hold the pinned files (section 5), or it refuses;
+   - builds S1–S3 per section 2 (corrected mode);
+   - asserts that the engine's effective StrategyConfig equals the `138cab1` snapshot (section 5), then runs `run_backtest` unchanged;
    - writes trades, the per-segment bar counts, Δ, and the dropped S2 sessions.
-2. **Seal:** `prereg_seal.py --name yank_frontmonth_revalidation --config strategy_config.yaml --output _bmad-output/preregistration_yank_frontmonth_revalidation.md`. Merge sections 1–8 of this draft into it, commit it together with the harness, and record the SHA.
+2. **Done in this commit:** sealed with `prereg_seal.py --name yank_frontmonth_revalidation --config <138cab1 strategy_config.yaml>`. This document and the harness are committed together, and **the run cites this commit's SHA**.
 3. **G0, the reproduction gate** (original mode, both arms). The harness must reproduce `data/reports/backtest_1year_20260615_181838.csv` (ML, 82 trades) and `…_185354.csv` (no-ML, 107 trades) **row for row**.
    - If it fails, run **G0′** with the engine at `138cab1`.
    - If both fail, **STOP**: corrected runs are not interpreted, and the failure is recorded in `ACCESS_LOG`.
@@ -119,3 +130,62 @@ Scored on trades whose entry falls in 2026 (S1 + S2 + S3), from the corrected ML
 - **Bar construction differs by segment.** S0 is dollar-aggregated; S1–S3 are 1-minute time bars, as the seal's 2026 rows already were.
 - The S1 bars have already been replayed pre-cutoff (the contamination check). S1 is not a fresh window, and only S2–S3 are new holdout exposure. That makes S2–S3 (about 14 ML trades) the only untouched part, far below any power to settle the ML question on its own.
 - A single small-N window. The verdict is directional, as `138cab1`'s was.
+
+---
+
+## Configuration Snapshot
+
+| Field | Value |
+|---|---|
+| sl_multiplier | 2.0 |
+| tp_multiplier | 8.0 |
+| entry_pct | 0.5 |
+| atr_threshold | 0.5 |
+| max_gap_dollars | 60.0 |
+| max_gap_atr_ratio | 0.0 |
+| max_hold_bars | 60 |
+| max_pending_bars | 240 |
+| contracts_per_trade | 5 |
+| max_daily_loss | -750.0 |
+| vol_regime_lookback | 120 |
+| vol_regime_threshold | 0.75 |
+| min_gap_atr_ratio | 0.25 |
+| ml_threshold | 0.5 |
+| bearish_only | True |
+| h1_sweep_lookback | 6 |
+| kill_zone_start_et | 09:30 |
+| kill_zone_end_et | 11:00 |
+| commission_per_roundtrip | 4.0 |
+| enable_kill_zone_filter | True |
+| m15_confirmation | True |
+| tuesday_exclusion | True |
+| enable_ifvg_fallback | False |
+| funding_rate_filter_enabled | False |
+| funding_rate_short_threshold | 0.03 |
+| funding_rate_long_threshold | -0.02 |
+| enable_breakeven_stop | False |
+| breakeven_trigger_r | 2.0 |
+| enable_trailing_stop | False |
+| trailing_stop_mult | 1.5 |
+
+---
+
+## Holdout Data Range
+
+- **Directory:** `data/sealed_holdout/`
+- **Start date:** 2026-03-01
+- **End date:** 2026-03-01
+
+---
+
+## Integrity Hashes
+
+| Hash | Value |
+|---|---|
+| (a) YAML config SHA-256 | `faef1c740ed753449796dc948cce15f41722e0b8b60dbb99df3d82e37d1d8b52` |
+| (b) strategy_core.py SHA-256 | `96e087d8154a99b31da9a7f0239da9dbf49129126cb4553da5d8543870931201` |
+| (c) Git HEAD commit | `396033d03adefe510bc84aab03dbc282c276ffbb` |
+
+*Hash (a): SHA-256 of `strategy_config.yaml` as committed in `138cab1` (`git show 138cab1:strategy_config.yaml`). It equals that seal's own hash (a); the harness re-verifies it at run time.*
+*Hash (b): SHA-256 of `/root/Silver-Bullet-ML-BMAD/src/research/strategy_core.py` source bytes.*
+*Hash (c): `git rev-parse HEAD` at seal time — commit this document to make it tamper-evident.*

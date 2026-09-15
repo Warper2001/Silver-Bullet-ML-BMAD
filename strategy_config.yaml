@@ -1,5 +1,10 @@
 # strategy_config.yaml — YANK live paper trading config
-# Pre-registration (current): _bmad-output/preregistration_yank_sl2tp8_ml050.md  (2026-06-15)
+# Pre-registration (current): _bmad-output/preregistration_yank_frontmonth_revalidation.md (2026-09-15,
+#   seal da82cfc; verdict _bmad-output/results_yank_frontmonth_revalidation.md). It re-ran the test of
+#   preregistration_yank_sl2tp8_ml050.md (2026-06-15) on front-month 2026 bars, after the old test was
+#   found to have run on the deferred MNQM26 contract. Corrected 2026: ML N=23 (< the sealed minimum of
+#   25) -> INCONCLUSIVE -> ml_threshold 0.0, superseding that seal's KEEP. Everything else is unchanged.
+# Prior pre-registration: _bmad-output/preregistration_yank_sl2tp8_ml050.md  (2026-06-15)
 # Supersedes S25 seal (_bmad-output/preregistration_s25_live_deployment.md, 2026-05-21, SHA 69972c3).
 #   Config had drifted unsealed from S25 (S25 = SL5/TP6/ML-disabled); this re-seals the running config.
 # 2026-06-15: ml_threshold corrected 0.75 -> 0.50 (0.75 was a dead value; the meta-label filter's
@@ -18,7 +23,9 @@ max_daily_loss: -300.0  # sealed: preregistration_yank_daily_breaker_2ct.md (2ct
 vol_regime_lookback: 120
 vol_regime_threshold: 0.75
 min_gap_atr_ratio: 0.25
-ml_threshold: 0.50
+ml_threshold: 0.0  # ML filter DISABLED 2026-09-15 per seal da82cfc (was 0.50). The live gate is
+                   # models/xgboost/tier2_threshold.json, set to 0.0 at the same time; this value is
+                   # documentation — yank_streaming_working.py builds MetaLabelingFilter without it.
 bearish_only: true
 h1_sweep_lookback: 6
 tuesday_exclusion: true

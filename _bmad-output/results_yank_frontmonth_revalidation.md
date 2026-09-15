@@ -74,3 +74,22 @@
 - No parameter, threshold or live setting was changed, and `trader-yank` was not restarted.
 - The model was not retrained, even though 5% of `doe_run_08` rows sit on 2025 roll splices.
 - The live unit's `Environment=` overrides were not examined. The replay does not read them.
+
+## Applied to live YANK (2026-09-15 23:53 UTC)
+
+Alex authorised applying the verdict. The ML filter is now disabled on the live combine account.
+
+| Change | Detail |
+|---|---|
+| `strategy_config.yaml` | `ml_threshold` 0.50 → 0.0, header now cites this seal. Committed and merged (`603575a`, merge `acf70f9`). Documentation only: `yank_streaming_working.py` builds `MetaLabelingFilter(ML_MODEL_PATH)` without it. |
+| `models/xgboost/tier2_threshold.json` | `threshold` 0.5 → 0.0. **This is the live gate.** Gitignored, so edited in place with a backup at `tier2_threshold.json.pre-ml-disable-20260915T235252Z.bak`; every other field unchanged, and a `superseded` block records the reason. |
+| `trader-yank` | restarted 2026-09-15 23:53:04 UTC, active, 0 restarts, no open trade at the time. |
+
+**Verified from the startup log:** `ML threshold loaded from JSON: 0.0`, `Configuration: … | ml_threshold=0.0`, `ML Filter: ACTIVE | threshold=0.0` (the model still loads; at 0.0 every signal passes). Symbol MNQZ26, 2 contracts, account 26556101 — unchanged.
+
+**Scope checks before the edit:**
+- Among live units only YANK reads `tier2_threshold.json`. The other two readers (`btc_combine_streaming.py`, `s26_crypto_streaming_working.py`) are not imported by any running service.
+- No other live entry file reads `ml_threshold` or `strategy_config.yaml`.
+- The LR regime config's own `ml_threshold` field is only logged, never used for gating.
+
+**Not changed:** every other strategy parameter, the model file, the LR regime filter, and the unit's `Environment=` lines.

@@ -34,3 +34,14 @@ OOS verdict above rests on the 2026 rows only.)
 - Live wiring: the YANK trader (`yank_streaming_working.py`) already gates at 0.50 (loaded from
   `tier2_threshold.json`); the YAML now documents 0.50 (was a dead 0.75). The `tier2_streaming_working.py`
   variant loads 0.0 — confirm which process is the live YANK service if behavior matters.
+
+## Superseded for the ML question (appended 2026-09-15)
+
+**This test's 2026 bars came from the deferred MNQM26 contract before the March roll**, not the front month: `mnq_1min_2026_ytd.csv` and its holdout copy. 40 of the 54 OOS ML trades above (+$5,411) fell in Jan–Feb 2026 and do not exist on front-month bars.
+
+The sealed re-run on front-month bars supersedes the verdict above. It is `preregistration_yank_frontmonth_revalidation.md` (seal `da82cfc`); results are in `results_yank_frontmonth_revalidation.md`.
+- G0 reproduced this file's trade lists row for row.
+- Corrected 2026: ML 23 trades, PF 1.70; no-ML 30, PF 1.39.
+- `N_2026(ml)` = 23 < 25, so the verdict is **INCONCLUSIVE → ML disabled (`ml_threshold` 0.0)**, by this seal's own minimum-sample rule.
+
+No live setting has been changed yet; that is a separate operator step.

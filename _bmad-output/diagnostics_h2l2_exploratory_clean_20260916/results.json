@@ -1,0 +1,99 @@
+{
+  "mnq_bars": {
+    "sessions": 270,
+    "bars": 20675,
+    "first": "2025-01-02 09:35:00-05:00",
+    "last": "2026-02-27 16:00:00-05:00"
+  },
+  "raw_sha256": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924",
+  "script_sha256": "7cb6c9a5410dfdca4cfa422f8dd734ae4903c4a59d56afc60ed87e7d0b18c04a",
+  "MNQ_5min_C1b": {
+    "A_plan_primary (prox 1.00pt)": {
+      "N": 47,
+      "per_session": 0.17407407407407408,
+      "R_usd_median": 69.0,
+      "sigma_cluster_usd_1R": 82.07714842416081,
+      "power_pessimistic": 0.03678381518498414,
+      "years80_pessimistic": null,
+      "power_central": 0.07363024060808718,
+      "years80_central": 173.17837168247667,
+      "power_optimistic": 0.22087474342502544,
+      "years80_optimistic": 8.639898113810961
+    },
+    "B_prox_price_scaled (4.00pt)": {
+      "N": 51,
+      "per_session": 0.18888888888888888,
+      "R_usd_median": 69.0,
+      "sigma_cluster_usd_1R": 79.76281764062449,
+      "power_pessimistic": 0.03530072448134257,
+      "years80_pessimistic": null,
+      "power_central": 0.07326218411501698,
+      "years80_central": 177.9537458762699,
+      "power_optimistic": 0.22974421012943036,
+      "years80_optimistic": 8.084938146399624
+    },
+    "C_no_proximity": {
+      "N": 118,
+      "per_session": 0.43703703703703706,
+      "R_usd_median": 61.75,
+      "sigma_cluster_usd_1R": 72.7660440266834,
+      "power_pessimistic": 0.02422656713806209,
+      "years80_pessimistic": null,
+      "power_central": 0.07549458527606838,
+      "years80_central": 151.9287093208593,
+      "power_optimistic": 0.3589025447303839,
+      "years80_optimistic": 4.021303047444352
+    },
+    "D_raw_H2L2_no_filters": {
+      "N": 935,
+      "per_session": 3.462962962962963,
+      "R_usd_median": 56.5,
+      "sigma_cluster_usd_1R": 63.40032574828878,
+      "power_pessimistic": 0.0024622277592870243,
+      "years80_pessimistic": null,
+      "power_central": 0.11866356602073597,
+      "years80_central": 30.879482605833,
+      "power_optimistic": 0.9811815160791753,
+      "years80_optimistic": 0.47774476712051855
+    }
+  },
+  "ES_5min_as_MES_approx": {
+    "A_plan_primary (prox 1.00pt)": {
+      "N": 34,
+      "per_session": 0.22818791946308725,
+      "R_usd_median": 26.25,
+      "sigma_cluster_usd_1R": 31.871359817190402,
+      "power_pessimistic": 0.009007803196373166,
+      "years80_pessimistic": null,
+      "power_central": 0.02145345432865142,
+      "years80_central": null,
+      "power_optimistic": 0.0895954063571543,
+      "years80_optimistic": 40.18673683751135
+    },
+    "D_raw_H2L2_no_filters": {
+      "N": 540,
+      "per_session": 3.6241610738255035,
+      "R_usd_median": 26.25,
+      "sigma_cluster_usd_1R": 28.488883448124874,
+      "power_pessimistic": 1.5430201348760706e-07,
+      "years80_pessimistic": null,
+      "power_central": 5.6597301991308364e-05,
+      "years80_central": null,
+      "power_optimistic": 0.0893102646633745,
+      "years80_optimistic": 40.66094496856143
+    }
+  },
+  "es_bars": {
+    "sessions": 149,
+    "bars": 11380,
+    "first": "2025-05-01 09:35:00-04:00",
+    "last": "2025-12-31 16:00:00-05:00"
+  },
+  "es_range_diagnostic": {
+    "sessions_all": 174,
+    "sessions_roll_week": 25,
+    "max_5min_range_pts_median_rollweek": 14.25,
+    "max_5min_range_pts_median_clean": 15.25,
+    "max_5min_range_pts_p100_clean": 57.75
+  }
+}

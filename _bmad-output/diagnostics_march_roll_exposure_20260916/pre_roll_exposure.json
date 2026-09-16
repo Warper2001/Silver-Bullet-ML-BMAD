@@ -1,0 +1,506 @@
+[
+  {
+    "file": "data/reports/backtest_1year_20260519_215831.csv",
+    "N": 425,
+    "pre_roll_N": 9,
+    "total": 382.5,
+    "pre_roll_pnl": -5151.0,
+    "share_of_net": -13.467,
+    "span": [
+      "2025-05-22",
+      "2026-05-19"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260519_224400.csv",
+    "N": 193,
+    "pre_roll_N": 5,
+    "total": 168.0,
+    "pre_roll_pnl": 355.0,
+    "share_of_net": 2.113,
+    "span": [
+      "2025-05-22",
+      "2026-05-15"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260519_225639.csv",
+    "N": 181,
+    "pre_roll_N": 4,
+    "total": -1419.0,
+    "pre_roll_pnl": -1493.5,
+    "share_of_net": 1.053,
+    "span": [
+      "2025-05-22",
+      "2026-05-15"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_162232.csv",
+    "N": 156,
+    "pre_roll_N": 14,
+    "total": 5184.2,
+    "pre_roll_pnl": 1917.05,
+    "share_of_net": 0.37,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260525_234347.csv",
+    "N": 62,
+    "pre_roll_N": 3,
+    "total": 7462.0,
+    "pre_roll_pnl": -2677.0,
+    "share_of_net": -0.359,
+    "span": [
+      "2025-05-22",
+      "2026-05-13"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260526_004254.csv",
+    "N": 62,
+    "pre_roll_N": 3,
+    "total": 7462.0,
+    "pre_roll_pnl": -2677.0,
+    "share_of_net": -0.359,
+    "span": [
+      "2025-05-22",
+      "2026-05-13"
+    ]
+  },
+  {
+    "file": "data/reports/s26_subgroup_20260528_190159_trades.csv",
+    "N": 70,
+    "pre_roll_N": 3,
+    "total": 8062.5,
+    "pre_roll_pnl": -2677.0,
+    "share_of_net": -0.332,
+    "span": [
+      "2025-05-21",
+      "2026-05-13"
+    ]
+  },
+  {
+    "file": "data/reports/stat_arb_short_gate2_oos_20260609_003846.csv",
+    "N": 199,
+    "pre_roll_N": 44,
+    "total": -1533.16,
+    "pre_roll_pnl": 480.92,
+    "share_of_net": -0.314,
+    "span": [
+      "2026-03-02",
+      "2026-05-19"
+    ]
+  },
+  {
+    "file": "data/reports/stat_arb_short_gate2_oos_20260611_044807.csv",
+    "N": 199,
+    "pre_roll_N": 44,
+    "total": -1533.16,
+    "pre_roll_pnl": 480.92,
+    "share_of_net": -0.314,
+    "span": [
+      "2026-03-02",
+      "2026-05-19"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260519_225141.csv",
+    "N": 191,
+    "pre_roll_N": 5,
+    "total": 1768.5,
+    "pre_roll_pnl": 520.0,
+    "share_of_net": 0.294,
+    "span": [
+      "2025-05-22",
+      "2026-05-15"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260520_134907.csv",
+    "N": 191,
+    "pre_roll_N": 5,
+    "total": 1768.5,
+    "pre_roll_pnl": 520.0,
+    "share_of_net": 0.294,
+    "span": [
+      "2025-05-22",
+      "2026-05-15"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_033406.csv",
+    "N": 273,
+    "pre_roll_N": 23,
+    "total": 6559.35,
+    "pre_roll_pnl": 1896.1,
+    "share_of_net": 0.289,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_033759.csv",
+    "N": 273,
+    "pre_roll_N": 23,
+    "total": 6559.35,
+    "pre_roll_pnl": 1896.1,
+    "share_of_net": 0.289,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/ml_training/silver_bullet_corrected_history.csv",
+    "N": 272,
+    "pre_roll_N": 23,
+    "total": 6579.15,
+    "pre_roll_pnl": 1896.1,
+    "share_of_net": 0.288,
+    "span": [
+      "2025-11-05",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/tier2_wf_daily_trajectory_20260613.csv",
+    "N": 859,
+    "pre_roll_N": 17,
+    "total": 3251.3,
+    "pre_roll_pnl": -875.1,
+    "share_of_net": -0.269,
+    "span": [
+      "2025-07-03",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/tier2_wf_daily_trajectory_20260613_expanding.csv",
+    "N": 859,
+    "pre_roll_N": 17,
+    "total": 3251.3,
+    "pre_roll_pnl": -875.1,
+    "share_of_net": -0.269,
+    "span": [
+      "2025-07-03",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260506_173500.csv",
+    "N": 340,
+    "pre_roll_N": 14,
+    "total": 8513.25,
+    "pre_roll_pnl": 1917.05,
+    "share_of_net": 0.225,
+    "span": [
+      "2025-05-06",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260504_212220.csv",
+    "N": 15645,
+    "pre_roll_N": 1255,
+    "total": 44797.81,
+    "pre_roll_pnl": 8676.25,
+    "share_of_net": 0.194,
+    "span": [
+      "2025-11-04",
+      "2026-03-06"
+    ]
+  },
+  {
+    "file": "data/reports/gap_fade_20260625_205328.csv",
+    "N": 117,
+    "pre_roll_N": 4,
+    "total": 4939.0,
+    "pre_roll_pnl": 944.0,
+    "share_of_net": 0.191,
+    "span": [
+      "2025-01-06",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/tier2_wf_daily_trajectory_20260613_w90.csv",
+    "N": 1096,
+    "pre_roll_N": 17,
+    "total": 4578.2,
+    "pre_roll_pnl": -875.1,
+    "share_of_net": -0.191,
+    "span": [
+      "2025-04-02",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260504_213634.csv",
+    "N": 24077,
+    "pre_roll_N": 1983,
+    "total": 48816.81,
+    "pre_roll_pnl": 9074.5,
+    "share_of_net": 0.186,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/mim_nb_gate1_v2_2026oos.csv",
+    "N": 62,
+    "pre_roll_N": 3,
+    "total": 2115.5,
+    "pre_roll_pnl": -328.25,
+    "share_of_net": -0.155,
+    "span": [
+      "2026-02-02",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/tier2_wf_daily_trajectory_20260613_w182_bearish.csv",
+    "N": 475,
+    "pre_roll_N": 10,
+    "total": 2596.75,
+    "pre_roll_pnl": -395.5,
+    "share_of_net": -0.152,
+    "span": [
+      "2025-07-07",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260615_185354.csv",
+    "N": 107,
+    "pre_roll_N": 5,
+    "total": 1748.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.142,
+    "span": [
+      "2025-05-22",
+      "2026-05-13"
+    ]
+  },
+  {
+    "file": "_bmad-output/diagnostics_yank_sharpe_levers_20260912/trades_reconstructed_noml.csv",
+    "N": 107,
+    "pre_roll_N": 5,
+    "total": 1748.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.142,
+    "span": [
+      "2025-05-22",
+      "2026-05-13"
+    ]
+  },
+  {
+    "file": "_bmad-output/revalidation_yank_frontmonth_20260915/trades_original_noml.csv",
+    "N": 107,
+    "pre_roll_N": 5,
+    "total": 1748.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.142,
+    "span": [
+      "2025-05-22",
+      "2026-05-13"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_143206.csv",
+    "N": 273,
+    "pre_roll_N": 23,
+    "total": 2990.35,
+    "pre_roll_pnl": 409.6,
+    "share_of_net": 0.137,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/ml_training/yank_drift_combined_history.csv",
+    "N": 1328,
+    "pre_roll_N": 17,
+    "total": 6415.85,
+    "pre_roll_pnl": -875.1,
+    "share_of_net": -0.136,
+    "span": [
+      "2025-01-02",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/mim_nb_gate1_v1_2026oos.csv",
+    "N": 82,
+    "pre_roll_N": 3,
+    "total": 1368.5,
+    "pre_roll_pnl": -180.25,
+    "share_of_net": -0.132,
+    "span": [
+      "2026-02-02",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/mim_nb_catstop_s250_pooled.csv",
+    "N": 164,
+    "pre_roll_N": 3,
+    "total": 3568.75,
+    "pre_roll_pnl": -461.0,
+    "share_of_net": -0.129,
+    "span": [
+      "2025-01-24",
+      "2026-05-19"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_142906.csv",
+    "N": 273,
+    "pre_roll_N": 23,
+    "total": 2864.6,
+    "pre_roll_pnl": 321.1,
+    "share_of_net": 0.112,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260704_180517.csv",
+    "N": 26,
+    "pre_roll_N": 1,
+    "total": -295.0,
+    "pre_roll_pnl": -30.0,
+    "share_of_net": 0.102,
+    "span": [
+      "2026-03-11",
+      "2026-06-05"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_142610.csv",
+    "N": 273,
+    "pre_roll_N": 23,
+    "total": 2350.6,
+    "pre_roll_pnl": 186.6,
+    "share_of_net": 0.079,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_full_silver_bullet_ml_6months_20260505_144018.csv",
+    "N": 273,
+    "pre_roll_N": 23,
+    "total": 2350.6,
+    "pre_roll_pnl": 186.6,
+    "share_of_net": 0.079,
+    "span": [
+      "2025-11-04",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/mim_nb_catstop_s500_pooled.csv",
+    "N": 164,
+    "pre_roll_N": 3,
+    "total": 4590.5,
+    "pre_roll_pnl": -328.25,
+    "share_of_net": -0.072,
+    "span": [
+      "2025-01-24",
+      "2026-05-19"
+    ]
+  },
+  {
+    "file": "data/ml_training/yank_drift_bearish_history.csv",
+    "N": 722,
+    "pre_roll_N": 10,
+    "total": 5928.65,
+    "pre_roll_pnl": -395.5,
+    "share_of_net": -0.067,
+    "span": [
+      "2025-01-03",
+      "2026-06-11"
+    ]
+  },
+  {
+    "file": "data/reports/yank_topstep_constrained.csv",
+    "N": 81,
+    "pre_roll_N": 5,
+    "total": 6315.5,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.039,
+    "span": [
+      "2025-05-22",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260615_181838.csv",
+    "N": 82,
+    "pre_roll_N": 5,
+    "total": 7804.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.032,
+    "span": [
+      "2025-05-22",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260615_214013.csv",
+    "N": 82,
+    "pre_roll_N": 5,
+    "total": 7804.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.032,
+    "span": [
+      "2025-05-22",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "data/reports/backtest_1year_20260617_230745.csv",
+    "N": 82,
+    "pre_roll_N": 5,
+    "total": 7804.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.032,
+    "span": [
+      "2025-05-22",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "_bmad-output/diagnostics_yank_sharpe_levers_20260912/trades_reconstructed_ml050.csv",
+    "N": 82,
+    "pre_roll_N": 5,
+    "total": 7804.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.032,
+    "span": [
+      "2025-05-22",
+      "2026-05-04"
+    ]
+  },
+  {
+    "file": "_bmad-output/revalidation_yank_frontmonth_20260915/trades_original_ml.csv",
+    "N": 82,
+    "pre_roll_N": 5,
+    "total": 7804.0,
+    "pre_roll_pnl": -247.5,
+    "share_of_net": -0.032,
+    "span": [
+      "2025-05-22",
+      "2026-05-04"
+    ]
+  }
+]

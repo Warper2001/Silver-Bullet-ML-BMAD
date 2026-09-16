@@ -1,0 +1,86 @@
+{
+  "frozen_csv": {
+    "N": 77,
+    "net_usd": 7861,
+    "WR": 64.9,
+    "PF": 2.017
+  },
+  "corrected_frontmonth": {
+    "N": 77,
+    "net_usd": 7622,
+    "WR": 64.9,
+    "PF": 1.987
+  },
+  "sealed_baseline": {
+    "csv": "mnq_1min_2025.csv",
+    "N": 77,
+    "WR": 64.9,
+    "PF": 2.017,
+    "net_usd": 7861,
+    "source": "2025 subset of data/reports/gap_fade_20260625_205328.csv"
+  },
+  "parity_frozen_matches_sealed": true,
+  "trades_only_in_frozen": [],
+  "trades_only_in_corrected": [],
+  "trades_changed": [
+    {
+      "date": "2025-03-03",
+      "tag": "roll_boundary",
+      "frozen": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 1.768,
+        "outcome": "fill",
+        "pnl_usd": 740.5
+      },
+      "corrected": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 1.81,
+        "outcome": "time",
+        "pnl_usd": 502.0
+      }
+    }
+  ],
+  "identical_trades": 76,
+  "frozen_csv_by_session_kind": {
+    "clean": {
+      "N": 75,
+      "net_usd": 7075.0
+    },
+    "roll_boundary": {
+      "N": 1,
+      "net_usd": 740.5
+    },
+    "interleaved_session": {
+      "N": 1,
+      "net_usd": 45.5
+    }
+  },
+  "corrected_frontmonth_by_session_kind": {
+    "clean": {
+      "N": 75,
+      "net_usd": 7075.0
+    },
+    "roll_boundary": {
+      "N": 1,
+      "net_usd": 502.0
+    },
+    "interleaved_session": {
+      "N": 1,
+      "net_usd": 45.5
+    }
+  },
+  "frozen_csv_clean_sessions_only": {
+    "N": 75,
+    "net_usd": 7075,
+    "WR": 64.0,
+    "PF": 1.916
+  },
+  "corrected_frontmonth_clean_sessions_only": {
+    "N": 75,
+    "net_usd": 7075,
+    "WR": 64.0,
+    "PF": 1.916
+  }
+}

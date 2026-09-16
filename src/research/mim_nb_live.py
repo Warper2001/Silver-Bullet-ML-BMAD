@@ -134,6 +134,18 @@ RTH_LAST = "16:00"
 FULL_SESSION_BARS = 390
 WARMUP_CSV = BASE_DIR / "data" / "processed" / "dollar_bars" / "1_minute" / "mnq_1min_2026_ytd.csv"
 BARS_RAW_CSV = DATA_DIR / "bars_raw.csv"
+# Per-session contract provenance (roll-contamination fix, 2026-09-16). bars_raw.csv
+# carries no contract field and cannot grow one: it is hash-chained and its header was
+# written once at file creation, so widening it means rewriting an append-only file.
+# This companion file carries the contract instead — one row when a session's first RTH
+# bar is handled, plus a mixed=1 row the moment a second contract appears in the same
+# session. Additive: nothing that reads bars_raw.csv needs to know it exists.
+SESSIONS_CSV = DATA_DIR / "sessions.csv"
+# Private key stamped onto every bar dict at FETCH time. It must be taken at fetch and
+# never at handle time: _maybe_roll() runs INSIDE on_bar, so by the time a stale bar is
+# handled self.symbol is already the new contract and a handle-time stamp would mislabel
+# exactly the bar that caused the 2026-09-15 contamination.
+BAR_SYMBOL_KEY = "_fetch_symbol"
 CHECK_MARKS = ENTRY_MARKS | {"16:00"}
 
 # Early-close sessions — sealed-engine parity: the engine skips any session without
@@ -185,6 +197,11 @@ orders_log = ChainedCsv(DATA_DIR / "orders.csv",
 trades_log = ChainedCsv(DATA_DIR / "trades.csv",
                         ["day", "dir", "entry_t", "entry_px", "exit_t", "exit_px",
                          "reason", "pnl_pts", "pnl_usd", "day_pnl_usd"])
+# Session -> contract provenance. New file, so its header is written at creation and
+# tools/verify_chain.py (which derives fields from the file's own header) verifies it
+# without modification.
+sessions_log = ChainedCsv(SESSIONS_CSV,
+                          ["day_et", "symbol", "first_ts_utc", "mixed", "detail"])
 
 
 class MimNbLive:
@@ -222,6 +239,13 @@ class MimNbLive:
         self._running = True
         self._early_close_logged = None   # date already announced as stand-down
         self._last_reconcile_mono = 0.0   # monotonic ts of last stop-fill reconcile
+
+        # Contract provenance of the session in progress (roll-contamination fix)
+        self._session_contract = None       # symbol this session was recorded under
+        self._session_contract_day = None   # ET date str _session_contract refers to
+        self._session_contract_mixed = False  # a 2nd contract appeared this session
+        self._roll_drop_key = None          # (stale_sym, active_sym) announced once
+        self._roll_drop_n = 0               # bars dropped since that announcement
 
         # Combine balance tracking for buffer-aware risk gates
         self._realized_pnl = 0.0       # cumulative realized P&L across all sessions
@@ -453,6 +477,17 @@ class MimNbLive:
             logger.warning("ROLL prev_close re-derived: OLD=%s %s -> NEW=%s %.2f (spread %+.2f pt)",
                            old_sym, f"{old_prev:.2f}" if old_prev is not None else "None",
                            sym, new_prev, spread)
+            # A spread of exactly +0.00 across two different contracts is the
+            # fingerprint of the 2026-09-15 contamination: the lookup handed back the
+            # RETIRED contract's own close, because the bar record carried no contract.
+            # The session-contract filter in _prev_close_for_symbol should now make that
+            # impossible; if it still happens, say so rather than log it as normal.
+            if old_prev is not None and new_prev == old_prev:
+                logger.critical("ROLL prev_close SUSPECT: %s and %s re-derived to the "
+                                "SAME price %.2f (spread +0.00 pt) — signature of a "
+                                "cross-contract carry-over. Treat this session's gap "
+                                "adjustment as UNTRUSTED and check %s",
+                                old_sym, sym, new_prev, SESSIONS_CSV.name)
             self.prev_close = new_prev
         else:
             logger.error("ROLL prev_close re-derivation FAILED for %s — carrying %s forward; "
@@ -470,11 +505,22 @@ class MimNbLive:
         This is a single-session level lookup, not a distribution rebuild, so it does not
         reintroduce the provenance defect. Prefers the recorded bar file; falls back to a
         broker fetch only when the new contract has no local history yet (the normal case
-        at a roll), and logs which source was used."""
+        at a roll), and logs which source was used.
+
+        The bar record itself carries no contract, so a recorded session is usable here
+        ONLY when SESSIONS_CSV says it was `sym` from open to close. Sessions that are
+        unknown (recorded before that file existed) or mixed (a roll landed inside them)
+        fall through to the broker fetch: handing back the retired contract's close is
+        exactly how 2026-09-15 produced `spread +0.00 pt` and left the gap adjustment
+        comparing two different contracts."""
         today_et = datetime.now(ET).date()
         sessions = self._read_rth_sessions(BARS_RAW_CSV, "ts_utc")
+        recorded = self._read_session_symbols()
         for d in sorted(sessions, reverse=True):
             if d >= today_et:
+                continue
+            rec = recorded.get(str(d))
+            if rec is None or rec["mixed"] or rec["symbol"] != sym:
                 continue
             bars = sessions[d]
             if bars[0][0] == RTH_FIRST and any(hm == RTH_LAST for hm, _o, _c in bars):
@@ -516,15 +562,25 @@ class MimNbLive:
     async def _ts_get_bars(self, barsback=1500):
         # Data backend: ProjectX bars (TS-shaped, +1-min-aligned, roll-tracked via
         # self.contract_id) when MIM_NB_DATA_SOURCE=projectx; else TradeStation REST.
+        #
+        # Every returned bar is stamped with the contract THIS request was issued
+        # under — the single fetch point for both backends, and the only place the
+        # answer is knowable. on_bar refuses to let a bar whose stamp is not the active
+        # contract anchor a session (the 2026-09-15 defect).
+        sym = self.symbol
         if self._data_source == "projectx":
-            return await fetch_px_ts_shaped(
+            bars = await fetch_px_ts_shaped(
                 self.http, self.px_auth, self.contract_id,
                 now_utc=datetime.now(timezone.utc), live=self._data_px_live, barsback=barsback)
-        token = await self._ts_token()
-        url = f"{_bars_url(self.symbol)}&barsback={barsback}"
-        r = await self.http.get(url, headers={"Authorization": f"Bearer {token}"})
-        r.raise_for_status()
-        return r.json().get("Bars", [])
+        else:
+            token = await self._ts_token()
+            url = f"{_bars_url(sym)}&barsback={barsback}"
+            r = await self.http.get(url, headers={"Authorization": f"Bearer {token}"})
+            r.raise_for_status()
+            bars = r.json().get("Bars", [])
+        for b in bars:
+            b[BAR_SYMBOL_KEY] = sym
+        return bars
 
     async def _run_shadow_parity(self, ts_bars):
         """Stage-1 shadow: fetch ProjectX bars in parallel and log TS-vs-PX parity to
@@ -602,6 +658,79 @@ class MimNbLive:
             sessions[d].sort(key=lambda r: r[0])
         return sessions
 
+    @staticmethod
+    def _read_session_symbols(path=None):
+        """Contract provenance per session, from SESSIONS_CSV.
+
+        Returns {"YYYY-MM-DD": {"symbol": str, "mixed": bool}}. `mixed` means a roll
+        landed inside that session — either an explicit mixed row, or two rows
+        disagreeing on the contract. `symbol` is the contract the session was first
+        recorded under.
+
+        A session that predates this file is simply ABSENT, and absence is never read
+        as agreement: a caller that needs to know the contract must treat an unrecorded
+        session as unknown and fall back to a source that does know.
+        """
+        p = Path(path if path is not None else SESSIONS_CSV)
+        out = {}
+        if not p.exists():
+            return out
+        try:
+            with p.open(newline="") as fh:
+                for row in csv.DictReader(fh):
+                    d = (row.get("day_et") or "").strip()
+                    sym = (row.get("symbol") or "").strip()
+                    if not d:
+                        continue
+                    rec = out.setdefault(d, {"symbol": sym, "mixed": False})
+                    if str(row.get("mixed") or "0").strip() not in ("", "0"):
+                        rec["mixed"] = True
+                    if not rec["symbol"]:
+                        rec["symbol"] = sym
+                    elif sym and sym != rec["symbol"]:
+                        rec["mixed"] = True
+        except (OSError, csv.Error) as exc:
+            logger.warning("session-contract record unreadable (%s) — every session is "
+                           "treated as unknown contract", exc)
+            return {}
+        return out
+
+    def _note_session_contract(self, day_et, ts_utc, stale_symbol=None):
+        """Record which contract this session's bars were fetched under.
+
+        Append-only, one row per event: the session's first handled RTH bar, and a
+        mixed=1 row the moment a second contract appears in the same session. A restart
+        mid-session appends a second row for the same day; the reader collapses rows by
+        day and treats `mixed` as sticky, so replay is harmless and can only ever make a
+        session MORE suspect, never less.
+        """
+        d = str(day_et)
+        if self._session_contract_day != d:
+            self._session_contract_day = d
+            self._session_contract = None
+            self._session_contract_mixed = False
+        if stale_symbol is not None:
+            if self._session_contract_mixed:
+                return
+            self._session_contract_mixed = True
+            sessions_log.append({"day_et": d, "symbol": self.symbol,
+                                 "first_ts_utc": ts_utc, "mixed": 1,
+                                 "detail": f"bar fetched under {stale_symbol}; active "
+                                           f"contract {self.symbol}"})
+            return
+        if self._session_contract is None:
+            self._session_contract = self.symbol
+            sessions_log.append({"day_et": d, "symbol": self.symbol,
+                                 "first_ts_utc": ts_utc, "mixed": 0, "detail": ""})
+        elif self._session_contract != self.symbol:
+            if not self._session_contract_mixed:
+                self._session_contract_mixed = True
+                sessions_log.append({"day_et": d, "symbol": self.symbol,
+                                     "first_ts_utc": ts_utc, "mixed": 1,
+                                     "detail": f"contract changed mid-session from "
+                                               f"{self._session_contract}"})
+            self._session_contract = self.symbol
+
     def _seed_sigma_from_bars(self):
         """Build sigma_hist from the recorded bar files under the sealed engine's
         whole-day acceptance rule: a session counts only if it starts at 09:31 AND
@@ -609,6 +738,13 @@ class MimNbLive:
         sessions = self._read_rth_sessions(WARMUP_CSV, "timestamp")
         sessions.update(self._read_rth_sessions(BARS_RAW_CSV, "ts_utc"))  # live record wins
         today_et = datetime.now(ET).date()
+        # A session that spans a contract roll is excluded: its moves are |close/open-1|
+        # with the close from one contract and the open from another, ~1% each on
+        # 2026-09-15, which would skew every minute label for the next LOOKBACK_DAYS.
+        # Sessions of any OTHER contract still seed: a move is a dimensionless ratio, so
+        # it is contract-agnostic as long as both ends come from one contract. This gate
+        # therefore cannot starve sigma depth and block entries.
+        recorded = self._read_session_symbols()
         # FAIL CLOSED (prereg Amendment 3 §10.3). The old rule — first bar 09:31 and a
         # 16:00 bar present — admits a session with an arbitrarily large hole in the
         # middle. 2026-07-13 (169 bars) passed it and poisoned the window for 14 sessions.
@@ -619,6 +755,12 @@ class MimNbLive:
         accepted = []
         for d in sorted(sessions):
             if d >= today_et:
+                continue
+            rec = recorded.get(str(d))
+            if rec is not None and rec["mixed"]:
+                logger.warning("SEED REJECT %s: session spans a contract roll (as %s) "
+                               "— its moves divide one contract's close by another's "
+                               "open and contribute nothing", d, rec["symbol"])
                 continue
             labels = {hm for hm, _o, _c in sessions[d]}
             if len(sessions[d]) != len(labels):
@@ -758,6 +900,17 @@ class MimNbLive:
         if todays[0][0] != RTH_FIRST:
             logger.warning("Catch-up: today's %s bar not in the record (first=%s) — "
                            "standing down today", RTH_FIRST, todays[0][0])
+            return
+        # The bar record carries no contract, so re-anchoring on it after a roll would
+        # put back the very open the roll guard rejected: a crash restart
+        # (Restart=on-failure) would silently undo the fix inside the same session. Only
+        # SESSIONS_CSV knows; when it says nothing about today, behaviour is unchanged.
+        rec = self._read_session_symbols().get(str(now_et.date()))
+        if rec is not None and (rec["mixed"] or rec["symbol"] != self.symbol):
+            logger.warning("CATCHUP_ROLLED %s: recorded under %s (mixed=%s) while the "
+                           "active contract is %s — standing down rather than anchor "
+                           "on another contract's open",
+                           now_et.date(), rec["symbol"], rec["mixed"], self.symbol)
             return
         self._new_session(now_et.date())
         skipped_checks = 0
@@ -1090,6 +1243,30 @@ class MimNbLive:
         if et.date() != self.day:
             await self._maybe_roll()       # quarterly contract roll, while flat
             self._new_session(et.date())
+        # ROLL GUARD (2026-09-15). _maybe_roll() runs INSIDE this handler, so the bar
+        # that triggers the date change can have been fetched under the retired contract
+        # while self.symbol is already the new one. That bar anchored open_d at an
+        # MNQU26 price (29127.00) against MNQZ26 marks ~293 pts higher: `c > ub` became
+        # arithmetic rather than signal and forced a long that lost $355. The bar is
+        # recorded (above, unchanged) but may not touch open_d, today_moves, VWAP or
+        # sigma — which leaves open_d None and stands the session down through the
+        # fail-closed path that already exists.
+        fetched_under = bar.get(BAR_SYMBOL_KEY)
+        stale = bool(fetched_under) and fetched_under != self.symbol
+        self._note_session_contract(et.date(), bar["TimeStamp"],
+                                    stale_symbol=fetched_under if stale else None)
+        if stale:
+            key = (fetched_under, self.symbol)
+            if key != self._roll_drop_key:
+                self._roll_drop_key, self._roll_drop_n = key, 0
+                logger.warning("ROLL GUARD: bar %s was fetched under %s but the active "
+                               "contract is %s — dropped before it could anchor the "
+                               "session; %s stands down (no entry, no sigma fold)",
+                               bar["TimeStamp"], fetched_under, self.symbol, et.date())
+            self._roll_drop_n += 1
+            logger.debug("ROLL GUARD: %d bar(s) dropped for %s -> %s",
+                         self._roll_drop_n, fetched_under, self.symbol)
+            return
         if self.open_d is None:
             if hm != "09:31":
                 return  # joined mid-session without the open — stand down today

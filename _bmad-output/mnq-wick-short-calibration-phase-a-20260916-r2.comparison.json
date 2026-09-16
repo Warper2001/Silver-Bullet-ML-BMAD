@@ -1,0 +1,134 @@
+{
+  "initial_directory": "mnq-wick-short-calibration-phase-a-20260916",
+  "corrected_directory": "mnq-wick-short-calibration-phase-a-20260916-r2",
+  "sample_role": "calibration-development-only",
+  "evaluation_allowed": false,
+  "ledgers_byte_identical": [
+    "eligibility.jsonl",
+    "outcomes.jsonl",
+    "sessions.jsonl"
+  ],
+  "counts_identical": true,
+  "changed_summary_fields": [
+    {
+      "path": "statistics/per_eligible_session/net_total_dollars/3.22/envelope/interval/0",
+      "initial": -13.41344841713789,
+      "corrected": -13.413448417137891
+    },
+    {
+      "path": "statistics/per_eligible_session/net_total_dollars/3.22/envelope/interval/1",
+      "initial": -3.1834447867456035,
+      "corrected": -3.1834447867456053
+    },
+    {
+      "path": "statistics/per_eligible_session/net_total_dollars/3.22/iso_week_clustered/interval/0",
+      "initial": -13.41344841713789,
+      "corrected": -13.413448417137891
+    },
+    {
+      "path": "statistics/per_eligible_session/net_total_dollars/3.22/iso_week_clustered/interval/1",
+      "initial": -3.1834447867456035,
+      "corrected": -3.1834447867456053
+    },
+    {
+      "path": "statistics/per_eligible_session/net_total_dollars/3.22/session_clustered/interval/1",
+      "initial": -3.7350961158333833,
+      "corrected": -3.735096115833385
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/1.22/envelope/interval/0",
+      "initial": -9.673314248242033,
+      "corrected": -9.673314248242034
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/1.22/envelope/interval/1",
+      "initial": -0.9376259226981363,
+      "corrected": -0.9376259226981365
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/1.22/iso_week_clustered/interval/0",
+      "initial": -9.673314248242033,
+      "corrected": -9.673314248242034
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/1.22/iso_week_clustered/interval/1",
+      "initial": -0.9376259226981363,
+      "corrected": -0.9376259226981365
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/1.22/session_clustered/interval/1",
+      "initial": -1.2986633398661835,
+      "corrected": -1.2986633398661838
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/2.22/descriptive/mean",
+      "initial": -6.305470085470085,
+      "corrected": -6.305470085470086
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/2.22/envelope/interval/0",
+      "initial": -10.673314248242033,
+      "corrected": -10.673314248242034
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/2.22/envelope/interval/1",
+      "initial": -1.9376259226981363,
+      "corrected": -1.9376259226981367
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/2.22/iso_week_clustered/interval/0",
+      "initial": -10.673314248242033,
+      "corrected": -10.673314248242034
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/2.22/iso_week_clustered/interval/1",
+      "initial": -1.9376259226981363,
+      "corrected": -1.9376259226981367
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/2.22/session_clustered/interval/1",
+      "initial": -2.2986633398661835,
+      "corrected": -2.298663339866184
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/3.22/descriptive/mean",
+      "initial": -7.305470085470085,
+      "corrected": -7.305470085470086
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/3.22/envelope/interval/0",
+      "initial": -11.673314248242033,
+      "corrected": -11.673314248242034
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/3.22/envelope/interval/1",
+      "initial": -2.9376259226981363,
+      "corrected": -2.9376259226981367
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/3.22/iso_week_clustered/interval/0",
+      "initial": -11.673314248242033,
+      "corrected": -11.673314248242034
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/3.22/iso_week_clustered/interval/1",
+      "initial": -2.9376259226981363,
+      "corrected": -2.9376259226981367
+    },
+    {
+      "path": "statistics/per_signal/net_dollars/3.22/session_clustered/interval/1",
+      "initial": -3.2986633398661835,
+      "corrected": -3.298663339866184
+    }
+  ],
+  "largest_absolute_difference": 1.7763568394002505e-15,
+  "initial_output_sha256": {
+    "eligibility.jsonl": "3d1ccee621821ccd101e2818557b782296b00886e6ed9edfcce86a9e8ba1feb3",
+    "report.md": "046e98d0504b1ad2d2d8f89b0aef43c89903426e87bc40c222a9f5b1e1104acb",
+    "sessions.jsonl": "efb19bdba4117834f4df26f0a5d0eeaa77c84bd448a08e622a46a07c014ade8a",
+    "report.json": "1aa42110f376910751da6e462f4e37b087d0e9556ecf0d544a31c061d5c43086",
+    "outcomes.jsonl": "8caabb1539e42d3e224a030ce5cc2450936781adf1894f18f0b0afa975c48fc9",
+    "COMPLETE.json": "a9947d0c3c0c772f29d635a3277aea845f592e58ab5d5b7977629b0c5409ca5f",
+    "manifest.json": "bc2ddd9d95e8c95658fdda72259e266dd6c62d14e9f65005205e8d3200521779"
+  }
+}

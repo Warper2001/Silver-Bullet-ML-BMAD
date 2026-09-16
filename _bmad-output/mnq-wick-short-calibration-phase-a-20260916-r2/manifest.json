@@ -1,0 +1,12 @@
+{
+  "evaluation_allowed": false,
+  "output_sha256": {
+    "eligibility.jsonl": "3d1ccee621821ccd101e2818557b782296b00886e6ed9edfcce86a9e8ba1feb3",
+    "outcomes.jsonl": "8caabb1539e42d3e224a030ce5cc2450936781adf1894f18f0b0afa975c48fc9",
+    "report.json": "b0eafae80426cd95c7d934c9e9c02bc842d2a27b834323f23a1cba2cf280c6bc",
+    "report.md": "fa6fade96bedfdacf0ffc039585ee171b84c5904500106bc7647998eb84206d6",
+    "sessions.jsonl": "efb19bdba4117834f4df26f0a5d0eeaa77c84bd448a08e622a46a07c014ade8a"
+  },
+  "sample_role": "calibration-development-only",
+  "schema_version": "mnq-wick-short-calibration-phase-a/v1"
+}

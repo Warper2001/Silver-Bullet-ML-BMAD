@@ -1,0 +1,492 @@
+{
+  "evaluation_allowed": false,
+  "limitations": [
+    "Diagnostic only; no exclusion selected after outcomes is adopted as a strategy filter.",
+    "Contract labels establish source labels, not trade execution, front-month accuracy, or a future edge.",
+    "No sealed holdout, strategy mechanics, costs, eligibility, Phase B, orders, services, or trade records were accessed or changed."
+  ],
+  "march_april_session_contract_evidence": [
+    {
+      "contracts": [
+        "MNQH25",
+        "MNQM25"
+      ],
+      "eligible": false,
+      "exclusion_reasons": [
+        "MIXED_CONTRACT"
+      ],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-03-03"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -246.5,
+      "recorded_outcome_count": 7,
+      "session_id": "2025-03-04"
+    },
+    {
+      "contracts": [
+        "MNQH25",
+        "MNQM25"
+      ],
+      "eligible": false,
+      "exclusion_reasons": [
+        "MIXED_CONTRACT"
+      ],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-03-05"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 57.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-06"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -8.0,
+      "recorded_outcome_count": 3,
+      "session_id": "2025-03-07"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -234.5,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-03-10"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -23.0,
+      "recorded_outcome_count": 3,
+      "session_id": "2025-03-11"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 2.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-12"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-03-13"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -96.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-14"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -36.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-17"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -8.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-18"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 11.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-19"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 13.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-20"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 8.5,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-03-21"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-03-24"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-03-25"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 21.0,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-03-26"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 9.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-27"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -18.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-03-28"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -80.5,
+      "recorded_outcome_count": 4,
+      "session_id": "2025-03-31"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-04-01"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-04-02"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -105.5,
+      "recorded_outcome_count": 5,
+      "session_id": "2025-04-03"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -95.0,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-04-04"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -29.0,
+      "recorded_outcome_count": 3,
+      "session_id": "2025-04-07"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 88.5,
+      "recorded_outcome_count": 5,
+      "session_id": "2025-04-08"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -630.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-09"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -198.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-10"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -53.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-11"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -69.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-14"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -64.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-15"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 19.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-16"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -199.5,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-04-17"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -36.0,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-04-21"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -12.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-22"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-04-23"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 0.0,
+      "recorded_outcome_count": 0,
+      "session_id": "2025-04-24"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 83.0,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-25"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": 103.5,
+      "recorded_outcome_count": 1,
+      "session_id": "2025-04-28"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -31.0,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-04-29"
+    },
+    {
+      "contracts": [
+        "MNQM25"
+      ],
+      "eligible": true,
+      "exclusion_reasons": [],
+      "recorded_gross_dollars": -66.5,
+      "recorded_outcome_count": 2,
+      "session_id": "2025-04-30"
+    }
+  ],
+  "phase_a_hashes": {
+    "mnq-wick-short-calibration-phase-a-20260916": {
+      "COMPLETE.json": "a9947d0c3c0c772f29d635a3277aea845f592e58ab5d5b7977629b0c5409ca5f",
+      "manifest.json": "bc2ddd9d95e8c95658fdda72259e266dd6c62d14e9f65005205e8d3200521779",
+      "report.json": "1aa42110f376910751da6e462f4e37b087d0e9556ecf0d544a31c061d5c43086"
+    },
+    "mnq-wick-short-calibration-phase-a-20260916-r2": {
+      "COMPLETE.json": "e4a9d4e10964546a077b5d82270ae825826ac95859f937263909aa7cd895a3f7",
+      "manifest.json": "6aeb7869658fbfc2ad57ec7385ad82175ef9e925af8ab3eb88dfeecf6835726e",
+      "report.json": "b0eafae80426cd95c7d934c9e9c02bc842d2a27b834323f23a1cba2cf280c6bc"
+    }
+  },
+  "pre_roll_mnqm25": {
+    "classification": "CONTAMINATED_DIAGNOSTIC_ONLY",
+    "gross_dollars": -549.0,
+    "net_dollars": {
+      "1.22": -570.96,
+      "2.22": -588.96,
+      "3.22": -606.96
+    },
+    "outcome_count": 18,
+    "session_count": 8,
+    "session_ids": [
+      "2025-03-04",
+      "2025-03-06",
+      "2025-03-07",
+      "2025-03-10",
+      "2025-03-11",
+      "2025-03-12",
+      "2025-03-13",
+      "2025-03-14"
+    ]
+  },
+  "r2_ledger": {
+    "eligibility_rows": 576,
+    "outcome_rows": 585,
+    "outcomes_mapped_to_raw_same_contract_rth_components": 585
+  },
+  "roll_calendar": {
+    "lead_month_transition": "2025-03-17",
+    "source": "https://www.cmegroup.com/trading/equity-index/rolldates.html"
+  },
+  "schema_version": "mnq-wick-short-source-audit/v1",
+  "source": {
+    "decoded_after_hash_verification": true,
+    "path": "/root/mnq_historical.json",
+    "sha256": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924"
+  },
+  "source_session_integrity": {
+    "eligible_single_contract_complete_sessions": 515,
+    "incomplete_and_mixed_sessions": 40,
+    "incomplete_sessions": 61,
+    "mixed_contract_sessions": 40,
+    "observed_rth_sessions": 576
+  },
+  "status": "COMPLETE_DIAGNOSTIC_ONLY"
+}

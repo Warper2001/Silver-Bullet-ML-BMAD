@@ -1,0 +1,17 @@
+{
+  "study_sealed_functions": {
+    "N": 77,
+    "net_usd": 7861,
+    "WR": 64.9,
+    "PF": 2.017
+  },
+  "replay_loop": {
+    "N": 77,
+    "net_usd": 7861,
+    "WR": 64.9,
+    "PF": 2.017
+  },
+  "only_in_study": [],
+  "only_in_replay": [],
+  "differing": []
+}

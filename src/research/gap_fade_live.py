@@ -74,6 +74,15 @@ CONTRACTS      = 1
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 TRADER_ID = "trader-gap-fade"
+
+# --replay parity baseline: the 2025 rows of the sealed Gate-0 trade list. Verified
+# 2026-09-16 against that list and against the sealed study's own functions; every
+# commit of this file since 2026-06-25 reproduces it. Used only by _run_replay.
+SEALED_PARITY_2025 = {
+    "csv": "mnq_1min_2025.csv",
+    "N": 77, "WR": 64.9, "PF": 2.017, "net_usd": 7861,
+    "source": "2025 subset of data/reports/gap_fade_20260625_205328.csv",
+}
 ET        = pytz.timezone("America/New_York")
 BARSBACK  = 3000    # ~50h of 1-min bars — covers 2 full prior RTH sessions
 
@@ -408,10 +417,22 @@ def _clear_state():
 def _run_replay(csv_path: str) -> None:
     """Feed a historical 1-min bar CSV through the frozen strategy logic.
 
-    Should reproduce the sealed Gate-0 result for mnq_1min_2025.csv:
-      N=78, WR≈62.8%, PF≈1.760, Net≈$6,462
+    Baseline for mnq_1min_2025.csv — the 2025 rows of the sealed Gate-0 trade list
+    `data/reports/gap_fade_20260625_205328.csv`:
+      N=77, WR 64.9%, PF 2.017, Net $7,861   (see SEALED_PARITY_2025)
 
-    A mismatch means the live path has drifted from the pre-registered spec.
+    Sealed Gate-0 itself is the 2025+2026-YTD combined run: N=117, PF 1.761, Net $9,878
+    (`_bmad-output/gap1_friday_review_20260704.md`). This replay reads whatever CSV it is
+    given, so on the 2025 file it reproduces the 2025 subset, not that combined figure.
+
+    Corrected 2026-09-16: the previous docstring claimed N=78, WR 62.8%, PF 1.760,
+    Net $6,462. Those numbers never matched anything — they blend the combined run's
+    WR/PF with a 2025-ish N — and every commit of this file since 2026-06-25 produces
+    N=77/PF 2.017, as do the sealed study's own functions. Diagnosis:
+    `_bmad-output/diagnostics_gap_fade_parity_20260916/`. No logic changed.
+
+    A mismatch against SEALED_PARITY_2025 means the live path has drifted from the
+    pre-registered spec.
     """
     import numpy as np
     import pandas as pd
@@ -468,6 +489,13 @@ def _run_replay(csv_path: str) -> None:
     gw   = pnls[wins].sum(); gl = abs(pnls[losses].sum())
     pf   = gw / gl if gl > 0 else float("inf")
     print(f"N={len(trades)}, WR={wins.mean()*100:.1f}%, PF={pf:.3f}, Net=${pnls.sum():.0f}")
+    if Path(csv_path).name == SEALED_PARITY_2025["csv"]:
+        got = (len(trades), round(float(wins.mean()) * 100, 1), round(float(pf), 3),
+               round(float(pnls.sum())))
+        want = (SEALED_PARITY_2025["N"], SEALED_PARITY_2025["WR"],
+                SEALED_PARITY_2025["PF"], SEALED_PARITY_2025["net_usd"])
+        print(f"PARITY: {'PASS' if got == want else 'MISMATCH'} — got {got}, sealed baseline {want}"
+              f"  ({SEALED_PARITY_2025['source']})")
     by_month: dict = {}
     for t in trades:
         m = str(t["date"])[:7]
@@ -1086,7 +1114,8 @@ def main():
         "--replay", metavar="CSV",
         help=(
             "Parity check: replay a 1-min bar CSV through the frozen strategy logic. "
-            "Should reproduce N=78, WR≈62.8%%, PF≈1.760 on mnq_1min_2025.csv."
+            "On mnq_1min_2025.csv it must reproduce the sealed 2025 baseline "
+            "N=77, WR 64.9%%, PF 2.017, Net $7,861 and print PARITY: PASS."
         ),
     )
     args = parser.parse_args()

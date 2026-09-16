@@ -1,0 +1,219 @@
+{
+  "prereg": "151f1d05499da6f951d0743399c74f9caf76ee32",
+  "sealed_gate0": {
+    "N": 117,
+    "net_usd": 9878,
+    "WR": 62.4,
+    "PF": 1.761
+  },
+  "corrected_gate0": {
+    "N": 115,
+    "net_usd": 8281,
+    "WR": 61.7,
+    "PF": 1.646
+  },
+  "window": [
+    "2025-01-06",
+    "2026-06-11"
+  ],
+  "bars": {
+    "2025_frontmonth": 281645,
+    "2026_raw_prerolldropped_sessions": [
+      "2026-03-01",
+      "2026-03-02",
+      "2026-03-03",
+      "2026-03-04",
+      "2026-03-05",
+      "2026-03-06"
+    ],
+    "2026_raw_pre_roll": 56100,
+    "2026_csv_post_roll": 89928
+  },
+  "skipped_no_same_contract_prior_close": [
+    {
+      "date": "2025-03-03",
+      "contract": "MNQM25",
+      "reason": "no prior-session RTH close in this contract"
+    },
+    {
+      "date": "2025-06-02",
+      "contract": "MNQU25",
+      "reason": "no prior-session RTH close in this contract"
+    },
+    {
+      "date": "2026-03-12",
+      "contract": "MNQM26",
+      "reason": "no prior-session RTH close in this contract"
+    }
+  ],
+  "by_segment": {
+    "2025": {
+      "N": 76,
+      "net_usd": 7120.5
+    },
+    "2026 Jan-Feb": {
+      "N": 12,
+      "net_usd": 932.0
+    },
+    "2026-03-12..05-19 holdout, front month": {
+      "N": 19,
+      "net_usd": -1165.0
+    },
+    "2026-05-20..06-11 post-holdout": {
+      "N": 8,
+      "net_usd": 1393.5
+    }
+  },
+  "sealed_by_segment": {
+    "2025": {
+      "N": 77,
+      "net_usd": 7861.0
+    },
+    "2026 Jan-Feb": {
+      "N": 8,
+      "net_usd": 149.0
+    },
+    "2026-03-01..03-11 pre-roll": {
+      "N": 4,
+      "net_usd": 1888.0
+    },
+    "2026-03-12..05-19 holdout, front month": {
+      "N": 20,
+      "net_usd": -1413.5
+    },
+    "2026-05-20..06-11 post-holdout": {
+      "N": 8,
+      "net_usd": 1393.5
+    }
+  },
+  "only_in_sealed": [
+    "2025-03-03",
+    "2026-02-09",
+    "2026-03-02",
+    "2026-03-03",
+    "2026-03-05",
+    "2026-03-09",
+    "2026-03-12"
+  ],
+  "only_in_corrected": [
+    "2026-01-12",
+    "2026-01-19",
+    "2026-01-27",
+    "2026-01-28",
+    "2026-02-02"
+  ],
+  "changed": [
+    {
+      "date": "2026-01-05",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-01-05",
+        "outcome": "time",
+        "pnl_usd": 4.5
+      },
+      "corrected": {
+        "date": "2026-01-05",
+        "dir": "short",
+        "gap_pct": 0.94,
+        "outcome": "time",
+        "pnl_usd": -2.5
+      }
+    },
+    {
+      "date": "2026-01-14",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-01-14",
+        "outcome": "stop",
+        "pnl_usd": -600.0
+      },
+      "corrected": {
+        "date": "2026-01-14",
+        "dir": "long",
+        "gap_pct": 0.591,
+        "outcome": "stop",
+        "pnl_usd": -612.0
+      }
+    },
+    {
+      "date": "2026-01-15",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-01-15",
+        "outcome": "time",
+        "pnl_usd": 176.5
+      },
+      "corrected": {
+        "date": "2026-01-15",
+        "dir": "short",
+        "gap_pct": 1.258,
+        "outcome": "time",
+        "pnl_usd": 177.5
+      }
+    },
+    {
+      "date": "2026-01-22",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-01-22",
+        "outcome": "time",
+        "pnl_usd": 40.5
+      },
+      "corrected": {
+        "date": "2026-01-22",
+        "dir": "short",
+        "gap_pct": 0.984,
+        "outcome": "time",
+        "pnl_usd": 19.0
+      }
+    },
+    {
+      "date": "2026-02-05",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-02-05",
+        "outcome": "time",
+        "pnl_usd": -7.5
+      },
+      "corrected": {
+        "date": "2026-02-05",
+        "dir": "long",
+        "gap_pct": 0.941,
+        "outcome": "time",
+        "pnl_usd": 28.0
+      }
+    },
+    {
+      "date": "2026-02-11",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-02-11",
+        "outcome": "fill",
+        "pnl_usd": 430.0
+      },
+      "corrected": {
+        "date": "2026-02-11",
+        "dir": "short",
+        "gap_pct": 0.872,
+        "outcome": "fill",
+        "pnl_usd": 440.0
+      }
+    },
+    {
+      "date": "2026-02-19",
+      "segment": "2026 Jan-Feb",
+      "sealed": {
+        "date": "2026-02-19",
+        "outcome": "time",
+        "pnl_usd": -168.5
+      },
+      "corrected": {
+        "date": "2026-02-19",
+        "dir": "long",
+        "gap_pct": 0.54,
+        "outcome": "time",
+        "pnl_usd": -131.0
+      }
+    }
+  ]
+}

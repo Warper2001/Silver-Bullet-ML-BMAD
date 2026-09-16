@@ -49,6 +49,7 @@ Quant research plus live trading bots for one operator: MNQ on a Topstep combine
 - Replaying bars through a trader class writes real trade-log rows under `logs/`, and YANK's also writes `data/trades.db` outside backfill mode; only `tier2_streaming_working.TradeLogger(persist=False)` is sandboxed — use it or a standalone pandas engine.
 - Tuesday exclusion and the M15 CHoCH constants (`SWING_R`, `CHOCH_ATR_MULT`) are hardcoded in the trader files; `tuesday_exclusion` in the YAML has no effect.
 - On a combine account reset, update `COMBINE_EPOCH_START_FALLBACK` in `src/research/mim_nb_live.py` and `PROJECTX_ACCOUNT_ID` in every unit that sets it — a stale epoch leaks the retired account's trades into the new balance.
+- **The MNQ 1-min CSVs are not front-month everywhere.** `mnq_1min_2025.csv` interleaves two contracts minute by minute in roll weeks (27 RTH sessions, fake ±240-pt bars), and `mnq_1min_2026_ytd.csv` — plus its sealed-holdout copy — is the deferred MNQM26 until the 2026-03-12 roll. Both defects inflate backtests: 11 pre-roll days supplied a fifth of GAP-1's sealed Gate-0 net, and back-month Jan–Feb 2026 produced most of YANK's. Before trusting any window that touches a roll, rebuild front-month bars (`_bmad-output/diagnostics_gap_fade_splice_20260916/rebuild_2025_frontmonth.py`) and take each session's prior close from its own contract. Whole-series price adjustment is not a fix for percentage-triggered strategies — it moves the trigger. Exposure triage: `_bmad-output/diagnostics_march_roll_exposure_20260916/`.
 
 <!-- /bmad:context -->
 

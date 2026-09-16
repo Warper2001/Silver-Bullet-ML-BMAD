@@ -1,0 +1,41 @@
+{
+  "frontmonth_unadjusted": {
+    "N": 77,
+    "net_usd": 7622,
+    "WR": 64.9,
+    "PF": 1.987
+  },
+  "same_contract_prior_close": {
+    "N": 76,
+    "net_usd": 7120,
+    "WR": 64.5,
+    "PF": 1.922
+  },
+  "boundary_sessions": [
+    "2025-03-03",
+    "2025-06-02",
+    "2025-09-02",
+    "2025-12-01"
+  ],
+  "skipped_no_prior_in_contract": [
+    {
+      "date": "2025-03-03",
+      "contract": "MNQM25",
+      "reason": "no prior-session close in this contract"
+    },
+    {
+      "date": "2025-06-02",
+      "contract": "MNQU25",
+      "reason": "no prior-session close in this contract"
+    }
+  ],
+  "only_in_unadjusted": [
+    "2025-03-03"
+  ],
+  "only_in_fixed": [],
+  "changed": [],
+  "only_boundary_sessions_touched": true,
+  "sessions_touched": [
+    "2025-03-03"
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "segments": [
+    "MNQH25",
+    "MNQM25",
+    "MNQU25",
+    "MNQZ25",
+    "MNQH26"
+  ],
+  "offsets_pts": {
+    "MNQH26": 0.0,
+    "MNQZ25": 253.0,
+    "MNQU25": 487.25,
+    "MNQM25": 713.5,
+    "MNQH25": 933.75
+  },
+  "roll_spreads": {
+    "MNQH25->MNQM25": {
+      "n_pairs": 809,
+      "median": 220.25,
+      "iqr": [
+        212.75,
+        225.75
+      ]
+    },
+    "MNQM25->MNQH25": {
+      "n_pairs": 808,
+      "median": -220.5,
+      "iqr": [
+        -225.25,
+        -213.25
+      ]
+    },
+    "MNQM25->MNQU25": {
+      "n_pairs": 1681,
+      "median": 226.25,
+      "iqr": [
+        223.5,
+        228.5
+      ]
+    },
+    "MNQU25->MNQM25": {
+      "n_pairs": 1680,
+      "median": -226.25,
+      "iqr": [
+        -228.75,
+        -223.5
+      ]
+    },
+    "MNQU25->MNQZ25": {
+      "n_pairs": 1690,
+      "median": 234.25,
+      "iqr": [
+        232.25,
+        236.0
+      ]
+    },
+    "MNQZ25->MNQU25": {
+      "n_pairs": 1689,
+      "median": -234.0,
+      "iqr": [
+        -236.25,
+        -232.0
+      ]
+    },
+    "MNQZ25->MNQH26": {
+      "n_pairs": 1673,
+      "median": 253.0,
+      "iqr": [
+        250.5,
+        255.25
+      ]
+    },
+    "MNQH26->MNQZ25": {
+      "n_pairs": 1672,
+      "median": -253.0,
+      "iqr": [
+        -255.25,
+        -250.5
+      ]
+    }
+  },
+  "bars": 281645,
+  "bars_without_raw_label": 0,
+  "per_segment_shift_is_constant": true,
+  "observed_shifts": {
+    "MNQH25": [
+      933.75
+    ],
+    "MNQM25": [
+      713.5
+    ],
+    "MNQU25": [
+      487.25
+    ],
+    "MNQZ25": [
+      253.0
+    ],
+    "MNQH26": [
+      0.0
+    ]
+  },
+  "out_csv": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/gapfade-splice-sensitivity/_bmad-output/diagnostics_gap_fade_splice_20260916/mnq_1min_2025_frontmonth_adjusted.csv"
+}

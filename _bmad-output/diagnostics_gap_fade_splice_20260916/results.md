@@ -44,10 +44,60 @@ So of the sealed $7,861: **$7,075 is clean**, $740.50 comes from the roll-bounda
 - **GAP-1's sealed 2025 edge is not an artifact of the roll splices.** Correcting them moves PF 2.017 → 1.987.
 - **The sealed number does lean ~9% on one distorted trade.** That is a data-construction artifact nobody had identified, and it is worth knowing before the strategy's promotion gate is judged — especially since that gate is already UNDERPOWERED at N=30 (`_bmad-output/diagnostics_gap_fade_power_gate_20260913/`).
 - **No seal, parameter or live setting is changed by this.** The sealed Gate-0 figure (2025+2026 combined, N=117, PF 1.761) still includes the back-month Jan–Feb 2026 rows; re-scoring that needs its own pre-registration.
-- **A future clean rebuild should also span the roll**, e.g. by back-adjusting each contract segment by the spread measured at the switch, so gaps are never taken across contracts.
+- **The roll boundary still needs handling** so gaps are never taken across contracts. *(Superseded the same day — see the second half of this file. Back-adjustment was tried and rejected as not neutral for a percentage-triggered strategy; the fix is to take the prior close from the session's own contract, as live already does.)*
 
 ## Outputs
 
 - `rebuild_2025_frontmonth.py`, `rebuild_meta.json`, `mnq_1min_2025_frontmonth.csv` (the corrected 2025 bars, sha `f1fe5b36…`)
 - `measure_splice.py`, `splice_results.json`
 - this file
+
+---
+
+# The roll-boundary artifact, fixed (2026-09-16, same day)
+
+## Live GAP-1 never had this bug
+
+`gap_fade_live.py` fetches `barsback=3000` bars for **one symbol** (`_fetch_bars`, `self.symbol`), so the prior RTH close and today's RTH open always come from the same contract. The live path cannot measure a gap across a contract change. On the first day after the operator switches `GAP_FADE_SYMBOL`, the new contract's own prior session is thin, and `MIN_RTH_BARS = 300` makes the bot skip the day rather than trade a bad reference.
+
+**The artifact is a property of the research series only** — an unadjusted continuous splice of four contracts.
+
+## Whole-series adjustment was tried and rejected
+
+**Point (Panama) back-adjustment** (`backadjust_2025.py`): each segment shifted by the cumulative roll spread, estimated from adjacent raw minutes whose contract label changes (e.g. MNQZ25→MNQH26 = 253.0 pts, n=1,673 pairs, IQR 250.5–255.25). The shift is provably constant within each segment (asserted), and it does fix the March gap: 1.768% → 0.726%, the real overnight move.
+
+**But it is not neutral for this strategy.** GAP-1 triggers on 0.5% **of the prior close**, and shifting levels changes that denominator. Replaying the back-adjusted series gives N=77, PF 1.968, $7,481 — which includes two unintended changes: 2025-03-27 drops out and 2025-06-02 appears, purely because their gap percentages crossed the threshold on rescaled levels. Ratio adjustment has the mirror-image flaw: it preserves percentages but rescales historical point P&L, and GAP-1 is paid in points. **Neither is a clean fix for a percentage-triggered, point-paid strategy.**
+
+## The fix: take the prior close from the same contract, as live does
+
+`same_contract_prior_close.py` keeps the front-month bars and the strategy's own loop, and changes exactly one input: each session's prior RTH close is read from **that session's own contract** in the pinned raw extract. Both contracts trade during roll weeks, so the incoming contract has its own prior session whenever it traded.
+
+**Result — only boundary sessions are touched (asserted, and true: one session):**
+
+| 2025 | N | WR | PF | Net |
+|---|---|---|---|---|
+| Frozen CSV (sealed baseline) | 77 | 64.9% | 2.017 | $7,861 |
+| Front-month rebuild (splices fixed) | 77 | 64.9% | 1.987 | $7,622 |
+| **+ same-contract prior close (boundary fixed)** | **76** | **64.5%** | **1.922** | **$7,120** |
+
+- **2025-03-03 drops out entirely.** Its incoming contract (MNQM25) has no prior-session RTH close in the data, so there is no honest gap to measure — exactly the case where live skips the day. The distorted +$740.50 (frozen) / +$502.00 (front-month) trade is gone.
+- 2025-06-02 is likewise skipped for want of a same-contract prior close; it produced no trade in the sealed run either.
+- 2025-09-02 and 2025-12-01 were never affected.
+- **No other session changes.** Every non-boundary trade keeps its date, direction, outcome and P&L.
+
+## The corrected 2025 figure
+
+**N=76, WR 64.5%, PF 1.922, Net $7,120.** Against the sealed $7,861 that is **−$741 (−9.4%)**: −$239 from the roll splices and −$502 from removing the boundary trade.
+
+**Cite this for GAP-1's 2025 in-sample performance.** The strategy's edge survives the correction; it is simply ~9% smaller than the sealed number.
+
+## What deliberately did not change
+
+- **`SEALED_PARITY_2025` in `gap_fade_live.py` stays as it is.** It exists to detect drift against the frozen sealed artifact, and it must keep matching that artifact (N=77, PF 2.017) to do its job. The corrected figure is a separate research number, not a new parity target.
+- **No strategy rule, parameter or live setting changed**, so no pre-registration was required. The harness mirrors live behaviour; it does not alter it.
+- **The sealed Gate-0 headline (2025+2026 combined, N=117, PF 1.761) is untouched** and still carries the back-month Jan–Feb 2026 rows. Re-scoring it needs its own prereg, and would want the same same-contract treatment at the 2026 roll.
+
+## Added outputs
+
+- `backadjust_2025.py`, `backadjust_meta.json`, `measure_backadjusted.py`, `backadjusted_results.json` — the rejected whole-series adjustment, kept as the evidence for rejecting it
+- `same_contract_prior_close.py`, `same_contract_results.json` — the fix

@@ -1,0 +1,1395 @@
+{
+  "summaries": {
+    "frozen": {
+      "N": 77,
+      "net_usd": 7861,
+      "WR": 64.9,
+      "PF": 2.017
+    },
+    "frontmonth": {
+      "N": 77,
+      "net_usd": 7622,
+      "WR": 64.9,
+      "PF": 1.987
+    },
+    "frontmonth_backadjusted": {
+      "N": 77,
+      "net_usd": 7481,
+      "WR": 64.9,
+      "PF": 1.968
+    }
+  },
+  "boundary_sessions": [
+    "2025-03-03",
+    "2025-06-02",
+    "2025-09-02",
+    "2025-12-01"
+  ],
+  "changed_frontmonth_vs_adjusted": [
+    {
+      "date": "2025-01-06",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-06",
+        "dir": "short",
+        "gap_pct": 1.001,
+        "outcome": "time",
+        "pnl_usd": -137.5
+      },
+      "adjusted": {
+        "date": "2025-01-06",
+        "dir": "short",
+        "gap_pct": 0.959,
+        "outcome": "time",
+        "pnl_usd": -137.5
+      }
+    },
+    {
+      "date": "2025-01-13",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-13",
+        "dir": "long",
+        "gap_pct": 1.241,
+        "outcome": "time",
+        "pnl_usd": 226.5
+      },
+      "adjusted": {
+        "date": "2025-01-13",
+        "dir": "long",
+        "gap_pct": 1.188,
+        "outcome": "time",
+        "pnl_usd": 226.5
+      }
+    },
+    {
+      "date": "2025-01-14",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-14",
+        "dir": "short",
+        "gap_pct": 0.578,
+        "outcome": "fill",
+        "pnl_usd": 242.5
+      },
+      "adjusted": {
+        "date": "2025-01-14",
+        "dir": "short",
+        "gap_pct": 0.554,
+        "outcome": "fill",
+        "pnl_usd": 242.5
+      }
+    },
+    {
+      "date": "2025-01-15",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-15",
+        "dir": "short",
+        "gap_pct": 1.716,
+        "outcome": "time",
+        "pnl_usd": -165.0
+      },
+      "adjusted": {
+        "date": "2025-01-15",
+        "dir": "short",
+        "gap_pct": 1.642,
+        "outcome": "time",
+        "pnl_usd": -165.0
+      }
+    },
+    {
+      "date": "2025-01-20",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-20",
+        "dir": "short",
+        "gap_pct": 0.655,
+        "outcome": "time",
+        "pnl_usd": 73.0
+      },
+      "adjusted": {
+        "date": "2025-01-20",
+        "dir": "short",
+        "gap_pct": 0.627,
+        "outcome": "time",
+        "pnl_usd": 73.0
+      }
+    },
+    {
+      "date": "2025-01-22",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-22",
+        "dir": "short",
+        "gap_pct": 0.92,
+        "outcome": "time",
+        "pnl_usd": -294.0
+      },
+      "adjusted": {
+        "date": "2025-01-22",
+        "dir": "short",
+        "gap_pct": 0.882,
+        "outcome": "time",
+        "pnl_usd": -294.0
+      }
+    },
+    {
+      "date": "2025-01-23",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-23",
+        "dir": "long",
+        "gap_pct": 0.567,
+        "outcome": "time",
+        "pnl_usd": 112.0
+      },
+      "adjusted": {
+        "date": "2025-01-23",
+        "dir": "long",
+        "gap_pct": 0.544,
+        "outcome": "time",
+        "pnl_usd": 112.0
+      }
+    },
+    {
+      "date": "2025-01-27",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-27",
+        "dir": "long",
+        "gap_pct": 3.621,
+        "outcome": "time",
+        "pnl_usd": 72.5
+      },
+      "adjusted": {
+        "date": "2025-01-27",
+        "dir": "long",
+        "gap_pct": 3.473,
+        "outcome": "time",
+        "pnl_usd": 72.5
+      }
+    },
+    {
+      "date": "2025-01-30",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-01-30",
+        "dir": "short",
+        "gap_pct": 0.575,
+        "outcome": "fill",
+        "pnl_usd": 247.5
+      },
+      "adjusted": {
+        "date": "2025-01-30",
+        "dir": "short",
+        "gap_pct": 0.551,
+        "outcome": "fill",
+        "pnl_usd": 247.5
+      }
+    },
+    {
+      "date": "2025-02-03",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-02-03",
+        "dir": "long",
+        "gap_pct": 1.801,
+        "outcome": "time",
+        "pnl_usd": 390.0
+      },
+      "adjusted": {
+        "date": "2025-02-03",
+        "dir": "long",
+        "gap_pct": 1.726,
+        "outcome": "time",
+        "pnl_usd": 390.0
+      }
+    },
+    {
+      "date": "2025-02-05",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-02-05",
+        "dir": "long",
+        "gap_pct": 0.557,
+        "outcome": "fill",
+        "pnl_usd": 241.5
+      },
+      "adjusted": {
+        "date": "2025-02-05",
+        "dir": "long",
+        "gap_pct": 0.534,
+        "outcome": "fill",
+        "pnl_usd": 241.5
+      }
+    },
+    {
+      "date": "2025-02-10",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-02-10",
+        "dir": "short",
+        "gap_pct": 0.81,
+        "outcome": "time",
+        "pnl_usd": -206.5
+      },
+      "adjusted": {
+        "date": "2025-02-10",
+        "dir": "short",
+        "gap_pct": 0.776,
+        "outcome": "time",
+        "pnl_usd": -206.5
+      }
+    },
+    {
+      "date": "2025-02-11",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-02-11",
+        "dir": "long",
+        "gap_pct": 0.657,
+        "outcome": "fill",
+        "pnl_usd": 287.0
+      },
+      "adjusted": {
+        "date": "2025-02-11",
+        "dir": "long",
+        "gap_pct": 0.63,
+        "outcome": "fill",
+        "pnl_usd": 287.0
+      }
+    },
+    {
+      "date": "2025-02-12",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-02-12",
+        "dir": "long",
+        "gap_pct": 1.059,
+        "outcome": "fill",
+        "pnl_usd": 461.5
+      },
+      "adjusted": {
+        "date": "2025-02-12",
+        "dir": "long",
+        "gap_pct": 1.016,
+        "outcome": "fill",
+        "pnl_usd": 461.5
+      }
+    },
+    {
+      "date": "2025-02-27",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-02-27",
+        "dir": "short",
+        "gap_pct": 0.786,
+        "outcome": "fill",
+        "pnl_usd": 333.0
+      },
+      "adjusted": {
+        "date": "2025-02-27",
+        "dir": "short",
+        "gap_pct": 0.753,
+        "outcome": "fill",
+        "pnl_usd": 333.0
+      }
+    },
+    {
+      "date": "2025-03-03",
+      "is_boundary": true,
+      "frontmonth": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 1.81,
+        "outcome": "time",
+        "pnl_usd": 502.0
+      },
+      "adjusted": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 0.726,
+        "outcome": "fill",
+        "pnl_usd": 317.5
+      }
+    },
+    {
+      "date": "2025-03-18",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-03-18",
+        "dir": "long",
+        "gap_pct": 0.757,
+        "outcome": "time",
+        "pnl_usd": -336.0
+      },
+      "adjusted": {
+        "date": "2025-03-18",
+        "dir": "long",
+        "gap_pct": 0.731,
+        "outcome": "time",
+        "pnl_usd": -336.0
+      }
+    },
+    {
+      "date": "2025-03-20",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-03-20",
+        "dir": "long",
+        "gap_pct": 0.74,
+        "outcome": "fill",
+        "pnl_usd": 295.0
+      },
+      "adjusted": {
+        "date": "2025-03-20",
+        "dir": "long",
+        "gap_pct": 0.714,
+        "outcome": "fill",
+        "pnl_usd": 295.0
+      }
+    },
+    {
+      "date": "2025-03-24",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-03-24",
+        "dir": "short",
+        "gap_pct": 1.544,
+        "outcome": "time",
+        "pnl_usd": -151.5
+      },
+      "adjusted": {
+        "date": "2025-03-24",
+        "dir": "short",
+        "gap_pct": 1.49,
+        "outcome": "time",
+        "pnl_usd": -151.5
+      }
+    },
+    {
+      "date": "2025-03-31",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-03-31",
+        "dir": "long",
+        "gap_pct": 1.56,
+        "outcome": "time",
+        "pnl_usd": 96.5
+      },
+      "adjusted": {
+        "date": "2025-03-31",
+        "dir": "long",
+        "gap_pct": 1.505,
+        "outcome": "time",
+        "pnl_usd": 96.5
+      }
+    },
+    {
+      "date": "2025-04-01",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-01",
+        "dir": "long",
+        "gap_pct": 0.525,
+        "outcome": "fill",
+        "pnl_usd": 204.5
+      },
+      "adjusted": {
+        "date": "2025-04-01",
+        "dir": "long",
+        "gap_pct": 0.506,
+        "outcome": "fill",
+        "pnl_usd": 204.5
+      }
+    },
+    {
+      "date": "2025-04-02",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-02",
+        "dir": "long",
+        "gap_pct": 1.411,
+        "outcome": "fill",
+        "pnl_usd": 553.5
+      },
+      "adjusted": {
+        "date": "2025-04-02",
+        "dir": "long",
+        "gap_pct": 1.362,
+        "outcome": "fill",
+        "pnl_usd": 553.5
+      }
+    },
+    {
+      "date": "2025-04-03",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-03",
+        "dir": "long",
+        "gap_pct": 4.369,
+        "outcome": "time",
+        "pnl_usd": -90.5
+      },
+      "adjusted": {
+        "date": "2025-04-03",
+        "dir": "long",
+        "gap_pct": 4.217,
+        "outcome": "time",
+        "pnl_usd": -90.5
+      }
+    },
+    {
+      "date": "2025-04-07",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-07",
+        "dir": "long",
+        "gap_pct": 3.601,
+        "outcome": "fill",
+        "pnl_usd": 1264.0
+      },
+      "adjusted": {
+        "date": "2025-04-07",
+        "dir": "long",
+        "gap_pct": 3.46,
+        "outcome": "fill",
+        "pnl_usd": 1264.0
+      }
+    },
+    {
+      "date": "2025-04-08",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-08",
+        "dir": "short",
+        "gap_pct": 3.399,
+        "outcome": "time",
+        "pnl_usd": 934.0
+      },
+      "adjusted": {
+        "date": "2025-04-08",
+        "dir": "short",
+        "gap_pct": 3.266,
+        "outcome": "time",
+        "pnl_usd": 934.0
+      }
+    },
+    {
+      "date": "2025-04-10",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-10",
+        "dir": "long",
+        "gap_pct": 2.57,
+        "outcome": "time",
+        "pnl_usd": -919.5
+      },
+      "adjusted": {
+        "date": "2025-04-10",
+        "dir": "long",
+        "gap_pct": 2.478,
+        "outcome": "time",
+        "pnl_usd": -919.5
+      }
+    },
+    {
+      "date": "2025-04-14",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-14",
+        "dir": "short",
+        "gap_pct": 2.243,
+        "outcome": "fill",
+        "pnl_usd": 844.0
+      },
+      "adjusted": {
+        "date": "2025-04-14",
+        "dir": "short",
+        "gap_pct": 2.161,
+        "outcome": "fill",
+        "pnl_usd": 844.0
+      }
+    },
+    {
+      "date": "2025-04-16",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-16",
+        "dir": "long",
+        "gap_pct": 2.061,
+        "outcome": "time",
+        "pnl_usd": -36.5
+      },
+      "adjusted": {
+        "date": "2025-04-16",
+        "dir": "long",
+        "gap_pct": 1.986,
+        "outcome": "time",
+        "pnl_usd": -36.5
+      }
+    },
+    {
+      "date": "2025-04-17",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-17",
+        "dir": "short",
+        "gap_pct": 0.535,
+        "outcome": "fill",
+        "pnl_usd": 197.0
+      },
+      "adjusted": {
+        "date": "2025-04-17",
+        "dir": "short",
+        "gap_pct": 0.515,
+        "outcome": "fill",
+        "pnl_usd": 197.0
+      }
+    },
+    {
+      "date": "2025-04-21",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-21",
+        "dir": "long",
+        "gap_pct": 1.36,
+        "outcome": "time",
+        "pnl_usd": -654.0
+      },
+      "adjusted": {
+        "date": "2025-04-21",
+        "dir": "long",
+        "gap_pct": 1.309,
+        "outcome": "time",
+        "pnl_usd": -654.0
+      }
+    },
+    {
+      "date": "2025-04-22",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-22",
+        "dir": "short",
+        "gap_pct": 1.145,
+        "outcome": "time",
+        "pnl_usd": -602.5
+      },
+      "adjusted": {
+        "date": "2025-04-22",
+        "dir": "short",
+        "gap_pct": 1.102,
+        "outcome": "time",
+        "pnl_usd": -602.5
+      }
+    },
+    {
+      "date": "2025-04-23",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-23",
+        "dir": "short",
+        "gap_pct": 2.984,
+        "outcome": "time",
+        "pnl_usd": 63.0
+      },
+      "adjusted": {
+        "date": "2025-04-23",
+        "dir": "short",
+        "gap_pct": 2.872,
+        "outcome": "time",
+        "pnl_usd": 63.0
+      }
+    },
+    {
+      "date": "2025-04-29",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-29",
+        "dir": "long",
+        "gap_pct": 0.633,
+        "outcome": "fill",
+        "pnl_usd": 247.5
+      },
+      "adjusted": {
+        "date": "2025-04-29",
+        "dir": "long",
+        "gap_pct": 0.611,
+        "outcome": "fill",
+        "pnl_usd": 247.5
+      }
+    },
+    {
+      "date": "2025-04-30",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-04-30",
+        "dir": "long",
+        "gap_pct": 1.771,
+        "outcome": "time",
+        "pnl_usd": 251.5
+      },
+      "adjusted": {
+        "date": "2025-04-30",
+        "dir": "long",
+        "gap_pct": 1.709,
+        "outcome": "time",
+        "pnl_usd": 251.5
+      }
+    },
+    {
+      "date": "2025-05-01",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-01",
+        "dir": "short",
+        "gap_pct": 1.468,
+        "outcome": "time",
+        "pnl_usd": 56.5
+      },
+      "adjusted": {
+        "date": "2025-05-01",
+        "dir": "short",
+        "gap_pct": 1.417,
+        "outcome": "time",
+        "pnl_usd": 56.5
+      }
+    },
+    {
+      "date": "2025-05-05",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-05",
+        "dir": "long",
+        "gap_pct": 0.825,
+        "outcome": "time",
+        "pnl_usd": 231.0
+      },
+      "adjusted": {
+        "date": "2025-05-05",
+        "dir": "long",
+        "gap_pct": 0.797,
+        "outcome": "time",
+        "pnl_usd": 231.0
+      }
+    },
+    {
+      "date": "2025-05-06",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-06",
+        "dir": "long",
+        "gap_pct": 1.308,
+        "outcome": "time",
+        "pnl_usd": 149.0
+      },
+      "adjusted": {
+        "date": "2025-05-06",
+        "dir": "long",
+        "gap_pct": 1.263,
+        "outcome": "time",
+        "pnl_usd": 149.0
+      }
+    },
+    {
+      "date": "2025-05-08",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-08",
+        "dir": "short",
+        "gap_pct": 1.016,
+        "outcome": "time",
+        "pnl_usd": -348.0
+      },
+      "adjusted": {
+        "date": "2025-05-08",
+        "dir": "short",
+        "gap_pct": 0.981,
+        "outcome": "time",
+        "pnl_usd": -348.0
+      }
+    },
+    {
+      "date": "2025-05-12",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-12",
+        "dir": "short",
+        "gap_pct": 3.912,
+        "outcome": "time",
+        "pnl_usd": 95.5
+      },
+      "adjusted": {
+        "date": "2025-05-12",
+        "dir": "short",
+        "gap_pct": 3.778,
+        "outcome": "time",
+        "pnl_usd": 95.5
+      }
+    },
+    {
+      "date": "2025-05-19",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-19",
+        "dir": "long",
+        "gap_pct": 1.417,
+        "outcome": "fill",
+        "pnl_usd": 609.5
+      },
+      "adjusted": {
+        "date": "2025-05-19",
+        "dir": "long",
+        "gap_pct": 1.372,
+        "outcome": "fill",
+        "pnl_usd": 609.5
+      }
+    },
+    {
+      "date": "2025-05-21",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-21",
+        "dir": "long",
+        "gap_pct": 0.735,
+        "outcome": "fill",
+        "pnl_usd": 315.0
+      },
+      "adjusted": {
+        "date": "2025-05-21",
+        "dir": "long",
+        "gap_pct": 0.711,
+        "outcome": "fill",
+        "pnl_usd": 315.0
+      }
+    },
+    {
+      "date": "2025-05-26",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-26",
+        "dir": "short",
+        "gap_pct": 1.242,
+        "outcome": "time",
+        "pnl_usd": -33.5
+      },
+      "adjusted": {
+        "date": "2025-05-26",
+        "dir": "short",
+        "gap_pct": 1.201,
+        "outcome": "time",
+        "pnl_usd": -33.5
+      }
+    },
+    {
+      "date": "2025-05-29",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-05-29",
+        "dir": "short",
+        "gap_pct": 1.427,
+        "outcome": "fill",
+        "pnl_usd": 610.0
+      },
+      "adjusted": {
+        "date": "2025-05-29",
+        "dir": "short",
+        "gap_pct": 1.381,
+        "outcome": "fill",
+        "pnl_usd": 610.0
+      }
+    },
+    {
+      "date": "2025-06-16",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-06-16",
+        "dir": "short",
+        "gap_pct": 0.784,
+        "outcome": "time",
+        "pnl_usd": -292.0
+      },
+      "adjusted": {
+        "date": "2025-06-16",
+        "dir": "short",
+        "gap_pct": 0.767,
+        "outcome": "time",
+        "pnl_usd": -292.0
+      }
+    },
+    {
+      "date": "2025-06-19",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-06-19",
+        "dir": "long",
+        "gap_pct": 0.75,
+        "outcome": "time",
+        "pnl_usd": -150.5
+      },
+      "adjusted": {
+        "date": "2025-06-19",
+        "dir": "long",
+        "gap_pct": 0.733,
+        "outcome": "time",
+        "pnl_usd": -150.5
+      }
+    },
+    {
+      "date": "2025-06-24",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-06-24",
+        "dir": "short",
+        "gap_pct": 0.913,
+        "outcome": "time",
+        "pnl_usd": -211.0
+      },
+      "adjusted": {
+        "date": "2025-06-24",
+        "dir": "short",
+        "gap_pct": 0.894,
+        "outcome": "time",
+        "pnl_usd": -211.0
+      }
+    },
+    {
+      "date": "2025-06-30",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-06-30",
+        "dir": "short",
+        "gap_pct": 0.517,
+        "outcome": "time",
+        "pnl_usd": 60.5
+      },
+      "adjusted": {
+        "date": "2025-06-30",
+        "dir": "short",
+        "gap_pct": 0.507,
+        "outcome": "time",
+        "pnl_usd": 60.5
+      }
+    },
+    {
+      "date": "2025-07-15",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-07-15",
+        "dir": "short",
+        "gap_pct": 0.709,
+        "outcome": "time",
+        "pnl_usd": 214.0
+      },
+      "adjusted": {
+        "date": "2025-07-15",
+        "dir": "short",
+        "gap_pct": 0.694,
+        "outcome": "time",
+        "pnl_usd": 214.0
+      }
+    },
+    {
+      "date": "2025-07-31",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-07-31",
+        "dir": "short",
+        "gap_pct": 1.136,
+        "outcome": "fill",
+        "pnl_usd": 533.5
+      },
+      "adjusted": {
+        "date": "2025-07-31",
+        "dir": "short",
+        "gap_pct": 1.113,
+        "outcome": "fill",
+        "pnl_usd": 533.5
+      }
+    },
+    {
+      "date": "2025-08-04",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-08-04",
+        "dir": "short",
+        "gap_pct": 0.847,
+        "outcome": "time",
+        "pnl_usd": -361.5
+      },
+      "adjusted": {
+        "date": "2025-08-04",
+        "dir": "short",
+        "gap_pct": 0.83,
+        "outcome": "time",
+        "pnl_usd": -361.5
+      }
+    },
+    {
+      "date": "2025-08-07",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-08-07",
+        "dir": "short",
+        "gap_pct": 0.733,
+        "outcome": "fill",
+        "pnl_usd": 343.5
+      },
+      "adjusted": {
+        "date": "2025-08-07",
+        "dir": "short",
+        "gap_pct": 0.718,
+        "outcome": "fill",
+        "pnl_usd": 343.5
+      }
+    },
+    {
+      "date": "2025-09-01",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-09-01",
+        "dir": "long",
+        "gap_pct": 1.269,
+        "outcome": "eod",
+        "pnl_usd": 45.5
+      },
+      "adjusted": {
+        "date": "2025-09-01",
+        "dir": "long",
+        "gap_pct": 1.244,
+        "outcome": "eod",
+        "pnl_usd": 45.5
+      }
+    },
+    {
+      "date": "2025-09-18",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-09-18",
+        "dir": "short",
+        "gap_pct": 0.877,
+        "outcome": "time",
+        "pnl_usd": -226.5
+      },
+      "adjusted": {
+        "date": "2025-09-18",
+        "dir": "short",
+        "gap_pct": 0.868,
+        "outcome": "time",
+        "pnl_usd": -226.5
+      }
+    },
+    {
+      "date": "2025-09-25",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-09-25",
+        "dir": "long",
+        "gap_pct": 0.676,
+        "outcome": "time",
+        "pnl_usd": 96.5
+      },
+      "adjusted": {
+        "date": "2025-09-25",
+        "dir": "long",
+        "gap_pct": 0.669,
+        "outcome": "time",
+        "pnl_usd": 96.5
+      }
+    },
+    {
+      "date": "2025-09-29",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-09-29",
+        "dir": "short",
+        "gap_pct": 0.516,
+        "outcome": "time",
+        "pnl_usd": 53.5
+      },
+      "adjusted": {
+        "date": "2025-09-29",
+        "dir": "short",
+        "gap_pct": 0.51,
+        "outcome": "time",
+        "pnl_usd": 53.5
+      }
+    },
+    {
+      "date": "2025-10-01",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-01",
+        "dir": "long",
+        "gap_pct": 0.543,
+        "outcome": "fill",
+        "pnl_usd": 270.5
+      },
+      "adjusted": {
+        "date": "2025-10-01",
+        "dir": "long",
+        "gap_pct": 0.538,
+        "outcome": "fill",
+        "pnl_usd": 270.5
+      }
+    },
+    {
+      "date": "2025-10-02",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-02",
+        "dir": "short",
+        "gap_pct": 0.555,
+        "outcome": "fill",
+        "pnl_usd": 278.0
+      },
+      "adjusted": {
+        "date": "2025-10-02",
+        "dir": "short",
+        "gap_pct": 0.55,
+        "outcome": "fill",
+        "pnl_usd": 278.0
+      }
+    },
+    {
+      "date": "2025-10-06",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-06",
+        "dir": "short",
+        "gap_pct": 0.897,
+        "outcome": "time",
+        "pnl_usd": 21.5
+      },
+      "adjusted": {
+        "date": "2025-10-06",
+        "dir": "short",
+        "gap_pct": 0.888,
+        "outcome": "time",
+        "pnl_usd": 21.5
+      }
+    },
+    {
+      "date": "2025-10-13",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-13",
+        "dir": "short",
+        "gap_pct": 1.732,
+        "outcome": "time",
+        "pnl_usd": -248.5
+      },
+      "adjusted": {
+        "date": "2025-10-13",
+        "dir": "short",
+        "gap_pct": 1.714,
+        "outcome": "time",
+        "pnl_usd": -248.5
+      }
+    },
+    {
+      "date": "2025-10-14",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-14",
+        "dir": "long",
+        "gap_pct": 1.191,
+        "outcome": "fill",
+        "pnl_usd": 594.0
+      },
+      "adjusted": {
+        "date": "2025-10-14",
+        "dir": "long",
+        "gap_pct": 1.179,
+        "outcome": "fill",
+        "pnl_usd": 594.0
+      }
+    },
+    {
+      "date": "2025-10-15",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-15",
+        "dir": "short",
+        "gap_pct": 0.954,
+        "outcome": "time",
+        "pnl_usd": 185.5
+      },
+      "adjusted": {
+        "date": "2025-10-15",
+        "dir": "short",
+        "gap_pct": 0.944,
+        "outcome": "time",
+        "pnl_usd": 185.5
+      }
+    },
+    {
+      "date": "2025-10-16",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-16",
+        "dir": "short",
+        "gap_pct": 0.539,
+        "outcome": "fill",
+        "pnl_usd": 268.5
+      },
+      "adjusted": {
+        "date": "2025-10-16",
+        "dir": "short",
+        "gap_pct": 0.533,
+        "outcome": "fill",
+        "pnl_usd": 268.5
+      }
+    },
+    {
+      "date": "2025-10-27",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-27",
+        "dir": "short",
+        "gap_pct": 1.24,
+        "outcome": "time",
+        "pnl_usd": -171.5
+      },
+      "adjusted": {
+        "date": "2025-10-27",
+        "dir": "short",
+        "gap_pct": 1.228,
+        "outcome": "time",
+        "pnl_usd": -171.5
+      }
+    },
+    {
+      "date": "2025-10-30",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-10-30",
+        "dir": "long",
+        "gap_pct": 0.586,
+        "outcome": "time",
+        "pnl_usd": -55.0
+      },
+      "adjusted": {
+        "date": "2025-10-30",
+        "dir": "long",
+        "gap_pct": 0.58,
+        "outcome": "time",
+        "pnl_usd": -55.0
+      }
+    },
+    {
+      "date": "2025-11-03",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-03",
+        "dir": "short",
+        "gap_pct": 0.801,
+        "outcome": "fill",
+        "pnl_usd": 416.5
+      },
+      "adjusted": {
+        "date": "2025-11-03",
+        "dir": "short",
+        "gap_pct": 0.793,
+        "outcome": "fill",
+        "pnl_usd": 416.5
+      }
+    },
+    {
+      "date": "2025-11-04",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-04",
+        "dir": "long",
+        "gap_pct": 1.403,
+        "outcome": "time",
+        "pnl_usd": -118.5
+      },
+      "adjusted": {
+        "date": "2025-11-04",
+        "dir": "long",
+        "gap_pct": 1.39,
+        "outcome": "time",
+        "pnl_usd": -118.5
+      }
+    },
+    {
+      "date": "2025-11-10",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-10",
+        "dir": "short",
+        "gap_pct": 1.484,
+        "outcome": "time",
+        "pnl_usd": -195.0
+      },
+      "adjusted": {
+        "date": "2025-11-10",
+        "dir": "short",
+        "gap_pct": 1.469,
+        "outcome": "time",
+        "pnl_usd": -195.0
+      }
+    },
+    {
+      "date": "2025-11-12",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-12",
+        "dir": "short",
+        "gap_pct": 0.599,
+        "outcome": "fill",
+        "pnl_usd": 307.0
+      },
+      "adjusted": {
+        "date": "2025-11-12",
+        "dir": "short",
+        "gap_pct": 0.593,
+        "outcome": "fill",
+        "pnl_usd": 307.0
+      }
+    },
+    {
+      "date": "2025-11-13",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-13",
+        "dir": "long",
+        "gap_pct": 0.518,
+        "outcome": "stop",
+        "pnl_usd": -530.0
+      },
+      "adjusted": {
+        "date": "2025-11-13",
+        "dir": "long",
+        "gap_pct": 0.513,
+        "outcome": "stop",
+        "pnl_usd": -530.0
+      }
+    },
+    {
+      "date": "2025-11-18",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-18",
+        "dir": "long",
+        "gap_pct": 0.678,
+        "outcome": "time",
+        "pnl_usd": 123.5
+      },
+      "adjusted": {
+        "date": "2025-11-18",
+        "dir": "long",
+        "gap_pct": 0.671,
+        "outcome": "time",
+        "pnl_usd": 123.5
+      }
+    },
+    {
+      "date": "2025-11-20",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-20",
+        "dir": "short",
+        "gap_pct": 2.007,
+        "outcome": "fill",
+        "pnl_usd": 992.0
+      },
+      "adjusted": {
+        "date": "2025-11-20",
+        "dir": "short",
+        "gap_pct": 1.986,
+        "outcome": "fill",
+        "pnl_usd": 992.0
+      }
+    },
+    {
+      "date": "2025-11-24",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-24",
+        "dir": "short",
+        "gap_pct": 0.937,
+        "outcome": "time",
+        "pnl_usd": -791.5
+      },
+      "adjusted": {
+        "date": "2025-11-24",
+        "dir": "short",
+        "gap_pct": 0.928,
+        "outcome": "time",
+        "pnl_usd": -791.5
+      }
+    },
+    {
+      "date": "2025-11-26",
+      "is_boundary": false,
+      "frontmonth": {
+        "date": "2025-11-26",
+        "dir": "short",
+        "gap_pct": 0.511,
+        "outcome": "time",
+        "pnl_usd": -229.5
+      },
+      "adjusted": {
+        "date": "2025-11-26",
+        "dir": "short",
+        "gap_pct": 0.506,
+        "outcome": "time",
+        "pnl_usd": -229.5
+      }
+    }
+  ],
+  "only_in_frontmonth": [
+    "2025-03-27"
+  ],
+  "only_in_adjusted": [
+    "2025-06-02"
+  ],
+  "all_changes_are_boundary_sessions": false,
+  "boundary_trades_across_versions": [
+    {
+      "date": "2025-03-03",
+      "frozen": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 1.768,
+        "outcome": "fill",
+        "pnl_usd": 740.5
+      },
+      "frontmonth": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 1.81,
+        "outcome": "time",
+        "pnl_usd": 502.0
+      },
+      "adjusted": {
+        "date": "2025-03-03",
+        "dir": "short",
+        "gap_pct": 0.726,
+        "outcome": "fill",
+        "pnl_usd": 317.5
+      }
+    },
+    {
+      "date": "2025-06-02",
+      "frozen": null,
+      "frontmonth": null,
+      "adjusted": {
+        "date": "2025-06-02",
+        "dir": "long",
+        "gap_pct": 0.564,
+        "outcome": "fill",
+        "pnl_usd": 249.5
+      }
+    }
+  ],
+  "adjusted_excluding_boundaries": {
+    "N": 75,
+    "net_usd": 6914,
+    "WR": 64.0,
+    "PF": 1.895
+  }
+}

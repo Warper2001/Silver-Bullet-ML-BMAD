@@ -1,0 +1,6 @@
+{
+  "evaluation_allowed": false,
+  "manifest_sha256": "6aeb7869658fbfc2ad57ec7385ad82175ef9e925af8ab3eb88dfeecf6835726e",
+  "schema_version": "mnq-wick-short-calibration-phase-a/v1",
+  "status": "COMPLETE_CALIBRATION_ONLY"
+}

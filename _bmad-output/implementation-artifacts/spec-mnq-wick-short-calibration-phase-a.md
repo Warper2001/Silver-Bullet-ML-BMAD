@@ -2,7 +2,7 @@
 title: MNQ wick-short Phase A historical calibration
 type: feature
 created: 2026-09-16
-status: in-review
+status: done
 baseline_commit: 403a9542e60891f22e4f14e7411a90557acf660e
 route: dispatch
 review_loop_iteration: 0
@@ -154,3 +154,12 @@ See `mnq-wick-short-calibration-phase-a-review-verification-20260916.md` for
 precise commands, scope and the final annotation/message-only corrections.
 The patch route requires a committed-code rerun in a fresh directory before
 final publication; the original seven result files retain their original hashes.
+
+Completed the required rerun from correction commit
+`7ab4c9a20fde3d9aa3358abc4de42d2dc7060229` into
+`mnq-wick-short-calibration-phase-a-20260916-r2`. The hardened independent audit
+passed. All three ledgers and counts match the original run; only 22 floating
+summary fields differ, by at most `1.7763568394002505e-15`. The corrected
+execution record and comparison retain both publications as one calibration
+sample. All review findings are resolved; no implementation work is deferred.
+Phase B and confirmation remain separate, unactivated work.

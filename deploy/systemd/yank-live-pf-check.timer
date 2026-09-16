@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the YANK live PF checkpoint every Friday at 21:30 UTC (~16:30 CT / 17:30 ET), after the RTH close and just after the weekly funnel check
+
+[Timer]
+OnCalendar=Fri *-*-* 21:30:00 UTC
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

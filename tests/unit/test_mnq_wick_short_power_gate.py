@@ -97,6 +97,15 @@ def test_cutoff_and_duplicate_rejection(tmp_path: Path) -> None:
         gate.load_minutes(path)
 
 
+def test_malformed_ohlc_is_refused(tmp_path: Path) -> None:
+    rows = minute_rows(date(2025, 1, 2))
+    rows[0]["High"] = "99"  # below the open and close
+    path = tmp_path / "malformed.json"
+    path.write_text(json.dumps(rows))
+    with pytest.raises(gate.GateError, match="OHLC"):
+        gate.load_minutes(path)
+
+
 def test_adjacent_signal_holding_slots_are_nonoverlapping() -> None:
     bars = [gate.Bar(date(2025, 1, 2), slot, 100, 103, 100, 101) for slot in range(78)]
     slots = gate.signal_slots(bars)

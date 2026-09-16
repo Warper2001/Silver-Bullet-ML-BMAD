@@ -1,0 +1,10 @@
+[Unit]
+Description=YANK live PF checkpoint — live trade count/PF against seal 138cab1's forward stop, plus ML-gate drift (report only, never trades)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/tools/yank_live_pf_check.sh
+TimeoutStartSec=300

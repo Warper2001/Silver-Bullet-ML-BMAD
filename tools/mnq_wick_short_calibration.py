@@ -17,6 +17,7 @@ import platform
 import subprocess
 import sys
 from collections import Counter, defaultdict
+from copy import deepcopy
 from datetime import date, datetime, time, timedelta, timezone
 from fractions import Fraction
 from pathlib import Path
@@ -518,10 +519,14 @@ def descriptive(values: Sequence[float]) -> dict[str, Any]:
 
 
 def cluster_interval(
-    values: Sequence[float], labels: Sequence[Hashable]
+    values: Sequence[float],
+    labels: Sequence[Hashable],
+    exact_values: Sequence[Fraction] | None = None,
 ) -> dict[str, Any]:
     if len(values) != len(labels):
         raise CalibrationError("observation/cluster label length mismatch")
+    if exact_values is not None and len(exact_values) != len(values):
+        raise CalibrationError("exact monetary observation length mismatch")
     groups: dict[Hashable, list[float]] = defaultdict(list)
     for value, label in zip(values, labels):
         groups[label].append(value)
@@ -551,7 +556,11 @@ def cluster_interval(
         result["reason"] = "FEWER_THAN_TWO_NONEMPTY_CLUSTERS"
     elif any(not math.isfinite(value) for value in values):
         result["reason"] = "NONFINITE_OBSERVATION"
-    elif min(values) == max(values):
+    elif (
+        min(exact_values) == max(exact_values)
+        if exact_values is not None
+        else min(values) == max(values)
+    ):
         # Exact equality must precede floating-point centering (e.g. 0.1).
         result["reason"] = "CONSTANT_OBSERVATIONS_ZERO_VARIANCE"
     else:
@@ -559,11 +568,17 @@ def cluster_interval(
             # Exact rational arithmetic on the supplied binary floats avoids
             # inventing positive variance from cancellation in balanced clusters.
             # No tolerance or hand-set variance threshold is needed.
-            exact_mean = sum(map(Fraction, values), Fraction()) / n
+            numbers = (
+                list(map(Fraction, values)) if exact_values is None else exact_values
+            )
+            exact_mean = sum(numbers, Fraction()) / n
             mean = float(exact_mean)
+            exact_groups: dict[Hashable, list[Fraction]] = defaultdict(list)
+            for number, label in zip(numbers, labels):
+                exact_groups[label].append(number)
             residuals = [
-                sum(map(Fraction, group), Fraction()) - len(group) * exact_mean
-                for group in groups.values()
+                sum(group, Fraction()) - len(group) * exact_mean
+                for group in exact_groups.values()
             ]
             variance = float(
                 Fraction(g, g - 1) * sum(value**2 for value in residuals) / n**2
@@ -588,9 +603,13 @@ def cluster_interval(
     return result
 
 
-def estimand(values: Sequence[float], days: Sequence[date]) -> dict[str, Any]:
-    session = cluster_interval(values, days)
-    week = cluster_interval(values, [iso_week(day) for day in days])
+def estimand(
+    values: Sequence[float],
+    days: Sequence[date],
+    exact_values: Sequence[Fraction] | None = None,
+) -> dict[str, Any]:
+    session = cluster_interval(values, days, exact_values)
+    week = cluster_interval(values, [iso_week(day) for day in days], exact_values)
     envelope: dict[str, Any] = {
         "status": "UNASSESSABLE",
         "interval": None,
@@ -614,19 +633,38 @@ def estimand(values: Sequence[float], days: Sequence[date]) -> dict[str, Any]:
     }
 
 
+def signal_cost_estimand(
+    gross: dict[str, Any], values: Sequence[float], cost: float
+) -> dict[str, Any]:
+    """Translate gross inference before rounded subtraction can change centering."""
+    result = deepcopy(gross)
+    result["descriptive"] = descriptive(values)
+    desc = result["descriptive"]
+    original = gross["descriptive"]
+    desc["sample_sd"] = original["sample_sd"]
+    if original["mean"] is not None:
+        desc["mean"] = original["mean"] - cost
+    if original["total"] is not None:
+        desc["total"] = original["total"] - cost * original["observation_count"]
+    for grouping in ("session_clustered", "iso_week_clustered", "envelope"):
+        interval = gross[grouping]["interval"]
+        if interval is not None:
+            result[grouping]["interval"] = [value - cost for value in interval]
+    return result
+
+
 def summarize(
     outcomes: list[dict[str, Any]], sessions: list[dict[str, Any]]
 ) -> dict[str, Any]:
     signal_days = [date.fromisoformat(row["session_id"]) for row in outcomes]
     session_days = [date.fromisoformat(row["session_id"]) for row in sessions]
+    gross = estimand([row["gross_dollars"] for row in outcomes], signal_days)
     return {
         "per_signal": {
-            "gross_dollars": estimand(
-                [row["gross_dollars"] for row in outcomes], signal_days
-            ),
+            "gross_dollars": gross,
             "net_dollars": {
-                f"{cost:.2f}": estimand(
-                    [row["net_dollars"][f"{cost:.2f}"] for row in outcomes], signal_days
+                f"{cost:.2f}": signal_cost_estimand(
+                    gross, [row["net_dollars"][f"{cost:.2f}"] for row in outcomes], cost
                 )
                 for cost in gate.COSTS
             },
@@ -642,6 +680,11 @@ def summarize(
                 f"{cost:.2f}": estimand(
                     [row["net_total_dollars"][f"{cost:.2f}"] for row in sessions],
                     session_days,
+                    [
+                        Fraction(row["gross_total_dollars"])
+                        - Fraction(f"{cost:.2f}") * row["signal_count"]
+                        for row in sessions
+                    ],
                 )
                 for cost in gate.COSTS
             },
@@ -762,8 +805,18 @@ def publish(
         "evaluation_allowed": False,
         "manifest_sha256": sha256(output / "manifest.json"),
     }
-    with (output / "COMPLETE.json").open("xb") as stream:
+    temporary = output / ".COMPLETE.json.tmp"
+    with temporary.open("xb") as stream:
         stream.write(json_bytes(completion))
+        stream.flush()
+        os.fsync(stream.fileno())
+    # A hard link publishes closed, complete bytes atomically and refuses an
+    # existing destination. Unlike replace(), it cannot overwrite a marker.
+    os.link(temporary, output / "COMPLETE.json")
+    try:
+        temporary.unlink()
+    except OSError:
+        pass  # Publication already succeeded; leftover temporary is harmless.
 
 
 def execute(input_path: Path, output: Path) -> None:
@@ -824,7 +877,6 @@ def execute(input_path: Path, output: Path) -> None:
             },
         }
         publish(reserved, report, eligibility, outcomes, sessions)
-        print(f"Completed calibration only: {reserved}", flush=True)
     except Exception as exc:
         # Preserve any partial files; a failure never writes COMPLETE.json.
         failure = {
@@ -839,6 +891,10 @@ def execute(input_path: Path, output: Path) -> None:
         with (reserved / "FAILED.json").open("xb") as stream:
             stream.write(json_bytes(failure))
         raise
+    try:
+        print(f"Completed calibration only: {reserved}", flush=True)
+    except (OSError, ValueError):
+        pass  # Successful publication is authoritative if the log stream fails.
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -1,0 +1,84 @@
+[
+  {
+    "values": [
+      0,
+      2,
+      4,
+      6,
+      8
+    ],
+    "labels": [
+      "a",
+      "a",
+      "b",
+      "c",
+      "c"
+    ],
+    "mean_exact": "4",
+    "n": 5,
+    "g": 3,
+    "variance_exact": "108/25",
+    "variance": 4.32,
+    "sample_variance_exact": "10"
+  },
+  {
+    "values": [
+      6,
+      -2,
+      2,
+      10
+    ],
+    "labels": [
+      "a",
+      "a",
+      "b",
+      "c"
+    ],
+    "mean_exact": "4",
+    "n": 4,
+    "g": 3,
+    "variance_exact": "21/4",
+    "variance": 5.25,
+    "sample_variance_exact": "80/3"
+  },
+  {
+    "values": [
+      6,
+      -2,
+      2,
+      10
+    ],
+    "labels": [
+      "w1",
+      "w1",
+      "w2",
+      "w2"
+    ],
+    "mean_exact": "4",
+    "n": 4,
+    "g": 2,
+    "variance_exact": "4",
+    "variance": 4.0,
+    "sample_variance_exact": "80/3"
+  },
+  {
+    "values": [
+      4,
+      2,
+      10,
+      0
+    ],
+    "labels": [
+      "a",
+      "b",
+      "c",
+      "d"
+    ],
+    "mean_exact": "4",
+    "n": 4,
+    "g": 4,
+    "variance_exact": "14/3",
+    "variance": 4.666666666666667,
+    "sample_variance_exact": "56/3"
+  }
+]

@@ -63,18 +63,28 @@ verdict.
 ## Independent persisted-output audit
 
 The parent independently implemented and ran an audit without importing the
-calibration runner. It verified the output hash chain, all 576 eligibility rows,
-585 interval/outcome records and their component-minute mapping, 515 session
-totals including 164 zeros, monetary signs and all cost scenarios, and all nine
-estimands with both clustered intervals, envelopes and empirical distributions.
+calibration runner. Its scope is internal consistency of the persisted output
+ledgers and reports: the output hash chain, 576 eligibility rows, 585
+interval/outcome records and their recorded component-minute mapping, 515
+session totals including 164 zeros, monetary signs and all cost scenarios, and
+all nine estimands with both clustered intervals, envelopes and empirical
+distributions. It did not independently rescan `/root/mnq_historical.json`,
+reconstruct all RTH source rows, or independently prove that copied component
+prices match that source. Input provenance and cutoff access were verified by
+the production runner; the audit compares the recorded cutoff count to the
+registered prior count. Agreement between persisted artifacts must not be
+described as an independent raw-source replay.
 The independent arithmetic uses exact decimal-rational observations, separate
 from the runner's exact binary-rational residual arithmetic; comparisons passed.
 
-The original audit scripts are archived unchanged for reproducibility:
+The initial audit scripts were archived with the results commit. Review later
+hardened those scripts; the original versions and their hashes remain available
+in commit `9f291030bc451e7cb3aabe69183a401dc0bf412b`. Current script hashes are:
 
-- [Persisted-output audit](mnq-wick-short-calibration-phase-a-audit-20260916/mnq_phase_a_audit_outputs.py), SHA-256 `3735c63ee37440db4b06af6923234dee73150d9a29be26ad6043400a92972072`.
-- [Independent arithmetic](mnq-wick-short-calibration-phase-a-audit-20260916/mnq_phase_a_independent_audit.py), SHA-256 `33bd0e268fabc0c8abaeacee44469d8762b5603771fb8f53615b75fa8b0885d0`.
-- [Archived audit log](mnq-wick-short-calibration-phase-a-audit-20260916/audit.log): **INDEPENDENT AUDIT PASSED**. The archived copy was also executed successfully to verify that the sibling import remains reproducible.
+- [Persisted-output audit](mnq-wick-short-calibration-phase-a-audit-20260916/mnq_phase_a_audit_outputs.py), SHA-256 `f56c7cb4df3205a1ff216f8f438830ebcb61a83e38be7d5ae69f841994765e97`.
+- [Independent arithmetic](mnq-wick-short-calibration-phase-a-audit-20260916/mnq_phase_a_independent_audit.py), SHA-256 `a38656718db467f63b1065a5f20fb69f0cbf57426af9a9bf681bb2af764dea58`.
+- [Archived oracle fixture](mnq-wick-short-calibration-phase-a-audit-20260916/independent-oracles.json), SHA-256 `645249706b217cd8d7659b6944abe7d989e7c54e0eb60e0e3c314acb5b1bb2dc`. The helper resolves this file beside its own script, without any `/tmp` dependency.
+- [Initial archived audit log](mnq-wick-short-calibration-phase-a-audit-20260916/audit.log): **INDEPENDENT AUDIT PASSED** using the initial script versions. This original log is preserved; it is not a claim that the hardened scripts were executed on the market outputs during the review-fix task.
 
 Reproduce from the repository root using the root `.venv` interpreter:
 
@@ -87,3 +97,33 @@ documents 61 passing synthetic tests plus formatting, lint and targeted type
 checks. No original gate/spec/registration bytes, strategy parameters, live
 code, live services, or production ledgers were changed; sealed holdout data
 was not accessed. The parent performs the final merge after workflow review.
+
+## Review corrections and focused verification
+
+The review fixes preserve the completed run directory and its original hashes.
+They correct cost-rounding degeneracy by deriving per-signal uncertainty from
+gross centered observations and session uncertainty from exact gross minus
+registered cost times signal count. Descriptive distributions continue to use
+the persisted ledger float values. Completion now publishes a fully written,
+closed temporary marker atomically without overwriting a marker, and a final
+logging failure cannot create a contradictory failure record after publication.
+
+The hardened independent audit requires the exact manifest inventory and
+publication schema/status, both interval endpoints, the full quantile set,
+all report counts, internally derivable per-date coverage/contracts/counts,
+cluster label/count mappings and concentration, Student-t critical values, and
+ECDF cumulative probabilities. Both audit scripts refuse optimized execution
+so that their assertions cannot silently disappear.
+
+Focused verification used only synthetic fixtures and the two affected test
+files: `tests/unit/test_mnq_wick_short_calibration.py` and
+`tests/unit/test_mnq_wick_short_calibration_audit.py`: **85 passed in 12.63s**.
+This includes balanced unequal/equal cluster costs, constant/varying session
+counts, interrupted final-marker writes, logging failure after completion,
+real initial provenance refusal before input access, and 22 rehashed-corruption
+cases. A final targeted check after moving the optimization guards below the
+imports passed the three optimized-execution/relocated-oracle tests.
+
+These corrections have not been used to rerun the historical container in this
+review-fix task. The parent handles full verification, the fix commit, any new
+committed-code run in a fresh output directory, and final merge.

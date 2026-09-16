@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import builtins
 import json
 import math
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from fractions import Fraction
 from typing import Any, Sequence
 
 import pytest
@@ -323,6 +325,85 @@ def test_decimal_balanced_clusters_have_no_invented_variance(
     assert result["variance"] is None and result["se"] is None
 
 
+@pytest.mark.parametrize(
+    "values,labels",
+    [
+        ([0, 4, 2], [0, 0, 1]),
+        ([0, 8, 4, 4], [0, 0, 1, 1]),
+        ([0, 4, 3], [0, 0, 1]),
+    ],
+)
+def test_summarize_costs_preserve_balanced_cluster_inference(
+    values: list[float], labels: list[int]
+) -> None:
+    dates = ["2025-01-02", "2025-01-09"]
+    outcomes = [
+        {
+            "session_id": dates[label],
+            "gross_dollars": value,
+            "net_dollars": {f"{cost:.2f}": value - cost for cost in gate.COSTS},
+        }
+        for value, label in zip(values, labels)
+    ]
+    result = cal.summarize(outcomes, [])["per_signal"]
+    gross = result["gross_dollars"]
+    for cost in gate.COSTS:
+        net = result["net_dollars"][f"{cost:.2f}"]
+        for grouping in ("session_clustered", "iso_week_clustered", "envelope"):
+            assert net[grouping]["status"] == gross[grouping]["status"]
+            assert net[grouping]["reason"] == gross[grouping]["reason"]
+            if grouping != "envelope":
+                assert net[grouping]["se"] == gross[grouping]["se"]
+                assert net[grouping]["variance"] == gross[grouping]["variance"]
+            interval = gross[grouping]["interval"]
+            assert net[grouping]["interval"] == (
+                None if interval is None else [value - cost for value in interval]
+            )
+        assert net["descriptive"]["sample_sd"] == gross["descriptive"]["sample_sd"]
+    if values != [0, 4, 3]:
+        assert gross["session_clustered"]["status"] == "UNASSESSABLE"
+
+
+@pytest.mark.parametrize("counts", [[1, 1, 1, 1], [1, 2, 1, 2], [1, 1, 1, 2]])
+def test_session_net_cluster_inference_uses_exact_cost_times_count(
+    counts: list[int],
+) -> None:
+    days = ["2025-01-02", "2025-01-03", "2025-01-06", "2025-01-07"]
+    values = [0, 8, 4, 4]
+    sessions: list[dict[str, Any]] = [
+        {
+            "session_id": day,
+            "signal_count": count,
+            "gross_total_dollars": gross,
+            "net_total_dollars": {f"{c:.2f}": gross - c * count for c in gate.COSTS},
+        }
+        for day, gross, count in zip(days, values, counts)
+    ]
+    result = cal.summarize([], sessions)["per_eligible_session"]
+    assert (
+        result["gross_total_dollars"]["iso_week_clustered"]["status"] == "UNASSESSABLE"
+    )
+    for cost in gate.COSTS:
+        key = f"{cost:.2f}"
+        net = result["net_total_dollars"][key]
+        numbers = [
+            Fraction(gross) - Fraction(key) * count
+            for gross, count in zip(values, counts)
+        ]
+        mean = sum(numbers) / 4
+        residuals = [sum(numbers[:2]) - 2 * mean, sum(numbers[2:]) - 2 * mean]
+        variance = 2 * sum(r * r for r in residuals) / 16
+        actual = net["iso_week_clustered"]
+        if variance == 0:
+            assert actual["status"] == "UNASSESSABLE" and actual["se"] is None
+        else:
+            assert actual["variance"] == pytest.approx(float(variance))
+        # Descriptive support remains the exact persisted float support.
+        assert [
+            r["value"] for r in net["descriptive"]["distribution"]["ecdf"]
+        ] == sorted({r["net_total_dollars"][key] for r in sessions})
+
+
 def test_session_totals_frequency_denominators_and_iso_year(tmp_path: Path) -> None:
     minutes = synthetic_sample(tmp_path)
     _, bars, signals, _ = cal.eligible_ledgers(minutes, 0)
@@ -477,6 +558,24 @@ def test_provenance_change_prevents_alignment(
     assert "changed before alignment" in (output / "FAILED.json").read_text()
 
 
+def test_initial_provenance_failure_precedes_input_access(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    verifier = cal.verify_provenance
+    source, output = configure_synthetic_cli(tmp_path, monkeypatch)
+    monkeypatch.setattr(cal, "verify_provenance", verifier)
+    source.unlink()  # Input bytes are unavailable; no input hashing/loading allowed.
+    (tmp_path / "pin.md").write_text("corrupted synthetic pin")
+    monkeypatch.setattr(cal, "PINS", {"pin.md": ("canonical", "0" * 64)})
+    monkeypatch.setattr(cal, "git_audit", lambda root: {})
+    monkeypatch.setattr(cal, "git", lambda root, *args: b"head\n")
+    monkeypatch.setattr(cal, "validate_input_hash", assert_not_called)
+    monkeypatch.setattr(gate, "load_minutes", assert_not_called)
+    assert cal.main(["--input", str(source), "--output-dir", str(output)]) == 2
+    assert "pinned artifact hash mismatch" in (output / "FAILED.json").read_text()
+    assert not (output / "COMPLETE.json").exists()
+
+
 @pytest.mark.parametrize("kind", ["valid", "pin", "canonical", "uncommitted", "staged"])
 def test_committed_and_canonical_provenance(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, kind: str
@@ -557,3 +656,52 @@ def test_git_guard_precedes_git_operation(
         ["log", "--format=%H", "HEAD..origin/main"],
     ]
     assert commands[3] == ("rev-parse", "HEAD")
+
+
+def test_interrupted_final_marker_write_never_publishes_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source, output = configure_synthetic_cli(tmp_path, monkeypatch)
+    original_open = Path.open
+
+    class InterruptedMarker:
+        def __enter__(self) -> InterruptedMarker:
+            return self
+
+        def __exit__(self, *args: Any) -> None:
+            pass
+
+        def write(self, data: bytes) -> None:
+            with original_open(output / ".COMPLETE.json.tmp", "wb") as stream:
+                stream.write(data[:10])
+            raise OSError("interrupted marker write")
+
+    def interrupted_open(path: Path, *args: Any, **kwargs: Any) -> Any:
+        if path.name == ".COMPLETE.json.tmp":
+            return InterruptedMarker()
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", interrupted_open)
+    assert cal.main(["--input", str(source), "--output-dir", str(output)]) == 2
+    assert not (output / "COMPLETE.json").exists()
+    assert (output / "FAILED.json").exists()
+
+
+def test_final_logging_failure_keeps_completion_authoritative(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source, output = configure_synthetic_cli(tmp_path, monkeypatch)
+    original_print = builtins.print
+
+    def failed_print(*args: Any, **kwargs: Any) -> None:
+        if args and str(args[0]).startswith("Completed calibration only"):
+            raise BrokenPipeError("completion log unavailable")
+        original_print(*args, **kwargs)
+
+    monkeypatch.setattr(builtins, "print", failed_print)
+    assert cal.main(["--input", str(source), "--output-dir", str(output)]) == 0
+    assert (
+        json.loads((output / "COMPLETE.json").read_text())["status"]
+        == "COMPLETE_CALIBRATION_ONLY"
+    )
+    assert not (output / "FAILED.json").exists()

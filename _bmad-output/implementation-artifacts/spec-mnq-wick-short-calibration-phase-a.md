@@ -2,7 +2,7 @@
 title: MNQ wick-short Phase A historical calibration
 type: feature
 created: 2026-09-16
-status: in-progress
+status: in-review
 baseline_commit: 403a9542e60891f22e4f14e7411a90557acf660e
 route: dispatch
 review_loop_iteration: 0
@@ -109,6 +109,23 @@ not trading thresholds. Calendar audit flags are observations, not new filters.
 
 ## Review Triage Log
 
+| Finding | Verdict | Evidence and route |
+| --- | --- | --- |
+| Blind 1: rounded constant-cost residuals | medium | Confirmed zero gross cluster variance becomes tiny positive net variance after float subtraction; patch scenario uncertainty using gross centered values/exact pre-subtraction arithmetic. Actual recorded intervals passed independent audit. |
+| Blind 2: partial completion marker | medium | Direct final-name write can fail after creating a truncated marker; patch atomic publication of fully written marker. |
+| Blind 3: final logging failure | medium | The final flushed print is inside the failure handler's try after COMPLETE publication; patch so logging cannot publish FAILED after success. |
+| Blind 4: empty manifest inventory accepted by audit | medium | Audit loops only over supplied hash keys and never requires the five expected files; patch exact inventory/status/schema validation. |
+| Blind 5: missing interval endpoints/quantiles accepted | medium | zip and supplied-quantile iteration skip absent entries; patch expected shapes and quantile keys. |
+| Blind 6: ledger/report counts not reconciled by audit | medium | Existing audit checks row counts but omits report counts and per-date eligibility counts/contracts; patch all internally derivable cross-ledger checks. |
+| Blind 7: no independent rescan of raw source | low | Audit explicitly operates on persisted outputs and has not authenticated copied minute values against raw source. Clarify that boundary in execution record; no new source access or changed strategy calculation is needed. |
+| Blind 8: unchecked diagnostics | medium | Label/count mapping, HHI, t critical values and ECDF cumulative probabilities are not compared; patch these independently derivable fields. |
+| Blind 9: optimized Python disables audit assertions | low | Python optimization disables assert-based checks; direct refusal of optimized execution is a small correction to the audit entry points. |
+| Blind 10: helper self-check uses temporary fixture | low | Main audit reproduces, but running the archived helper standalone depends on /tmp; archive fixture alongside helper and use its directory. |
+| Edge 1: cost subtraction violates zero-variance invariance | medium | Same verified cause as Blind 1; same patch preserves all registered mechanics and costs. |
+| Edge 2: marker write interruption | medium | Same verified cause as Blind 2; same atomic-marker patch. |
+| Verification 1: pre-access provenance regression gap | medium | Reviewer mutation moving initial verification after load leaves 61 tests passing. Add a CLI test with real corrupted synthetic pin and forbidden input access to lock down the already-correct ordering. |
+
+
 ## Verification
 
 - Root `.venv/bin/python -m pytest` on both wick-short test files from the
@@ -124,3 +141,16 @@ has residual sums `[-6,0,6]`, variance `4.32`, and df `2`; retain cluster b.
 An exactly constant `[0.1,0.1,0.1]` must yield unassessable inference despite
 floating-point centering. Add valid bearish OHLC and actual adjacent interval
 price/time mapping tests; the inherited gate tests do not fully cover these.
+
+Review execution: three lenses completed. The host initially lacked a third
+review slot; verification-gap review launched after the blind review completed,
+before parent triage. No layer was skipped. All findings were checked against
+code or filed mutation evidence; bounded corrections preserve the frozen intent.
+
+All triaged corrections are implemented. Parent verification passed 96 relevant
+synthetic tests, all targeted static checks, the archived arithmetic self-check,
+and the hardened persisted-output audit against the unchanged initial run.
+See `mnq-wick-short-calibration-phase-a-review-verification-20260916.md` for
+precise commands, scope and the final annotation/message-only corrections.
+The patch route requires a committed-code rerun in a fresh directory before
+final publication; the original seven result files retain their original hashes.

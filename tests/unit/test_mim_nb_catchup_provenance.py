@@ -35,6 +35,17 @@ def _fixed_now(hm="14:00"):
     return _FakeDT
 
 
+@pytest.fixture(autouse=True)
+def _isolate_session_record(tmp_path, monkeypatch):
+    """Keep these tests off the live contract-provenance record.
+
+    `_catch_up_today` consults SESSIONS_CSV, a module global under data/mim_nb/. Without
+    this patch the tests read the live bot's file and pass only because their fixture
+    dates happen to predate it.
+    """
+    monkeypatch.setattr(M, "SESSIONS_CSV", tmp_path / "sessions.csv")
+
+
 def _write_bars(path, marks, day=DAY):
     """bars_raw-shaped CSV. marks = [(hm, open, close, volume), ...]. ET -> UTC is +4h."""
     lines = ["ts_utc,open,high,low,close,volume,received_at,chain"]
@@ -56,6 +67,11 @@ def _bot():
     o.day_pnl = 0.0
     o.day_deactivated = False
     o.last_bar_ts = None
+    # Contract provenance: catch-up compares the recorded session's contract against the
+    # active one, and _new_session reports/resets the roll guard's drop count.
+    o.symbol = "MNQU26"
+    o._roll_drop_key = None
+    o._roll_drop_n = 0
 
     async def _boom(*a, **k):                      # any network call fails the test
         raise AssertionError("_catch_up_today made a network call")

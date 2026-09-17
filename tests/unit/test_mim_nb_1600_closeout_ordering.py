@@ -54,8 +54,16 @@ class TestCloseOutOrdering:
         assert "self.prev_close = c" not in before_gate, \
             "prev_close rolls before the mark is evaluated — bands would use today's close"
 
-        sigma_read = src.index("sig = self.sigma_hist.get(hm")
-        first_closeout = src.index("_close_out_session")
+        # Scoped to the mark-evaluation path (from the CHECK_MARKS gate onward) rather
+        # than to the whole function. The invariant is "a mark is evaluated against days
+        # strictly before today", so what must not precede the sigma read is a close-out
+        # ON A PATH THAT EVALUATES A MARK. Above the gate there is now one close-out on
+        # the stand-down path (open_d is None → no bands are ever computed, and the fold
+        # is a no-op), added so a stood-down session still rolls prev_close for the next
+        # one; a whole-function index would read that as a violation it is not.
+        tail = src[gate:]
+        sigma_read = tail.index("sig = self.sigma_hist.get(hm")
+        first_closeout = tail.index("_close_out_session")
         assert first_closeout > sigma_read, \
             "close-out must follow the sigma read that feeds the bands"
 

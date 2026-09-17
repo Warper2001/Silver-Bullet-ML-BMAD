@@ -16,15 +16,20 @@ from src.research.mim_nb_live import MimNbLive, LOOKBACK_DAYS
 
 
 @pytest.fixture(autouse=True)
-def _tiny_sessions(monkeypatch):
+def _tiny_sessions(tmp_path, monkeypatch):
     """These tests exercise ORDERING and DETERMINISM with miniature sessions.
 
     Amendment 3 made a session count only when it carries FULL_SESSION_BARS (390) distinct
     RTH minutes. Rather than inflate every fixture to 390 rows — which would test nothing
     extra here — scale the constant to the fixtures. Completeness itself is covered by
     tests/unit/test_mim_nb_fail_closed_sessions.py.
+
+    SESSIONS_CSV is patched for the same reason the bar files are: the seed now consults
+    the contract-provenance record, and unpatched these tests read the live bot's file
+    under data/mim_nb/ and pass only because their fixture dates predate it.
     """
     monkeypatch.setattr(M, "FULL_SESSION_BARS", 6)
+    monkeypatch.setattr(M, "SESSIONS_CSV", tmp_path / "sessions.csv")
 
 
 def _bare():
@@ -168,6 +173,49 @@ class TestRestartStability:
         o._seed_sigma_from_bars = lambda: called.append(True)
         await MimNbLive._backfill(o)
         assert called == [True]
+
+    @pytest.mark.asyncio
+    async def test_mixed_session_filter_does_not_run_on_the_restart_path(
+            self, tmp_path, monkeypatch):
+        """The roll-contamination seed filter is SEED-ONLY. Why that matters:
+
+        `_seed_sigma_from_bars` skips sessions whose contract-provenance record says a
+        roll landed inside them. But the live bot almost never seeds: state.json carries
+        sigma, so `_backfill` restores it verbatim and returns before the filter is
+        reached. A mixed session already folded into the window therefore STAYS in it
+        until it ages out — which is the accepted remediation (spec
+        spec-mim-nb-roll-contract-contamination-fix, Decision 1: the ~1%-inflated
+        2026-09-15 moves are left to age out of the 14-session window by about
+        2026-10-03, leaving bands wider than they should be, which suppresses entries —
+        the safe direction). Pinned so nobody later reads the seed filter as a promise
+        that recorded history is cleaned.
+        """
+        p = tmp_path / "bars_raw.csv"
+        _write_bars(p, JULY)
+        monkeypatch.setattr(M, "BARS_RAW_CSV", p)
+        monkeypatch.setattr(M, "WARMUP_CSV", tmp_path / "nope.csv")
+        # every one of those sessions is on file as roll-contaminated
+        (tmp_path / "sessions.csv").write_text(
+            "day_et,symbol,first_ts_utc,mixed,detail,chain\n"
+            + "".join(f"{d},MNQU26,{d}T13:31:00Z,1,,abc\n" for d in JULY))
+
+        contaminated = {"10:00": [0.0123] * LOOKBACK_DAYS}
+        o = _bare()
+        o._load_persisted_position = lambda: {
+            "position": 0, "prev_close": 20123.5,
+            "sigma_hist": contaminated, "sigma_days": JULY[:LOOKBACK_DAYS]}
+        await MimNbLive._backfill(o)
+
+        assert o.sigma_hist == contaminated, \
+            "restart must restore recorded sigma verbatim — the seed filter is not a " \
+            "retroactive clean-up and must not become one silently"
+        assert o.sigma_days == JULY[:LOOKBACK_DAYS]
+
+        # …and on the path that DOES seed, the same record excludes them all.
+        fresh = _bare()
+        fresh._load_persisted_position = lambda: None
+        await MimNbLive._backfill(fresh)
+        assert fresh.sigma_days == [], "the seed path must refuse mixed sessions"
 
     @pytest.mark.asyncio
     async def test_round_trip_through_json_is_lossless(self, tmp_path, monkeypatch):

@@ -1,0 +1,55 @@
+{
+  "oos_reference_gross": {
+    "n": 62,
+    "net": 4231.0,
+    "mean": 68.24193548387096,
+    "sd": 377.41799393644726,
+    "pf": 1.6593937504870255,
+    "gross_win": 10647.5,
+    "gross_loss": 6416.5
+  },
+  "live_with_contamination": {
+    "n": 26,
+    "net": -1540.5,
+    "mean": -59.25,
+    "sd": 419.11648142252767,
+    "pf": 0.6891646489104116,
+    "gross_win": 3415.5,
+    "gross_loss": 4956.0
+  },
+  "live_excl_20260915_contamination": {
+    "n": 25,
+    "net": -1185.5,
+    "mean": -47.42,
+    "sd": 423.30538818525173,
+    "pf": 0.7423386220386873,
+    "gross_win": 3415.5,
+    "gross_loss": 4601.0
+  },
+  "bootstrap_vs_with_contamination": {
+    "n": 26,
+    "p_net_le_observed": 0.035125,
+    "p_pf_le_observed": 0.054675,
+    "sim_net_mean": 1777.2490775,
+    "sim_net_sd": 1907.5319571377172,
+    "sim_net_pct_5_25_50": [
+      -1248.0,
+      470.5,
+      1709.5
+    ]
+  },
+  "bootstrap_vs_excl_contamination": {
+    "n": 25,
+    "p_net_le_observed": 0.054005,
+    "p_pf_le_observed": 0.07423,
+    "sim_net_mean": 1708.2491875,
+    "sim_net_sd": 1867.8228511878049,
+    "sim_net_pct_5_25_50": [
+      -1251.5,
+      426.5,
+      1642.0
+    ]
+  },
+  "sealed_halt_trigger": "PF < 0.70 at N>=30 -> halt (preregistration_mim_nb_honest_expectations.md sec 5)",
+  "sealed_upgrade_trigger": "N 20-30 with PF tracking ~1.30 -> hypothesis to evidence (same sec 5)"
+}

@@ -88,3 +88,48 @@ Corroborating provenance: `download_es_1min.py` and `download_gc_1min.py` fetch 
 - Treat `si` and `hg` bars before 2026-03-12 as **deferred-contract data**, in both the working files and their holdout copies.
 - Nothing needs re-running: both instruments' tracks are closed and neither is live.
 - If copper or silver is ever revived, refetch per contract with explicit date ranges as `download_es_1min.py` and `download_gc_1min.py` already do.
+
+---
+
+# hg and si refetched per contract (2026-09-17)
+
+**Done:** `download_hg_si_1min.py` rebuilt both files front-month, one request per contract with explicit date ranges, the way `download_es_1min.py` and `download_gc_1min.py` already work.
+
+## The probe corrected the diagnosis first
+
+The volume test above said si and hg were "deferred pre-roll". A probe on 2026-03-02 showed the opposite direction:
+
+| Contract | Bars | Median vol/min |
+|---|---|---|
+| HGH26 (March) | 98 | 2 |
+| **HGK26 (May)** | **2,697** | **19** |
+| SIH26 (March) | 193 | 1 |
+| **SIK26 (May)** | **2,719** | **32** |
+
+The old files sat on the **expiring** contract in its notice period, not on a deferred one. **COMEX metals leave the delivery month around first notice — the end of the month before delivery — so they roll roughly three weeks earlier than the equity-index convention.** Had the refetch assumed the mid-March roll date, it would have rebuilt the same defect.
+
+## Roll dates were derived, not assumed
+
+`build_metals_roll_calendar.py` pulls daily volume for every candidate contract and rolls on the volume crossover (3-session confirmation), writing `metals_roll_calendar.json`:
+
+| | roll into K26 | full segment chain |
+|---|---|---|
+| hg | **2026-02-24** | N25 → U25 → Z25 → H26 → K26 → N26 |
+| si | **2026-02-25** | N25 → U25 → Z25 → H26 → K26 → N26 |
+
+## Verification
+
+| | Mar 1–11 (was defective) | Mar 12 – Apr 1 | Feb 1–24 |
+|---|---|---|---|
+| hg median vol/min | **2 → 17** | 16 → 15 | 15 → 15 |
+| si median vol/min | **1 → 19** | 18 → 17 | 24 → 24 |
+
+The defective window is now as liquid as its neighbours, and the neighbouring windows are unchanged — the control that says only the broken segment moved. Row counts rise from 284,723 to 365,923 (hg) and 302,674 to 383,373 (si), as expected when the liquid contract trades more minutes.
+
+**Roll-boundary steps are disclosed, not adjusted** (hg ≤ 0.081, si ≤ 0.315 at the stitch), matching how `es` and `gc` are built. Anything measuring a gap across a stitch should take the prior close from the session's own contract, as established for GAP-1.
+
+## Files
+
+- **New:** `data/processed/dollar_bars/1_minute/{hg,si}_1min_2025_2026_frontmonth.csv` — use these.
+- **Kept:** the original `{hg,si}_1min_2025_2026.csv`, left in place as evidence of the defect. They are wrong for 2026-03-01 → 03-11 and should not be used.
+- Neither instrument is live, and no strategy result changes: copper's Gate-1 already failed and silver's track is closed. These files simply make a future revival honest.

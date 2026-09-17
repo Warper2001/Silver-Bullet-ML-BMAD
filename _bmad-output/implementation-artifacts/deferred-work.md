@@ -324,3 +324,15 @@ Low-severity findings; no loopback required. S13 verdict (`design_phase2_ml_test
 - Report PF per timeframe, best_TF_PF = max of non-None PFs, verdict (≥ 1.1 → design_phase2_ml_test; < 1.1 → PIVOT)
 - Gate: same `--preregistration 910e95c` + ACCESS_LOG append, same self-contained implementation pattern as S12
 - Spec draft: `spec-program-c-phase-1-s12-s13.md` (S13 tasks already written; trim S12 tasks and rename if resuming)
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-mim-nb-roll-contract-contamination-fix.md`
+  summary: Backfill a mixed=1 row for 2026-09-15 into the live data/mim_nb/sessions.csv so a cold re-seed cannot re-poison sigma from the contaminated session.
+  evidence: Absence from sessions.csv means "seed it", which for the one session known to be contaminated inverts the reader's own doctrine. Out of the spec's code-only scope (Decision 1) because it writes to a live hash-chained record; must go through ChainedCsv to keep the chain intact.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-mim-nb-roll-contract-contamination-fix.md`
+  summary: Decide whether excluding mixed sessions from sigma seeding needs a pre-registration note, and register data/mim_nb/* chains in tools/verify_chain.py DEFAULT_FILES.
+  evidence: Every neighbouring rule in the sealed functions cites a prereg section; these new ones cite only the spec. Separately, no data/mim_nb chain has ever been in DEFAULT_FILES, so none is checked by a default verify_chain run — pre-existing, not caused by this change.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-mim-nb-roll-contract-contamination-fix.md`
+  summary: A restart BETWEEN sessions across a roll still restores the retired contract's prev_close from state.json, uncaught.
+  evidence: Verified — data/mim_nb/state.json carries prev_close (29254.0) with no symbol key. On restart, initialize() resolves the new front month, so _maybe_roll sees sym == self.symbol and never re-derives; the restored prev_close then belongs to the retired contract and the first session after the restart runs cross-contract bands with no log and no stand-down. Pre-existing path, not caused by this change, but the same defect class the fix targets. Smallest fix: persist the symbol in state.json and distrust prev_close on restore when it differs.

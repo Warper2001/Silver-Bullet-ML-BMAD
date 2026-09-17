@@ -22,6 +22,7 @@ fixtures, `object.__new__(MimNbLive)` with only the attributes under test, modul
 globals patched with monkeypatch. No network, no credentials.
 """
 import csv
+import inspect
 import logging
 from datetime import datetime
 
@@ -47,7 +48,12 @@ Z26_OPEN = 29420.25
 # ----------------------------------------------------------------------
 @pytest.fixture(autouse=True)
 def _isolate_records(tmp_path, monkeypatch):
-    """Point both chained records at tmp_path so no test touches data/mim_nb/."""
+    """Point EVERY chained record `on_bar` writes to at tmp_path.
+
+    These are module-level ChainedCsv objects under data/mim_nb/. Miss one and a test
+    run from the main checkout appends to the live bot's hash-chained audit trail —
+    which is how data/gap_fade/decisions.csv got a permanent, unfixable break.
+    """
     monkeypatch.setattr(M, "SESSIONS_CSV", tmp_path / "sessions.csv")
     monkeypatch.setattr(M, "sessions_log",
                         M.ChainedCsv(tmp_path / "sessions.csv",
@@ -57,6 +63,15 @@ def _isolate_records(tmp_path, monkeypatch):
                         M.ChainedCsv(tmp_path / "bars_raw_written.csv",
                                      ["ts_utc", "open", "high", "low", "close",
                                       "volume", "received_at"]))
+    monkeypatch.setattr(M, "decisions_log",
+                        M.ChainedCsv(tmp_path / "decisions.csv",
+                                     ["ts_et", "mark", "open_d", "prev_close", "sigma",
+                                      "ub", "lb", "close", "vwap", "position",
+                                      "action", "detail"]))
+    monkeypatch.setattr(M, "orders_log",
+                        M.ChainedCsv(tmp_path / "orders.csv",
+                                     ["ts_utc", "event", "order_id", "otype", "side",
+                                      "size", "price", "outcome", "detail"]))
     monkeypatch.setattr(M, "BARS_RAW_CSV", tmp_path / "bars_raw.csv")
     monkeypatch.setattr(M, "WARMUP_CSV", tmp_path / "no_warmup.csv")
 
@@ -102,6 +117,7 @@ def _bot(symbol=NEW, day=None, sigma_hist=None, prev_close=29000.0):
     o._session_contract_mixed = False
     o._roll_drop_key = None
     o._roll_drop_n = 0
+    o.last_bar_ts = None
     o._save_state = lambda: None
 
     async def _no_roll():
@@ -265,6 +281,167 @@ class TestRollAtSessionBoundary:
                            _bar("10:00", Z26_OPEN, Z26_OPEN + 40)])
         rec = MimNbLive._read_session_symbols(tmp_path / "sessions.csv")
         assert rec[DAY]["mixed"] is True
+
+    @pytest.mark.asyncio
+    async def test_the_guard_must_sit_below_the_roll(self, monkeypatch):
+        """The ordering the whole fix rests on, with a REAL `_maybe_roll`.
+
+        Every other test here starts with `symbol` already switched and the roll stubbed
+        out, so moving the ROLL GUARD block above the date-change block would leave them
+        all green while restoring the 2026-09-15 defect exactly: run the guard first and
+        the stamp still matches the retired symbol, so the stale bar sails through and
+        anchors the session. Here the bot starts on U26, the broker reports Z26, and the
+        roll happens inside `on_bar` — the real sequence.
+        """
+        bot = _bot(symbol=OLD)
+        bot.px = None
+        bot._cfg = None
+        bot.http = None
+        bot.px_auth = None
+        bot.contract_id = "CON.F.US.MNQ.U26"
+        bot._maybe_roll = MimNbLive._maybe_roll.__get__(bot)   # the real thing
+        monkeypatch.setattr(M, "AUTOROLL", True)
+
+        async def _front(http, px_auth, root="MNQ"):
+            return NEW
+        monkeypatch.setattr(M, "resolve_front_month", _front)
+
+        async def _prev(sym):
+            return 29400.0
+        bot._prev_close_for_symbol = _prev
+
+        await bot.on_bar(_bar(RTH_FIRST, U26_OPEN, U26_OPEN + 5, symbol=OLD))
+
+        assert bot.symbol == NEW, "the roll itself must still happen"
+        assert bot.open_d is None, \
+            "the bar that triggered the roll anchored the session (2026-09-15)"
+        assert bot.today_moves == {}
+
+    @pytest.mark.asyncio
+    async def test_provenance_is_recorded_even_if_the_roll_crashes(self, tmp_path):
+        """The bar is already in bars_raw.csv, which carries no contract. If the roll
+        blows up before provenance is written, that bar is on file with nothing saying
+        where it came from — so the row goes down first."""
+        bot = _bot(symbol=OLD, day=None)
+
+        async def _boom():
+            raise RuntimeError("broker down mid-roll")
+        bot._maybe_roll = _boom
+
+        with pytest.raises(RuntimeError):
+            await bot.on_bar(_bar(RTH_FIRST, U26_OPEN, U26_OPEN + 5, symbol=OLD))
+
+        rec = MimNbLive._read_session_symbols(tmp_path / "sessions.csv")
+        assert rec[DAY]["symbol"] == OLD, \
+            "the bar's contract must be on file before anything can await"
+
+    @pytest.mark.asyncio
+    async def test_a_failed_provenance_write_cannot_abort_on_bar(self, monkeypatch):
+        """An OSError escaping on_bar is swallowed by the poll loop, last_bar_ts never
+        advances, and the same bar is re-appended to the hash-chained bar record on
+        every poll. The write is guarded; the row is retried on the next bar."""
+        def _explode(row):
+            raise OSError("disk full")
+        monkeypatch.setattr(M.sessions_log, "append", _explode)
+
+        bot = _bot()
+        await _drive(bot, [_bar(RTH_FIRST, Z26_OPEN, Z26_OPEN + 5)])
+        assert bot.open_d == Z26_OPEN, "bar handling must survive a write error"
+        assert bot._session_contract is None, "state must allow a retry on the next bar"
+
+    @pytest.mark.asyncio
+    async def test_no_clean_row_is_ever_written_after_a_mixed_one(self, tmp_path):
+        """Only the collapsing reader saves us otherwise: a human, or any last-row-wins
+        reader, would see a contaminated session ending clean."""
+        bot = _bot(symbol=NEW)
+        await _drive(bot, [_bar(RTH_FIRST, U26_OPEN, U26_OPEN + 5, symbol=OLD),
+                           _bar("10:00", Z26_OPEN, Z26_OPEN + 40),
+                           _bar("10:30", Z26_OPEN + 40, Z26_OPEN + 90)])
+        rows = list(csv.DictReader((tmp_path / "sessions.csv").open()))
+        assert [r["mixed"] for r in rows] == ["0", "1"], \
+            f"a clean row was written after the mixed row: {rows}"
+        assert rows[-1]["mixed"] == "1", "the last row for a mixed day must say mixed"
+
+    @pytest.mark.asyncio
+    async def test_a_restart_mid_session_does_not_launder_a_mixed_day(self, tmp_path):
+        """The case that actually needs protecting.
+
+        Within one process the writer can never reach the clean-row branch again. A
+        RESTART can: the in-memory state starts empty, so the next bar looks like the
+        session's first and would append a fresh `mixed=0` row for a day already on file
+        as contaminated — leaving the last row for that day saying clean. The day-change
+        path therefore restores its state from the record before writing anything.
+        """
+        _write_sessions_csv(tmp_path / "sessions.csv",
+                            [(DAY, OLD, 0), (DAY, NEW, 1)])
+        before = (tmp_path / "sessions.csv").read_text()
+
+        revived = _bot(symbol=NEW)          # fresh process, same session
+        await _drive(revived, [_bar("10:30", Z26_OPEN, Z26_OPEN + 40)])
+
+        assert revived._session_contract_mixed is True, \
+            "a restart must inherit the session's mixed status, not start clean"
+        assert (tmp_path / "sessions.csv").read_text() == before, \
+            "a restart appended a row to a day already fully described"
+        rec = MimNbLive._read_session_symbols(tmp_path / "sessions.csv")
+        assert rec[DAY]["mixed"] is True
+
+    @pytest.mark.asyncio
+    async def test_dropped_timestamp_is_never_redelivered(self):
+        """Why the stand-down is permanent, not merely a delay.
+
+        The poll loop consumes each timestamp once (`ts > self.last_bar_ts`), so the
+        real new-contract 09:31 bar arriving in a later poll is filtered out before
+        on_bar ever sees it. The guard's fail-closed behaviour depends on this, so the
+        loop's rule is asserted against its own source rather than assumed.
+        """
+        src = inspect.getsource(MimNbLive.run)
+        assert "ts > self.last_bar_ts" in src and "self.last_bar_ts = ts" in src, \
+            "the poll loop's dedupe rule changed — this test's replica is now a fiction"
+
+        bot = _bot(symbol=NEW)
+        stale = _bar(RTH_FIRST, U26_OPEN, U26_OPEN + 5, symbol=OLD)
+        fresh = _bar(RTH_FIRST, Z26_OPEN, Z26_OPEN + 5, symbol=NEW)  # same TimeStamp
+        delivered = []
+        for b in (stale, fresh):
+            ts = b["TimeStamp"]
+            if bot.last_bar_ts is None or ts > bot.last_bar_ts:
+                await bot.on_bar(b)
+                bot.last_bar_ts = ts
+                delivered.append(ts)
+        assert delivered == [stale["TimeStamp"]], "the 09:31 minute is consumed once"
+        assert bot.open_d is None
+
+    @pytest.mark.asyncio
+    async def test_stood_down_session_still_rolls_prev_close(self, monkeypatch):
+        """A stood-down session must still hand the next one a prev_close, or the next
+        session's gap adjustment is computed from a two-day-old close."""
+        monkeypatch.setattr(M, "FULL_SESSION_BARS", 2)
+        bot = _bot(symbol=NEW, prev_close=29000.0)
+        await _drive(bot, [_bar(RTH_FIRST, U26_OPEN, U26_OPEN + 5, symbol=OLD),
+                           _bar(RTH_LAST, Z26_OPEN, Z26_OPEN + 20)])
+        assert bot.open_d is None, "still a stood-down session"
+        assert bot.sigma_days == [], "and still not folded"
+        assert bot.prev_close == Z26_OPEN + 20, \
+            "prev_close must roll from the session's own 16:00 close"
+
+    @pytest.mark.asyncio
+    async def test_drop_total_is_reported_and_reset_per_session(self, caplog):
+        """basicConfig is INFO, so a DEBUG count never reaches the log file; and an
+        unreset key means a later roll between the same two contracts says nothing."""
+        bot = _bot(symbol=NEW)
+        with caplog.at_level(logging.WARNING):
+            await _drive(bot, [_bar(RTH_FIRST, U26_OPEN, U26_OPEN + 5, symbol=OLD),
+                               _bar("09:32", U26_OPEN + 5, U26_OPEN + 8, symbol=OLD)])
+            assert bot._roll_drop_n == 2
+            # next session
+            await bot.on_bar(_bar(RTH_FIRST, Z26_OPEN, Z26_OPEN + 5, day="2026-09-16"))
+
+        totals = [r for r in caplog.records if "ROLL GUARD" in r.getMessage()
+                  and "dropped 2 bar(s)" in r.getMessage()]
+        assert totals and totals[0].levelno >= logging.WARNING, \
+            "the drop total must reach the log file, not sit at DEBUG"
+        assert (bot._roll_drop_n, bot._roll_drop_key) == (0, None), "reset per session"
 
     @pytest.mark.asyncio
     async def test_unstamped_bars_are_never_dropped(self):
@@ -477,6 +654,8 @@ class TestCatchUpAfterARoll:
         o.day_pnl = 0.0
         o.day_deactivated = False
         o.last_bar_ts = None
+        o._roll_drop_key = None      # _new_session reports and resets the drop count
+        o._roll_drop_n = 0
 
         async def _boom(*a, **k):
             raise AssertionError("_catch_up_today made a network call")
@@ -651,6 +830,109 @@ class TestRecordCompatibility:
 
     def test_missing_file_is_empty_not_an_error(self, tmp_path):
         assert MimNbLive._read_session_symbols(tmp_path / "absent.csv") == {}
+
+
+class TestUnreadableRecordFailsClosed:
+    """An unreadable record must not read as "unknown, proceed".
+
+    `{}` (nothing recorded) and `None` (recorded but unparseable) are different answers.
+    Collapse them and a corrupt or truncated sessions.csv silently restores exactly the
+    pre-fix behaviour on the two paths that depend on it.
+    """
+
+    @staticmethod
+    def _unreadable(tmp_path):
+        """A path that exists but cannot be read as a file."""
+        p = tmp_path / "sessions.csv"
+        if p.exists():
+            p.unlink()
+        p.mkdir()
+        return p
+
+    def test_read_error_is_distinguishable_from_absence(self, tmp_path):
+        p = self._unreadable(tmp_path)
+        assert MimNbLive._read_session_symbols(p) is None
+        assert MimNbLive._read_session_symbols(tmp_path / "absent.csv") == {}
+
+    def test_seed_refuses_to_seed_on_an_unreadable_record(self, tmp_path,
+                                                          monkeypatch, caplog):
+        _write_bars_csv(tmp_path / "bars_raw.csv",
+                        ["2026-09-08", "2026-09-09", "2026-09-11"])
+        monkeypatch.setattr(M, "FULL_SESSION_BARS", 5)
+        self._unreadable(tmp_path)
+        bot = object.__new__(MimNbLive)
+        bot.sigma_hist, bot.sigma_days, bot.prev_close = {}, [], None
+        with caplog.at_level(logging.WARNING):
+            bot._seed_sigma_from_bars()
+        assert bot.sigma_days == [] and bot.sigma_hist == {}, \
+            "a roll-spanning session cannot be told from a clean one — seed nothing"
+        assert "SEED ABORTED" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_catchup_stands_down_on_an_unreadable_record(self, tmp_path,
+                                                               monkeypatch, caplog):
+        _write_bars_csv(tmp_path / "bars_raw.csv", [DAY], symbols=[NEW])
+        self._unreadable(tmp_path)
+        monkeypatch.setattr(M, "datetime", TestCatchUpAfterARoll()._fixed_now())
+
+        bot = TestCatchUpAfterARoll()._catchup_bot()
+        with caplog.at_level(logging.WARNING):
+            await bot._catch_up_today()
+        assert bot.open_d is None and bot.today_moves == {}
+        assert "CATCHUP_NO_PROVENANCE" in caplog.text
+        assert bot.last_bar_ts is not None, \
+            "the declined bars must still be consumed, or the poll loop re-appends them"
+
+
+class TestRollFailsClosedWithoutAPrevClose:
+
+    @pytest.mark.asyncio
+    async def test_failed_re_derivation_drops_the_retired_level(self, monkeypatch,
+                                                                caplog):
+        """Carrying the old contract's close forward IS the contaminated state this fix
+        exists to prevent, and at a real roll the fetch is the only possible source."""
+        monkeypatch.setattr(M, "AUTOROLL", True)
+        bot = object.__new__(MimNbLive)
+        bot.symbol, bot.position = OLD, 0
+        bot.prev_close = U26_OPEN
+        bot.open_d, bot.today_saw_close = U26_OPEN, False
+        bot.today_moves = {"10:00": 0.001}
+        bot.http = bot.px_auth = None
+        bot._apply_symbol = lambda s: setattr(bot, "symbol", s)
+
+        async def _front(http, px_auth, root="MNQ"):
+            return NEW
+        monkeypatch.setattr(M, "resolve_front_month", _front)
+
+        async def _none(sym):
+            return None
+        bot._prev_close_for_symbol = _none
+
+        with caplog.at_level(logging.WARNING):
+            await bot._maybe_roll()
+
+        assert bot.prev_close is None, \
+            "the retired contract's close was carried across the roll"
+        assert any(r.levelno == logging.CRITICAL and "FAILED" in r.getMessage()
+                   for r in caplog.records)
+
+
+class TestStateAnchorsEveryChain:
+
+    def test_save_state_records_the_sessions_chain(self, tmp_path, monkeypatch):
+        """Every other chained log has a restart anchor in state.json; without one here
+        the sessions chain is the only audit trail with nothing to detect a break."""
+        import json
+        monkeypatch.setattr(M, "DATA_DIR", tmp_path)
+        M.sessions_log.append({"day_et": DAY, "symbol": NEW,
+                               "first_ts_utc": f"{DAY}T13:31:00Z", "mixed": 0,
+                               "detail": ""})
+        bot = _bot()
+        bot.day, bot.entry_px, bot.entry_t, bot.cat_stop_id = DAY, 0.0, None, None
+        MimNbLive._save_state(bot)
+        chains = json.loads((tmp_path / "state.json").read_text())["chains"]
+        assert chains["sessions"] == M.sessions_log.head
+        assert set(chains) == {"bars", "decisions", "orders", "trades", "sessions"}
 
 
 def test_full_session_bars_constant_untouched():

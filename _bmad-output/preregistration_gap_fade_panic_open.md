@@ -121,3 +121,18 @@ backtest_gap_fade.py in repo root.
 Run: .venv/bin/python backtest_gap_fade.py
 
 Output: data/reports/gap_fade_<timestamp>.csv and console summary.
+
+---
+
+## Gate-0 figure re-scored on corrected bars (appended 2026-09-17)
+
+The Gate-0 window was priced partly off the wrong contract: `mnq_1min_2026_ytd.csv` is the deferred MNQM26 until the 2026-03-12 roll, and the 2025 file interleaves contracts in roll weeks. A re-score under sealed prereg `151f1d05` (with an `ACCESS_LOG` row) gives:
+
+| Gate-0 window (2025-01-06 → 2026-06-11) | N | WR | PF | Net |
+|---|---|---|---|---|
+| As sealed 2026-06-25 | 117 | 62.4% | 1.761 | $9,878 |
+| **Corrected** | **115** | **61.7%** | **1.646** | **$8,281** |
+
+**Cite the corrected figure.** The edge survives — PF 1.646 still clears this document's 1.40 "strong" number — but 2026-03-01 → 03-11 contributed +$1,888 from 4 trades on the deferred contract and produces none on front-month bars.
+
+The decision rule above was applied in June 2026 and is **not** re-applied. Nothing here is amended: no parameter, threshold or live setting changed. Details: `_bmad-output/diagnostics_gap_fade_gate0_rescore_20260916/results.md`; the 2025-only correction is in `_bmad-output/diagnostics_gap_fade_splice_20260916/results.md`.

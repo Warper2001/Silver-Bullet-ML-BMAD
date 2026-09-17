@@ -72,3 +72,7 @@ Entry rate: 3/7 sessions → at this rate the sealed decision gate (N≥30 live)
 2026-06-29 14:08:43,171 | INFO     | ✅ EXIT [fill][TS SIM + sim] | entry=29650.75 exit=29457.00 | +193.8 pts | +387.50 USD | 2026-06-29
 2026-06-29 14:08:43,171 | INFO     | TS SIM: broker-managed fill exit (bracket auto-cancelled)
 ```
+
+---
+
+**Correction (2026-09-17):** the N=117 / PF 1.761 / $9,878 baseline quoted throughout this review was priced partly off the deferred MNQM26 contract (pre-2026-03-12) and off roll-week contract splices in 2025. Re-scored on corrected front-month bars under sealed prereg `151f1d05`: **N=115, WR 61.7%, PF 1.646, Net $8,281**. The long/short split and every other figure derived from the old trade list inherit the same ~16% overstatement. See `_bmad-output/diagnostics_gap_fade_gate0_rescore_20260916/results.md`.

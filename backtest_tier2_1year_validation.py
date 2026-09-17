@@ -72,7 +72,11 @@ INSTRUMENTS: dict[str, dict] = {
     },
     "si": {
         "symbol": "SIL",
-        "files": [(_DB1 / "si_1min_2025_2026.csv", None, None)],
+        # 2026-09-17: was si_1min_2025_2026.csv, which sits on the EXPIRING contract for
+        # 2026-03-01..03-11 (1 contract/min vs 19). Refetched front-month per contract with
+        # volume-derived roll dates; see _bmad-output/diagnostics_march_roll_exposure_20260916/.
+        # The old file is kept as evidence — use it only to reproduce pre-correction runs.
+        "files": [(_DB1 / "si_1min_2025_2026_frontmonth.csv", None, None)],
         "label": "SI→SIL (Micro Silver)",
     },
     "ym": {
@@ -87,7 +91,11 @@ INSTRUMENTS: dict[str, dict] = {
     },
     "hg": {
         "symbol": "MHG",
-        "files": [(_DB1 / "hg_1min_2025_2026.csv", None, None)],
+        # 2026-09-17: was hg_1min_2025_2026.csv, which sits on the EXPIRING contract for
+        # 2026-03-01..03-11 (2 contracts/min vs 17). Refetched front-month per contract; the
+        # copper Gate-1 that FAILED (prereg fbd7afe, run 328cdaf) ran on the old file, so
+        # reproducing that run needs the unsuffixed path.
+        "files": [(_DB1 / "hg_1min_2025_2026_frontmonth.csv", None, None)],
         "label": "HG→MHG (Micro Copper)",
     },
     "es": {

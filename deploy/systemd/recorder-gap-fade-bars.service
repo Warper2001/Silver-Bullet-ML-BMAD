@@ -16,10 +16,11 @@ WorkingDirectory=/root/Silver-Bullet-ML-BMAD
 # record was YANK's shadow logger, which had gaps). Stopping it never affects trading.
 #
 # Record both contracts across a roll so the witness is already on the new one before
-# the bot switches. Drop the old contract after it expires (MNQU26: 2026-09-18).
+# the bot switches. Drop the old contract after it expires. MNQU26 dropped 2026-09-18 (it
+# stopped trading at that day's 09:30 ET open); add MNQH27 before the ~2026-12-10 roll.
 # Changing this line is not a strategy-parameter change — the recorder has no parameters
 # that reach any trade.
-Environment=RECORDER_SYMBOLS=MNQU26,MNQZ26
+Environment=RECORDER_SYMBOLS=MNQZ26
 ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python src/monitoring/ts_bar_recorder.py
 # always, not on-failure: a clean exit must not leave the witness dark (lesson 2026-08-08).
 Restart=always

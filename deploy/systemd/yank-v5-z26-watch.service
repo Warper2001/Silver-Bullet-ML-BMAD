@@ -1,0 +1,10 @@
+[Unit]
+Description=YANK roll check V5 — record YANK's first real order on MNQZ26 (prereg f18b0cd). Read-only: reads YANK's own log and the ledger, places no orders, calls no broker.
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python tools/yank_v5_z26_watch.py
+TimeoutStartSec=300

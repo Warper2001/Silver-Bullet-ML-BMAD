@@ -1,0 +1,10 @@
+[Unit]
+Description=Check every 15 minutes for YANK's first MNQZ26 order (roll check V5); stops finding once recorded
+
+[Timer]
+OnCalendar=*:0/15
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

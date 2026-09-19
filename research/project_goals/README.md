@@ -68,10 +68,87 @@ The existing portfolio-decay observer remains advisory: no schedule or threshold
 
 ### Stale child recovery
 
-The wrapper observes the child each second. After 60 seconds it records `OPERATOR_RECOVERY_REQUIRED_CHILD_ALIVE`, PID, process-start identity, elapsed time and a fresh observation timestamp. This is an operational alert, not a command to terminate. The child inherits the singleton lock, so an interrupted wrapper cannot permit overlapping polls. `--health-only --state <state>` inspects the persistent child receipt without signaling any process.
+The wrapper observes the child each second. After 60 seconds it records `OVERDUE_EXECUTION`, PID, process-start identity, elapsed time and a fresh observation timestamp. This is an operational alert, not a command to terminate. The child inherits the singleton lock, so an interrupted wrapper cannot permit overlapping polls. `--health-only --state <state>` inspects the persistent child receipt without signaling any process.
 
-A pending `child.json` blocks a replacement poll, even if the old child has exited, until an operator reviews the recorded process identity, completed artifacts and journal integrity. A child whose late exit is observed preserves its stale/latency alert history, finishes result handling and archival, then clears its receipt and resumes completion-plus-one-second cadence. Manual recovery is reserved for orphaned/interrupted receipts or unhandled results. Do not restart the service or launch a replacement while its child is alive. Process termination requires separate user authorization under repository policy; this package never sends termination signals. After the child has exited and the operator has reviewed the evidence, preserve `child.json` under a dated recovery filename before permitting the next poll. Never remove active journals or authoritative state as recovery.
+A pending `child.json` reports `SUPERVISED_POLLING`, `FINALIZING`, `OVERDUE_EXECUTION`, or `OVERDUE_FINALIZATION` while its supervisor is alive. `ORPHANED_CHILD` requires operator review of process identity, artifacts and journal integrity before replacement. A child whose late exit is observed preserves its stale/latency alert history, finishes result handling and archival, then clears its receipt and resumes completion-plus-one-second cadence. Manual recovery is reserved for orphaned/interrupted receipts or unhandled results. Do not restart the service or launch a replacement while its child is alive. Process termination requires separate user authorization under repository policy; this package never sends termination signals. After the child has exited and the operator has reviewed the evidence, preserve `child.json` under a dated recovery filename before permitting the next poll. Never remove active journals or authoritative state as recovery.
 
 Epochs are never fabricated: `audit --account/--epoch-start` propagates only explicit caller-supplied account/epoch information, without independently proving a reset. Absent epoch identity remains blank. Strict marked equity rejects unknown/placeholder epochs. The API-export report can still emit **PER_SESSION_CONDITIONAL_UNKNOWN_EPOCH** curves and actual/1:2/1:1/equal-exposure comparisons separately for each session; it does not stitch balances, drawdown or recovery across dates or infer no-fill-day flat carry. These rows remain in `marked_equity.csv` with per-session scope. Multiple actual epochs require separate reports. Monthly expense allocation across unknown epochs is reported as unknown, with the requested expense assumption retained.
 
 API-mark exports may span dates or contain different supported MNQ contracts in separate files. Bars are partitioned by actual close date and contract, and conflicting duplicates are refused. No other product receives the MNQ multiplier implicitly.
+
+## Read-only broker daily audit
+
+The persistent collector is independent of either strategy and imports no execution
+client. Its endpoint allowlist contains only `Account/search`, `Order/search`,
+`Order/searchOpen`, `Trade/search`, and `Position/searchOpen`; authentication reuses
+`ProjectXAuth`'s cached token. No test orders are required or permitted.
+
+```bash
+.venv/bin/python -m research.project_goals capture --root "$PWD" \
+  --output research/project_goals/runs/broker-audit --account 26556101 \
+  --credentials .projectx_api_key
+.venv/bin/python -m research.project_goals reconcile-day \
+  --output research/project_goals/runs/broker-audit --account 26556101 --day 2026-09-18
+```
+
+`--once` performs one bounded capture. The service polls every 60 seconds, with a
+50-second network-cycle budget, three bounded attempts per request, exponential
+backoff, and a singleton file lock. Eight rolling daily query windows collect late
+corrections. API errors, cap-sized responses, retention/pagination hints, missing
+fields, and incomplete history remain uncertainty. Raw request windows, observation
+timestamps and responses are immutable content-addressed snapshots; local source
+blobs are deduplicated separately. Large sigma history arrays are omitted from the
+audit state projection, with their field names and the original state-byte hash
+retained. MIM source capture reads the latest nine days of order/fill evidence;
+older immutable snapshots remain available. Parsed source caching is bounded. No CSV or ledger history is rewritten.
+
+Install `systemd/project-goals-broker-capture.service` only after the verified merge.
+It writes only to the research runs directory. The account is explicit in the unit;
+account transitions require updating that configuration and preserving old evidence.
+The collector itself schedules local reports at 16:10 America/New_York and prior
+weekday refreshes at 08:30. Durable event receipts prevent duplicate scheduled runs;
+startup catches up the preceding seven calendar days. DST follows zoneinfo, weekends
+are skipped, holidays with no evidence remain incomplete. Changed broker evidence for previously reported days also triggers a bounded automatic correction refresh. Account-keyed receipts prevent a new account inheriting an old account's scheduling suppression. Explicit `reconcile-day` rebuilds older dates without replacing prior versions.
+
+Sessions span 18:00 ET on the preceding calendar day through 17:00 ET on the report
+date. The 16:10 report is therefore provisional; the next morning refresh can
+complete it. `COMPLETE` requires complete query coverage, exact order/fill quantities,
+known costs, attribution, independently flat opening/closing inventory, and an
+uninterrupted balance bridge. `INCOMPLETE` never publishes a complete net total or
+calls missing coverage a zero-trade day. Gross, fees and commissions remain separate;
+unknown commissions or missing realized P&L do not hide known fill prices or fees. Unknown P&L is not imputed to zero. Broker P&L already
+reflects actual execution; modeled slippage is not subtracted again.
+
+The prospective observation starts only after repeated broker-flat readings and
+stable before/after individually flat MIM and YANK states with matching live process
+account identity. Event-only state timestamps are preserved. A state publication must postdate its proven producer start; legacy state predating a restarted producer leaves observation pending until a natural state update. No state or account reset is fabricated. Missing or malformed state and offsetting bot
+positions block the start. Its initial observed balance and source hashes establish
+an observation window, **not an account-reset epoch**. Account changes or any prior
+unexplained adjacent balance delta interrupt continuity and remain visible on later
+reconciliation. Missing bridge costs/coverage remain incomplete. Fills occurring during the broker account HTTP request interval make that boundary uncertain; they do not prove an unexplained balance delta. Later corrected fills are applied to earlier bridges, while unexplained deltas and identity interruptions remain visible. Closed-day exposure and continuity stop at that session's closing evidence, so future trading cannot invalidate a past day. Reconciliation can
+never certify a session earlier than the observation window.
+
+MIM PLACE records now embed captured account/contract/order identity in the existing
+`detail` field. Its fill observer preserves individually matched broker fills in
+`data/mim_nb/broker_fill_evidence`, with persistent broker-ID dedup and explicit
+conflict/void diagnostics. The CSV headers are unchanged. Evidence files are the
+dedup authority: a crash between publishing a fill artifact and appending its CSV
+row may leave the CSV row absent, but retains the authoritative broker evidence.
+Independent capture recovers late fills. YANK active-state IDs are joined to exact
+broker-account/order/contract evidence. Prospective append-only YANK order logs capture short trades between state polls, retaining immutable source hashes and line numbers under stable producer/account identity. Startup and producer changes baseline at EOF; historical accountless log IDs are not retroactively attributed using today's process account. Unknown or conflicting attribution stays incomplete. Claims accumulate per account, order and contract with their source hashes; later claims cannot erase an earlier conflict.
+
+Recovery is local: inspect `heartbeat.json`, `latest_report.json`, immutable
+`snapshots/`, `sources/`, `observations/`, `reports/<day>/`, and `schedule/` receipts.
+Capture restart preserves evidence and scheduling receipts. No process is killed
+automatically. Storage has no automatic deletion; monitor growth and archive old
+immutable evidence as a separate operator action.
+
+Scheduler health distinguishes supervised polling/finalization, overdue execution
+or finalization, and orphaned/unhandled child receipts. Overdue is a latency finding;
+orphan recovery must preserve the receipt and inspect journals before restarting
+work. The combine healthcheck prints `[LOCAL AUDIT]` outside trader alert severity
+and exit status; the alert wrapper excludes that line from Telegram messages.
+All broker audit reports are advisory and local. Engineering fixtures and deployed
+capture do not establish traded-session acceptance: that remains pending until a
+naturally traded session is reconciled. Frozen comparison rules and efficacy
+analysis are unchanged.

@@ -152,18 +152,74 @@ def child_health(state):
     path = Path(state) / "child.json"
     if not path.exists():
         return dict(status="NO_PENDING_CHILD")
-    record = json.loads(path.read_text())
+    try:
+        record = json.loads(path.read_text())
+        if not isinstance(record, dict):
+            raise ValueError("invalid receipt")
+        started_at = datetime.fromisoformat(record["started_at"])
+        if started_at.tzinfo is None:
+            raise ValueError("naive receipt time")
+    except (OSError, ValueError, KeyError, TypeError):
+        return dict(
+            status="OPERATOR_RECOVERY_REQUIRED",
+            operator_recovery_required=True,
+            reason="Unreadable child receipt; identity unknown",
+        )
+    try:
+        beat = json.loads((Path(state) / "heartbeat.json").read_text())
+        if not isinstance(beat, dict):
+            beat = {}
+    except (OSError, ValueError):
+        beat = {}
     identity = record.get("identity")
-    alive = bool(identity and process_identity(identity["pid"]) == identity)
-    elapsed = (
-        datetime.now(timezone.utc) - datetime.fromisoformat(record["started_at"])
-    ).total_seconds()
+    alive = bool(
+        isinstance(identity, dict)
+        and identity.get("pid")
+        and process_identity(identity["pid"]) == identity
+    )
+    elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
+    supervisor = record.get("supervisor")
+    supervised = bool(
+        isinstance(supervisor, dict)
+        and supervisor.get("pid")
+        and process_identity(supervisor["pid"]) == supervisor
+        and beat.get("supervisor") == supervisor
+        and beat.get("started_at") == record.get("poll_started_at")
+    )
+    observed = beat.get("last_observed_at", beat.get("started_at"))
+    try:
+        heartbeat_age = (
+            datetime.now(timezone.utc) - datetime.fromisoformat(observed)
+        ).total_seconds()
+    except (TypeError, ValueError):
+        heartbeat_age = float("inf")
+    overdue = elapsed >= record.get("stale_after_seconds", 60)
+    if supervised and beat.get("status") not in (
+        "OPERATOR_RECOVERY_REQUIRED",
+        "PREFLIGHT_OR_HEALTH_FAILED",
+    ):
+        if alive:
+            status = (
+                "OVERDUE_EXECUTION"
+                if overdue or heartbeat_age > 10
+                else "SUPERVISED_POLLING"
+            )
+        else:
+            status = "OVERDUE_FINALIZATION" if heartbeat_age > 60 else "FINALIZING"
+        recovery = False
+        action = "Supervisor owns this poll; observe latency and finalization. No replacement or process killing."
+    else:
+        status = "ORPHANED_CHILD" if alive else "OPERATOR_RECOVERY_REQUIRED"
+        recovery = True
+        action = "Review receipt and journals; preserve receipt before manual recovery. Do not replace a living child."
     return dict(
-        status="OPERATOR_RECOVERY_REQUIRED",
+        status=status,
         child_alive=alive,
+        supervisor_alive=supervised,
+        operator_recovery_required=recovery,
         elapsed_seconds=elapsed,
         child=record,
-        action="Do not start another poll while child is alive. Review receipt and journals; preserve receipt before manual recovery. No process is killed automatically.",
+        action=action,
     )
 
 
@@ -180,6 +236,8 @@ def run_monitored(
         pid=child.pid,
         started_at=datetime.now(timezone.utc).isoformat(),
         stale_after_seconds=stale_after,
+        supervisor=process_identity(os.getpid()),
+        poll_started_at=beat["started_at"],
     )
     atomic(state / "child.json", receipt)
     stale = False
@@ -187,13 +245,11 @@ def run_monitored(
         elapsed = clock() - started
         stale = stale or elapsed >= stale_after
         beat.update(
-            status=(
-                "OPERATOR_RECOVERY_REQUIRED_CHILD_ALIVE" if stale else "RUNNING_CHILD"
-            ),
+            status=("OVERDUE_EXECUTION" if stale else "SUPERVISED_POLLING"),
             child_pid=child.pid,
             child_alive=True,
             child_elapsed_seconds=elapsed,
-            operator_recovery_required=stale,
+            operator_recovery_required=False,
             last_observed_at=datetime.now(timezone.utc).isoformat(),
         )
         atomic(state / "heartbeat.json", beat)
@@ -202,8 +258,13 @@ def run_monitored(
         except subprocess.TimeoutExpired:
             pass
     beat.update(
-        child_alive=False, operator_recovery_required=False, stale_child_observed=stale
+        status="FINALIZING",
+        child_alive=False,
+        operator_recovery_required=False,
+        stale_child_observed=stale,
+        last_observed_at=datetime.now(timezone.utc).isoformat(),
     )
+    atomic(state / "heartbeat.json", beat)
     if stale:
         beat["recovery_note"] = (
             "Late child completion observed; preserve latency alert, finish archival, then resume permitted cadence."
@@ -224,7 +285,11 @@ def poll_once(
     state = Path(state).resolve()
     state.mkdir(parents=True, exist_ok=True)
     started = clock()
-    beat = dict(started_at=datetime.now(timezone.utc).isoformat(), status="RUNNING")
+    beat = dict(
+        started_at=datetime.now(timezone.utc).isoformat(),
+        status="RUNNING",
+        supervisor=process_identity(os.getpid()),
+    )
     with (state / "lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

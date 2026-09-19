@@ -35,7 +35,41 @@ def main():
         e.add_argument("--" + name, required=True, type=Path)
     for command in (a, r, p, e):
         command.add_argument("--output", required=True, type=Path)
+    capture = sub.add_parser("capture")
+    capture.add_argument("--root", type=Path, required=True)
+    capture.add_argument("--output", type=Path, required=True)
+    capture.add_argument("--account", required=True)
+    capture.add_argument("--credentials", type=Path, required=True)
+    capture.add_argument("--once", action="store_true")
+    daily = sub.add_parser("reconcile-day")
+    daily.add_argument("--output", type=Path, required=True)
+    daily.add_argument("--account", required=True)
+    daily.add_argument("--day", required=True)
     args = parser.parse_args()
+    if args.command in ("capture", "reconcile-day"):
+        out = input_path(args.output)
+        if "data" in out.parts:
+            parser.error("audit output must be outside source data")
+        if args.command == "capture":
+            import asyncio
+            from .capture import serve
+
+            asyncio.run(
+                serve(
+                    input_path(args.root),
+                    out,
+                    args.account,
+                    input_path(args.credentials),
+                    args.once,
+                )
+            )
+        else:
+            from .daily import reconcile_day
+
+            print(
+                json.dumps(reconcile_day(out, args.account, args.day), sort_keys=True)
+            )
+        return
     out = args.output.resolve()
     # Never write into an input directory/file, production data, or sealed holdout.
     if "sealed_holdout" in out.parts or "data" in out.parts:

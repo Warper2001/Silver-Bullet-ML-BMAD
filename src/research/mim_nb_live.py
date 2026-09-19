@@ -1039,36 +1039,53 @@ class MimNbLive:
                    "type": otype, "side": side, "size": CONTRACTS}
         if otype == _TYPE_STOP:
             payload["stopPrice"] = float(price)
+        # Reference is observational only; it is never added to the broker payload.
+        submission = dict(payload, strategyReferencePrice=price)
         oid = await self.px._place_order(payload)
         orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
                            "event": "PLACE", "order_id": oid or "FAIL",
                            "otype": otype, "side": side, "size": CONTRACTS,
                            "price": price or "", "outcome": "OK" if oid else "REJECTED",
-                           "detail": ""})
+                           "detail": json.dumps(dict(submission, orderId=oid), sort_keys=True)})
         if oid is not None and otype == _TYPE_MARKET:
-            asyncio.get_event_loop().create_task(self._log_fill(oid))
+            asyncio.get_event_loop().create_task(self._log_fill(oid, submission))
         return oid
 
-    async def _log_fill(self, order_id):
-        """Best-effort: fetch the venue fill price for a market order and log it
-        (slippage evidence per deployment prereg halt trigger #2)."""
+    async def _log_fill(self, order_id, submission):
+        """Evidence only: each exact broker fill; never changes trading decisions."""
+        from src.research.broker_fill_evidence import matching_fills, persist_fill
+        identity = dict(submission, orderId=order_id)
         await asyncio.sleep(3)
         try:
             headers = await self.px._headers()
             since = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
             r = await self.http.post(f"{_BASE_URL}/Trade/search",
-                                     json={"accountId": self.account_id,
-                                           "startTimestamp": since}, headers=headers)
-            if r.status_code == 200 and r.json().get("trades"):
-                t = r.json()["trades"][0]
+                                    json={"accountId": identity["accountId"],
+                                          "startTimestamp": since}, headers=headers)
+            r.raise_for_status()
+            raw = r.json()
+            if raw.get("success") is not True:
+                raise ValueError("broker fill search unsuccessful")
+            fills, issues = matching_fills(raw.get("trades", []), identity)
+            evidence = DATA_DIR / "broker_fill_evidence"
+            evidence.mkdir(parents=True, exist_ok=True)
+            with (evidence / "diagnostics.jsonl").open("a") as stream:
+                stream.write(json.dumps({"submission": identity, "response": raw,
+                                        "issues": issues}, sort_keys=True) + "\n")
+            for t in fills:
+                outcome = persist_fill(evidence, identity, t)
+                if outcome != "new":
+                    if outcome == "conflict":
+                        logger.error("Conflicting broker fill evidence #%s", t["id"])
+                    continue
                 orders_log.append({"ts_utc": datetime.now(timezone.utc).isoformat(),
                                    "event": "FILL", "order_id": order_id,
-                                   "otype": _TYPE_MARKET, "side": t.get("side"),
-                                   "size": t.get("size"), "price": t.get("price"),
-                                   "outcome": "OK",
-                                   "detail": f"fees={t.get('fees')}"})
-                logger.info("FILL order #%s @ %s (fees %s)", order_id,
-                            t.get("price"), t.get("fees"))
+                                   "otype": identity["type"], "side": t["side"],
+                                   "size": t["size"], "price": t["price"], "outcome": "OK",
+                                   "detail": json.dumps({"broker_fill_id": t["id"],
+                                       "accountId": t["accountId"], "contractId": t["contractId"],
+                                       "fees": t.get("fees"), "commissions": t.get("commissions"),
+                                       "strategy_reference": submission.get("strategyReferencePrice")}, sort_keys=True)})
         except Exception as exc:
             logger.warning("fill logging failed for #%s: %s", order_id, exc)
 
@@ -1170,7 +1187,7 @@ class MimNbLive:
 
     async def _enter(self, direction, ref_px, mark):
         side = _SIDE_BUY if direction == 1 else _SIDE_SELL
-        oid = await self._order(_TYPE_MARKET, side)
+        oid = await self._order(_TYPE_MARKET, side, price=ref_px)
         if oid is None:
             logger.error("ENTRY market order rejected at %s", mark)
             return False
@@ -1192,7 +1209,7 @@ class MimNbLive:
     async def _exit(self, ref_px, mark, reason):
         await self._cancel_cat_stop()
         side = _SIDE_SELL if self.position == 1 else _SIDE_BUY
-        oid = await self._order(_TYPE_MARKET, side)
+        oid = await self._order(_TYPE_MARKET, side, price=ref_px)
         if oid is None:
             logger.error("EXIT market order rejected — will retry next loop")
             return False

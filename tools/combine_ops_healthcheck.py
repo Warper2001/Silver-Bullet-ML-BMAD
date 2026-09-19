@@ -383,6 +383,18 @@ def witness_finding(symbol, in_rth: bool, now=None):
     return OK, f"{WITNESS_SVC}: witnessing {symbol} (newest bar {age:.0f}s old, live)"
 
 
+def broker_audit_local_status() -> dict:
+    """Advisory audit status; never changes trading alerts or external messaging."""
+    try:
+        if str(BASE) not in sys.path:
+            sys.path.insert(0, str(BASE))
+        from research.project_goals.capture import audit_health
+
+        return audit_health(BASE / "research/project_goals/runs/broker-audit")
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "error_type": type(exc).__name__}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--max-stale", type=int, default=None,
@@ -514,6 +526,9 @@ def main() -> int:
     emit(*witness_finding(unit_env("trader-gap-fade", "GAP_FADE_SYMBOL"), in_window(WITNESS_RTH)))
 
     header = {OK: "ALL OK", WARN: "WARNINGS", CRIT: "CRITICAL"}[worst]
+    # Keep this outside emit(): advisory research must not change trading alert
+    # severity or trigger the optional external notifier in combine_ops_alert.sh.
+    print("[LOCAL AUDIT] " + json.dumps(broker_audit_local_status(), sort_keys=True))
     if not (args.quiet and worst == OK):
         print(f"=== Combine ops healthcheck: {header} ===")
         for ln in lines:

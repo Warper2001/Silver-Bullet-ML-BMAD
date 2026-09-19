@@ -512,10 +512,10 @@ def test_stale_child_observable_never_killed_and_blocks_replacement(
         while time.monotonic() < deadline:
             if (state / "heartbeat.json").exists():
                 heartbeat = json.loads((state / "heartbeat.json").read_text())
-                if heartbeat["status"] == "OPERATOR_RECOVERY_REQUIRED_CHILD_ALIVE":
+                if heartbeat["status"] == "OVERDUE_EXECUTION":
                     break
             time.sleep(0.01)
-        assert heartbeat["child_alive"] and heartbeat["operator_recovery_required"]
+        assert heartbeat["child_alive"] and not heartbeat["operator_recovery_required"]
         assert scheduler.child_health(state)["child_alive"]
         assert scheduler.poll_once(root, state)["status"] == "OVERLAP_REFUSED"
     finally:
@@ -547,7 +547,7 @@ def test_orphan_receipt_refuses_replacement_without_signaling(tmp_path, monkeypa
         ),
     )
     result = scheduler.poll_once(root, state)
-    assert result["status"] == "OPERATOR_RECOVERY_REQUIRED" and result["child_alive"]
+    assert result["status"] == "ORPHANED_CHILD" and result["child_alive"]
     assert (state / "child.json").exists()
 
 

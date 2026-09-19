@@ -72,14 +72,16 @@ echo "exit=$rc"
 # equity, distances jitter every run). Collapses "stale 25s"/"stale 26s" to one signature
 # so a persistent condition logs ONCE; a level/category change (different text) re-fires.
 # Live numbers still reach the journal + ops_status.txt snapshot.
-sig="$(printf '%s\n' "$out" | grep -E 'CRIT!|WARN' | sed -E 's/[0-9][0-9.,]*//g' | sort || true)"
+# Advisory research evidence stays in the journal/status snapshot/local log only.
+push_out="$(printf '%s\n' "$out" | grep -v '^\[LOCAL AUDIT\]' || true)"
+sig="$(printf '%s\n' "$push_out" | grep -E 'CRIT!|WARN' | sed -E 's/[0-9][0-9.,]*//g' | sort || true)"
 last="$(cat "$SIGFILE" 2>/dev/null || true)"
 
 if [ "$rc" -ne 0 ] && [ "$sig" != "$last" ]; then
   level="WARN"; [ "$rc" -ge 2 ] && level="CRITICAL"
   { echo "===== $ts  $level (exit $rc) ====="; echo "$out"; echo; } >> "$ALERT_LOG"
   # Only the failing lines in the push (keep it phone-readable); full detail is in the log.
-  fails="$(printf '%s\n' "$out" | grep -E 'CRIT!|WARN' || true)"
+  fails="$(printf '%s\n' "$push_out" | grep -E 'CRIT!|WARN' || true)"
   msg="$(printf '🛑 Combine ops %s (%s)\n%s\n\nsnapshot: data/combine_joint/ops_status.txt' "$level" "$ts" "$fails")"
   # CRITICAL is never throttled. WARN is rate-limited per condition (keyed on the dedup
   # signature) so a flapping check can't spam the phone.

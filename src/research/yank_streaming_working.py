@@ -1265,12 +1265,19 @@ class Tier2StreamingTrader:
 
     @staticmethod
     def _is_market_open() -> bool:
-        now = datetime.now(timezone.utc)
-        wd, h = now.weekday(), now.hour
-        if wd == 5: return False
-        if wd == 6: return h >= 23
-        if wd == 4: return h < 22
-        return h != 22
+        # CME equity-index Globex: Sunday 17:00 CT through Friday 16:00 CT, with a daily
+        # 16:00-17:00 CT maintenance halt. Those boundaries are fixed in EXCHANGE time, so
+        # the test has to run on an exchange clock. The old form compared UTC hours
+        # (h != 22 and friends), which is only CST: every DST summer it slipped an hour,
+        # polling straight through the real halt and then sleeping through the session's
+        # first hour instead — observed 2026-09-17, when the bot idled 17:00-18:00 CT and
+        # resumed at 18:00 exactly as the broken rule predicted.
+        now_ct = datetime.now(timezone.utc).astimezone(CT_TZ)
+        wd, h = now_ct.weekday(), now_ct.hour
+        if wd == 5: return False          # Saturday: closed all day
+        if wd == 6: return h >= 17        # Sunday: reopens 17:00 CT
+        if wd == 4: return h < 16         # Friday: closes 16:00 CT
+        return h != 16                    # Mon-Thu: 16:00-17:00 CT maintenance halt
 
     @staticmethod
     def _is_rth(now_et: datetime) -> bool:

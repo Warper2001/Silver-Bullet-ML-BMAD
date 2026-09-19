@@ -73,6 +73,27 @@ Option 1 is only honest once the causes above are confirmed rather than inferred
 written here is inferred from the files themselves; neither incident was investigated at
 the time, and no contemporaneous note exists for either date.
 
+## Corrections after a closer read (same day)
+
+Two things in the account above needed fixing once Amendment 3 of the sigma-provenance
+prereg and a full break-count were checked:
+
+1. **decisions.csv's break was already known, not newly discovered.** Amendment 3
+   (2026-08-06) states the file "carries one chain break in 465 rows". A full walk now
+   finds **exactly one** break in 855 rows, at row 128 — so that is the same break. What
+   is new is its location and cause; Amendment 3 never localised it. Note the break at
+   2026-06-29 **predates** the 08-05/06 row loss that amendment was about, and that later
+   loss produced no second break (rows went from the tail, and the bot re-read its head on
+   restart).
+2. **orders.csv's break appears undocumented** — no amendment or incident note mentions
+   it. It is one break in 162 rows, at row 79.
+3. **The mechanism behind break 1 can no longer recur.** Amendment 3 §10.5 left the root
+   cause open: `data/mim_nb/` files were git-tracked *and* live-appended, so a branch
+   switch reverted them under the running bot. All six are untracked today, so that
+   specific mechanism is closed. Break 1 dates from 2026-06-29, when it was still live.
+
+`trades.csv` walks clean at 28 rows, 0 breaks.
+
 ## What this does not affect
 
 - **No trade evidence is lost.** `trades.csv` verifies clean, as does the ledger in

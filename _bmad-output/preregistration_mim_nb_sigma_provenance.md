@@ -569,3 +569,53 @@ window until ~2026-08-25.
 The files being both git-tracked and live-appended is the cause and is **not** fixed here.
 Until it is, this recurs. Recommended: untrack the live append-only files under
 `data/mim_nb/`, as `trades.db` already is, and snapshot them by another route.
+
+---
+
+## 11. Amendment 4 — contract-aware σ seeding and state restore (2026-09-19)
+
+**Status: recorded AFTER deployment, deliberately.** Both changes below are defect fixes
+to the 2026-09-15 roll contamination, built and shipped under Alex's explicit approval
+(spec `_bmad-output/implementation-artifacts/spec-mim-nb-roll-contract-contamination-fix.md`,
+merges `1ae682e` on 2026-09-17 and `47349c3` on 2026-09-19). This section exists because
+every neighbouring acceptance rule in these functions cites a prereg amendment, and these
+two change **which sessions reach σ** and **which `prev_close` is trusted** — inputs to a
+sealed strategy. Writing it after the fact is the honest record, not a claim of
+pre-registration.
+
+### 11.1 What changed
+
+| Site | Rule added | Why |
+|---|---|---|
+| `_seed_sigma_from_bars` | a session recorded as `mixed` in `data/mim_nb/sessions.csv` is rejected, logging `SEED REJECT` | across a roll its per-minute moves divide one contract's close by another's open — ~1% each on 2026-09-15 against a ~0.2% norm, which would skew every minute label for `LOOKBACK_DAYS` |
+| `_backfill` restore | `prev_close` is discarded (CRITICAL) when `state.json`'s `symbol` differs from the active contract | a restart between sessions across a roll restored the retired contract's close; `_maybe_roll` never fires because `initialize()` already resolved the new front month |
+
+**Deliberately unchanged:** sessions recorded under *another* contract still seed σ. A
+move is a dimensionless ratio, so it is contract-agnostic as long as both ends come from
+one contract. Only *mixed* sessions are excluded. This keeps the gate from starving σ
+depth and blocking entries — the failure mode §1 site 3 exists to avoid.
+
+### 11.2 Effect on the σ already recorded
+
+**None, by design.** `_backfill` restores σ from `state.json` when it exists, so the new
+seed filter only runs on a cold reseed. The ~1%-inflated 2026-09-15 moves already folded
+into the live window were **not** removed: Alex's decision (spec Decision 1) was to let
+them age out of the 14-session window by about 2026-10-03, which suppresses entries rather
+than encouraging them. A `mixed=1` row for 2026-09-15 was backfilled into `sessions.csv`
+on 2026-09-19 (bot stopped, appended through `ChainedCsv`, chain re-verified), so any
+future cold reseed excludes that session.
+
+### 11.3 A rolled session is not traded
+
+With the roll guard in place, a session whose bars change contract mid-way loses its open
+anchor and stands down: no entries, and the existing fail-closed fold rejects it. About
+four sessions a year; they count as VOID for the accrual. Re-anchoring from a broker fetch
+was considered and rejected — §1 site 1 forbids sourcing the anchor from the network.
+
+### 11.4 Related finding, not authorized here
+
+Registering `data/mim_nb/*` in `verify_chain.py` on 2026-09-19 localised the single
+`decisions.csv` chain break this prereg counted in §10.1 (row 128, 2026-06-29) and turned
+up a second, undocumented break in `orders.csv` (row 79, 2026-07-29). Neither is repaired:
+`_bmad-output/ledger_incident_20260919_mim_nb_chains.md`. §10.5's root cause — those files
+being git-tracked and live-appended — is closed; all six are untracked today.

@@ -1,0 +1,15 @@
+[Unit]
+Description=Frozen MIM comparison operational poll (research only)
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/Silver-Bullet-ML-BMAD
+ExecStart=/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m research.project_goals.scheduler --root /root/Silver-Bullet-ML-BMAD --state /root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health
+TimeoutStartSec=infinity
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/root/Silver-Bullet-ML-BMAD/research/mim_comparison/runs /root/Silver-Bullet-ML-BMAD/research/project_goals/runs

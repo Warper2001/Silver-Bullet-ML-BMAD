@@ -1,0 +1,13 @@
+{
+  "retrieved_at": "2026-09-19T18:40:28.971328+00:00",
+  "endpoint": "Position/searchOpen",
+  "request": {
+    "accountId": 26556101
+  },
+  "response": {
+    "positions": [],
+    "success": true,
+    "errorCode": 0,
+    "errorMessage": null
+  }
+}

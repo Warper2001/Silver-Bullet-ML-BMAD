@@ -1,0 +1,16 @@
+{
+  "status": "ADVISORY_PROVENANCE_LIMITED",
+  "observed_run_times": [
+    "2026-09-12T21:23:28.451376+00:00",
+    "2026-09-14T01:05:11.909182+00:00"
+  ],
+  "source_sha256": "09e76f04aab359c9252f47596a3fbbd60ee2797c00442a65e4a57b0d0297cc12",
+  "log_sha256": "06c90d1030e610306f78326d411cef9c0a19ffdfef3d407848f5738aef6f9db5",
+  "scheduler_check": "No reference in /etc/systemd/system, /etc/cron.d, /etc/crontab or /var/spool/cron/crontabs at 2026-09-19T19:18Z; no matching systemd timer.",
+  "pf_source": "data/trades.db realtime-only rows, trader_id filter; all epochs accumulated; cash pnl not broker-cost-reconciled",
+  "thursday_source": "data/thursday_ts/trades.csv; Thursday >=2026-09-17; weekly sum across legs, mean/sample_sd *sqrt(52); code explicitly says formula not traced to original backtest",
+  "gate_issue": "next_gate(n,gates) skips a gate at equality when a later gate exists: at YANK N20 returns N30. Existing code unchanged; do not use observer as halt authority.",
+  "cadence_status": "NOT_ESTABLISHED",
+  "action": "Keep advisory. Reconcile original Thursday formula and gate reporting under existing protocol before decisions; establish cadence separately.",
+  "no_threshold_change": true
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "bytes": 781506,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/portfolio-reviewed/evidence.json",
+    "sha256": "79dee9f93d58e9c3e251700eeec60d2c1c375302928d9c7294af01efd1ec056e",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 694153,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/portfolio-reviewed/marked_equity.csv",
+    "sha256": "979243d78a662a5446add9f1cf6a68468a42718dd24c0324321d2bbe566aeab5",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 383,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/portfolio-reviewed/report.md",
+    "sha256": "77147ce89c3bcd9c78e6af8cc6c82c4b7820e744c2ea53c563db0c6320b0d4a8",
+    "stable_during_hash": true
+  }
+]

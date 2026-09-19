@@ -1,0 +1,12 @@
+{
+  "frozen_files_identical": 14,
+  "preflight": {
+    "status": "VERIFIED",
+    "freeze": "2026-09-10T21:02:24.363841+00:00",
+    "deadline": "2027-06-10",
+    "required_eligible_sessions": 120,
+    "timeliness_seconds": 60,
+    "interim_efficacy": false
+  },
+  "generated_artifact_source_hashes": "all match final source"
+}

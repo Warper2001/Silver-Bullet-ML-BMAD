@@ -1,0 +1,597 @@
+{
+  "command_input_inventory": [
+    {
+      "bytes": 3893,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/calibration-inputs/exposed_corrected_gap_trades.csv",
+      "sha256": "e8ef00365bdfda166c417ba1150ce58f371419180a4676eaafdfb35509e65e39",
+      "stable_during_hash": true
+    }
+  ],
+  "computational_sources": [
+    {
+      "bytes": 82,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/__init__.py",
+      "sha256": "1baeecc479e3b48d361f75db9117a15cef4cf49817c08d869e658f5e3ea4d196",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 11919,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/__main__.py",
+      "sha256": "03a4c036db200be6ee6d114b2739f74b1d58cb6ff1a994bfe8e9e0ec398ecc33",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10368,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/accounts.py",
+      "sha256": "d54f28b10717de134806a252c7ec7d88a75119df3d6957ab6d5e3ae877a3fbe3",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10552,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/archive.py",
+      "sha256": "3fdf22d611fd615d8e9162cee1ef23220c82c668b9087e7ec2759488d53d6c7b",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 14921,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/audit.py",
+      "sha256": "616d6f07f37cfd4cef07adcb69785d849f30c1957a89459bdedba7fbdbc8021d",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 2789,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/common.py",
+      "sha256": "d1c73a35eb595d2089c49740723d3864056c19670ba303ae29134d2d458228ba",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 15874,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/portfolio.py",
+      "sha256": "f4ec5a3557c8cd76e57084fd8ab8175ff56c50c8034f186f18e3170dc53e82b6",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 18891,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/power.py",
+      "sha256": "f6dd255a085844c09da35e026f5047e89474c1009fc3537b4114e6261c1ca501",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10260,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/reconciliation.py",
+      "sha256": "cca67b9b55c991a95d1c2de2f684658b6d5d9f857043d12f5921d6654094945f",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 13057,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/scheduler.py",
+      "sha256": "3398a277a96bba8294d7219a726d74a422a1afe31068a678557e098d98a3529b",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 7617,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/session_report.py",
+      "sha256": "d8965d2651ec9b615a2ecff2406174e9968c22ab11a29b3a94bbc7a0dfe95fb8",
+      "stable_during_hash": true
+    }
+  ],
+  "confirmatory": false,
+  "design": {
+    "allocations": {
+      "GAP": 1,
+      "MIM": 1,
+      "YANK": 2
+    },
+    "alpha": 0.05,
+    "blocks": [
+      5,
+      10,
+      20
+    ],
+    "cost_stress": [
+      0.0,
+      1.0
+    ],
+    "decision_rule": "positive_three_endpoints_all_costs_blocks_bonferroni_paired_bootstrap_v1",
+    "draws": 400,
+    "seed": 7
+  },
+  "horizon_formula": "ceil(required_eligible_sessions / eligible_session_fraction); calendar weeks ~= /5",
+  "input_sha256": null,
+  "missing": "paired corrected MIM/YANK/GAP sessions with exposure and costs",
+  "portfolio_sweep": [],
+  "standalone": {
+    "collection_horizon": "required_future_trades / prospective_trade_rate_per_eligible_session; rate must be observed",
+    "confirmatory": false,
+    "cost_provenance": "Uses supplied pnl_usd; fee/slippage decomposition unresolved, not treated as verified net.",
+    "input_sha256": "e8ef00365bdfda166c417ba1150ce58f371419180a4676eaafdfb35509e65e39",
+    "joint_portfolio_status": "INSUFFICIENT_DATA",
+    "status": "EXPOSED_CALIBRATION_ONLY",
+    "sweep": [
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 5.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 192.79729489359354,
+        "required_future_trades": 44605
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 5.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 136.3282746136825,
+        "required_future_trades": 44605
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 5.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 96.39864744679677,
+        "required_future_trades": 44605
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 5.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 68.16413730684125,
+        "required_future_trades": 44605
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 5.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 48.199323723398386,
+        "required_future_trades": 44605
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 10.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 192.79729489359354,
+        "required_future_trades": 11152
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 10.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 136.3282746136825,
+        "required_future_trades": 11152
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 10.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 96.39864744679677,
+        "required_future_trades": 11152
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 10.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 68.16413730684125,
+        "required_future_trades": 11152
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 10.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 48.199323723398386,
+        "required_future_trades": 11152
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 20.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 192.79729489359354,
+        "required_future_trades": 2788
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 20.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 136.3282746136825,
+        "required_future_trades": 2788
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 20.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 96.39864744679677,
+        "required_future_trades": 2788
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 20.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 68.16413730684125,
+        "required_future_trades": 2788
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 20.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 48.199323723398386,
+        "required_future_trades": 2788
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 40.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 192.79729489359354,
+        "required_future_trades": 697
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 40.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 136.3282746136825,
+        "required_future_trades": 697
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 40.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 96.39864744679677,
+        "required_future_trades": 697
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 40.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 68.16413730684125,
+        "required_future_trades": 697
+      },
+      {
+        "adequate": false,
+        "block_trades": 1,
+        "effect_usd": 40.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 48.199323723398386,
+        "required_future_trades": 697
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 5.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 161.47197532481528,
+        "required_future_trades": 31288
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 5.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 114.17792872376377,
+        "required_future_trades": 31288
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 5.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 80.73598766240764,
+        "required_future_trades": 31288
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 5.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 57.088964361881885,
+        "required_future_trades": 31288
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 5.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 40.36799383120382,
+        "required_future_trades": 31288
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 10.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 161.47197532481528,
+        "required_future_trades": 7822
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 10.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 114.17792872376377,
+        "required_future_trades": 7822
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 10.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 80.73598766240764,
+        "required_future_trades": 7822
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 10.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 57.088964361881885,
+        "required_future_trades": 7822
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 10.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 40.36799383120382,
+        "required_future_trades": 7822
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 20.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 161.47197532481528,
+        "required_future_trades": 1956
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 20.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 114.17792872376377,
+        "required_future_trades": 1956
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 20.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 80.73598766240764,
+        "required_future_trades": 1956
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 20.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 57.088964361881885,
+        "required_future_trades": 1956
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 20.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 40.36799383120382,
+        "required_future_trades": 1956
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 40.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 161.47197532481528,
+        "required_future_trades": 489
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 40.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 114.17792872376377,
+        "required_future_trades": 489
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 40.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 80.73598766240764,
+        "required_future_trades": 489
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 40.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 57.088964361881885,
+        "required_future_trades": 489
+      },
+      {
+        "adequate": false,
+        "block_trades": 3,
+        "effect_usd": 40.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 40.36799383120382,
+        "required_future_trades": 489
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 5.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 183.04665156301274,
+        "required_future_trades": 40208
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 5.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 129.43352859369747,
+        "required_future_trades": 40208
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 5.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 91.52332578150637,
+        "required_future_trades": 40208
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 5.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 64.71676429684874,
+        "required_future_trades": 40208
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 5.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 45.761662890753186,
+        "required_future_trades": 40208
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 10.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 183.04665156301274,
+        "required_future_trades": 10052
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 10.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 129.43352859369747,
+        "required_future_trades": 10052
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 10.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 91.52332578150637,
+        "required_future_trades": 10052
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 10.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 64.71676429684874,
+        "required_future_trades": 10052
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 10.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 45.761662890753186,
+        "required_future_trades": 10052
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 20.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 183.04665156301274,
+        "required_future_trades": 2513
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 20.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 129.43352859369747,
+        "required_future_trades": 2513
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 20.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 91.52332578150637,
+        "required_future_trades": 2513
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 20.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 64.71676429684874,
+        "required_future_trades": 2513
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 20.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 45.761662890753186,
+        "required_future_trades": 2513
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 40.0,
+        "future_trades": 30,
+        "minimum_detectable_usd": 183.04665156301274,
+        "required_future_trades": 629
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 40.0,
+        "future_trades": 60,
+        "minimum_detectable_usd": 129.43352859369747,
+        "required_future_trades": 629
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 40.0,
+        "future_trades": 120,
+        "minimum_detectable_usd": 91.52332578150637,
+        "required_future_trades": 629
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 40.0,
+        "future_trades": 240,
+        "minimum_detectable_usd": 64.71676429684874,
+        "required_future_trades": 629
+      },
+      {
+        "adequate": false,
+        "block_trades": 5,
+        "effect_usd": 40.0,
+        "future_trades": 480,
+        "minimum_detectable_usd": 45.761662890753186,
+        "required_future_trades": 629
+      }
+    ],
+    "trades": 115
+  },
+  "status": "INSUFFICIENT_DATA",
+  "sweep": [],
+  "target_power": 0.8
+}

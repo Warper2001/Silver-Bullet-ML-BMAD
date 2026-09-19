@@ -1,0 +1,210 @@
+{
+  "retrieved_at": "2026-09-19T18:40:29.131861+00:00",
+  "orders": {
+    "3402786736": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 107,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3403419854": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 111,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3440196079": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 113,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3442305605": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 117,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3458517705": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 119,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3459306848": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 123,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3463323116": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 125,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3463323140": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 126,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3464030716": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 129,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3464771398": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 133,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3485315080": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 135,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3487577619": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 139,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3490856253": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 141,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3493056828": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 145,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3526429109": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 148,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3528749110": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 152,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3531839017": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 154,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3531839051": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 155,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3534499548": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 158,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3534648878": {
+      "strategy": "MIM",
+      "source": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "line": 162,
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 14011
+    },
+    "3407519214": {
+      "strategy": "YANK",
+      "source": "/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log",
+      "line": 348641,
+      "sha256": "7c025dea791aa134c0262c3124125442efadb4047436e26198041d679c4e6d1b",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 370674578
+    },
+    "3408188342": {
+      "strategy": "YANK",
+      "source": "/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log",
+      "line": 349180,
+      "sha256": "7c025dea791aa134c0262c3124125442efadb4047436e26198041d679c4e6d1b",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 370674578
+    },
+    "3410754322": {
+      "strategy": "YANK",
+      "source": "/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log",
+      "line": 360861,
+      "sha256": "7c025dea791aa134c0262c3124125442efadb4047436e26198041d679c4e6d1b",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 370674578
+    },
+    "3412298651": {
+      "strategy": "YANK",
+      "source": "/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log",
+      "line": 361417,
+      "sha256": "7c025dea791aa134c0262c3124125442efadb4047436e26198041d679c4e6d1b",
+      "link": "explicit_order_id",
+      "source_prefix_bytes": 370674578
+    }
+  },
+  "contract_mapping": {
+    "CON.F.US.MNQ.U26": "MNQU26",
+    "CON.F.US.MNQ.Z26": "MNQZ26"
+  },
+  "coverage": {
+    "requested_start": "2026-08-13T00:00:00Z",
+    "requested_end": "2026-09-19T18:40:28.650897+00:00",
+    "broker_success": true,
+    "current_positions_empty": true,
+    "current_open_orders_empty": true,
+    "flat_at_start": "NOT_INDEPENDENTLY_CERTIFIED",
+    "coverage_certification": "API success only; no statement of historical completeness or prior starting positions. Account epoch start from configured fallback 2026-08-13, not independently established."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "retrieved_at": "2026-09-19T18:44:37.086756+00:00",
+  "endpoint": "Account/search",
+  "accounts": [
+    {
+      "id": 26556101,
+      "balance": 48917.42,
+      "canTrade": true,
+      "isVisible": true,
+      "simulated": true
+    }
+  ]
+}

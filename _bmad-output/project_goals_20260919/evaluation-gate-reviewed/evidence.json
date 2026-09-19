@@ -1,0 +1,87 @@
+{
+  "command_input_inventory": [
+    {
+      "bytes": 17688,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/power-reviewed/evidence.json",
+      "sha256": "d139863336e0195a13f09e2450bc6aa2691bfe6af3c8c120462f57f3a0f2b390",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 665,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/registration-draft.json",
+      "sha256": "7d0fd57844855b3cbeed65b8f16a24088a7ff3afe3ceae021ddfa5ae76bc8b5f",
+      "stable_during_hash": true
+    }
+  ],
+  "computational_sources": [
+    {
+      "bytes": 82,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/__init__.py",
+      "sha256": "1baeecc479e3b48d361f75db9117a15cef4cf49817c08d869e658f5e3ea4d196",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 11919,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/__main__.py",
+      "sha256": "03a4c036db200be6ee6d114b2739f74b1d58cb6ff1a994bfe8e9e0ec398ecc33",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10368,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/accounts.py",
+      "sha256": "d54f28b10717de134806a252c7ec7d88a75119df3d6957ab6d5e3ae877a3fbe3",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10552,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/archive.py",
+      "sha256": "3fdf22d611fd615d8e9162cee1ef23220c82c668b9087e7ec2759488d53d6c7b",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 14921,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/audit.py",
+      "sha256": "616d6f07f37cfd4cef07adcb69785d849f30c1957a89459bdedba7fbdbc8021d",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 2789,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/common.py",
+      "sha256": "d1c73a35eb595d2089c49740723d3864056c19670ba303ae29134d2d458228ba",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 15874,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/portfolio.py",
+      "sha256": "f4ec5a3557c8cd76e57084fd8ab8175ff56c50c8034f186f18e3170dc53e82b6",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 18891,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/power.py",
+      "sha256": "f6dd255a085844c09da35e026f5047e89474c1009fc3537b4114e6261c1ca501",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10260,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/reconciliation.py",
+      "sha256": "cca67b9b55c991a95d1c2de2f684658b6d5d9f857043d12f5921d6654094945f",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 13057,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/scheduler.py",
+      "sha256": "3398a277a96bba8294d7219a726d74a422a1afe31068a678557e098d98a3529b",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 7617,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/session_report.py",
+      "sha256": "d8965d2651ec9b615a2ecff2406174e9968c22ab11a29b3a94bbc7a0dfe95fb8",
+      "stable_during_hash": true
+    }
+  ],
+  "confirmatory": false,
+  "reason": "registration not approved",
+  "status": "INSUFFICIENT_DATA"
+}

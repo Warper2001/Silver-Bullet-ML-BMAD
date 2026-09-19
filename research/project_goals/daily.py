@@ -783,17 +783,27 @@ def reconcile_day(output: Path, account: str, day: str) -> dict[str, Any]:
         note="Advisory; actual execution prices, no double slippage. Reset epoch unknown; natural traded-session acceptance pending.",
     )
     version = immutable(output / "reports" / str(day), result)
-    atomic(
-        output / "latest_report.json",
-        dict(
-            report_hash=version,
-            account=str(account),
-            session_date=str(day),
-            status=result["status"],
-            issues=result["issues"],
-            observation=obs["status"],
-        ),
-    )
+    latest_path = output / "latest_report.json"
+    try:
+        latest = json.loads(latest_path.read_text())
+    except (OSError, ValueError):
+        latest = {}
+    # A refresh of an older day preserves its version without regressing health's
+    # pointer to the most recent session already reported for this account.
+    if latest.get("account") != str(account) or str(day) >= latest.get(
+        "session_date", ""
+    ):
+        atomic(
+            latest_path,
+            dict(
+                report_hash=version,
+                account=str(account),
+                session_date=str(day),
+                status=result["status"],
+                issues=result["issues"],
+                observation=obs["status"],
+            ),
+        )
     immutable(output / "observations", obs)
     update_observation(output, obs, horizon)
     return result
@@ -808,6 +818,10 @@ def update_observation(
         previous = json.loads(path.read_text())
     except (OSError, ValueError):
         previous = {}
+    if observed.get("status") == "PENDING_FLAT_EVIDENCE" and previous:
+        # The capture loop owns current pending reasons. An old report with no
+        # snapshots cannot replace live producer-provenance findings.
+        return
     prior_horizon = (
         timestamp(previous["evaluated_through"])
         if previous.get("evaluated_through")

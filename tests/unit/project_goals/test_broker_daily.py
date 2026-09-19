@@ -637,3 +637,34 @@ def test_intermediate_unknown_producer_identity_incomplete(tmp_path):
     report = reconcile_day(tmp_path, "42", "2026-09-18")
     assert report["status"] == "INCOMPLETE"
     assert "producer_identity_unknown:MIM" in report["issues"]
+
+
+def test_historical_refresh_cannot_regress_live_health_pointers(tmp_path):
+    from research.project_goals.scheduler import atomic
+    from research.project_goals.daily import update_observation
+
+    current = dict(
+        status="PENDING_FLAT_EVIDENCE", reasons=["YANK:state_predates_producer"]
+    )
+    atomic(tmp_path / "observation.json", current)
+    update_observation(
+        tmp_path,
+        dict(status="PENDING_FLAT_EVIDENCE", reasons=["no_snapshots"]),
+        datetime(2026, 9, 17, tzinfo=timezone.utc),
+    )
+    assert json.loads((tmp_path / "observation.json").read_text()) == current
+    atomic(
+        tmp_path / "latest_report.json",
+        dict(
+            account="42",
+            session_date="2026-09-18",
+            status="INCOMPLETE",
+            report_hash="current",
+        ),
+    )
+    reconcile_day(tmp_path, "42", "2026-09-17")
+    assert (
+        json.loads((tmp_path / "latest_report.json").read_text())["report_hash"]
+        == "current"
+    )
+    assert list((tmp_path / "reports/2026-09-17").glob("*.json"))

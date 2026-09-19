@@ -635,7 +635,20 @@ class MimNbLive:
         if st and st.get("sigma_hist"):
             self.sigma_hist = {k: [float(x) for x in v] for k, v in st["sigma_hist"].items()}
             self.sigma_days = [str(d) for d in st.get("sigma_days", [])]
-            if st.get("prev_close") is not None:
+            saved_sym = st.get("symbol")
+            if st.get("prev_close") is None:
+                pass
+            elif saved_sym is not None and saved_sym != self.symbol:
+                # Fail closed: a price level from the retired contract is worse than none.
+                # prev_close=None runs the existing depth gate, so the session stands down
+                # and recovers at its own 16:00 close-out.
+                logger.critical("STATE CONTRACT MISMATCH: prev_close %.2f was saved under "
+                                "%s but the active contract is %s — DISCARDED. This session "
+                                "stands down; prev_close is re-established at its 16:00 "
+                                "close. (Restart across a roll; see sessions.csv.)",
+                                float(st["prev_close"]), saved_sym, self.symbol)
+                self.prev_close = None
+            else:
                 self.prev_close = float(st["prev_close"])
             n_ok = sum(1 for v in self.sigma_hist.values() if len(v) >= LOOKBACK_DAYS)
             logger.info("Sigma restored from state: %d labels, %d at full depth, "
@@ -1467,6 +1480,12 @@ class MimNbLive:
             "day": str(self.day), "position": self.position, "entry_px": self.entry_px,
             "entry_t": self.entry_t, "cat_stop_id": self.cat_stop_id,
             "day_pnl": self.day_pnl, "prev_close": self.prev_close,
+            # The contract prev_close belongs to. Without it a restart BETWEEN sessions
+            # across a roll restores the RETIRED contract's close: initialize() resolves
+            # the new front month, so _maybe_roll() sees no change and never re-derives,
+            # and the next session's gap adjustment compares two contracts (the 2026-09-15
+            # defect, on the one path the roll guard cannot see).
+            "symbol": self.symbol,
             "chains": {"bars": bars_log.head, "decisions": decisions_log.head,
                        "orders": orders_log.head, "trades": trades_log.head,
                        "sessions": sessions_log.head},

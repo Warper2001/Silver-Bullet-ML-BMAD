@@ -1,0 +1,42 @@
+{
+  "status": "DESCRIPTIVE_BROKER_API_RECONSTRUCTION",
+  "order_fill_quantity_discrepancies": [],
+  "net_quantity_by_contract": {
+    "CON.F.US.MNQ.Z26": 0,
+    "CON.F.US.MNQ.U26": 0
+  },
+  "fill_ids_unique": true,
+  "initial_balance_assumption": 50000,
+  "reported_balance": 48917.42,
+  "gross_reported": -1065.5,
+  "actual_fees_and_commissions": 17.08,
+  "balance_bridge_difference": 0.0,
+  "current_positions": [],
+  "current_open_orders": [],
+  "wider_query_start": "2026-06-01T00:00:00Z",
+  "wider_query_same_fills": true,
+  "limits": [
+    "Broker API records are the source; historical completeness is not independently audited.",
+    "Zero net fills and current flat imply initial flat conditional on export completeness.",
+    "Minute close marks omit intraminute excursions; actual close orders can fill after16:00."
+  ],
+  "hashes": {
+    "/tmp/six-goals-broker-20260919/account.json": "0a2298d9693ae05817f33ecf4fdffd2edefa43f3a900ad6c773970eac36a095f",
+    "/tmp/six-goals-broker-20260919/attribution.json": "c3356360e50338c2344cd5cb8b977379a1343c1902b1c97340d4698765af5b67",
+    "/tmp/six-goals-broker-20260919/fills.json": "08859fcbfdf6eb906776ff4dfbc7eee324b4dd20513c1e1a399b115d2632a579",
+    "/tmp/six-goals-broker-20260919/marks/2026-08-13_U26.json": "ee1706463cc2abcbc5088fea9dc1c993e59c825c46dba18d84fad04971e7db4c",
+    "/tmp/six-goals-broker-20260919/marks/2026-08-14_U26.json": "33b722f30d5b4b04c0285dc9e2da8c04288e6e9b35aed42a394c9ac7edcb592e",
+    "/tmp/six-goals-broker-20260919/marks/2026-08-17_U26.json": "cc1d7c9755b1fedd9c473183a9483817834da1f1852e5c206ef8600275f1cfbd",
+    "/tmp/six-goals-broker-20260919/marks/2026-08-24_U26.json": "1ece4072b17506f718a5a52dc748448a1827ec01c0733926fbc0f82412626a53",
+    "/tmp/six-goals-broker-20260919/marks/2026-08-27_U26.json": "804177f61f4f810ad110be85934e398340b08fec330323e426e36a57c464dd45",
+    "/tmp/six-goals-broker-20260919/marks/2026-08-28_U26.json": "089839bac0b981e26bf741d6ea0fc310df7f6680d28d16f7d389d589db23a354",
+    "/tmp/six-goals-broker-20260919/marks/2026-09-03_U26.json": "df3484fb3040c6a55bf15194393d54c92960c98f9a316b936ce216657ba45a02",
+    "/tmp/six-goals-broker-20260919/marks/2026-09-04_U26.json": "c4a3b5f449da91b66c35edc753af198eff06cd1e5e1c49911f8ab0fc768539ce",
+    "/tmp/six-goals-broker-20260919/marks/2026-09-15_Z26.json": "d526306fcba56a59b987218dfc3b6f66a33ab1c5af3be9923ef54b7535700009",
+    "/tmp/six-goals-broker-20260919/marks/2026-09-16_Z26.json": "9173aac93e722e016b2801b6ce5352dc2a0e9bc45c071cd39aa73bd776b9628c",
+    "/tmp/six-goals-broker-20260919/open_orders.json": "a75f1835a4a4ea98a123a54891efb0dd803c6d8a2373cb4d01e0c97cc4c60743",
+    "/tmp/six-goals-broker-20260919/orders.json": "6b72d3765fdb3f4322004a1ad96debc54381e02c967d6cfcbf3ea05c60cfb9b2",
+    "/tmp/six-goals-broker-20260919/positions.json": "cae8e2cc5453dc89ef35353d8cccc26e1916e1ba07f15102cdb1f133e4a83c0e",
+    "/tmp/six-goals-broker-20260919/realtime-ledger.json": "2f54045c833cf5d898daf881237b237f837539c6ce011abdc753e25f8e3d26f9"
+  }
+}

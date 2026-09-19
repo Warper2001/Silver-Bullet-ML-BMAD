@@ -1,0 +1,435 @@
+{
+  "accounts": [
+    "26556101"
+  ],
+  "command_input_inventory": [
+    {
+      "bytes": 7807,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/broker-inputs/attribution.json",
+      "sha256": "c3356360e50338c2344cd5cb8b977379a1343c1902b1c97340d4698765af5b67",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 9532,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/broker-inputs/fills.json",
+      "sha256": "08859fcbfdf6eb906776ff4dfbc7eee324b4dd20513c1e1a399b115d2632a579",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 14753,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/broker-inputs/realtime-ledger.json",
+      "sha256": "2f54045c833cf5d898daf881237b237f837539c6ce011abdc753e25f8e3d26f9",
+      "stable_during_hash": true
+    }
+  ],
+  "completeness": "not certified; requires broker export start/end and account reset register",
+  "computational_sources": [
+    {
+      "bytes": 82,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/__init__.py",
+      "sha256": "1baeecc479e3b48d361f75db9117a15cef4cf49817c08d869e658f5e3ea4d196",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 11919,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/__main__.py",
+      "sha256": "03a4c036db200be6ee6d114b2739f74b1d58cb6ff1a994bfe8e9e0ec398ecc33",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10368,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/accounts.py",
+      "sha256": "d54f28b10717de134806a252c7ec7d88a75119df3d6957ab6d5e3ae877a3fbe3",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10552,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/archive.py",
+      "sha256": "3fdf22d611fd615d8e9162cee1ef23220c82c668b9087e7ec2759488d53d6c7b",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 14921,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/audit.py",
+      "sha256": "616d6f07f37cfd4cef07adcb69785d849f30c1957a89459bdedba7fbdbc8021d",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 2789,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/common.py",
+      "sha256": "d1c73a35eb595d2089c49740723d3864056c19670ba303ae29134d2d458228ba",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 15874,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/portfolio.py",
+      "sha256": "f4ec5a3557c8cd76e57084fd8ab8175ff56c50c8034f186f18e3170dc53e82b6",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 18891,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/power.py",
+      "sha256": "f6dd255a085844c09da35e026f5047e89474c1009fc3537b4114e6261c1ca501",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 10260,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/reconciliation.py",
+      "sha256": "cca67b9b55c991a95d1c2de2f684658b6d5d9f857043d12f5921d6654094945f",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 13057,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/scheduler.py",
+      "sha256": "3398a277a96bba8294d7219a726d74a422a1afe31068a678557e098d98a3529b",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 7617,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/research/project_goals/session_report.py",
+      "sha256": "d8965d2651ec9b615a2ecff2406174e9968c22ab11a29b3a94bbc7a0dfe95fb8",
+      "stable_during_hash": true
+    }
+  ],
+  "contracts": [
+    "CON.F.US.MNQ.U26"
+  ],
+  "fills": 14,
+  "first_timestamp": "2026-08-13T17:00:03.877460+00:00",
+  "fresh_broker_snapshot": {
+    "accounts": [
+      "26556101"
+    ],
+    "completeness": "not certified; requires broker export start/end and account reset register",
+    "contracts": [
+      "CON.F.US.MNQ.U26",
+      "CON.F.US.MNQ.Z26"
+    ],
+    "coverage": "broker export snapshot; independent flat-start and completeness statement unavailable",
+    "economic_scope": "Partial snapshot cash P&L; months may be incomplete. Actual prices already include realized slippage. Stress is additional hypothetical degradation; operating assumptions are not invoices. This is not marked-equity drawdown or earning capacity.",
+    "economic_sensitivity": [
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.0,
+        "monthly_net": {
+          "2026-08": -202.48000000000013,
+          "2026-09": -880.1000000000001
+        },
+        "monthly_operating_assumption": 0.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.0,
+        "monthly_net": {
+          "2026-08": -231.48000000000013,
+          "2026-09": -909.1000000000001
+        },
+        "monthly_operating_assumption": 29.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.0,
+        "monthly_net": {
+          "2026-08": -280.48000000000013,
+          "2026-09": -958.1000000000001
+        },
+        "monthly_operating_assumption": 78.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.0,
+        "monthly_net": {
+          "2026-08": -318.48000000000013,
+          "2026-09": -996.1000000000001
+        },
+        "monthly_operating_assumption": 116.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.5,
+        "monthly_net": {
+          "2026-08": -211.48000000000013,
+          "2026-09": -885.1000000000001
+        },
+        "monthly_operating_assumption": 0.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.5,
+        "monthly_net": {
+          "2026-08": -240.48000000000013,
+          "2026-09": -914.1000000000001
+        },
+        "monthly_operating_assumption": 29.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.5,
+        "monthly_net": {
+          "2026-08": -289.48000000000013,
+          "2026-09": -963.1000000000001
+        },
+        "monthly_operating_assumption": 78.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 0.5,
+        "monthly_net": {
+          "2026-08": -327.48000000000013,
+          "2026-09": -1001.1000000000001
+        },
+        "monthly_operating_assumption": 116.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 1.0,
+        "monthly_net": {
+          "2026-08": -220.48000000000013,
+          "2026-09": -890.1000000000001
+        },
+        "monthly_operating_assumption": 0.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 1.0,
+        "monthly_net": {
+          "2026-08": -249.48000000000013,
+          "2026-09": -919.1000000000001
+        },
+        "monthly_operating_assumption": 29.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 1.0,
+        "monthly_net": {
+          "2026-08": -298.48000000000013,
+          "2026-09": -968.1000000000001
+        },
+        "monthly_operating_assumption": 78.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 1.0,
+        "monthly_net": {
+          "2026-08": -336.48000000000013,
+          "2026-09": -1006.1000000000001
+        },
+        "monthly_operating_assumption": 116.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 2.0,
+        "monthly_net": {
+          "2026-08": -238.48000000000013,
+          "2026-09": -900.1000000000001
+        },
+        "monthly_operating_assumption": 0.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 2.0,
+        "monthly_net": {
+          "2026-08": -267.48000000000013,
+          "2026-09": -929.1000000000001
+        },
+        "monthly_operating_assumption": 29.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 2.0,
+        "monthly_net": {
+          "2026-08": -316.48000000000013,
+          "2026-09": -978.1000000000001
+        },
+        "monthly_operating_assumption": 78.0
+      },
+      {
+        "extra_modeled_slippage_per_filled_contract": 2.0,
+        "monthly_net": {
+          "2026-08": -354.48000000000013,
+          "2026-09": -1016.1000000000001
+        },
+        "monthly_operating_assumption": 116.0
+      }
+    ],
+    "fills": 24,
+    "first_timestamp": "2026-08-13T17:00:03.877460+00:00",
+    "inventory": [
+      {
+        "bytes": 7807,
+        "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/broker-inputs/attribution.json",
+        "sha256": "c3356360e50338c2344cd5cb8b977379a1343c1902b1c97340d4698765af5b67",
+        "stable_during_hash": true
+      },
+      {
+        "bytes": 9532,
+        "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/broker-inputs/fills.json",
+        "sha256": "08859fcbfdf6eb906776ff4dfbc7eee324b4dd20513c1e1a399b115d2632a579",
+        "stable_during_hash": true
+      }
+    ],
+    "issues": [],
+    "known_cost_subtotal": 17.08,
+    "last_timestamp": "2026-09-16T20:00:03.093878+00:00",
+    "missing_cost_records": 0,
+    "modeled_slippage": "not measured; requires contemporaneous intended prices",
+    "monthly_reported_realized_less_all_fill_costs": {
+      "2026-08": -202.48000000000013,
+      "2026-09": -880.1000000000001
+    },
+    "realized_economics": {
+      "cashflow_by_observed_day": {
+        "2026-08-13": -3.7199999999999998,
+        "2026-08-14": 69.56,
+        "2026-08-17": 232.56,
+        "2026-08-24": -176.22000000000003,
+        "2026-08-27": 176.77999999999997,
+        "2026-08-28": -501.44000000000005,
+        "2026-09-03": 440.78,
+        "2026-09-04": -238.22000000000003,
+        "2026-09-15": -325.22,
+        "2026-09-16": -757.44
+      },
+      "reason": "Unknown or multiple account epochs; no cross-session drawdown, recovery or capital curve.",
+      "status": "PER_SESSION_CONDITIONAL_ONLY"
+    },
+    "reconciliation_status_counts": {
+      "UNIQUE_INFERRED_DATE_ENTRY_MINUTE_SIDE": 10,
+      "UNIQUE_INFERRED_EXIT_MINUTE_SIDE_STRATEGY": 12,
+      "UNMATCHED": 37
+    },
+    "reported_gross_realized_sum": -1065.5,
+    "reported_realized_records": 12,
+    "retained_records": 24,
+    "snapshot_net_reported_realized_less_all_fill_costs": -1082.58,
+    "source_prefix_inventory": [
+      {
+        "bytes": 14011,
+        "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+        "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135"
+      },
+      {
+        "bytes": 370674578,
+        "path": "/root/Silver-Bullet-ML-BMAD/logs/yank_streaming_working.log",
+        "sha256": "7c025dea791aa134c0262c3124125442efadb4047436e26198041d679c4e6d1b"
+      }
+    ],
+    "status": "PARTIAL_COVERAGE",
+    "strategy_attribution": "unknown; accountless strategy CSV cannot prove joins",
+    "strategy_totals": {
+      "MIM": {
+        "actual_cost": 12.199999999999998,
+        "fills": 20,
+        "gross_reported": -1372.5,
+        "missing_costs": 0,
+        "net_reported": -1384.7
+      },
+      "YANK": {
+        "actual_cost": 4.88,
+        "fills": 4,
+        "gross_reported": 307.0,
+        "missing_costs": 0,
+        "net_reported": 302.12
+      }
+    },
+    "unmatched_broker_fill_parts": 0,
+    "unmatched_order_ids": 4
+  },
+  "inputs_unchanged_during_read": true,
+  "inventory": [
+    {
+      "bytes": 14011,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/orders.csv",
+      "sha256": "66875a2f2713d85ac225e05d6bacdfaeb479aef17547698f811eb8747ace2135",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 4210,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/projectx_fills.json",
+      "sha256": "d98556116dc89a44ff5b8595b6ca4f5e6d82ac67f25436cdfba93a049e1446fd",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 444,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/sessions.csv",
+      "sha256": "e8398b9e4a8e06c912fee3577764f68797237ce2ce079efdc272689cc1b4f29c",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 164918,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/state.json",
+      "sha256": "6237397b3992c3a616824c14f2482c60bd3c2cc2bb4b22ffc98b9735f045165d",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 2615,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_nb/trades.csv",
+      "sha256": "a153c527246faad43e3822b1bac857cb5a101c3be95bfb0942395e98f4f45dc9",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 1024000,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/trades.db",
+      "sha256": "5a82e1c900cb24b0ca93551868a51ea0cde662fc311d041b4f8e573de09ae68a",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 13179522,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/ts_sim_mirror/mim_invvol_equity.csv",
+      "sha256": "20a51ba267ecb53ba5257d8fd85f8f4a93df24b73298bbe696c46f3eb6ed5e11",
+      "stable_during_hash": true
+    },
+    {
+      "bytes": 14062792,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/ts_sim_mirror/yank_invvol_equity.csv",
+      "sha256": "c913f161368ca7fbbe8ad3cbdf664624fc255087955043f7a1415a9c6292bc92",
+      "stable_during_hash": true
+    }
+  ],
+  "issues": [],
+  "known_cost_subtotal": 10.98,
+  "last_timestamp": "2026-08-28T20:00:02.925043+00:00",
+  "ledger": {
+    "invalid_timestamps": 0,
+    "missing_provenance": {
+      "account": 392,
+      "quantity": 392,
+      "symbol": 358
+    },
+    "pnl_not_combined_with_broker": "no proven identity join",
+    "rows": 392,
+    "status": "PARTIAL_COVERAGE"
+  },
+  "missing_cost_records": 0,
+  "modeled_slippage": "not measured; requires contemporaneous intended prices",
+  "reported_gross_realized_sum": -191.5,
+  "reported_realized_records": 7,
+  "retained_records": 14,
+  "sim_observations": {
+    "status": "SHARED_ACCOUNT_OBSERVATIONS_ONLY",
+    "streams": [
+      {
+        "first": {
+          "buying_power": "101916.95",
+          "contracts": "1",
+          "equity": "101916.95",
+          "ts_utc": "2026-06-19T02:48:44.697822+00:00"
+        },
+        "last": {
+          "buying_power": "99535.75",
+          "contracts": "1",
+          "equity": "99535.75",
+          "ts_utc": "2026-09-19T19:29:48.814987+00:00"
+        },
+        "path": "/root/Silver-Bullet-ML-BMAD/data/ts_sim_mirror/mim_invvol_equity.csv",
+        "rows": 240883
+      },
+      {
+        "first": {
+          "buying_power": "101916.95",
+          "contracts": "1",
+          "equity": "101916.95",
+          "ts_utc": "2026-06-19T02:48:46.389056+00:00"
+        },
+        "last": {
+          "buying_power": "99535.75",
+          "contracts": "1",
+          "equity": "99535.75",
+          "ts_utc": "2026-09-19T19:30:06.740140+00:00"
+        },
+        "path": "/root/Silver-Bullet-ML-BMAD/data/ts_sim_mirror/yank_invvol_equity.csv",
+        "rows": 256936
+      }
+    ],
+    "warning": "Both files observe the same SIM account. Never add or attribute these curves."
+  },
+  "snapshot_net_reported_realized_less_all_fill_costs": -202.48,
+  "status": "PARTIAL_COVERAGE",
+  "strategy_attribution": "unknown; accountless strategy CSV cannot prove joins",
+  "unmatched_order_ids": 4
+}

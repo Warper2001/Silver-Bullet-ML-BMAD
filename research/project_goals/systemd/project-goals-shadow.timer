@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll frozen comparison one second after preceding completion
+
+[Timer]
+OnBootSec=5s
+OnUnitInactiveSec=1s
+AccuracySec=100ms
+Unit=project-goals-shadow.service
+
+[Install]
+WantedBy=timers.target

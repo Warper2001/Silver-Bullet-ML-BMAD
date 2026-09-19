@@ -1,95 +1,105 @@
-"""A prev_close restored from state must belong to the ACTIVE contract.
+"""Price provenance is distinct from the active contract and sigma provenance."""
 
-Residual left open by the 2026-09-15 roll-contract fix: that fix guards the bar path, but
-a restart BETWEEN sessions across a roll never touches it. `initialize()` resolves the new
-front month, `_maybe_roll()` therefore sees no change and never re-derives, and state.json
-carried no contract — so the retired contract's close came back as if it were the new
-one's, and the next session's bands were built across two contracts (~293 pts apart at the
-U26→Z26 roll).
-"""
 import json
-
+from unittest.mock import AsyncMock
 import pytest
-
 from src.research import mim_nb_live as M
 from src.research.mim_nb_live import MimNbLive
 
 SIGMA = {"09:31": [0.001] * 14}
 
 
-def _bot(symbol="MNQZ26"):
+def bot():
     o = object.__new__(MimNbLive)
-    o.symbol = symbol
-    o.sigma_hist, o.sigma_days, o.prev_close = {}, [], None
-    o.day, o.position, o.entry_px, o.entry_t = "2026-09-18", 0, None, None
-    o.cat_stop_id, o.day_pnl = None, 0.0
+    o.symbol = "MNQZ26"
+    o.prev_close = None
+    o.prev_close_symbol = None
+    o.sigma_hist = {}
+    o.sigma_days = []
+    o.day = "2026-09-18"
+    o.position = 0
+    o.entry_px = None
+    o.entry_t = None
+    o.cat_stop_id = None
+    o.day_pnl = 0.0
+    o._prev_close_for_symbol = AsyncMock(return_value=29700.0)
     return o
 
 
-def _state(prev_close=29254.0, symbol="MNQZ26"):
-    st = {"sigma_hist": SIGMA, "sigma_days": ["2026-09-17"], "prev_close": prev_close}
-    if symbol is not None:
-        st["symbol"] = symbol
-    return st
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provenance", [None, "MNQU26", "UNKNOWN", "MNQZ26"])
+async def test_restart_uses_price_provenance(provenance):
+    o = bot()
+    o.position = 1
+    o.entry_px = 29000.0
+    o.cat_stop_id = 123
+    st = dict(
+        symbol="MNQZ26",
+        prev_close_symbol=provenance,
+        prev_close=29254.0,
+        sigma_hist=SIGMA,
+        sigma_days=["2026-09-17"],
+    )
+    o._load_persisted_position = lambda: st
+    await o._backfill()
+    assert o.prev_close == (29254.0 if provenance == "MNQZ26" else 29700.0)
+    assert o.prev_close_symbol == "MNQZ26"
+    assert o.sigma_hist == SIGMA and o.sigma_days == ["2026-09-17"]
+    assert (o.position, o.entry_px, o.cat_stop_id) == (1, 29000.0, 123)
+    assert o._prev_close_for_symbol.await_count == (0 if provenance == "MNQZ26" else 1)
 
 
 @pytest.mark.asyncio
-async def test_same_contract_restores_prev_close():
-    o = _bot("MNQZ26")
-    o._load_persisted_position = lambda: _state(symbol="MNQZ26")
-    await MimNbLive._backfill(o)
-    assert o.prev_close == 29254.0
+async def test_failed_lookup_clears_price():
+    o = bot()
+    o._prev_close_for_symbol = AsyncMock(return_value=None)
+    o._load_persisted_position = lambda: dict(prev_close=29254.0, sigma_hist=SIGMA)
+    await o._backfill()
+    assert o.prev_close is None and o.prev_close_symbol is None
+    assert o.sigma_hist == SIGMA
 
 
 @pytest.mark.asyncio
-async def test_retired_contract_prev_close_is_discarded(caplog):
-    """The 2026-09-15 shape: state saved under U26, bot now on Z26."""
-    o = _bot("MNQZ26")
-    o._load_persisted_position = lambda: _state(prev_close=29151.5, symbol="MNQU26")
-    with caplog.at_level("CRITICAL"):
-        await MimNbLive._backfill(o)
-    assert o.prev_close is None, "a retired contract's close must not become the new one's"
-    assert "STATE CONTRACT MISMATCH" in caplog.text
-    assert o.sigma_hist, "sigma is contract-agnostic and must still be restored"
+async def test_cold_seed_cannot_relabel_old_contract():
+    o = bot()
+    o._load_persisted_position = lambda: None
+
+    def seed():
+        o.sigma_hist = SIGMA
+        o.prev_close = 27000.0
+        o.prev_close_symbol = "MNQU26"
+
+    o._seed_sigma_from_bars = seed
+    await o._backfill()
+    assert o.prev_close == 29700.0 and o.prev_close_symbol == "MNQZ26"
 
 
-@pytest.mark.asyncio
-async def test_legacy_state_without_a_contract_still_restores():
-    """States written before this change carry no symbol; behaviour is unchanged."""
-    o = _bot("MNQZ26")
-    o._load_persisted_position = lambda: _state(symbol=None)
-    await MimNbLive._backfill(o)
-    assert o.prev_close == 29254.0
-
-
-@pytest.mark.asyncio
-async def test_absent_prev_close_is_not_an_error():
-    o = _bot("MNQZ26")
-    o._load_persisted_position = lambda: _state(prev_close=None, symbol="MNQU26")
-    await MimNbLive._backfill(o)
-    assert o.prev_close is None
-
-
-def test_save_state_records_the_contract(tmp_path, monkeypatch):
+def test_save_preserves_price_symbol_independent_of_active(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "DATA_DIR", tmp_path)
-    o = _bot("MNQZ26")
-    o.prev_close, o.sigma_hist, o.sigma_days = 29744.75, SIGMA, ["2026-09-17"]
-    MimNbLive._save_state(o)
-    saved = json.loads((tmp_path / "state.json").read_text())
-    assert saved["symbol"] == "MNQZ26"
-    assert saved["prev_close"] == 29744.75
+    o = bot()
+    o.prev_close = 27000.0
+    o.prev_close_symbol = "MNQU26"
+    o._save_state()
+    st = json.loads((tmp_path / "state.json").read_text())
+    assert st["symbol"] == "MNQZ26" and st["prev_close_symbol"] == "MNQU26"
 
 
-def test_saved_then_restored_across_a_roll_fails_closed(tmp_path, monkeypatch):
-    """End to end: save on U26, come back on Z26, prev_close must not survive."""
-    monkeypatch.setattr(M, "DATA_DIR", tmp_path)
-    old = _bot("MNQU26")
-    old.prev_close, old.sigma_hist, old.sigma_days = 29151.5, SIGMA, ["2026-09-14"]
-    MimNbLive._save_state(old)
-    saved = json.loads((tmp_path / "state.json").read_text())
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -1, "invalid", None])
+async def test_bad_saved_price_rederived(value):
+    o = bot()
+    o._load_persisted_position = lambda: dict(
+        prev_close=value, prev_close_symbol=o.symbol, sigma_hist=SIGMA
+    )
+    await o._backfill()
+    assert o.prev_close == 29700.0
 
-    import asyncio
-    new = _bot("MNQZ26")
-    new._load_persisted_position = lambda: saved
-    asyncio.run(MimNbLive._backfill(new))
-    assert new.prev_close is None
+
+@pytest.mark.asyncio
+async def test_raised_lookup_preserves_open_position_and_sigma():
+    o = bot()
+    o.position = 1
+    o._prev_close_for_symbol = AsyncMock(side_effect=ValueError("malformed bar"))
+    o._load_persisted_position = lambda: dict(prev_close=1, sigma_hist=SIGMA)
+    await o._backfill()
+    assert o.position == 1 and o.sigma_hist == SIGMA and o.prev_close is None

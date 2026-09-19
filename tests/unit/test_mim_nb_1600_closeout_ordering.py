@@ -25,6 +25,7 @@ def _tiny_sessions(monkeypatch):
 
 def _bot(sigma_hist=None, sigma_days=None, prev_close=1000.0, day="2026-07-31"):
     o = object.__new__(MimNbLive)
+    o.symbol = "MNQZ26"
     o.sigma_hist = sigma_hist if sigma_hist is not None else {}
     o.sigma_days = list(sigma_days) if sigma_days else []
     o.prev_close = prev_close

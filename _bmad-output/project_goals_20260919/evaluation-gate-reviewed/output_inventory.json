@@ -1,0 +1,14 @@
+[
+  {
+    "bytes": 3590,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/evaluation-gate-reviewed/evidence.json",
+    "sha256": "7ba72e92ef21e04618d173dd72266bf588c89c5fa74ab98015d36c2a06f3d88e",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 307,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/evaluation-gate-reviewed/report.md",
+    "sha256": "1516c1928f9cd767ff132ce1ce5080fb986ce1d1d7b4970e91933cd305b0926e",
+    "stable_during_hash": true
+  }
+]

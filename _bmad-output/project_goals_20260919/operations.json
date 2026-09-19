@@ -1,0 +1,123 @@
+{
+  "commissioning": "PENDING_FULL_ELIGIBLE_SESSION",
+  "engineering": "proposed units; not installed by implementation agent",
+  "frozen_sources_byte_identical": {
+    "research/mim_comparison/__init__.py": true,
+    "research/mim_comparison/__main__.py": true,
+    "research/mim_comparison/artifacts.py": true,
+    "research/mim_comparison/data.py": true,
+    "research/mim_comparison/engine.py": true,
+    "research/mim_comparison/feed_adapter/__init__.py": true,
+    "research/mim_comparison/feed_adapter/__main__.py": true,
+    "research/mim_comparison/feed_adapter/adapter.py": true,
+    "research/mim_comparison/feed_adapter/sandbox.py": true,
+    "research/mim_comparison/historical.py": true,
+    "research/mim_comparison/poll.sh": true,
+    "research/mim_comparison/references.py": true,
+    "research/mim_comparison/shadow.py": true,
+    "research/mim_comparison/statistics.py": true
+  },
+  "health": {
+    "commissioning": "PENDING_FULL_ELIGIBLE_SESSION",
+    "deadline": "2027-06-10",
+    "eligible_sessions": 0,
+    "exclusions": [
+      {
+        "day": "2026-06-21",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-06-28",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-07-05",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-07-12",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-07-19",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-07-26",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-08-02",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-08-09",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-08-16",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-08-23",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-08-30",
+        "reason": "invalid_first_observation"
+      },
+      {
+        "day": "2026-09-06",
+        "reason": "invalid_first_observation"
+      }
+    ],
+    "no_interim_efficacy": true,
+    "required_eligible_sessions": 120,
+    "sessions": [
+      {
+        "contract": null,
+        "day": "2026-09-11",
+        "eligible": 0,
+        "reason": "missing_late_or_exchange_closed_unverified"
+      },
+      {
+        "contract": null,
+        "day": "2026-09-14",
+        "eligible": 0,
+        "reason": "missing_late_or_exchange_closed_unverified"
+      },
+      {
+        "contract": null,
+        "day": "2026-09-15",
+        "eligible": 0,
+        "reason": "missing_late_or_exchange_closed_unverified"
+      },
+      {
+        "contract": null,
+        "day": "2026-09-16",
+        "eligible": 0,
+        "reason": "missing_late_or_exchange_closed_unverified"
+      },
+      {
+        "contract": null,
+        "day": "2026-09-17",
+        "eligible": 0,
+        "reason": "missing_late_or_exchange_closed_unverified"
+      },
+      {
+        "contract": null,
+        "day": "2026-09-18",
+        "eligible": 0,
+        "reason": "missing_late_or_exchange_closed_unverified"
+      }
+    ]
+  },
+  "preflight": {
+    "deadline": "2027-06-10",
+    "freeze": "2026-09-10T21:02:24.363841+00:00",
+    "interim_efficacy": false,
+    "required_eligible_sessions": 120,
+    "status": "VERIFIED",
+    "timeliness_seconds": 60
+  }
+}

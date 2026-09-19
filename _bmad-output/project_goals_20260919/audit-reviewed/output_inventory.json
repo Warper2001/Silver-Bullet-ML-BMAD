@@ -1,0 +1,50 @@
+[
+  {
+    "bytes": 6744,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/attributed_fills.csv",
+    "sha256": "378e0f0deb4962c5c8f6c771e766ef0df1df50f6d45bc5e2688cdecfabdf8b8a",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 3218,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/broker_roundtrip_parts.csv",
+    "sha256": "07c5dc06404c2bfb1e897732fbd1b7cf6429e1b5243c9b92417d0bea3e433be5",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 2338,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/canonical_fills.csv",
+    "sha256": "118fa21846a32151c26402d7b1278d4679860b20b2d8e4730de9242505afe664",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 15397,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/evidence.json",
+    "sha256": "49ae558930f296816381d644b2c6400911275a7ec897a0ba99bfc24fc4deb865",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 2357,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/original_snapshot_fills.csv",
+    "sha256": "f9746e98cc9464e78dde90e2b57c690a7faf887bac442b56e75570daf5a0a670",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 793,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/report.md",
+    "sha256": "8612beb4152e6cd9ecf642de2bde9be3cf70f40e26def3421e5a32ba2b229821",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 55537,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/strategy_ledger_reconciliation.json",
+    "sha256": "eab8392588d77698f13408db3f408b8d38e7ea6e79d3bccbe9fd5f1994784ffe",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 3,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/audit-reviewed/unmatched_broker_fills.json",
+    "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "stable_during_hash": true
+  }
+]

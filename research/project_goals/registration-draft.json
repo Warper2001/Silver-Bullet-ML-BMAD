@@ -1,0 +1,22 @@
+{
+  "status": "BLOCKED_PENDING_PAIRED_CALIBRATION",
+  "experiment": "GAP incremental contribution to MIM1/YANK2",
+  "allocations": {
+    "MIM": 1,
+    "YANK": 2,
+    "GAP": 1
+  },
+  "required_sessions": null,
+  "effect_usd": null,
+  "blocks": [],
+  "cost_stress": [],
+  "power_status": "INSUFFICIENT_DATA",
+  "calibration_commit": null,
+  "registered_at": null,
+  "freshness_after": null,
+  "power_sha256": null,
+  "code_sha256": null,
+  "source_hashes": {},
+  "note": "Not a seal. Commit calibration first, derive choices from sweeps, then separately commit completed registration before fresh collection. No hand-set threshold or strategy change.",
+  "seed": 7
+}

@@ -1,0 +1,8 @@
+{
+  "manifest": "/tmp/six-goals-chunk-check-5d90vpni/archives/20260919T184513-shadow-80db573626.chunks.json",
+  "manifest_sha256": "097c470bf97fb3d04db6d532d8ec91b6e32ee8fd2600913e14e2847b6ccbe105",
+  "new_compressed_bytes": 3445828,
+  "uncompressed_bytes": 38698593,
+  "elapsed_archive_restore_seconds": 1.037706173985498,
+  "status": "BYTE_EXACT_REAL_SNAPSHOT_COPY"
+}

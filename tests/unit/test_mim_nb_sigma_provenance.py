@@ -35,6 +35,9 @@ def _tiny_sessions(tmp_path, monkeypatch):
 def _bare():
     """A MimNbLive with only the sigma-related state initialised."""
     o = object.__new__(MimNbLive)
+    from unittest.mock import AsyncMock
+    o.symbol = "MNQZ26"
+    o._prev_close_for_symbol = AsyncMock(return_value=None)
     o.sigma_hist, o.sigma_days = {}, []
     o.prev_close, o.day, o.open_d = None, None, None
     o.today_moves, o.today_saw_close = {}, False
@@ -153,7 +156,7 @@ class TestRestartStability:
         o.sigma_days = [f"2026-07-{d:02d}" for d in range(1, 15)]
         o.prev_close = 20123.5
 
-        state = {"position": 0, "prev_close": o.prev_close,
+        state = {"position": 0, "prev_close": o.prev_close, "prev_close_symbol": o.symbol,
                  "sigma_hist": o.sigma_hist, "sigma_days": o.sigma_days}
         o._load_persisted_position = lambda: state
 

@@ -19,6 +19,7 @@ PROJECTX_ACCOUNT_ID must be set in the environment — the bot refuses to start 
 import asyncio
 import csv
 import hashlib
+import math
 import json
 import logging
 import os
@@ -224,6 +225,7 @@ class MimNbLive:
         self.sigma_days = []          # ISO dates contributing to sigma_hist, oldest->newest, max 14
         self.today_saw_close = False  # today's 16:00 bar seen -> day may be folded into sigma_hist
         self.prev_close = None        # prior session close
+        self.prev_close_symbol = None  # provenance of this price, independent of active contract
         self.day = None               # current ET session date
         self.open_d = None            # today's 09:31-bar open
         self.cum_pv = 0.0
@@ -490,6 +492,7 @@ class MimNbLive:
                                 "adjustment as UNTRUSTED and check %s",
                                 old_sym, sym, new_prev, SESSIONS_CSV.name)
             self.prev_close = new_prev
+            self.prev_close_symbol = sym
         else:
             # FAIL CLOSED. Carrying the retired contract's close forward is precisely
             # the contaminated state this fix exists to prevent: the gap adjustment
@@ -504,6 +507,7 @@ class MimNbLive:
                             "this session cannot trade (prev_close=None) and recovers "
                             "at its 16:00 close-out", sym, old_sym)
             self.prev_close = None
+            self.prev_close_symbol = None
         self.open_d = None                  # do not re-fold a partial pre-roll day
         self.today_moves = {}
         self.today_saw_close = False
@@ -635,21 +639,20 @@ class MimNbLive:
         if st and st.get("sigma_hist"):
             self.sigma_hist = {k: [float(x) for x in v] for k, v in st["sigma_hist"].items()}
             self.sigma_days = [str(d) for d in st.get("sigma_days", [])]
-            saved_sym = st.get("symbol")
-            if st.get("prev_close") is None:
-                pass
-            elif saved_sym is not None and saved_sym != self.symbol:
-                # Fail closed: a price level from the retired contract is worse than none.
-                # prev_close=None runs the existing depth gate, so the session stands down
-                # and recovers at its own 16:00 close-out.
-                logger.critical("STATE CONTRACT MISMATCH: prev_close %.2f was saved under "
-                                "%s but the active contract is %s — DISCARDED. This session "
-                                "stands down; prev_close is re-established at its 16:00 "
-                                "close. (Restart across a roll; see sessions.csv.)",
-                                float(st["prev_close"]), saved_sym, self.symbol)
-                self.prev_close = None
-            else:
+            try:
+                saved_price = float(st.get("prev_close"))
+                valid_price = math.isfinite(saved_price) and saved_price > 0
+            except (TypeError, ValueError):
+                valid_price = False
+            if st.get("prev_close_symbol") == self.symbol and valid_price:
                 self.prev_close = float(st["prev_close"])
+                self.prev_close_symbol = self.symbol
+            else:
+                # Active symbol does not establish the provenance of a persisted price.
+                # Legacy, unknown and retired prices must use the contract lookup.
+                self.prev_close = await self._restore_contract_close()
+                self.prev_close_symbol = self.symbol if self.prev_close is not None else None
+                logger.warning("STATE PRICE RE-DERIVED for %s: %s", self.symbol, self.prev_close)
             n_ok = sum(1 for v in self.sigma_hist.values() if len(v) >= LOOKBACK_DAYS)
             logger.info("Sigma restored from state: %d labels, %d at full depth, "
                         "%d contributing days (%s..%s), prev_close=%s",
@@ -658,6 +661,18 @@ class MimNbLive:
                         self.sigma_days[-1] if self.sigma_days else "-", self.prev_close)
             return
         self._seed_sigma_from_bars()
+        self.prev_close = await self._restore_contract_close()
+        self.prev_close_symbol = self.symbol if self.prev_close is not None else None
+
+    async def _restore_contract_close(self):
+        """A failed price lookup must not abort startup position reconciliation."""
+        try:
+            value = await self._prev_close_for_symbol(self.symbol)
+            if value is not None and math.isfinite(float(value)) and float(value) > 0:
+                return float(value)
+        except Exception as exc:
+            logger.error("STATE PRICE lookup failed for %s: %s", self.symbol, exc)
+        return None
 
     @staticmethod
     def _read_rth_sessions(path, ts_field):
@@ -854,9 +869,10 @@ class MimNbLive:
                 self.sigma_hist.setdefault(hm, []).append(abs(c / o - 1.0))
                 self.sigma_hist[hm] = self.sigma_hist[hm][-LOOKBACK_DAYS:]
             self.sigma_days.append(str(d))
-        if seed_days:
-            last = sessions[seed_days[-1]]
-            self.prev_close = next(c for hm, _o, c in reversed(last) if hm == RTH_LAST)
+        # Sigma seed prices may belong to a retired contract. The async caller
+        # obtains the prior close separately using the active contract lookup.
+        self.prev_close = None
+        self.prev_close_symbol = None
         n_ok = sum(1 for v in self.sigma_hist.values() if len(v) >= LOOKBACK_DAYS)
         logger.info("Sigma seeded from bar record: %d days appended (%s..%s), "
                     "%d minute-labels at full depth, prev_close=%s",
@@ -1292,6 +1308,7 @@ class MimNbLive:
         self.today_saw_close = True
         self._fold_today_into_sigma()
         self.prev_close = c
+        self.prev_close_symbol = self.symbol
         self._save_state()
 
     def _new_session(self, d):
@@ -1486,6 +1503,7 @@ class MimNbLive:
             # and the next session's gap adjustment compares two contracts (the 2026-09-15
             # defect, on the one path the roll guard cannot see).
             "symbol": self.symbol,
+            "prev_close_symbol": getattr(self, "prev_close_symbol", None),
             "chains": {"bars": bars_log.head, "decisions": decisions_log.head,
                        "orders": orders_log.head, "trades": trades_log.head,
                        "sessions": sessions_log.head},

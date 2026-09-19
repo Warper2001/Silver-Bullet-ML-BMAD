@@ -1,0 +1,26 @@
+[
+  {
+    "bytes": 17688,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/power-reviewed/evidence.json",
+    "sha256": "d139863336e0195a13f09e2450bc6aa2691bfe6af3c8c120462f57f3a0f2b390",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 2,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/power-reviewed/power_sweep.csv",
+    "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 695,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/power-reviewed/report.md",
+    "sha256": "62387cf8bed89c1159609330f845b2f6c8d56094619a9a5b510ca7f746edf946",
+    "stable_during_hash": true
+  },
+  {
+    "bytes": 2557,
+    "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/six-goals/_bmad-output/project_goals_20260919/power-reviewed/standalone_sweep.csv",
+    "sha256": "39fcfd5178c8ddfe1d5c5d7788e51c747958b1b8caa3187928eb649ac85f86fe",
+    "stable_during_hash": true
+  }
+]

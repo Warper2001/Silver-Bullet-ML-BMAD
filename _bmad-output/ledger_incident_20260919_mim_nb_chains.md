@@ -50,7 +50,17 @@ Re-chaining either file would make the verifier green by destroying the evidence
 chain exists to preserve. `verify_chain.py`'s own doctrine: damage that already happened
 cannot be undone without rewriting an append-only file.
 
-## Decision needed
+## Decision (Alex, 2026-09-19): LEAVE THEM LOUD
+
+No scar is registered for either break. The ops healthcheck will WARN on every run, and
+`verify_chain.py` exits non-zero, until they are fixed or deliberately accepted later.
+That is the intended state: the causes below are inferred from the files, not confirmed by
+any contemporaneous note, and a scar is a claim the damage is understood and accepted.
+
+Expect a standing `bot ledgers:` WARN from `combine-ops-healthcheck`. It is this, not a
+new problem. Re-read this note before treating it as noise.
+
+## Options that were weighed
 
 1. **Register both as scars** (`SCARS` in `verify_chain.py`), each citing this note. The
    breaks still print, tagged `[SCAR]`, but stop failing the exit code — which is what

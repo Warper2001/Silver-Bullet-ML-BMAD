@@ -64,6 +64,15 @@ DEFAULT_FILES = [
     "data/thursday_ts/trades.csv",
     "data/thursday_ts/decisions.csv",
     "data/thursday_ts/counterfactuals.csv",
+    # Added 2026-09-19. MIM-NB has written hash-chained records since it went live on
+    # 2026-06-11 and none of them was ever walked by a default run — the same blind spot
+    # that let the gap-fade damage sit unnoticed for six days. sessions.csv is the
+    # contract-provenance record the 2026-09-15 roll fix introduced; the other three are
+    # the trade evidence a combine result rests on.
+    "data/mim_nb/trades.csv",
+    "data/mim_nb/decisions.csv",
+    "data/mim_nb/orders.csv",
+    "data/mim_nb/sessions.csv",
 ]
 
 # relpath -> (trader_id, date column) for the completeness cross-check

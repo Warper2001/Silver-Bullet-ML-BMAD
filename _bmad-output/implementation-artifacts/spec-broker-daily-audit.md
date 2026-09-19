@@ -2,7 +2,7 @@
 title: Broker-reconciled daily MIM and YANK record
 type: feature
 created: '2026-09-19'
-status: in-review
+status: done
 route: dispatch
 baseline_commit: 523bc692a46b63991fba83709cec646a05eccc5d
 review_loop_iteration: 0
@@ -47,6 +47,7 @@ Always work in /root/Silver-Bullet-ML-BMAD/.claude/worktrees/broker-daily-audit.
 - Given missing evidence or unknown fees, when reporting, then status is incomplete and no unsupported complete total appears.
 - Given successful tests and verified merge, when lead deploys, then read-only capture runs; traded-session acceptance remains pending until natural evidence exists.
 ## Implementation Notes
+Engineering work completed and deployed on 2026-09-19. Capture is enabled/active; MIM restarted in a documented broker-flat window. 275 relevant tests passed. Observation window is pending post-producer state publications; natural traded-session acceptance remains pending. See ../../docs/reports/broker-daily-audit-deployment-2026-09-19.md.
 User explicitly authorized implementation/verification/deployed capture from the plan; no renewed plan permission needed. Worktree starts clean from current main HEAD preserving seven local commits; unrelated main changes untouched. Subagent implements/tests only; lead reviews, merges and deploys. Before any git operation check status and ahead/behind counts. Use /root/Silver-Bullet-ML-BMAD/.venv/bin/python and installed formatting tools, no installs. Never read sealed_holdout.
 ## Spec Change Log
 Review hardening retains the approved scope. Preserve endpoint allowlist, immutable snapshots, exact MIM matching, local-only health, and unchanged strategy behavior while closing identity, continuity, attribution and integration-test gaps. No agent-context changes.

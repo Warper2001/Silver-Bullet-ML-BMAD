@@ -1,0 +1,10 @@
+2026-09-19 19:34:15,008 | INFO | MIM-NB LIVE — MNQZ26 — 1 contract — cat stop 250 pts — account 26556101
+2026-09-19 19:34:15,008 | INFO | MIM-NB LIVE — MNQZ26 — 1 contract — cat stop 250 pts — account 26556101
+2026-09-19 19:34:16,015 | INFO | ROLL prev_close source=bar-record session=2026-09-18
+2026-09-19 19:34:16,015 | INFO | ROLL prev_close source=bar-record session=2026-09-18
+2026-09-19 19:34:16,017 | WARNING | STATE PRICE RE-DERIVED for MNQZ26: 29916.25
+2026-09-19 19:34:16,017 | WARNING | STATE PRICE RE-DERIVED for MNQZ26: 29916.25
+2026-09-19 19:34:16,018 | INFO | Sigma restored from state: 390 labels, 390 at full depth, 14 contributing days (2026-08-31..2026-09-18), prev_close=29916.25
+2026-09-19 19:34:16,018 | INFO | Sigma restored from state: 390 labels, 390 at full depth, 14 contributing days (2026-08-31..2026-09-18), prev_close=29916.25
+2026-09-19 19:34:16,020 | INFO | Startup reconcile: own state FLAT — no account action ✓
+2026-09-19 19:34:16,020 | INFO | Startup reconcile: own state FLAT — no account action ✓

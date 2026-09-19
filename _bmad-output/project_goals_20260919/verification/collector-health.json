@@ -1,0 +1,95 @@
+{
+  "eligible_sessions": 0,
+  "required_eligible_sessions": 120,
+  "commissioning": "PENDING_FULL_ELIGIBLE_SESSION",
+  "sessions": [
+    {
+      "day": "2026-09-11",
+      "contract": null,
+      "eligible": 0,
+      "reason": "missing_late_or_exchange_closed_unverified"
+    },
+    {
+      "day": "2026-09-14",
+      "contract": null,
+      "eligible": 0,
+      "reason": "missing_late_or_exchange_closed_unverified"
+    },
+    {
+      "day": "2026-09-15",
+      "contract": null,
+      "eligible": 0,
+      "reason": "missing_late_or_exchange_closed_unverified"
+    },
+    {
+      "day": "2026-09-16",
+      "contract": null,
+      "eligible": 0,
+      "reason": "missing_late_or_exchange_closed_unverified"
+    },
+    {
+      "day": "2026-09-17",
+      "contract": null,
+      "eligible": 0,
+      "reason": "missing_late_or_exchange_closed_unverified"
+    },
+    {
+      "day": "2026-09-18",
+      "contract": null,
+      "eligible": 0,
+      "reason": "missing_late_or_exchange_closed_unverified"
+    }
+  ],
+  "exclusions": [
+    {
+      "day": "2026-06-21",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-06-28",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-07-05",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-07-12",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-07-19",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-07-26",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-08-02",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-08-09",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-08-16",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-08-23",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-08-30",
+      "reason": "invalid_first_observation"
+    },
+    {
+      "day": "2026-09-06",
+      "reason": "invalid_first_observation"
+    }
+  ],
+  "deadline": "2027-06-10",
+  "no_interim_efficacy": true
+}

@@ -1,0 +1,416 @@
+[
+  {
+    "archives": [
+      {
+        "manifest": "/root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health/archives/poll-20260919T193430063414-5091605d.chunks.json",
+        "manifest_sha256": "dc0b56bf642138fdf83a22c14190552698d7b7dea1eeaad6b4d93ae160b998a2",
+        "new_compressed_bytes": 13092,
+        "uncompressed_bytes": 449990
+      },
+      {
+        "manifest": "/root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health/archives/20260919T193432-shadow-16552d810b.chunks.json",
+        "manifest_sha256": "0715b278b96196d5ee34e3d92688feb7c2e083efdec55bd91e80fb93c1e977e2",
+        "new_compressed_bytes": 3445821,
+        "uncompressed_bytes": 38698593
+      }
+    ],
+    "child_alive": false,
+    "child_elapsed_seconds": 21.075726436974946,
+    "child_pid": 1194827,
+    "elapsed_seconds": 23.03969157699612,
+    "finished_at": "2026-09-19T19:34:52.037820+00:00",
+    "health": {
+      "commissioning": "PENDING_FULL_ELIGIBLE_SESSION",
+      "deadline": "2027-06-10",
+      "eligible_sessions": 0,
+      "exclusions": [
+        {
+          "day": "2026-06-21",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-06-28",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-05",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-12",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-19",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-26",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-02",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-09",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-16",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-23",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-30",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-09-06",
+          "reason": "invalid_first_observation"
+        }
+      ],
+      "no_interim_efficacy": true,
+      "required_eligible_sessions": 120,
+      "sessions": [
+        {
+          "contract": null,
+          "day": "2026-09-11",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-14",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-15",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-16",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-17",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-18",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        }
+      ]
+    },
+    "last_observed_at": "2026-09-19T19:34:51.007192+00:00",
+    "latency_budget_exceeded": false,
+    "latency_note": "End-to-end poll wall time; collector independently enforces actual per-bar 60-second receipt rule.",
+    "next_poll": "one second after completion; systemd OnUnitInactiveSec=1s",
+    "operator_recovery_required": false,
+    "poll_returncode": 0,
+    "preflight": {
+      "deadline": "2027-06-10",
+      "freeze": "2026-09-10T21:02:24.363841+00:00",
+      "interim_efficacy": false,
+      "required_eligible_sessions": 120,
+      "status": "VERIFIED",
+      "timeliness_seconds": 60
+    },
+    "stale_child_observed": false,
+    "started_at": "2026-09-19T19:34:28.998127+00:00",
+    "status": "SUCCESS",
+    "storage": {
+      "free_bytes": 101355962368,
+      "reserve_bytes": 4294967296,
+      "snapshot_growth_risk": "New completed snapshots are byte-verified and compressed; historical and authoritative journals remain untouched."
+    }
+  },
+  {
+    "archives": [
+      {
+        "manifest": "/root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health/archives/poll-20260919T193454318333-4d1ec069.chunks.json",
+        "manifest_sha256": "72aea32d7ffc1afd455e5467b03729ea195020388c2446688154e2fa5636ac5b",
+        "new_compressed_bytes": 767,
+        "uncompressed_bytes": 2144
+      },
+      {
+        "manifest": "/root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health/archives/20260919T193456-shadow-5f94660654.chunks.json",
+        "manifest_sha256": "506542a5252a344a5ae4d7dca3d0c56d23baa17fc22daf96a8dc5740c3b67ec3",
+        "new_compressed_bytes": 3383,
+        "uncompressed_bytes": 38698593
+      }
+    ],
+    "child_alive": false,
+    "child_elapsed_seconds": 22.144968432025053,
+    "child_pid": 1194901,
+    "elapsed_seconds": 23.722668642003555,
+    "finished_at": "2026-09-19T19:35:16.942417+00:00",
+    "health": {
+      "commissioning": "PENDING_FULL_ELIGIBLE_SESSION",
+      "deadline": "2027-06-10",
+      "eligible_sessions": 0,
+      "exclusions": [
+        {
+          "day": "2026-06-21",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-06-28",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-05",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-12",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-19",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-26",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-02",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-09",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-16",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-23",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-30",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-09-06",
+          "reason": "invalid_first_observation"
+        }
+      ],
+      "no_interim_efficacy": true,
+      "required_eligible_sessions": 120,
+      "sessions": [
+        {
+          "contract": null,
+          "day": "2026-09-11",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-14",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-15",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-16",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-17",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-18",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        }
+      ]
+    },
+    "last_observed_at": "2026-09-19T19:35:16.300576+00:00",
+    "latency_budget_exceeded": false,
+    "latency_note": "End-to-end poll wall time; collector independently enforces actual per-bar 60-second receipt rule.",
+    "next_poll": "one second after completion; systemd OnUnitInactiveSec=1s",
+    "operator_recovery_required": false,
+    "poll_returncode": 0,
+    "preflight": {
+      "deadline": "2027-06-10",
+      "freeze": "2026-09-10T21:02:24.363841+00:00",
+      "interim_efficacy": false,
+      "required_eligible_sessions": 120,
+      "status": "VERIFIED",
+      "timeliness_seconds": 60
+    },
+    "stale_child_observed": false,
+    "started_at": "2026-09-19T19:34:53.219745+00:00",
+    "status": "SUCCESS",
+    "storage": {
+      "free_bytes": 101351182336,
+      "reserve_bytes": 4294967296,
+      "snapshot_growth_risk": "New completed snapshots are byte-verified and compressed; historical and authoritative journals remain untouched."
+    }
+  },
+  {
+    "archives": [
+      {
+        "manifest": "/root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health/archives/poll-20260919T193519182883-d8a47c09.chunks.json",
+        "manifest_sha256": "f758f789ddee3495ea585bc0d8fea5d70760a7cc1869add10131b815f44ed979",
+        "new_compressed_bytes": 765,
+        "uncompressed_bytes": 2144
+      },
+      {
+        "manifest": "/root/Silver-Bullet-ML-BMAD/research/project_goals/runs/shadow-health/archives/20260919T193521-shadow-fac5b6d1cd.chunks.json",
+        "manifest_sha256": "892c1a64fd7a5f45a219e3eda61b31501c71f26de583d962f8ee90ca6ea02885",
+        "new_compressed_bytes": 3381,
+        "uncompressed_bytes": 38698593
+      }
+    ],
+    "child_alive": false,
+    "child_elapsed_seconds": 19.054023368982598,
+    "child_pid": 1195023,
+    "elapsed_seconds": 20.72124859498581,
+    "finished_at": "2026-09-19T19:35:38.840234+00:00",
+    "health": {
+      "commissioning": "PENDING_FULL_ELIGIBLE_SESSION",
+      "deadline": "2027-06-10",
+      "eligible_sessions": 0,
+      "exclusions": [
+        {
+          "day": "2026-06-21",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-06-28",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-05",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-12",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-19",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-07-26",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-02",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-09",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-16",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-23",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-08-30",
+          "reason": "invalid_first_observation"
+        },
+        {
+          "day": "2026-09-06",
+          "reason": "invalid_first_observation"
+        }
+      ],
+      "no_interim_efficacy": true,
+      "required_eligible_sessions": 120,
+      "sessions": [
+        {
+          "contract": null,
+          "day": "2026-09-11",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-14",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-15",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-16",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-17",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        },
+        {
+          "contract": null,
+          "day": "2026-09-18",
+          "eligible": 0,
+          "reason": "missing_late_or_exchange_closed_unverified"
+        }
+      ]
+    },
+    "last_observed_at": "2026-09-19T19:35:38.089827+00:00",
+    "latency_budget_exceeded": false,
+    "latency_note": "End-to-end poll wall time; collector independently enforces actual per-bar 60-second receipt rule.",
+    "next_poll": "one second after completion; systemd OnUnitInactiveSec=1s",
+    "operator_recovery_required": false,
+    "poll_returncode": 0,
+    "preflight": {
+      "deadline": "2027-06-10",
+      "freeze": "2026-09-10T21:02:24.363841+00:00",
+      "interim_efficacy": false,
+      "required_eligible_sessions": 120,
+      "status": "VERIFIED",
+      "timeliness_seconds": 60
+    },
+    "stale_child_observed": false,
+    "started_at": "2026-09-19T19:35:18.118984+00:00",
+    "status": "SUCCESS",
+    "storage": {
+      "free_bytes": 101351112704,
+      "reserve_bytes": 4294967296,
+      "snapshot_growth_risk": "New completed snapshots are byte-verified and compressed; historical and authoritative journals remain untouched."
+    }
+  }
+]

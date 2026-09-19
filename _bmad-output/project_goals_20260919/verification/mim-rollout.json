@@ -1,0 +1,12 @@
+{
+  "status": "RESTART_VERIFIED",
+  "flat_check": "../rollout-flat-check.json",
+  "sigma_unchanged": true,
+  "sigma_sha256": "3436ac740b0ca61ec98e4646a3108cc4e5284e45dd7aa972bb951cefd4364e57",
+  "runtime_contract": "MNQZ26",
+  "runtime_prev_close": 29916.25,
+  "provenance_source": "bar-record session2026-09-18",
+  "startup_position": "FLAT; no account action",
+  "unit_state": "NRestarts=0\nActiveState=active\nSubState=running\nActiveEnterTimestamp=Sat 2026-09-19 19:34:13 UTC\n",
+  "persisted_state_note": "Existing legacy state file is unchanged while idle; next normal _save_state writes independent price symbol. Every intervening restart rederives safely."
+}

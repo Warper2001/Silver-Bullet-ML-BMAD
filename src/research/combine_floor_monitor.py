@@ -250,7 +250,14 @@ async def main():
                     ACCOUNT_ID, HALT_DISTANCE, PF_THRESHOLD, PF_MIN_TRADES, POLL_SEC)
     auth = ProjectXAuth.from_file(".projectx_api_key")
     http = httpx.AsyncClient(timeout=30)
-    cfg = type("_Cfg", (), {"symbol": "MNQU26", "contracts": 1})()
+    # The contract is only used by the flatten-on-halt path, which is inert while the
+    # monitor is report-only — but a hardcoded front month silently rots at every roll
+    # (MNQU26 expired 2026-09-18 while this line still named it). Take it from the
+    # environment, same key MIM-NB seeds itself from, so a roll needs no code change.
+    symbol = os.environ.get("MIM_NB_SYMBOL") or os.environ.get("SYMBOL") or "MNQZ26"
+    logger.info("floor monitor contract: %s (flatten path only; inert while report-only)",
+                symbol)
+    cfg = type("_Cfg", (), {"symbol": symbol, "contracts": 1})()
     px = ProjectXClient(auth, cfg, http, projectx_account_id=int(ACCOUNT_ID))
     st = load_state()
     logger.info("floor state: acct %s | hwm $%.2f | floor $%.2f | PF window from %s",

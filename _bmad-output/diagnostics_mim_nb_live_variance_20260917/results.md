@@ -1,3 +1,5 @@
+> **ERRATUM 2026-09-20 — the N=26 / PF 0.689 figures below are wrong.** They used `write_mode='realtime'`, which drops MIM-NB's first two live trades. The authoritative ledger (`data/mim_nb/trades.csv`) is N=28, net −$753.00, PF 0.848 — above the 0.70 line, 2 trades from N=30. The claim that the halt "would already fire" is withdrawn. See `_bmad-output/diagnostics_mim_nb_n30_race_20260920/REPORT.md` §0.
+
 # MIM-NB live drawdown vs. its own modeled variance (2026-09-17)
 
 **Question:** is MIM-NB's −$1,540.50 over 26 live trades inside the variance its own

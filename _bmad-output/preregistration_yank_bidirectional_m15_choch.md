@@ -460,3 +460,55 @@ detectable mean per trade at 80% power (one-sided α = 0.05, `2.487 × se`) — 
 - **This window was already mined for three hypotheses** (Amendment 2's disclosure). This is a data
   correction of the third, pre-committed test, not a fourth look, and it is counted once.
 - N ≈ 20 cannot resolve an edge of the size at issue; a pass leaves the question open.
+
+### 4.9 RESULT — Amendment 4 run (2026-09-20, sealing commit `02f47ee`)
+
+Run once, from the sealed harness, artifacts in `_bmad-output/bidir_frontmonth_rerun_20260920/`
+(`results.json`, trade lists, `run.log`; `corrected_bars.csv` and `inputs/` are not committed and are
+pinned by hash). No sealed-holdout file was opened; no ACCESS_LOG entry was needed.
+
+**G0 (reproduction) PASSED, all nine checks.** On the original bars the sealed gate reproduced
+Amendment 1 and 2 exactly: baseline N=46 / PF 1.053; bullish N=23 / PF 1.430 / +$2,566.75; G3 diff
+3.32%; worst month 2026-01 at 17.4%; H1 half N=10 / −$261.25; H2 half N=13 / +$2,828.00. So the
+difference below is the input bars and nothing else.
+
+| | Original bars (Amendment 1) | **Corrected bars** | Bar |
+|---|---|---|---|
+| G1 bullish N | 23 | **19** — PASS | ≥ 15 |
+| **G2 bullish PF** | 1.430 (+$2,566.75) | **1.105 (+$516.50) — FAIL** | > 1.3 |
+| G3 bearish vs same-bars baseline | 3.32% | 0.00% — PASS | ≤ 10% |
+| G4 worst month share | 17.4% (2026-01) | 10.5% (2025-01) — PASS | ≤ 40% |
+| H1 half (2025-01..07), disclosure | N=10, PF 0.894, −$261.25 | N=10, PF 0.894, −$261.25 | not a gate |
+| H2 half (2025-08..2026-02), disclosure | N=13, PF 1.805, +$2,828.00 | **N=9, PF 1.314, +$777.75** | not a gate |
+
+**Verdict, by §4.5: H₀ (Response B). G2 failed.** Amendment 1's H₁ confirmation is **superseded**
+because its inputs were contaminated bars. Per §3, the answer is Response B — `bearish_only=True`
+remains the honest description of what is validated, and bidirectional trading stays untested
+pending a real out-of-sample sample. No multiplier, window or splice is re-tried.
+
+**Where the change came from (descriptive).** Every 2025 bullish entry is unchanged: the H1 half is
+identical to the cent and 17 entry dates are common to both runs. The whole difference is in
+Jan–Feb 2026 — the original bars produced 7 bullish trades there (4 Jan, 3 Feb) and the front-month
+bars produce 3 (1 Jan, 2 Feb). Five entry dates exist only on the deferred-contract bars
+(2026-01-12, 01-21, 01-23, 02-06, 02-11); one exists only on front-month bars (2026-02-18).
+Amendment 2's observation that the pass was "carried entirely by H2" was the contaminated Jan–Feb
+2026 bars.
+
+**What this does NOT show.** Bullish mean $27.18/trade, sd $707.68, se $162.35, t 0.17; the minimum
+detectable mean at 80% power is about **$404 per trade** (§4.6). N=19 cannot distinguish "no bullish
+edge" from a modest one, so this neither confirms nor refutes an edge in either direction. It shows
+that the one pre-committed test the bullish leg had passed **only** on data that was wrong.
+
+**Observation, outside the gates and not investigated (§4.7 forbids re-slicing).** The bearish
+subset moved the other way on corrected bars: N=46 / PF 1.053 / +$596 became N=41 / PF 1.438 /
++$4,139.75. That is the raw pre-ML `BacktestEngine` population, not YANK's live replay, and the
+2025 rebuild changed as well as Jan–Feb, so the two are not separable here. It is **not** evidence
+of a bearish edge, and it sits uneasily beside the 09-15 tier-2 revalidation, which found Jan–Feb 2026
+losing on front-month bars (different engine and config). The disagreement is unexplained.
+
+**Consequences and their limits.**
+- The sealed bullish leg has no passing evidence on correct data. Nothing was wired, changed or
+  restarted; Amendment 3's shadow watcher is untouched.
+- Whether to keep the watcher is Alex's call, not an automatic action (§4.7). Its four completed
+  trades remain unusable as evidence. A stopping N derived by power gate is not built.
+- The derivation window is now spent on this hypothesis: no further look at it on 2025-01 → 2026-02.

@@ -1,0 +1,172 @@
+{
+  "sealing_commit": "02f47ee31d246c26bff841f9aa195b1564b46bec",
+  "pins": {
+    "src/research/backtest_engine.py": "4c72b05b8adf1b0840bc1d604e0d5bfdd561f51cd7b5f3838f99b509e614d911",
+    "src/research/strategy_core.py": "96e087d8154a99b31da9a7f0239da9dbf49129126cb4553da5d8543870931201",
+    "src/research/config_loader.py": "b290e3f10337573f0982dde22f833d6256e903a291c488a1dc24cfbc1f6f1a92",
+    "tools/yank_gap_ceiling_backtest.py": "a28398ee80fa29858b78ee04d4bf73c58eac3351767808824ab1e1e0ff99202b",
+    "tools/yank_bidir_m15_choch_g5_gate.py": "6c71dd3a0eccbeb94a2beeb5cde6771f3d91fadcb71fb975f25bc24b71f2e72f",
+    "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+    "front2025": "f1fe5b36abba90681d8b1439a3975f94e4b4d1040093c7c0368629a807d219d4",
+    "raw_json": "e7aed8ba786436ba80f4b081d3b7a4ee97b06bd3e8cc347c035547ec57dcb924"
+  },
+  "corrected_bars": {
+    "rows_2025": 281645,
+    "rows_2026_janfeb": 56100,
+    "rows_total": 337745,
+    "first": "2025-01-01 23:01:00+00:00",
+    "last": "2026-02-27 22:00:00+00:00",
+    "s1_labels": [
+      "MNQH26"
+    ],
+    "out_sha256": "a850c51275ab1e4ccedcba87ac3c34eb1260a36dfc2f38495797c65b905b7d48"
+  },
+  "original": {
+    "window": [
+      "2025-01-01 23:01:00+00:00",
+      "2026-02-27 22:00:00+00:00"
+    ],
+    "n_bars": 318387,
+    "gates": {
+      "baseline": {
+        "n": 46,
+        "pf": 1.0532868414582355,
+        "net": 596.0
+      },
+      "bearish": {
+        "n": 45,
+        "pf": 1.0882155970717964,
+        "net": 955.0
+      },
+      "bullish": {
+        "n": 23,
+        "pf": 1.4299413735343383,
+        "net": 2566.75
+      },
+      "n_bidir": 68,
+      "months": {
+        "2025-01": 2,
+        "2025-02": 2,
+        "2025-03": 1,
+        "2025-04": 2,
+        "2025-05": 1,
+        "2025-07": 2,
+        "2025-08": 2,
+        "2025-10": 1,
+        "2025-11": 1,
+        "2025-12": 2,
+        "2026-01": 4,
+        "2026-02": 3
+      },
+      "G1": true,
+      "G2": true,
+      "G3": true,
+      "G3_diff_pct": 3.316167471075911,
+      "G4": true,
+      "G4_worst_month": "2026-01",
+      "G4_worst_pct": 17.391304347826086,
+      "all_pass": true
+    },
+    "halves": {
+      "H1_2025-01..07": {
+        "n": 10,
+        "pf": 0.8937144019528072,
+        "net": -261.25
+      },
+      "H2_2025-08..2026-02": {
+        "n": 13,
+        "pf": 1.8052391799544418,
+        "net": 2828.0
+      }
+    },
+    "verdict": "ALL FOUR GATES PASS on this input"
+  },
+  "G0": {
+    "checks": {
+      "baseline_n": true,
+      "baseline_pf": true,
+      "bullish_n": true,
+      "bullish_pf": true,
+      "bullish_net": true,
+      "g3_diff_pct": true,
+      "worst_month": true,
+      "h1": true,
+      "h2": true
+    },
+    "pass": true
+  },
+  "corrected": {
+    "gates": {
+      "baseline": {
+        "n": 41,
+        "pf": 1.43768667565353,
+        "net": 4139.75
+      },
+      "bearish": {
+        "n": 41,
+        "pf": 1.43768667565353,
+        "net": 4139.75
+      },
+      "bullish": {
+        "n": 19,
+        "pf": 1.1047242497972425,
+        "net": 516.5
+      },
+      "n_bidir": 60,
+      "months": {
+        "2025-01": 2,
+        "2025-02": 2,
+        "2025-03": 1,
+        "2025-04": 2,
+        "2025-05": 1,
+        "2025-07": 2,
+        "2025-08": 2,
+        "2025-10": 1,
+        "2025-11": 1,
+        "2025-12": 2,
+        "2026-01": 1,
+        "2026-02": 2
+      },
+      "G1": true,
+      "G2": false,
+      "G3": true,
+      "G3_diff_pct": 0.0,
+      "G4": true,
+      "G4_worst_month": "2025-01",
+      "G4_worst_pct": 10.526315789473683,
+      "all_pass": false
+    },
+    "halves": {
+      "H1_2025-01..07": {
+        "n": 10,
+        "pf": 0.8937144019528072,
+        "net": -261.25
+      },
+      "H2_2025-08..2026-02": {
+        "n": 9,
+        "pf": 1.3143694421988683,
+        "net": 777.75
+      }
+    },
+    "dispersion": {
+      "n": 19,
+      "mean": 27.18421052631579,
+      "sd": 707.6806396902473,
+      "se": 162.35307330052666,
+      "t": 0.16743884161648087,
+      "mde_80pct_power_one_sided_05": 403.7720932984098
+    },
+    "verdict": "H0 (Response B): G1/G2 failed",
+    "bullish_entry_dates_in_both": 17,
+    "bullish_entry_dates_original_only": [
+      "2026-01-12",
+      "2026-01-21",
+      "2026-01-23",
+      "2026-02-06",
+      "2026-02-11"
+    ],
+    "bullish_entry_dates_corrected_only": [
+      "2026-02-18"
+    ]
+  }
+}

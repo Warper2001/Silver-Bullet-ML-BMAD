@@ -1,0 +1,125 @@
+{
+  "verdict": "UNDERPOWERED",
+  "verdict_rule": "UNDERPOWERED if accrual > 2.0y at the paper's own point estimate and 52 events/yr",
+  "inputs": {
+    "mean_ann_pct": 4.14,
+    "t": 1.88,
+    "sd_daily_pct": 0.21,
+    "N": 591,
+    "sample_years": 13.390867579908445,
+    "events_per_year_paper": 44.13455636636508
+  },
+  "derived": {
+    "mean_per_trade_bp": 1.6428571428571428,
+    "sd_per_trade_bp": 21.0,
+    "d_paper": 0.0782312925170068,
+    "t_reproduced": 1.901841176641456
+  },
+  "grid": [
+    {
+      "effect": "ceiling (paper point est.)",
+      "d": 0.0782312925170068,
+      "theta_bp": 1.6428571428571428,
+      "N_req_deff1.0": 1010.1994648522882,
+      "years_deff1.0_paper_observed": 22.88908166350485,
+      "years_deff1.0_calendar_max": 19.426912785620928,
+      "N_req_deff1.5": 1515.2991972784323,
+      "years_deff1.5_paper_observed": 34.33362249525727,
+      "years_deff1.5_calendar_max": 29.140369178431392
+    },
+    {
+      "effect": "x0.75",
+      "d": 0.058673469387755105,
+      "theta_bp": 1.2321428571428572,
+      "N_req_deff1.0": 1795.9101597374013,
+      "years_deff1.0_paper_observed": 40.69170073511973,
+      "years_deff1.0_calendar_max": 34.53673384110387,
+      "N_req_deff1.5": 2693.865239606102,
+      "years_deff1.5_paper_observed": 61.0375511026796,
+      "years_deff1.5_calendar_max": 51.80510076165581
+    },
+    {
+      "effect": "x0.50",
+      "d": 0.0391156462585034,
+      "theta_bp": 0.8214285714285714,
+      "N_req_deff1.0": 4040.797859409153,
+      "years_deff1.0_paper_observed": 91.5563266540194,
+      "years_deff1.0_calendar_max": 77.70765114248371,
+      "N_req_deff1.5": 6061.196789113729,
+      "years_deff1.5_paper_observed": 137.3344899810291,
+      "years_deff1.5_calendar_max": 116.56147671372557
+    },
+    {
+      "effect": "x0.33",
+      "d": 0.026077097505668934,
+      "theta_bp": 0.5476190476190476,
+      "N_req_deff1.0": 9091.795183670596,
+      "years_deff1.0_paper_observed": 206.0017349715437,
+      "years_deff1.0_calendar_max": 174.8422150705884,
+      "N_req_deff1.5": 13637.692775505893,
+      "years_deff1.5_paper_observed": 309.0026024573155,
+      "years_deff1.5_calendar_max": 262.26332260588254
+    },
+    {
+      "effect": "lower 1-SE (d - 1/sqrt(N))",
+      "d": 0.03709678902752045,
+      "theta_bp": 0.7790325695779293,
+      "N_req_deff1.0": 4492.576747328093,
+      "years_deff1.0_paper_observed": 101.7927247310428,
+      "years_deff1.0_calendar_max": 86.39570667938641,
+      "N_req_deff1.5": 6738.865120992139,
+      "years_deff1.5_paper_observed": 152.68908709656418,
+      "years_deff1.5_calendar_max": 129.5935600190796
+    }
+  ],
+  "mde_inside_leash": {
+    "paper_observed": {
+      "N_in_leash": 88.26911273273016,
+      "MDE_d": 0.2646547493968822,
+      "MDE_over_paper_effect": 3.382978100986233
+    },
+    "calendar_max": {
+      "N_in_leash": 104.0,
+      "MDE_d": 0.24381891988214893,
+      "MDE_over_paper_effect": 3.1166418454500775
+    }
+  },
+  "cost_break_even": [
+    {
+      "price": 50,
+      "notional_usd": 5000,
+      "gross_edge_usd": 0.8214285714285714,
+      "one_tick_usd": 1.0,
+      "gross_edge_over_one_tick": 0.8214285714285714
+    },
+    {
+      "price": 60,
+      "notional_usd": 6000,
+      "gross_edge_usd": 0.9857142857142857,
+      "one_tick_usd": 1.0,
+      "gross_edge_over_one_tick": 0.9857142857142857
+    },
+    {
+      "price": 70,
+      "notional_usd": 7000,
+      "gross_edge_usd": 1.15,
+      "one_tick_usd": 1.0,
+      "gross_edge_over_one_tick": 1.15
+    },
+    {
+      "price": 80,
+      "notional_usd": 8000,
+      "gross_edge_usd": 1.3142857142857143,
+      "one_tick_usd": 1.0,
+      "gross_edge_over_one_tick": 1.3142857142857143
+    },
+    {
+      "price": 90,
+      "notional_usd": 9000,
+      "gross_edge_usd": 1.4785714285714284,
+      "one_tick_usd": 1.0,
+      "gross_edge_over_one_tick": 1.4785714285714284
+    }
+  ],
+  "script_sha256": "43ea127c4c0c67846c4cd426728e2973359b489097123e17d70b1df327764da1"
+}

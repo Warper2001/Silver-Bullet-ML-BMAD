@@ -1,0 +1,142 @@
+{
+  "all": {
+    "label": "all ledger trades",
+    "N": 29,
+    "net_usd": -20.0,
+    "PF": 0.9959644874899112,
+    "win_rate": 0.4482758620689655,
+    "payoff": 1.2258024461414292,
+    "mean_bp": 0.30689655484211775,
+    "sd_bp": 75.87665676332841,
+    "median_bp": -2.4585647068797423,
+    "mean_bp_ci95": [
+      -26.682157911859406,
+      27.643182179066162
+    ],
+    "t_mean_bp": 0.021781251271014747,
+    "mean_usd": -0.6896551724137931
+  },
+  "ex_0915_roll_contaminated": {
+    "label": "excluding 2026-09-15 (roll-contaminated spurious LONG)",
+    "N": 28,
+    "net_usd": 335.0,
+    "PF": 1.0728102586394261,
+    "win_rate": 0.4642857142857143,
+    "payoff": 1.2378579907377993,
+    "mean_bp": 2.471897093515769,
+    "sd_bp": 76.35139247081692,
+    "median_bp": -2.3846887997519848,
+    "mean_bp_ci95": [
+      -25.449755998654073,
+      29.921483951766838
+    ],
+    "t_mean_bp": 0.1713138363124374,
+    "mean_usd": 11.964285714285714
+  },
+  "ex_top4_run_0729_0804": {
+    "label": "excluding the 07-29..08-04 run (4 winning days)",
+    "N": 25,
+    "net_usd": -2299.5,
+    "PF": 0.5360169491525424,
+    "win_rate": 0.36,
+    "payoff": 0.952919020715631,
+    "mean_bp": -15.598745545993253,
+    "sd_bp": 66.90297271010921,
+    "median_bp": -15.805440130522344,
+    "mean_bp_ci95": [
+      -41.216017477809125,
+      10.814336431010036
+    ],
+    "t_mean_bp": -1.165773725300867,
+    "mean_usd": -91.98
+  },
+  "longs": {
+    "label": "long trades (descriptive only)",
+    "N": 19,
+    "net_usd": 921.5,
+    "PF": 1.2821926198131985,
+    "win_rate": 0.631578947368421,
+    "payoff": 0.7479456948910326,
+    "mean_bp": 8.550326908702345,
+    "sd_bp": 82.89333862240694,
+    "median_bp": 7.930481734581963,
+    "mean_bp_ci95": [
+      -28.26604895950896,
+      44.20418493995216
+    ],
+    "t_mean_bp": 0.44961406487729005,
+    "mean_usd": 48.5
+  },
+  "shorts": {
+    "label": "short trades (descriptive only)",
+    "N": 10,
+    "net_usd": -941.5,
+    "PF": 0.44306418219461696,
+    "win_rate": 0.1,
+    "payoff": 3.9875776397515525,
+    "mean_bp": -15.355621117492314,
+    "sd_bp": 61.26055759028568,
+    "median_bp": -19.630203718498887,
+    "mean_bp_ci95": [
+      -46.980142469993126,
+      24.75483790583897
+    ],
+    "t_mean_bp": -0.7926590864977027,
+    "mean_usd": -94.15
+  },
+  "monthly": [
+    {
+      "month": "2026-06",
+      "N": 6,
+      "net_usd": -157.0,
+      "mean_bp": -4.2
+    },
+    {
+      "month": "2026-07",
+      "N": 9,
+      "net_usd": -534.5,
+      "mean_bp": -8.8
+    },
+    {
+      "month": "2026-08",
+      "N": 8,
+      "net_usd": 887.5,
+      "mean_bp": 19.22
+    },
+    {
+      "month": "2026-09",
+      "N": 6,
+      "net_usd": -216.0,
+      "mean_bp": -6.74
+    }
+  ],
+  "daily_sharpe": {
+    "sessions": 70,
+    "trading_days": 26,
+    "sharpe_annualised": -0.015602740355467926,
+    "ci95": [
+      -3.8773340260574933,
+      3.723756408172631
+    ],
+    "note": "iid day bootstrap; zero days include any bot downtime; unlevered 1-contract notional"
+  },
+  "resolution": {
+    "report_mean_bp": 2.6,
+    "ledger_sd_bp": 75.87665676332841,
+    "d_report": 0.03426613811029947,
+    "N_needed_80pct_one_sided": 5267.702608032845,
+    "MDE_bp_at_current_N": 35.04168435483957
+  },
+  "report_vs_ledger": {
+    "report": {
+      "mean_bp": 2.6,
+      "win_rate": 0.41,
+      "payoff": 1.69
+    },
+    "ledger": {
+      "mean_bp": 0.30689655484211775,
+      "win_rate": 0.4482758620689655,
+      "payoff": 1.2258024461414292
+    }
+  }
+}

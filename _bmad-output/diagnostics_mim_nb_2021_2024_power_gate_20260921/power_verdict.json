@@ -1,0 +1,104 @@
+{
+  "verdict": "UNDETERMINED",
+  "verdict_rule": "UNDERPOWERED if simulated power < 0.80 at the ceiling d with N_avail_high, DEFF 1.0",
+  "window": {
+    "sessions_with_open_and_close": 998,
+    "seen_months_sessions_excluded": 124,
+    "unseen_sessions": 874,
+    "usable_after_warmup_and_rolls": 844,
+    "N_avail_low": 349.6571428571429,
+    "N_avail_high": 429.5357142857143,
+    "rate_low": 0.4142857142857143,
+    "rate_high": 0.5089285714285714
+  },
+  "dev_shape": {
+    "mean_bp": 14.106010278080781,
+    "sd_bp": 122.8079628488342,
+    "skew": 5.54498499868598,
+    "kurtosis": 47.48724916151779,
+    "n": 114
+  },
+  "grid": [
+    {
+      "anchor": "ceiling (2025 dev, in-sample)",
+      "d": 0.11486234239911658,
+      "mean_bp": 14.106010278080781,
+      "N_req_normal_deff1": 468.6113551941471,
+      "N_req_normal_deff1.5": 702.9170327912207,
+      "N_req_sim_deff1": 395,
+      "power_at_N_low": 0.75475,
+      "power_at_N_high": 0.8331,
+      "years_to_accrue_sim_at_rate_high_252d": 3.0799220272904484
+    },
+    {
+      "anchor": "x0.75",
+      "d": 0.08614675679933743,
+      "mean_bp": 10.579507708560586,
+      "N_req_normal_deff1": 833.086853678484,
+      "N_req_normal_deff1.5": 1249.630280517726,
+      "N_req_sim_deff1": 737,
+      "power_at_N_low": 0.47945,
+      "power_at_N_high": 0.56925,
+      "years_to_accrue_sim_at_rate_high_252d": 5.746588693957115
+    },
+    {
+      "anchor": "x0.50",
+      "d": 0.05743117119955829,
+      "mean_bp": 7.0530051390403905,
+      "N_req_normal_deff1": 1874.4454207765884,
+      "N_req_normal_deff1.5": 2811.6681311648827,
+      "N_req_sim_deff1": 1737,
+      "power_at_N_low": 0.236,
+      "power_at_N_high": 0.2882,
+      "years_to_accrue_sim_at_rate_high_252d": 13.543859649122806
+    },
+    {
+      "anchor": "x0.25",
+      "d": 0.028715585599779145,
+      "mean_bp": 3.5265025695201953,
+      "N_req_normal_deff1": 7497.781683106354,
+      "N_req_normal_deff1.5": 11246.67252465953,
+      "N_req_sim_deff1": 7202,
+      "power_at_N_low": 0.0862,
+      "power_at_N_high": 0.1032,
+      "years_to_accrue_sim_at_rate_high_252d": 56.15594541910331
+    },
+    {
+      "anchor": "third-party report (+2.6 bp)",
+      "d": 0.021171265605963774,
+      "mean_bp": 2.6,
+      "N_req_normal_deff1": 13793.500786760043,
+      "N_req_normal_deff1.5": 20690.251180140065,
+      "N_req_sim_deff1": 13363,
+      "power_at_N_low": 0.06405,
+      "power_at_N_high": 0.0733,
+      "years_to_accrue_sim_at_rate_high_252d": 104.19493177387915
+    },
+    {
+      "anchor": "live ledger (+0.31 bp)",
+      "d": 0.004084321475625823,
+      "mean_bp": 0.5015872000413517,
+      "N_req_normal_deff1": 370619.5372298835,
+      "N_req_normal_deff1.5": 555929.3058448252,
+      "N_req_sim_deff1": null,
+      "power_at_N_low": 0.02915,
+      "power_at_N_high": 0.0342,
+      "years_to_accrue_sim_at_rate_high_252d": null
+    }
+  ],
+  "mde": {
+    "N_low": {
+      "N": 349,
+      "MDE_d_normal": 0.13297281734265143,
+      "MDE_bp_normal": 16.33012081212115,
+      "MDE_over_ceiling": 1.1576711267179776
+    },
+    "N_high": {
+      "N": 429,
+      "MDE_d_normal": 0.11997325250550683,
+      "MDE_bp_normal": 14.733670736550087,
+      "MDE_over_ceiling": 1.0444959592468626
+    }
+  },
+  "script_sha256": "dd2df7f8f73292ea0b51dcaad613b989ee168077aa634e7fda7225fdc75815f2"
+}

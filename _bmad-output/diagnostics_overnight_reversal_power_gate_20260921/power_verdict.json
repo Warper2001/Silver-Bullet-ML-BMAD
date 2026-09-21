@@ -1,0 +1,128 @@
+{
+  "verdict": "UNDERPOWERED",
+  "required_retention_for_powered": 0.6526071073651666,
+  "verdict_rule": "UNDERPOWERED if net_d<=0 or years>2.0 at tradable ceiling (1-min retention) with cost card",
+  "inputs": {
+    "paper_d": 0.2571428571428572,
+    "ret_1min": 0.3055555555555556,
+    "ret_15min": 0.11111111111111112,
+    "days": 992,
+    "span_years": 3.9561943874058865,
+    "basket": "2 MNQ vs 3 MES"
+  },
+  "signal_free_properties": {
+    "basket_daily_sd_usd": 257.63771845616105,
+    "basket_daily_robust_sd_usd": 237.40132499999999,
+    "notional_ratio_mnq_over_mes_median": 0.9075027128215551,
+    "notional_ratio_p05_p95": [
+      0.7865299029491615,
+      0.94876873633849
+    ],
+    "overnight_dispersion": {
+      "n_days": 991,
+      "sd_overnight_mnq_bp": 81.60706939283838,
+      "sd_overnight_mes_bp": 61.27931096830288,
+      "sd_overnight_spread_bp": 30.29536009768214,
+      "robust_sd_overnight_spread_bp": 24.600511499040774
+    }
+  },
+  "grid": [
+    {
+      "cost": "cost card: comm 1.04 + 1 tick/side (MNQ RT 2.04)",
+      "cost_usd_per_day": 14.700000000000001,
+      "cost_d": 0.057056862978319356,
+      "entry": "paper as printed (0 delay, reference only)",
+      "d_gross": 0.2571428571428572,
+      "gross_usd_per_day": 66.24969903158429,
+      "net_d": 0.20008599416453782,
+      "N_req_deff1.0": 154.43110051538386,
+      "years_deff1.0": 0.6128218274419994,
+      "N_req_deff1.5": 231.6466507730758,
+      "years_deff1.5": 0.9192327411629992,
+      "no_cost_N_req_deff1.0": 93.50163715091618,
+      "no_cost_years_deff1.0": 0.3710382426623658
+    },
+    {
+      "cost": "cost card: comm 1.04 + 1 tick/side (MNQ RT 2.04)",
+      "cost_usd_per_day": 14.700000000000001,
+      "cost_d": 0.057056862978319356,
+      "entry": "tradable ceiling (1-min retention 0.306)",
+      "d_gross": 0.07857142857142858,
+      "gross_usd_per_day": 20.242963592984086,
+      "net_d": 0.021514565593109228,
+      "N_req_deff1.0": 13356.81719807217,
+      "years_deff1.0": 53.00324284949274,
+      "N_req_deff1.5": 20035.225797108258,
+      "years_deff1.5": 79.50486427423913,
+      "no_cost_N_req_deff1.0": 1001.4720805585733,
+      "no_cost_years_deff1.0": 3.974095557772116
+    },
+    {
+      "cost": "cost card: comm 1.04 + 1 tick/side (MNQ RT 2.04)",
+      "cost_usd_per_day": 14.700000000000001,
+      "cost_d": 0.057056862978319356,
+      "entry": "15-min retention 0.111",
+      "d_gross": 0.028571428571428577,
+      "gross_usd_per_day": 7.361077670176032,
+      "net_d": -0.02848543440689078,
+      "N_req_deff1.0": Infinity,
+      "years_deff1.0": Infinity,
+      "N_req_deff1.5": Infinity,
+      "years_deff1.5": Infinity,
+      "no_cost_N_req_deff1.0": 7573.632609224212,
+      "no_cost_years_deff1.0": 30.054097655651635
+    },
+    {
+      "cost": "operator MNQ RT 2.24, MES scaled as above",
+      "cost_usd_per_day": 15.100000000000001,
+      "cost_d": 0.05860943067840968,
+      "entry": "paper as printed (0 delay, reference only)",
+      "d_gross": 0.2571428571428572,
+      "gross_usd_per_day": 66.24969903158429,
+      "net_d": 0.1985334264644475,
+      "N_req_deff1.0": 156.85590368214832,
+      "years_deff1.0": 0.6224440622307473,
+      "N_req_deff1.5": 235.28385552322248,
+      "years_deff1.5": 0.9336660933461209,
+      "no_cost_N_req_deff1.0": 93.50163715091618,
+      "no_cost_years_deff1.0": 0.3710382426623658
+    },
+    {
+      "cost": "operator MNQ RT 2.24, MES scaled as above",
+      "cost_usd_per_day": 15.100000000000001,
+      "cost_d": 0.05860943067840968,
+      "entry": "tradable ceiling (1-min retention 0.306)",
+      "d_gross": 0.07857142857142858,
+      "gross_usd_per_day": 20.242963592984086,
+      "net_d": 0.019961997893018904,
+      "N_req_deff1.0": 15515.298466828599,
+      "years_deff1.0": 61.5686447096373,
+      "N_req_deff1.5": 23272.947700242898,
+      "years_deff1.5": 92.35296706445594,
+      "no_cost_N_req_deff1.0": 1001.4720805585733,
+      "no_cost_years_deff1.0": 3.974095557772116
+    },
+    {
+      "cost": "operator MNQ RT 2.24, MES scaled as above",
+      "cost_usd_per_day": 15.100000000000001,
+      "cost_d": 0.05860943067840968,
+      "entry": "15-min retention 0.111",
+      "d_gross": 0.028571428571428577,
+      "gross_usd_per_day": 7.361077670176032,
+      "net_d": -0.030038002106981102,
+      "N_req_deff1.0": Infinity,
+      "years_deff1.0": Infinity,
+      "N_req_deff1.5": Infinity,
+      "years_deff1.5": Infinity,
+      "no_cost_N_req_deff1.0": 7573.632609224212,
+      "no_cost_years_deff1.0": 30.054097655651635
+    }
+  ],
+  "mde_inside_leash": {
+    "N": 504.0,
+    "MDE_d": 0.11075639320129495,
+    "MDE_over_paper_d": 0.43071930689392474
+  },
+  "max_cost_usd_for_positive_net_at_tradable_ceiling": 20.242963592984086,
+  "script_sha256": "fcf1e6c06ccc746c162ff83992e74b898372c637a0718ab2ee1b0e023e2a109a"
+}

@@ -45,7 +45,7 @@ Quant research plus live trading bots for one operator: MNQ on a Topstep combine
 ## Known pitfalls
 
 - Before any git operation here, run `git status --porcelain` and count both `git log origin/main..HEAD` and `HEAD..origin/main` — uncommitted live hotfixes and one-sided divergence have each silently lost fixes.
-- `data/trades.db` `pnl` is mostly backfilled backtest rows — filter `write_mode = 'realtime'` for live trades, and parse `timestamp` with `format="ISO8601"` (mixed formats).
+- `data/trades.db` `pnl` is mostly backfilled backtest rows — filter `write_mode = 'realtime'` for live trades, and parse `timestamp` with `format="ISO8601"` (mixed formats). **The authoritative ledger is per bot, so reconcile the DB against the bot's own before quoting N or PF:** MIM-NB's is the hash-chained `data/mim_nb/trades.csv` (28 rows on 2026-09-20 — the `realtime` filter gave 26 because its first two live trades are `backfilled`/absent in the DB), while GAP-1's is `trades.db` (its CSV overstated by $1,390.50).
 - Replaying bars through a trader class writes real trade-log rows under `logs/`, and YANK's also writes `data/trades.db` outside backfill mode; only `tier2_streaming_working.TradeLogger(persist=False)` is sandboxed — use it or a standalone pandas engine.
 - Tuesday exclusion and the M15 CHoCH constants (`SWING_R`, `CHOCH_ATR_MULT`) are hardcoded in the trader files; `tuesday_exclusion` in the YAML has no effect.
 - On a combine account reset, update `COMBINE_EPOCH_START_FALLBACK` in `src/research/mim_nb_live.py` and `PROJECTX_ACCOUNT_ID` in every unit that sets it — a stale epoch leaks the retired account's trades into the new balance.

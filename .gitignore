@@ -98,6 +98,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv-research/
 env/
 venv/
 ENV/
@@ -244,11 +245,13 @@ data/yank/native-minute-*/
 !docs/reports/yank-native-minute/*.json
 
 # --- Bulk / regenerable data that only ever showed up as untracked noise (2026-09-21) ----
-# Multi-GB captures and acquisition output; none is a versioned artifact. data/evfade_fomc/ (live accrual ledger) is
-# intentionally NOT listed here.
+# Multi-GB captures and acquisition output; none is a versioned artifact.
 data/tick/
 data/yank/
 data/commodity_curve/
 data/trades.db.*
 # 25 MB pilot reconciliation dump; the sibling final-run1 copy predates this rule and stays tracked.
 docs/reports/yank-execution-pilot/final-run2/reconciliation.jsonl
+
+# Live prospective event accrual; keep on disk, never restore from Git.
+data/evfade_fomc/

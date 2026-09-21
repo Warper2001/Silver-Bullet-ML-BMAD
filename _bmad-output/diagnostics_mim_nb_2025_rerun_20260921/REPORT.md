@@ -42,3 +42,6 @@ The only data MIM-NB never saw is **MNQ front-month 2021-2024** (`data/mim_x/mnq
 
 ## Side finding, not investigated
 `mnq_1min_2026_ytd.csv` md5 is now 30bc05a8… but the noise-bands seal pinned 4ec175dd… for that file. It was modified after sealing (mtime 2026-06-11 23:31). The 2025 file still matches its seal. Any use of the 2026 file as "the sealed OOS" needs that difference explained first.
+
+**Resolved 2026-09-21:** the md5 change is cosmetic for MIM-NB. The file was extended to 2026-06-11 and gained a `notional` column after the seal, and the
+sealed engine on it reproduces the sealed 2026 trades exactly (50/50 at S250 and S500, through 2026-05-19). See `diagnostics_mnq_2026_ytd_md5_20260921/REPORT.md`.

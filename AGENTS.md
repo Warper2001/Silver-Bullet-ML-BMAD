@@ -54,6 +54,19 @@ Quant research plus live trading bots for one operator: MNQ on a Topstep combine
 
 <!-- /bmad:context -->
 
+## Project goals (confirmed by Alex, 2026-09-18)
+
+Overarching goal: build a dependable automated trading operation that Alex can trust, then scale it into meaningful income. Preserve these six goals when planning, researching, and implementing work:
+
+1. **Create a scalable revenue generator.** Build a robust strategy first, then assess scaling to grow income. $20,000 per month is an aspiration, not a backtest tuning target or an established earning capacity.
+2. **Get better returns relative to risk.** Prioritize higher Sharpe and controlled, understandable drawdown. Lower total profit is acceptable for substantial improvement in robustness; preserve the large winners that support profitability.
+3. **Establish an edge with trustworthy evidence.** Prove candidate strategies in simulation and on unseen data, with adequate statistical power, correct contract data, realistic costs, and preregistered decisions. Revise conclusions when supporting evidence weakens.
+4. **Trust the automation enough to follow its decisions.** Validate holding and exit decisions, keep live behavior faithful to the tested strategy, and make execution failures observable through monitoring, reconciliation, and reliable recovery.
+5. **Turn validated performance into actual withdrawals.** Pursue combine passage, sustainable funded-account trading, and eventual scaling; evaluate prop and direct-capital arrangements for their fit to the strategy.
+6. **Develop complementary sources of returns and a repeatable research process.** Build a small portfolio of defensible strategies and evaluate new opportunities efficiently, with each addition earning its place through evidence.
+
+Priority order: robustness and clear edge → confidence in execution → responsible scaling → income. These are intended outcomes, not claims that the current strategies have achieved them.
+
 ## Methodology history (kept from CLAUDE.md, Program C as of 2026-05-24)
 
 Program C evidence chain, preserved at the maintainer's request. Treat it as history: the 2026-05-20 methodology reset marks all earlier performance claims as tentative.

@@ -1,0 +1,22 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © crypto_rife
+
+//@version=5
+indicator("High Volume Bars", overlay=true)
+length = input(200, title="Loopback")
+mult = input(1.0, title="Multiplier")
+upColor = color.white
+dnColor = color.black
+upHighVolColor = color.blue
+dnHighVolColor = color.red
+
+volumeStDev = ta.stdev(volume, length)
+
+var bg = dnColor
+highVol = volume - volume[1] > volumeStDev*mult
+if (close > open)
+    bg := highVol ? upHighVolColor : upColor
+if (close < open)
+    bg := highVol ? dnHighVolColor : dnColor
+
+barcolor(bg)

@@ -1,0 +1,196 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BackQuant
+
+//@version=6
+indicator(
+ "Adaptive Valuation [BackQuant]", 
+ shorttitle = "Valuation [BackQuant]", 
+ overlay = false)
+
+import TradingView/ta/10 as ta
+
+const string ld    = "Uncheck if you are using a light chart"
+const string calc  = "Main Calculation Settings"
+const string ind   = "Indicator Settings"
+const string wgts  = "Weightings"
+const string smth  = "Smoothing" 
+const string thres = "Thresholds and Signals"
+const string dyn   = "Dynamic Thresholding"
+const string ui    = "UI/UX Settings"
+
+simple bool l_or_d = input.bool(true, "Light or Dark Mode", "Set to false if you are using light mode nad the text will change to black.", group = ld) 
+// Calculation Settings
+series float source = input.source(close, "Calculation Source", group = calc, tooltip = "Price source used for all indicator calculations (e.g., Close, Open, HL2, etc.)") 
+simple int lookback = input.int(100, "Z-Score Lookback Period", group = calc, tooltip = "Number of bars used to calculate the Z-Score (longer = smoother, shorter = more reactive)")
+
+// Indicator Settings
+simple int rsilb = input.int(100, "RSI Lookback", group = ind, inline = ind, tooltip = "Number of bars used in RSI calculation")
+simple int ccilb = input.int(100, "CCI Lookback", group = ind, inline = ind, tooltip = "Number of bars used in CCI calculation")
+simple int dmlb = input.int(100, "DM Lookback", group = ind, inline = ind, tooltip = "Number of bars used in Directional Movement (DM) calculation")
+simple int pzolb = input.int(100, "PZO Lookback", group = ind, inline = ind, tooltip = "Number of bars used in Price Zone Oscillator (PZO) calculation")
+
+// Weighting Settings
+simple float w_rsi = input.float(1.0, "RSI Weight", step=0.1, group = wgts, inline = wgts, tooltip = "Relative importance of RSI in the final valuation (higher = more influence)")
+simple float w_cci = input.float(1.0, "CCI Weight", step=0.1, group = wgts, inline = wgts, tooltip = "Relative importance of CCI in the final valuation")
+simple float w_dm = input.float(1.0, "DM Weight",  step=0.1, group = wgts, inline = wgts, tooltip = "Relative importance of DM in the final valuation")
+simple float w_pzo = input.float(1.0, "PZO Weight", step=0.1, group = wgts, inline = wgts, tooltip = "Relative importance of PZO in the final valuation")
+
+// Smoothing Settings
+simple bool smooth = input.bool(true, "Smooth Valuation?", group = smth, inline = "smt", tooltip = "If enabled, applies a moving average to the valuation for smoother signals")
+string maType = input.string("Ema", "Moving Average Type",options = ["SMA", "Hull", "Ema", "Wma", "Dema", "RMA", "LINREG", "TEMA", "ALMA", "T3"], group = smth, inline = "smt", tooltip = "Choose the moving average type used for smoothing")
+simple int smoothP = input.int(30, "Smoothing Period", group = smth, tooltip = "Number of bars used for the smoothing calculation")
+simple int sig = input.int(6, "Sigma for ALMA", group = smth, tooltip = "Only used when ALMA is selected. Controls ALMA curve shape (higher = smoother)")
+
+// Thresholds and Signals
+simple bool show_obos = input.bool(true, "Show Overbought and Oversold Signals", group = thres, tooltip = "Highlight chart background when valuation enters OB/OS zones")
+simple float ob_thres = input.float(1.5, "Overbought Threshold", step=0.1, group = thres, inline = thres, tooltip = "Level above which the indicator is considered overbought")
+simple float os_thres = input.float(-1.5, "Oversold Threshold", step=0.1, group = thres, inline = thres, tooltip = "Level below which the indicator is considered oversold")
+simple bool show_thres = input.bool(false, "Show OB/OS Thresholds", group = thres, inline = thres, tooltip = "Visualisation of the OB and OS thresholds")
+
+simple bool dyn_thres = input.bool(true, "Dynamic OB/OS (k·σ)", group = thres, tooltip = "If enabled, OB/OS thresholds are calculated dynamically as multiples of the rolling standard deviation")
+simple int dynLen = input.int(100, "Dyn window", minval = 10, group = thres, tooltip = "Number of bars used for calculating rolling mean and standard deviation of the valuation")
+simple float thres_k = input.float(1.5, "k (σ multiples)", step = 0.1, group = thres, tooltip = "Multiplier applied to the standard deviation to set dynamic overbought/oversold thresholds")
+simple bool centerZero = input.bool(true, "Center at 0 (ignore mean)", group = thres, tooltip = "If enabled, thresholds are ±k·σ around zero; if disabled, thresholds are centered around the rolling mean")
+
+// Plotting UI/UX Settings
+simple bool showtable = input.bool(true, "Show Summary Table", group = ui)
+simple bool showplot = input.bool(true, "Show Valuation Oscillator", group = ui)
+int linew = input.int(1, "Plot Line Width", 1,5, 1, group = ui)
+simple bool paintCandles = input.bool(false, "Color Bars According to Valuation?", group = ui)
+simple bool bgcol_ = input.bool(false, "Background Coloring?", group = ui)
+color shortcol = input.color(#ff0000, "Overbought Color", group = ui, inline = "xxxx")
+color longcol = input.color(#00ff00, "Oversold Colour", group = ui, inline = "xxxx")
+
+// Define Helper Functions
+zscore(series float source, simple int lookback) =>
+    mean = ta.ema(source, lookback)
+    stdDev = ta.stdev(source, lookback) 
+    zScore = (source - mean) / stdDev 
+
+// MA Function
+ma(src, len, type, almaSig) =>
+    switch type
+        "SMA" => ta.sma(src, len)
+        "Hull" => ta.hma(src, len)
+        "Ema" => ta.ema(src, len)
+        "Wma" => ta.wma(src, len)
+        "Dema" => ta.dema(src, len)
+        "RMA" => ta.rma(src, len)
+        "LINREG"=> ta.linreg(src, len, 0)
+        "TEMA" => ta.tema(src, len)
+        "ALMA" => ta.alma(src, len, 0, almaSig)
+        "T3" => ta.t3(src,len, 0.7)
+
+// Calculation Start
+rsi = ta.rsi(source, rsilb)
+cci = ta.cci(source, ccilb)
+dm  = ta.dm(dmlb)
+pzo = ta.pzo(pzolb)
+
+z_rsi = zscore(rsi,lookback)
+z_cci = zscore(cci, lookback)
+z_dm = zscore(dm, lookback)
+z_pzo = zscore(pzo, lookback)
+
+// Weighted calculation
+totalWeight = w_rsi + w_cci + w_dm + w_pzo
+valuation = na(totalWeight) or totalWeight == 0 ? na :
+ (z_rsi * w_rsi + z_cci * w_cci + z_dm * w_dm + z_pzo * w_pzo) / totalWeight
+
+if smooth
+    valuation := ma(valuation, smoothP, maType, sig)
+
+
+// Rolling Calculation for Dynamic Thresholding
+val_mean = ta.ema(valuation, dynLen)
+val_sd   = ta.stdev(valuation, dynLen)
+
+// Dynamic Bands
+val_ob = dyn_thres ? (centerZero ?  thres_k * val_sd : val_mean + thres_k * val_sd) : ob_thres
+val_os = dyn_thres ? (centerZero ? -thres_k * val_sd : val_mean - thres_k * val_sd) : os_thres
+
+// Plotting
+midline = plot(0,color = color.new(#000000, 100))
+valuation_plot = plot(showplot?valuation:na,"Valuation",valuation > 0 ? shortcol : valuation < 0 ? longcol : na, linew)
+
+// Oscillator Fill
+fill(
+ midline,valuation_plot,2,-2,
+ color.from_gradient(valuation,0,1.8,color.new(longcol, 90),color.new(shortcol, 10)),
+ color.from_gradient(valuation,-1.5,0,color.new(longcol, 10), color.new(shortcol, 90))
+ )
+
+// Bar colour and Background Color
+bgcolor(bgcol_?color.from_gradient(valuation, -2,2,color.new(longcol,80), color.new(shortcol,80)):na)
+barcolor(paintCandles?color.from_gradient(valuation, -2,2,longcol, shortcol):na)
+// Overbought/ Oversold Signals
+bgcolor(show_obos ? (valuation > val_ob ? color.new(shortcol,80) : na) : na, title="OB Signal (dyn)")
+bgcolor(show_obos ? (valuation < val_os ? color.new(longcol,80) : na) : na, title="OS Signal (dyn)")
+
+obdyn = plot(show_thres ? val_ob : na, "OB (dyn)", color.new(shortcol, 0))
+osdyn = plot(show_thres ? val_os : na, "OS (dyn)", color.new(longcol, 0))
+
+bgcolor(show_obos?(valuation>ob_thres?color.new(shortcol,80):na):na, title="OB Signal")
+bgcolor(show_obos?(valuation<os_thres?color.new(longcol,80):na):na, title="OS Signal")
+
+obupper = plot(show_thres ? 1.5 : na , "+", shortcol, editable = false)
+osupper = plot(show_thres ? -1.5 : na , "-", longcol, editable = false)
+
+
+// Table + Helper Functions
+emoji_signal(v) =>
+    (v >= 0 ?  "🔴": "🟢")
+
+fmt(v) =>
+    na(v) ? "—" : str.tostring(v, format.mintick)
+
+if showtable and barstate.islast
+    
+    tbl = table.new(position.top_right, 3,8, color.new(color.black, 85), l_or_d?color.new(color.white, 30):color.new(color.black, 30), 1, l_or_d?color.new(color.white, 20):color.new(color.black, 20), 1, false)
+
+    tbl.cell(0, 0, "Valuation", text_color=l_or_d?color.white:#000000, bgcolor=color.new(color.black, 50))
+    tbl.merge_cells(0, 0, 2, 0)
+
+    tbl.cell(0, 1, "Metric", text_color=l_or_d?color.white:#000000, bgcolor=color.new(color.black, 70))
+    tbl.cell(1, 1, "Score",  text_color=l_or_d?color.white:#000000, bgcolor=color.new(color.black, 70))
+    tbl.cell(2, 1, "Status", text_color=l_or_d?color.white:#000000, bgcolor=color.new(color.black, 70))
+
+    tbl.cell(0, 2, "RSI (z)", text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 90))
+    tbl.cell(1, 2, fmt(z_rsi), text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 90))
+    tbl.cell(2, 2, emoji_signal(z_rsi), bgcolor=color.new(color.black, 90))
+
+    tbl.cell(0, 3, "CCI (z)", text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 95))
+    tbl.cell(1, 3, fmt(z_cci), text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 95))
+    tbl.cell(2, 3, emoji_signal(z_cci), bgcolor=color.new(color.black, 95))
+
+    tbl.cell(0, 4, "DM (z)", text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 90))
+    tbl.cell(1, 4, fmt(z_dm), text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 90))
+    tbl.cell(2, 4, emoji_signal(z_dm), bgcolor=color.new(color.black, 90))
+
+    tbl.cell(0, 5, "PZO (z)", text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 95))
+    tbl.cell(1, 5, fmt(z_pzo), text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 95))
+    tbl.cell(2, 5, emoji_signal(z_pzo), bgcolor=color.new(color.black, 95))
+
+    tbl.cell(0, 6, "Final Score: " + fmt(valuation), text_color = l_or_d?color.white:#000000, bgcolor=color.new(color.black, 60))
+    tbl.merge_cells(0, 6, 2, 6)
+    tbl.cell(0, 7, emoji_signal(valuation), bgcolor=color.new(color.black, 60))
+    tbl.merge_cells(0, 7, 2, 7)
+
+// Alerts
+obEnter = ta.crossover(valuation, val_ob)   // Enters Overbought zone
+obExit  = ta.crossunder(valuation, val_ob)  // Leaves Overbought zone
+
+osEnter = ta.crossunder(valuation, val_os)  // Enters Oversold zone
+osExit  = ta.crossover(valuation, val_os)   // Leaves Oversold zone
+
+bullZero = ta.crossover(valuation, 0)       // Turns bullish (crosses above 0)
+bearZero = ta.crossunder(valuation, 0)      // Turns bearish (crosses below 0)
+
+alertcondition(obEnter,  title="Valuation: Overbought Enter", message="{{ticker}} {{interval}}: Valuation crossed ABOVE OB threshold")
+alertcondition(obExit,   title="Valuation: Overbought Exit",  message="{{ticker}} {{interval}}: Valuation crossed BELOW OB threshold")
+
+alertcondition(osEnter,  title="Valuation: Oversold Enter",   message="{{ticker}} {{interval}}: Valuation crossed BELOW OS threshold")
+alertcondition(osExit,   title="Valuation: Oversold Exit",    message="{{ticker}} {{interval}}: Valuation crossed ABOVE OS threshold")
+
+alertcondition(bullZero, title="Valuation: Bullish Zero Cross", message="{{ticker}} {{interval}}: Valuation crossed ABOVE zero")
+alertcondition(bearZero, title="Valuation: Bearish Zero Cross", message="{{ticker}} {{interval}}: Valuation crossed BELOW zero")

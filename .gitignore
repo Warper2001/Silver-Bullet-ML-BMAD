@@ -242,3 +242,13 @@ data/s26_replay/*
 data/yank/native-minute-*/
 !src/research/yank_native_minute/pins.json
 !docs/reports/yank-native-minute/*.json
+
+# --- Bulk / regenerable data that only ever showed up as untracked noise (2026-09-21) ----
+# Multi-GB captures and acquisition output; none is a versioned artifact. data/evfade_fomc/ (live accrual ledger) is
+# intentionally NOT listed here.
+data/tick/
+data/yank/
+data/commodity_curve/
+data/trades.db.*
+# 25 MB pilot reconciliation dump; the sibling final-run1 copy predates this rule and stays tracked.
+docs/reports/yank-execution-pilot/final-run2/reconciliation.jsonl

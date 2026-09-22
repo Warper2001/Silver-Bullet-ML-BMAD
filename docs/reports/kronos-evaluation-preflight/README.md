@@ -14,7 +14,9 @@ Under an illustrative one-sided normal known-variance test with 5% family alpha,
 
 ## Evidence and source audit
 
-Documentary inputs are pinned by SHA-256 in `tools/kronos_evaluation_preflight.py`; the program reads only those two report JSON files. It never opens the CSV paths named inside them. The earlier report remains a historical snapshot: its old torch-availability observation is superseded by the successful inference pilot, not silently rewritten.
+Documentary inputs are pinned by SHA-256 in `tools/kronos_evaluation_preflight.py`; the program reads two report JSON files and two archived public commit-metadata responses under `sources/`. It checks revision dates against those archived records and rejects input symlinks before reading content. It never opens the CSV paths named inside the reports. Both the runner and shared helper code are fingerprinted. The earlier report remains a historical snapshot: its old torch-availability observation is superseded by the successful inference pilot, not silently rewritten.
+
+In multi-comparison sensitivity rows, `hypothetical_power` means **marginal power for one Bonferroni-adjusted comparison**, not the probability of detecting any or all effects in the family. The alpha field is family-wise; the test's alpha is that value divided by the comparison count.
 
 Public metadata checked September 22, 2026:
 

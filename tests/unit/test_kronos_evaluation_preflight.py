@@ -49,6 +49,9 @@ def test_dependence_and_multiplicity_do_not_improve_power():
         {"alpha": 0},
         {"alpha": 1},
         {"target_power": 1},
+        {"annual_sharpe": 1e-300},
+        {"annual_sharpe": 1e300},
+        {"se_inflation": 1e308},
     ],
 )
 def test_invalid_scenarios(kwargs):
@@ -95,6 +98,9 @@ def test_revision_and_dataset_mismatch():
 def test_output_manifest_and_cli_gate(tmp_path, monkeypatch, capsys):
     original = gate.read_evidence
     documents = {key: original(key) for key in gate.EVIDENCE}
+    helper = tmp_path / "tools/trading_model_readiness.py"
+    helper.parent.mkdir()
+    helper.write_text("# synthetic helper for fingerprint test\n")
     monkeypatch.setattr(gate, "ROOT", tmp_path)
     monkeypatch.setattr(gate, "read_evidence", documents.__getitem__)
     output = tmp_path / "docs/reports/kronos-evaluation-preflight/run"
@@ -118,3 +124,24 @@ def test_symlink_output_refused(tmp_path, monkeypatch):
     (allowed / "alias").symlink_to(external, target_is_directory=True)
     with pytest.raises(gate.AuditError, match="fresh"):
         gate.run(allowed / "alias" / "run")
+
+
+def test_input_symlink_refused_before_read(tmp_path, monkeypatch):
+    monkeypatch.setattr(gate, "ROOT", tmp_path)
+    path = tmp_path / gate.AUDIT
+    path.parent.mkdir(parents=True)
+    # Even a dangling alias is rejected before any target content can be read.
+    path.symlink_to(tmp_path / "private-file")
+    with pytest.raises(gate.AuditError, match="symlinks"):
+        gate.read_evidence(gate.AUDIT)
+
+
+def test_metadata_mismatch_refused_before_publication(tmp_path, monkeypatch):
+    metadata = gate.read_evidence(gate.MODEL_METADATA)
+    metadata["response"][0]["date"] = "2025-01-01T00:00:00Z"
+    monkeypatch.setattr(gate, "ROOT", tmp_path)
+    monkeypatch.setattr(gate, "read_evidence", lambda _: metadata)
+    output = tmp_path / "docs/reports/kronos-evaluation-preflight/run"
+    with pytest.raises(gate.AuditError, match="metadata"):
+        gate.run(output)
+    assert not output.exists()

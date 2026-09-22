@@ -19,9 +19,15 @@ from tools.trading_model_readiness import AuditError, digest, safe_path  # noqa:
 
 AUDIT = "docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json"
 PILOT = "docs/reports/kronos-inference-pilot/run-20260922-verified/report.json"
+MODEL_METADATA = "docs/reports/kronos-evaluation-preflight/sources/model-commits.json"
+TOKENIZER_METADATA = (
+    "docs/reports/kronos-evaluation-preflight/sources/tokenizer-commits.json"
+)
 EVIDENCE = {
     AUDIT: "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
     PILOT: "97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc",
+    MODEL_METADATA: "594e9d18a9ff7cbbef11e928ac404c5d755b8702ea41231d4c48fed6a3ba1d94",
+    TOKENIZER_METADATA: "b1d96c0f36e3db861578bf622d55b56cd725c7310de4fb71d9eb3027e4fca7c6",
 }
 REVISIONS = {
     "model_revision": {
@@ -41,7 +47,11 @@ def read_evidence(relative: str) -> dict[str, Any]:
     """Only the fixed immutable documentary inputs are permitted."""
     if relative not in EVIDENCE:
         raise AuditError("not an approved documentary input")
-    payload = safe_path(ROOT / relative).read_bytes()
+    expected_path = ROOT.resolve() / relative
+    path = safe_path(expected_path)
+    if path != expected_path:
+        raise AuditError("documentary input symlinks are not permitted")
+    payload = path.read_bytes()
     if hashlib.sha256(payload).hexdigest() != EVIDENCE[relative]:
         raise AuditError("documentary evidence fingerprint changed")
     document = json.loads(payload)
@@ -90,9 +100,15 @@ def normal_scenario(
         raise AuditError("comparison allocation exceeds numerical precision")
     critical = normal.inv_cdf(1 - tail)
     z_power = normal.inv_cdf(target_power)
-    required = 252 * ((critical + z_power) * se_inflation / annual_sharpe) ** 2
+    try:
+        required = 252 * ((critical + z_power) * se_inflation / annual_sharpe) ** 2
+    except OverflowError as exc:
+        raise AuditError("scenario exceeds numerical range") from exc
+    if not math.isfinite(required) or required <= 0:
+        raise AuditError("scenario exceeds numerical range")
     return {
         "hypothetical_annual_net_sharpe": annual_sharpe,
+        "power_interpretation": "MARGINAL_PER_COMPARISON_NOT_ANY_OR_ALL_FAMILY_POWER",
         "se_inflation": se_inflation,
         "comparisons": comparisons,
         "family_alpha": alpha,
@@ -158,14 +174,17 @@ def build_report(audit: dict[str, Any], pilot: dict[str, Any]) -> dict[str, Any]
             for family in (1, 3)
         ],
         "qualifications": [
-            "Planning scenarios are unsealed assumptions, not adopted thresholds or Kronos estimates.",
+            "Planning scenarios are unsealed assumptions, "
+            "not adopted thresholds or Kronos estimates.",
             "252 days/year is a scaling convention, not a historical exchange calendar.",
             "Post-revision weekday ceiling includes holidays and unknown gaps; not effective N.",
             "Revision dates come from public commit metadata, not verified training cutoffs.",
-            "Later dates reduce temporal pretraining concerns but do not erase local research exposure.",
+            "Later dates reduce temporal pretraining concerns "
+            "but do not erase local research exposure.",
             "Zero admitted sessions means none certified here, not proof that none could qualify.",
             "Three seeds and overlapping forecast bars do not multiply market evidence.",
-            "Normal known-variance calculations do not replace a dependence-aware strategy power gate.",
+            "Normal known-variance calculations do not replace "
+            "a dependence-aware strategy power gate.",
             "No prices, forecasts, returns, PnL, credentials or sealed data were read.",
         ],
     }
@@ -219,8 +238,20 @@ def run(output: Path) -> dict[str, Any]:
         raise AuditError(
             "use a fresh child directory of docs/reports/kronos-evaluation-preflight"
         )
+    for key, filename in (
+        ("model_revision", MODEL_METADATA),
+        ("tokenizer_revision", TOKENIZER_METADATA),
+    ):
+        metadata = read_evidence(filename)
+        record = REVISIONS[key]
+        matching = [row for row in metadata["response"] if row["id"] == record["sha"]]
+        if len(matching) != 1 or datetime.fromisoformat(
+            matching[0]["date"].replace("Z", "+00:00")
+        ) != datetime.fromisoformat(record["date"]):
+            raise AuditError("revision boundary differs from archived metadata")
     report = build_report(read_evidence(AUDIT), read_evidence(PILOT))
     report["script_sha256"] = digest(Path(__file__))
+    report["shared_helper_sha256"] = digest(ROOT / "tools/trading_model_readiness.py")
     output.mkdir(parents=True, exist_ok=False)
     (output / "report.json").write_text(
         json.dumps(report, indent=2, allow_nan=False) + "\n"

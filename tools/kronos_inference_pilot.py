@@ -7,9 +7,11 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
+import os
 import resource
 import statistics
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -144,9 +146,13 @@ def load_context() -> pd.DataFrame:
 
 
 def prepare_source(cache: Path, offline: bool) -> Path:
-    vendor = safe_path(cache / "source" / SOURCE_REVISION)
+    vendor = cache.absolute() / "source" / SOURCE_REVISION
+    if safe_path(vendor) != vendor:
+        raise AuditError("source cache aliases are prohibited")
     for name, expected in SOURCE_FILES.items():
-        target = safe_path(vendor / name)
+        target = vendor / name
+        if safe_path(target) != target:
+            raise AuditError("source cache aliases are prohibited")
         if not target.exists():
             if offline:
                 raise AuditError("pinned source is not cached for offline inference")
@@ -156,8 +162,24 @@ def prepare_source(cache: Path, offline: bool) -> Path:
             if hashlib.sha256(content).hexdigest() != expected:
                 raise AuditError("downloaded source hash mismatch")
             target.parent.mkdir(parents=True, exist_ok=True)
-            with target.open("xb") as stream:
-                stream.write(content)
+            # Stage a complete verified file; never expose partially written source.
+            # link() publishes atomically without replacing another process's winner.
+            with tempfile.NamedTemporaryFile(
+                dir=target.parent, prefix=".kronos-", suffix=".part", delete=False
+            ) as stream:
+                staging = Path(stream.name)
+                try:
+                    stream.write(content)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                    try:
+                        os.link(staging, target)
+                    except FileExistsError:
+                        pass  # Verify the concurrent winner below; never overwrite it.
+                finally:
+                    staging.unlink(missing_ok=True)
+        if safe_path(target) != target:
+            raise AuditError("source cache aliases are prohibited")
         if digest(target) != expected:
             raise AuditError("cached source hash mismatch")
     return vendor
@@ -207,7 +229,9 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
         for t in future
     ):
         raise AuditError("forecast crosses the fixed RTH session")
-    cache = safe_path(CACHE)
+    cache = CACHE.absolute()
+    if safe_path(cache) != cache:
+        raise AuditError("source cache aliases are prohibited")
     vendor = prepare_source(cache, offline)
     hub = importlib.import_module("huggingface_hub")
     checkpoints = {}
@@ -274,6 +298,7 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
     warmup_started = time.perf_counter()
     warmup = predict(SEEDS[0])
     warmup_seconds = time.perf_counter() - warmup_started
+    warmup_check = validate_forecast(warmup, future)
     timings, frames, checks = [], [], []
     for seed in SEEDS:
         tick = time.perf_counter()
@@ -284,11 +309,10 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
         saved.insert(0, "seed", seed)
         frames.append(saved)
     predictions = pd.concat(frames)
-    finite = all(check["all_finite"] for check in checks)
-    quality = all(check["invalid_candles"] == 0 for check in checks)
+    quality = all(check["invalid_candles"] == 0 for check in [warmup_check, *checks])
     verify_checkpoints(checkpoints)
     report = {
-        "status": "INFERENCE_COMPLETED" if finite else "INFERENCE_INVALID_OUTPUT",
+        "status": "INFERENCE_COMPLETED" if quality else "INFERENCE_INVALID_OUTPUT",
         "economic_status": "UNTESTED_RESEARCH_CANDIDATE",
         "trading_authorized": False,
         "training_performed": False,
@@ -321,6 +345,7 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
         / 1024,
         "elapsed_seconds": time.perf_counter() - started,
         "output_checks": checks,
+        "warmup_check": warmup_check,
         "all_candles_valid": quality,
         "same_seed_repeat_equal": bool(
             np.array_equal(warmup.to_numpy(), frames[0][VALUE_COLUMNS].to_numpy())
@@ -356,12 +381,18 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=False)
     context.to_csv(output / "context.csv", index_label="timestamp")
     predictions.to_csv(output / "forecasts.csv", index_label="timestamp")
+    warmup.to_csv(output / "warmup.csv", index_label="timestamp")
     (output / "report.json").write_text(encoded)
     (output / "COMPLETE.json").write_text(
         json.dumps(
             {
                 name: digest(output / name)
-                for name in ("context.csv", "forecasts.csv", "report.json")
+                for name in (
+                    "context.csv",
+                    "forecasts.csv",
+                    "warmup.csv",
+                    "report.json",
+                )
             },
             indent=2,
             sort_keys=True,

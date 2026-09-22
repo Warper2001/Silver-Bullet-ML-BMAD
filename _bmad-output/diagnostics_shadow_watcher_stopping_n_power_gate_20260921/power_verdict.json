@@ -1,0 +1,199 @@
+{
+  "verdict": "UNDERPOWERED",
+  "rate_uncertainty": {
+    "count_ci95": [
+      1.0898653736263249,
+      10.241588675403694
+    ],
+    "rate_per_week_ci95": [
+      0.2724663434065812,
+      2.5603971688509235
+    ],
+    "years_at_upper_rate | PF-1.3 bar, SD x1.0": 3.8348700265233666,
+    "years_at_upper_rate | PF-1.3 bar, SD x0.75": 2.157114389919394,
+    "years_at_upper_rate | 1.5 x bar, SD x0.75": 0.9587175066308417,
+    "N_in_leash_at_upper_rate": 266.28130556049604,
+    "MDE_usd_at_upper_rate": 107.83284125504876
+  },
+  "verdict_rule": "POWERED if <=2.0y at both rates; POWER_UNDETERMINED if <=2.0y at r_high only; UNDERPOWERED if >2.0y at both \u2014 at the PF-1.3 anchor, DEFF 1.0",
+  "inputs": {
+    "bull_N": 19,
+    "bull_mean": 27.18421052631579,
+    "bull_sd": 707.6806396902474,
+    "bull_pf": 1.1047242497972425,
+    "gross_loss_per_trade": 259.57894736842104,
+    "theta_bar_usd": 77.87368421052632,
+    "d_bar": 0.11004071588649326,
+    "d_observed": 0.0384131047278817,
+    "rate_low_per_week": 0.3136792452830188,
+    "rate_high_per_week": 1.0,
+    "window_days": 424
+  },
+  "grid": [
+    {
+      "anchor": "PF-1.3 bar (PRIMARY)",
+      "theta_usd": 77.87368421052632,
+      "sd_mult": 0.75,
+      "d": 0.14672095451532435,
+      "N_deff1.0": 287.1996179955346,
+      "years_deff1.0_low": 17.60737970360131,
+      "years_deff1.0_high": 5.523069576837203,
+      "N_deff1.5": 430.7994269933019,
+      "years_deff1.5_low": 26.41106955540197,
+      "years_deff1.5_high": 8.284604365255806
+    },
+    {
+      "anchor": "PF-1.3 bar (PRIMARY)",
+      "theta_usd": 77.87368421052632,
+      "sd_mult": 1.0,
+      "d": 0.11004071588649326,
+      "N_deff1.0": 510.57709865872806,
+      "years_deff1.0_low": 31.30200836195788,
+      "years_deff1.0_high": 9.818790358821694,
+      "N_deff1.5": 765.8656479880921,
+      "years_deff1.5_low": 46.95301254293682,
+      "years_deff1.5_high": 14.72818553823254
+    },
+    {
+      "anchor": "PF-1.3 bar (PRIMARY)",
+      "theta_usd": 77.87368421052632,
+      "sd_mult": 1.25,
+      "d": 0.08803257270919461,
+      "N_deff1.0": 797.7767166542626,
+      "years_deff1.0_low": 48.90938806555919,
+      "years_deff1.0_high": 15.341859935658896,
+      "N_deff1.5": 1196.665074981394,
+      "years_deff1.5_low": 73.36408209833878,
+      "years_deff1.5_high": 23.012789903488343
+    },
+    {
+      "anchor": "0.5 x bar",
+      "theta_usd": 38.93684210526316,
+      "sd_mult": 0.75,
+      "d": 0.07336047725766218,
+      "N_deff1.0": 1148.7984719821384,
+      "years_deff1.0_low": 70.42951881440524,
+      "years_deff1.0_high": 22.092278307348813,
+      "N_deff1.5": 1723.1977079732076,
+      "years_deff1.5_low": 105.64427822160788,
+      "years_deff1.5_high": 33.138417461023224
+    },
+    {
+      "anchor": "0.5 x bar",
+      "theta_usd": 38.93684210526316,
+      "sd_mult": 1.0,
+      "d": 0.05502035794324663,
+      "N_deff1.0": 2042.3083946349122,
+      "years_deff1.0_low": 125.20803344783153,
+      "years_deff1.0_high": 39.275161435286776,
+      "N_deff1.5": 3063.4625919523683,
+      "years_deff1.5_low": 187.81205017174727,
+      "years_deff1.5_high": 58.91274215293016
+    },
+    {
+      "anchor": "0.5 x bar",
+      "theta_usd": 38.93684210526316,
+      "sd_mult": 1.25,
+      "d": 0.044016286354597305,
+      "N_deff1.0": 3191.1068666170504,
+      "years_deff1.0_low": 195.63755226223677,
+      "years_deff1.0_high": 61.36743974263558,
+      "N_deff1.5": 4786.660299925576,
+      "years_deff1.5_low": 293.45632839335514,
+      "years_deff1.5_high": 92.05115961395337
+    },
+    {
+      "anchor": "1.5 x bar",
+      "theta_usd": 116.81052631578947,
+      "sd_mult": 0.75,
+      "d": 0.22008143177298653,
+      "N_deff1.0": 127.64427466468202,
+      "years_deff1.0_low": 7.82550209048947,
+      "years_deff1.0_high": 2.4546975897054235,
+      "N_deff1.5": 191.46641199702302,
+      "years_deff1.5_low": 11.738253135734205,
+      "years_deff1.5_high": 3.682046384558135
+    },
+    {
+      "anchor": "1.5 x bar",
+      "theta_usd": 116.81052631578947,
+      "sd_mult": 1.0,
+      "d": 0.1650610738297399,
+      "N_deff1.0": 226.92315495943473,
+      "years_deff1.0_low": 13.912003716425726,
+      "years_deff1.0_high": 4.363906826142975,
+      "N_deff1.5": 340.3847324391521,
+      "years_deff1.5_low": 20.86800557463859,
+      "years_deff1.5_high": 6.545860239214464
+    },
+    {
+      "anchor": "1.5 x bar",
+      "theta_usd": 116.81052631578947,
+      "sd_mult": 1.25,
+      "d": 0.1320488590637919,
+      "N_deff1.0": 354.56742962411687,
+      "years_deff1.0_low": 21.737505806915205,
+      "years_deff1.0_high": 6.818604415848402,
+      "N_deff1.5": 531.8511444361753,
+      "years_deff1.5_low": 32.606258710372806,
+      "years_deff1.5_high": 10.227906623772602
+    },
+    {
+      "anchor": "derivation point est. (+$27.18, PF 1.105)",
+      "theta_usd": 27.18421052631579,
+      "sd_mult": 0.75,
+      "d": 0.051217472970508944,
+      "N_deff1.0": 2356.849503131045,
+      "years_deff1.0_low": 144.49164102480668,
+      "years_deff1.0_high": 45.32402890636625,
+      "N_deff1.5": 3535.2742546965674,
+      "years_deff1.5_low": 216.73746153721004,
+      "years_deff1.5_high": 67.98604335954937
+    },
+    {
+      "anchor": "derivation point est. (+$27.18, PF 1.105)",
+      "theta_usd": 27.18421052631579,
+      "sd_mult": 1.0,
+      "d": 0.0384131047278817,
+      "N_deff1.0": 4189.9546722329715,
+      "years_deff1.0_low": 256.8740284885454,
+      "years_deff1.0_high": 80.57605138909561,
+      "N_deff1.5": 6284.932008349457,
+      "years_deff1.5_low": 385.31104273281807,
+      "years_deff1.5_high": 120.8640770836434
+    },
+    {
+      "anchor": "derivation point est. (+$27.18, PF 1.105)",
+      "theta_usd": 27.18421052631579,
+      "sd_mult": 1.25,
+      "d": 0.030730483782305362,
+      "N_deff1.0": 6546.804175364016,
+      "years_deff1.0_low": 401.3656695133521,
+      "years_deff1.0_high": 125.90008029546185,
+      "N_deff1.5": 9820.206263046024,
+      "years_deff1.5_low": 602.048504270028,
+      "years_deff1.5_high": 188.85012044319276
+    }
+  ],
+  "mde_inside_leash": {
+    "low": {
+      "N": 32.62264150943396,
+      "MDE_usd": 308.0788081050009,
+      "MDE_over_bar": 3.956135005403499
+    },
+    "high": {
+      "N": 104.0,
+      "MDE_usd": 172.54592919078434,
+      "MDE_over_bar": 2.215715500557517
+    }
+  },
+  "simulation": {
+    "shape_n": 60,
+    "size_at_d0_N_head": 0.04315,
+    "power_at_N_head": 0.82325,
+    "power_at_N_leash_low": 0.10075,
+    "power_at_N_leash_high": 0.27295,
+    "N_head": 511
+  },
+  "script_sha256": "53e1c9c9b0e5c0cb83b2bc8f2087730ff7f7866c89f76ab64c673f6e69092ade"
+}

@@ -73,3 +73,34 @@ def test_safe_destination_and_missing_offline_cache(tmp_path):
             pilot.check_destination(path)
     with pytest.raises(pilot.AuditError):
         pilot.prepare_source(tmp_path / "cache", True)
+
+
+@pytest.mark.parametrize("valid", [True, False])
+def test_main_exit_status(monkeypatch, tmp_path, valid):
+    monkeypatch.setattr(
+        pilot,
+        "run",
+        lambda *args: {
+            "status": "INFERENCE_COMPLETED",
+            "all_candles_valid": valid,
+        },
+    )
+    assert pilot.main(["--output-dir", str(tmp_path / "report")]) == (0 if valid else 1)
+
+
+def test_checkpoint_corruption_rejected(tmp_path):
+    (tmp_path / "config.json").write_text("corrupted")
+    with pytest.raises(pilot.AuditError, match="checkpoint"):
+        pilot.verify_checkpoints({"Kronos-small": tmp_path})
+
+
+def test_cross_session_gap_rejected():
+    frame = minutes().iloc[:15].copy()
+    previous = frame.copy()
+    previous["timestamp"] = pd.date_range(
+        "2025-01-31T20:31:00Z", periods=15, freq="min"
+    ).astype(str)
+    with pytest.raises(pilot.AuditError, match="session-closing"):
+        pilot.build_context(
+            pd.concat([previous, frame], ignore_index=True), "2025-02-03T14:45:00Z", 2
+        )

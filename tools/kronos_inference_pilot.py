@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
-import pandas as pd  # type: ignore[import-untyped]
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -46,6 +46,16 @@ HORIZON = 4
 SEEDS = (0, 1, 2)
 PRICE_COLUMNS = ["open", "high", "low", "close"]
 VALUE_COLUMNS = PRICE_COLUMNS + ["volume", "amount"]
+CHECKPOINT_HASHES = {
+    "Kronos-small": {
+        "config.json": "5e0f6a605d5f81b5c9b559fe5cf716a1acb041c744e6f41bd05b097b7a685396",
+        "model.safetensors": "b082dfcbd8e8c142a725c8bbb99781802f38fec81210e13479effb32b3c3e020",
+    },
+    "Kronos-Tokenizer-base": {
+        "config.json": "2366e7ccfec76cbc19cf3c4c1b9c5d901be336ca1e83f2d2292c9bff381b77a2",
+        "model.safetensors": "59d85f6af76a2c3b8240ea06cb21db4213b4eeca053f246b23e29cf832fc6bee",
+    },
+}
 
 
 def build_context(frame: pd.DataFrame, cutoff: str, lookback: int) -> pd.DataFrame:
@@ -64,13 +74,14 @@ def build_context(frame: pd.DataFrame, cutoff: str, lookback: int) -> pd.DataFra
         "America/New_York"
     )
     selected = selected.sort_index()
-    minutes = selected.index.hour * 60 + selected.index.minute
+    index = pd.DatetimeIndex(selected.index)
+    minutes = index.hour * 60 + index.minute
     selected = selected.loc[
-        (selected.index.weekday < 5) & (minutes >= 571) & (minutes <= 960)
-    ]
+        (index.weekday < 5) & (minutes >= 571) & (minutes <= 960)
+    ].copy()
     if selected.empty or selected.index.has_duplicates:
         raise AuditError("empty or duplicate context minutes")
-    if not (selected.index == selected.index.floor("min")).all():
+    if not (selected.index == pd.DatetimeIndex(selected.index).floor("min")).all():
         raise AuditError("context timestamps must be whole minutes")
     columns = PRICE_COLUMNS + ["volume"]
     selected[columns] = selected[columns].apply(pd.to_numeric, errors="raise")
@@ -94,7 +105,12 @@ def build_context(frame: pd.DataFrame, cutoff: str, lookback: int) -> pd.DataFra
     bars = bars.loc[bars.minute_count > 0].tail(lookback)
     if len(bars) != lookback or not bars.minute_count.eq(15).all():
         raise AuditError("insufficient context or incomplete 15-minute bucket")
-    for _, day_bars in bars.groupby(bars.index.date):
+    for _, day_bars in bars.groupby(pd.DatetimeIndex(bars.index).date):
+        first, last = day_bars.index[0], day_bars.index[-1]
+        if first != bars.index[0] and (first.hour, first.minute) != (9, 45):
+            raise AuditError("missing session-opening context bucket")
+        if last != bars.index[-1] and (last.hour, last.minute) != (16, 0):
+            raise AuditError("missing session-closing context bucket")
         if (
             not day_bars.index.to_series()
             .diff()
@@ -172,6 +188,13 @@ def check_destination(output: Path) -> Path:
     return output
 
 
+def verify_checkpoints(checkpoints: dict[str, Path]) -> None:
+    for name, path in checkpoints.items():
+        for filename, expected in CHECKPOINT_HASHES[name].items():
+            if digest(path / filename) != expected:
+                raise AuditError("checkpoint fingerprint changed")
+
+
 def run(output: Path, offline: bool = False) -> dict[str, Any]:
     output = check_destination(output)
     started = time.perf_counter()
@@ -204,6 +227,7 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
             )
         )
     prepare_seconds = time.perf_counter() - prepare_started
+    verify_checkpoints(checkpoints)
     torch = importlib.import_module("torch")
     torch.set_num_threads(1)
     torch.set_num_interop_threads(1)
@@ -232,7 +256,7 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
         torch.manual_seed(seed)
         np.random.seed(seed)
         with torch.inference_mode():
-            return predictor.predict(
+            result = predictor.predict(
                 context,
                 pd.Series(context.index),
                 pd.Series(future),
@@ -243,6 +267,9 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
                 sample_count=1,
                 verbose=False,
             )
+            if not isinstance(result, pd.DataFrame):
+                raise AuditError("upstream returned a non-DataFrame forecast")
+            return result
 
     warmup_started = time.perf_counter()
     warmup = predict(SEEDS[0])
@@ -259,6 +286,7 @@ def run(output: Path, offline: bool = False) -> dict[str, Any]:
     predictions = pd.concat(frames)
     finite = all(check["all_finite"] for check in checks)
     quality = all(check["invalid_candles"] == 0 for check in checks)
+    verify_checkpoints(checkpoints)
     report = {
         "status": "INFERENCE_COMPLETED" if finite else "INFERENCE_INVALID_OUTPUT",
         "economic_status": "UNTESTED_RESEARCH_CANDIDATE",
@@ -365,8 +393,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--offline", action="store_true", help="Use only already cached pinned assets"
     )
     args = parser.parse_args(argv)
-    run(args.output_dir, args.offline)
-    return 0
+    report = run(args.output_dir, args.offline)
+    return (
+        0
+        if report["status"] == "INFERENCE_COMPLETED" and report["all_candles_valid"]
+        else 1
+    )
 
 
 if __name__ == "__main__":

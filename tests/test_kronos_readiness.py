@@ -1,8 +1,8 @@
-"""Readiness is conservative and all network/credentials below are synthetic."""
+"""Readiness is conservative and all network/credentials below are
+synthetic."""
 
 from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 from statistics import NormalDist
 import math
 
@@ -31,7 +31,8 @@ class Clock:
 def setup_probe(tmp_path):
     source = tmp_path / "source.md"
     source.write_text(
-        "Reviewed dated session and current explicit successful MNQZ26 request."
+        "Reviewed dated session and current explicit successful MNQZ26"
+        " request."
     )
     sha = evidence.sha(source.read_bytes())
     plan = {
@@ -152,12 +153,15 @@ def test_pending_never_reads_token(tmp_path, setup_probe, change):
         plan["session"]["close"] = "2026-09-22T16:59:00-04:00"
     path.write_text(json.dumps(plan))
     token.unlink()
-    report = call_probe(tmp_path, setup_probe, lambda *a: pytest.fail("network"), clock)
+    report = call_probe(
+        tmp_path, setup_probe, lambda *a: pytest.fail("network"), clock
+    )
     assert report["status"] == "PENDING" and report["token_read"] is False
 
 
 @pytest.mark.parametrize(
-    "mode", ["expired", "mismatch", "401", "429", "timeout", "malformed", "badbars"]
+    "mode",
+    ["expired", "mismatch", "401", "429", "timeout", "malformed", "badbars"],
 )
 def test_probe_stops_safely(tmp_path, setup_probe, mode):
     calls = []
@@ -207,7 +211,9 @@ def test_redaction_and_redirect():
     clean = probe.sanitize(body, "fixture-secret")
     assert b"other" not in clean and b"fixture-secret" not in clean
     with pytest.raises(ValueError):
-        probe.NoRedirect().redirect_request(None, None, 302, None, None, probe.BARS)
+        probe.NoRedirect().redirect_request(
+            None, None, 302, None, None, probe.BARS
+        )
 
 
 def test_descriptive_ambiguity_gap():
@@ -226,7 +232,9 @@ def test_descriptive_ambiguity_gap():
             }
         ]
     )
-    assert report["ambiguities"] and len(report["observed_timestamp_gaps"]) == 1
+    assert (
+        report["ambiguities"] and len(report["observed_timestamp_gaps"]) == 1
+    )
     assert report["completion_inferred_from_age"] is False
 
 
@@ -284,7 +292,8 @@ def test_assess_missing_evidence_holds(tmp_path):
     )
     assert len(report["blockers"]) == 8 and report["admitted_sessions"] == 0
     assert all(
-        r["verification"] == "UNRESOLVED" for r in report["evidence"]["fixed_reports"]
+        r["verification"] == "UNRESOLVED"
+        for r in report["evidence"]["fixed_reports"]
     )
     with pytest.raises(ValueError):
         evidence.documentary(tmp_path / "data" / "prices.json")
@@ -292,7 +301,10 @@ def test_assess_missing_evidence_holds(tmp_path):
 
 def test_timing_synthetic_only(tmp_path):
     report = timing.run(
-        tmp_path / "out", tmp_path / "cache", 2, factory=lambda c: StubProvider()
+        tmp_path / "out",
+        tmp_path / "cache",
+        2,
+        factory=lambda c: StubProvider(),
     )
     assert report["status"] == "TIMING_COMPLETED"
     assert len(report["three_seed_decision_seconds"]) == 2
@@ -337,7 +349,7 @@ def test_guard_disables_proxy_and_caps_body(monkeypatch):
         return Opener()
 
     monkeypatch.setattr(probe.urllib.request, "build_opener", build)
-    with pytest.raises(ValueError, match="size cap"):
+    with pytest.raises(ValueError, match="size"):
         probe.guarded_get(probe.BARS, "test-token", 1)
     assert captured["handlers"][0].proxies == {}
     assert isinstance(captured["handlers"][1], probe.NoRedirect)
@@ -355,7 +367,9 @@ def test_guard_disables_proxy_and_caps_body(monkeypatch):
 def test_dated_dst_and_early_close(setup_probe, day, offset, close):
     plan, _, _ = setup_probe
     plan["session"].update(
-        date=day, open=f"{day}T09:30:00{offset}", close=f"{day}T{close}{offset}"
+        date=day,
+        open=f"{day}T09:30:00{offset}",
+        close=f"{day}T{close}{offset}",
     )
     plan["contract"]["observed_at"] = f"{day}T09:35:00{offset}"
     now = probe.aware(f"{day}T10:00:00{offset}")
@@ -381,13 +395,16 @@ def test_slow_requests_never_catch_up(tmp_path, setup_probe):
         clock.seconds += 11
         return (
             200,
-            json.dumps(metadata() if url == probe.METADATA else {"Bars": []}).encode(),
+            json.dumps(
+                metadata() if url == probe.METADATA else {"Bars": []}
+            ).encode(),
         )
 
     report = call_probe(tmp_path, setup_probe, get, clock)
     assert report["bar_requests"] < 180
     assert all(b - a >= 11 for a, b in zip(starts, starts[1:]))
-    # The fake transport ignores its supplied hard timeout; real guarded_get enforces it.
+    # The fake transport ignores its supplied hard timeout; real guarded_get
+    # enforces it.
     assert max(starts) < 900
 
 
@@ -424,7 +441,11 @@ def test_timing_context_is_eligible_and_separate(tmp_path):
         return Provider()
 
     report = timing.run(
-        tmp_path / "out", tmp_path / "cache", 2, factory=factory, clock=clock.mono
+        tmp_path / "out",
+        tmp_path / "cache",
+        2,
+        factory=factory,
+        clock=clock.mono,
     )
     assert report["startup_seconds"] == 12
     assert report["three_seed_decision_seconds"] == [9, 9]
@@ -443,7 +464,9 @@ def test_remaining_timeout_and_duration_cap(tmp_path, setup_probe):
             raise TimeoutError("bounded")
         return (
             200,
-            json.dumps(metadata() if url == probe.METADATA else {"Bars": []}).encode(),
+            json.dumps(
+                metadata() if url == probe.METADATA else {"Bars": []}
+            ).encode(),
         )
 
     report = call_probe(tmp_path, setup_probe, get, clock)
@@ -454,7 +477,9 @@ def test_remaining_timeout_and_duration_cap(tmp_path, setup_probe):
 
 
 def test_frozen_hash_drift_refuses(tmp_path, monkeypatch):
-    monkeypatch.setitem(evidence.FROZEN, "research/kronos_replay/engine.py", "0" * 64)
+    monkeypatch.setitem(
+        evidence.FROZEN, "research/kronos_replay/engine.py", "0" * 64
+    )
     with pytest.raises(ValueError, match="frozen"):
         evidence.new_output(tmp_path / "out")
     assert not (tmp_path / "out").exists()
@@ -486,7 +511,9 @@ def test_paired_power_reference_values():
     assert report["marginal_powers"] == pytest.approx(
         [0.9988172507018026, 0.9655961814120477]
     )
-    assert report["joint_power_lower_bound"] == pytest.approx(0.9644134321138504)
+    assert report["joint_power_lower_bound"] == pytest.approx(
+        0.9644134321138504
+    )
     dependent = power.dollar_scenario(
         100,
         2,
@@ -498,7 +525,10 @@ def test_paired_power_reference_values():
         independent_evidence=refs,
     )
     assert all(
-        a > b for a, b in zip(report["marginal_powers"], dependent["marginal_powers"])
+        a > b
+        for a, b in zip(
+            report["marginal_powers"], dependent["marginal_powers"]
+        )
     )
 
 
@@ -524,3 +554,344 @@ def test_cli_failure_never_echoes_payload(tmp_path, capsys):
     text = capsys.readouterr().out
     assert "secret credential" not in text
     assert json.loads(text)["strategy_test_permitted"] is False
+
+
+def test_receipt_precedes_expensive_processing(
+    tmp_path, setup_probe, monkeypatch
+):
+    clock = Clock()
+    original = probe.sanitize
+
+    def sanitize(body, token):
+        clock.seconds += 100
+        return original(body, token)
+
+    def get(url, token, timeout):
+        clock.seconds += 1
+        return 401, b"{}"
+
+    monkeypatch.setattr(probe, "sanitize", sanitize)
+    call_probe(tmp_path, setup_probe, get, clock)
+    record = json.loads(
+        (tmp_path / "result/observation-0000.json").read_text()
+    )
+    assert record["receipt_elapsed_seconds"] == 1
+    assert (
+        record["receipt_utc"] == (clock.now + timedelta(seconds=1)).isoformat()
+    )
+
+
+def test_unicode_escaped_secret_keys_and_values():
+    body = b'{"\\u0073ecret-key":"echo \\u0073ecret value"}'
+    clean = probe.sanitize(body, "secret")
+    result = json.loads(clean)
+    assert result == {"[REDACTED]-key": "echo [REDACTED] value"}
+
+
+@pytest.mark.parametrize("folder", ["data", "logs", "cache", ".venv-research"])
+def test_forbidden_token_path_never_opened(
+    tmp_path, setup_probe, monkeypatch, folder
+):
+    from pathlib import Path
+
+    plan, plan_path, _ = setup_probe
+    forbidden = tmp_path / folder / ".access_token"
+    monkeypatch.setattr(
+        Path, "read_text", lambda *a, **k: pytest.fail("credential opened")
+    )
+    clock = Clock()
+    report = probe.run(
+        plan_path,
+        forbidden,
+        tmp_path / "result",
+        get=lambda *a: pytest.fail("network"),
+        utc=clock.utc,
+        monotonic=clock.mono,
+        sleep=clock.sleep,
+    )
+    assert report["status"] == "BLOCKED"
+    assert report["token_read"] is False
+
+
+def test_token_alias_refused(tmp_path, setup_probe):
+    _, plan, token = setup_probe
+    alias = tmp_path / "alias" / ".access_token"
+    alias.parent.mkdir()
+    alias.symlink_to(token)
+    clock = Clock()
+    report = probe.run(
+        plan,
+        alias,
+        tmp_path / "result",
+        utc=clock.utc,
+        get=lambda *a: pytest.fail("network"),
+    )
+    assert report["token_read"] is False
+
+
+@pytest.mark.parametrize("number", ["NaN", "Infinity", "-Infinity", "1e999"])
+def test_nonstandard_json_preserved_and_stopped(tmp_path, setup_probe, number):
+    body = ('{"n":' + number + "}").encode()
+    report = call_probe(tmp_path, setup_probe, lambda *a: (200, body))
+    assert report["status"] == "STOPPED"
+    record = json.loads(
+        (tmp_path / "result/observation-0000.json").read_text()
+    )
+    assert record["error_category"] == "invalid-response"
+    assert "raw_response_base64" in record
+    assert (tmp_path / "result/COMPLETE.json").exists()
+
+
+def test_nonfinite_write_creates_no_partial_file(tmp_path):
+    with pytest.raises(ValueError):
+        evidence.write_json(tmp_path / "bad.json", {"n": math.inf})
+    assert not (tmp_path / "bad.json").exists()
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "timeout",
+        "auth",
+        "throttled",
+        "redirect",
+        "size",
+        "transport",
+        "invalid-response",
+    ],
+)
+def test_transport_failure_categories(tmp_path, setup_probe, kind):
+    def get(*args):
+        if kind == "auth":
+            return 401, b"{}"
+        if kind == "throttled":
+            return 429, b"{}"
+        if kind == "invalid-response":
+            return 200, b"not json"
+        if kind == "timeout":
+            raise TimeoutError("secret text")
+        if kind == "transport":
+            raise OSError("secret text")
+        raise probe.ProbeFailure(kind)
+
+    call_probe(tmp_path, setup_probe, get)
+    record = json.loads(
+        (tmp_path / "result/observation-0000.json").read_text()
+    )
+    assert record["error_category"] == kind
+    assert "secret text" not in json.dumps(record)
+
+
+@pytest.mark.parametrize(
+    "deltas,target", [([3, -1, 1], 1), ([-3, 1, -1], -1), ([-1, 0, 1], 0)]
+)
+def test_timing_mean_terminal_policy(tmp_path, deltas, target):
+    class Provider(StubProvider):
+        def forecast(self, context, future):
+            paths = super().forecast(context, future)
+            for path, delta in zip(paths, deltas):
+                close = context.close.iloc[-1] + delta
+                path.loc[:, ["open", "close"]] = close
+                path.loc[:, "high"] = close + 1
+                path.loc[:, "low"] = close - 1
+            return paths
+
+    report = timing.run(
+        tmp_path / "out", tmp_path / "cache", 1, factory=lambda c: Provider()
+    )
+    assert report["targets"] == [target]
+
+
+@pytest.mark.parametrize("failure", ["partial", "schema", "geometry"])
+def test_timing_retains_invalid_forecast_paths(tmp_path, failure):
+    from research.kronos_replay.providers import ForecastFailure
+
+    class Provider(StubProvider):
+        def forecast(self, context, future):
+            paths = super().forecast(context, future)
+            if failure == "partial":
+                raise ForecastFailure("safe-test", paths[:1])
+            if failure == "schema":
+                paths[0] = paths[0].drop(columns=["amount"])
+            if failure == "geometry":
+                paths[0].loc[:, "high"] = 1
+            return paths
+
+    report = timing.run(
+        tmp_path / "out", tmp_path / "cache", 1, factory=lambda c: Provider()
+    )
+    assert report["status"] != "TIMING_COMPLETED"
+    assert report["error_category"] in ("inference", "invalid-output")
+    assert len(list((tmp_path / "out").glob("decision-*.csv"))) == (
+        1 if failure == "partial" else 3
+    )
+
+
+def test_timing_invalid_cli_nonzero(tmp_path, monkeypatch):
+    from research.kronos_readiness.__main__ import main
+
+    monkeypatch.setattr(
+        timing, "run", lambda *a: {"status": "TIMING_INVALID_OUTPUT"}
+    )
+    assert (
+        main(
+            [
+                "timing",
+                "--cache",
+                str(tmp_path / "cache"),
+                "--output-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+        == 2
+    )
+
+
+@pytest.mark.parametrize(
+    "dependency",
+    [
+        "tools/kronos_inference_pilot.py",
+        "research/kronos_replay/fixtures.py",
+        "tools/trading_model_readiness.py",
+    ],
+)
+def test_frozen_dependency_drift(tmp_path, monkeypatch, dependency):
+    monkeypatch.setitem(evidence.FROZEN, dependency, "0" * 64)
+    with pytest.raises(ValueError, match="frozen"):
+        evidence.new_output(tmp_path / "out")
+
+
+def test_assessment_snapshots_exact_category_citation(tmp_path, monkeypatch):
+    report_path = tmp_path / evidence.AUDIT
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps({"data_gaps": ["SOURCE_PROVENANCE_NOT_ADMITTED"]})
+    )
+    digest = evidence.sha(report_path.read_bytes())
+    monkeypatch.setattr(evidence, "EVIDENCE", {evidence.AUDIT: digest})
+    source = tmp_path / "source.md"
+    source.write_text("reviewer assertion")
+    pack = tmp_path / "pack.json"
+    pack.write_text(
+        json.dumps(
+            {
+                "sources": [
+                    {
+                        "path": str(source),
+                        "sha256": evidence.sha(source.read_bytes()),
+                        "date": "2026-09-22",
+                        "url": "https://example.test",
+                        "claim": "assertion",
+                        "category": "costs",
+                    }
+                ]
+            }
+        )
+    )
+    result = evidence.assess(tmp_path, pack, tmp_path / "out")
+    categories = result["evidence"]["categories"]
+    citation = categories["historical_acquisition"]["citations"][0]
+    assert citation["json_pointer"] == "/data_gaps/0"
+    assert categories["calendar"]["citations"] == []
+    assert categories["costs"]["status"] == "UNRESOLVED"
+    assert categories["costs"]["reviewer_assertions"]
+    assert (
+        evidence.sha((tmp_path / "out" / citation["path"]).read_bytes())
+        == digest
+    )
+    assert len(list((tmp_path / "out/sources").iterdir())) == 2
+
+
+def test_snapshot_rechecks_source_bytes(tmp_path, monkeypatch):
+    source = tmp_path / "source.md"
+    source.write_text("original")
+    digest = evidence.sha(source.read_bytes())
+    pack = tmp_path / "pack.json"
+    pack.write_text(
+        json.dumps(
+            {
+                "sources": [
+                    {
+                        "path": str(source),
+                        "sha256": digest,
+                        "date": "2026-09-22",
+                        "url": "https://example.test",
+                        "claim": "claim",
+                    }
+                ]
+            }
+        )
+    )
+    original = evidence.documentary
+    reads = 0
+
+    def changed(path):
+        nonlocal reads
+        data = original(path)
+        if path == source:
+            reads += 1
+            if reads == 1:
+                source.write_text("changed")
+        return data
+
+    monkeypatch.setattr(evidence, "documentary", changed)
+    with pytest.raises(ValueError, match="snapshot"):
+        evidence.assess(tmp_path, pack, tmp_path / "out")
+
+
+def test_extreme_power_inputs_refused():
+    for n, inflation in ((1, 1e308), (10**1000, 1)):
+        with pytest.raises(ValueError):
+            power.standardized(n, inflation)
+    refs = {
+        k: "reviewed"
+        for k in (
+            "k_effect",
+            "incremental_effect",
+            "k_variance",
+            "m_variance",
+            "covariance",
+            "dependence",
+        )
+    }
+    with pytest.raises(ValueError):
+        power.dollar_scenario(
+            100,
+            1,
+            k_effect=1e308,
+            incremental_effect=1,
+            k_variance=1e-300,
+            m_variance=1,
+            covariance=0,
+            independent_evidence=refs,
+        )
+
+
+def test_nested_response_preserves_receipt_without_secret(
+    tmp_path, setup_probe
+):
+    clock = Clock()
+    secret = setup_probe[2].read_text()
+    body = b"[" * 1100 + json.dumps(secret).encode() + b"]" * 1100
+
+    def get(*args):
+        clock.seconds += 1
+        return 200, body
+
+    report = call_probe(tmp_path, setup_probe, get, clock)
+    assert report["status"] == "STOPPED"
+    assert report["error_category"] == "invalid-response"
+    record = json.loads(
+        (tmp_path / "result/observation-0000.json").read_text()
+    )
+    assert record["request_elapsed_seconds"] == 0
+    assert record["receipt_elapsed_seconds"] == 1
+    assert record["http_status"] == 200
+    assert record["error_category"] == "invalid-response"
+    assert record["body_omitted_reason"]
+    assert "raw_response_base64" not in record
+    assert "response" not in record
+    assert (tmp_path / "result/COMPLETE.json").exists()
+    for path in (tmp_path / "result").rglob("*"):
+        if path.is_file():
+            assert secret not in path.read_text()

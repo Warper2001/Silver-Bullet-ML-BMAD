@@ -1,4 +1,5 @@
-"""One bounded current SIM observation; never refreshes credentials or retries."""
+"""One bounded current SIM observation; never refreshes credentials or
+retries."""
 
 from __future__ import annotations
 
@@ -9,19 +10,31 @@ import json
 from pathlib import Path
 import signal
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Iterator, cast
 import urllib.error
 import urllib.request
 from zoneinfo import ZoneInfo
 
 from . import FLAGS
-from .evidence import finish, load_json, new_output, sha, sources, write_json
+from .evidence import (
+    finish,
+    load_json,
+    new_output,
+    sha,
+    sources,
+    write_json,
+    strict_json,
+)
+from tools.trading_model_readiness import safe_path
 
 HOST = "https://sim-api.tradestation.com"
 SYMBOL = "MNQZ26"
 METADATA = HOST + "/v3/marketdata/symbols/" + SYMBOL
 BARS = (
-    HOST + "/v3/marketdata/barcharts/" + SYMBOL + "?interval=1&unit=Minute&barsback=3"
+    HOST
+    + "/v3/marketdata/barcharts/"
+    + SYMBOL
+    + "?interval=1&unit=Minute&barsback=3"
 )
 MAX_SECONDS = 900
 MAX_REQUESTS = 180
@@ -35,13 +48,33 @@ def aware(value: str) -> datetime:
     return result.astimezone(timezone.utc)
 
 
+class ProbeFailure(ValueError):
+    def __init__(self, category: str) -> None:
+        self.category = category
+        super().__init__(category)
+
+
+def error_category(exc: Exception) -> str:
+    if isinstance(exc, ProbeFailure):
+        return exc.category
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    if isinstance(exc, urllib.error.URLError) and isinstance(
+        exc.reason, TimeoutError
+    ):
+        return "timeout"
+    return "transport"
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise ValueError("redirect refused")
+    def redirect_request(
+        self, req: Any, fp: Any, code: Any, msg: Any, headers: Any, newurl: Any
+    ) -> None:
+        raise ProbeFailure("redirect")
 
 
 @contextmanager
-def hard_timeout(seconds: float):
+def hard_timeout(seconds: float) -> Iterator[None]:
     """Wall deadline also bounds DNS and trickling response bodies on Linux."""
     if seconds <= 0:
         raise TimeoutError("deadline")
@@ -50,7 +83,7 @@ def hard_timeout(seconds: float):
     if old_timer[0] or old_timer[1]:
         raise ValueError("existing alarm prevents safe deadline enforcement")
 
-    def expired(signum, frame):
+    def expired(signum: int, frame: Any) -> None:
         raise TimeoutError("deadline")
 
     signal.signal(signal.SIGALRM, expired)
@@ -67,7 +100,9 @@ def guarded_get(
 ) -> tuple[int, bytes]:
     if method != "GET" or url not in (METADATA, BARS):
         raise ValueError("endpoint or method refused")
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), NoRedirect()
+    )
     request = urllib.request.Request(
         url, headers={"Authorization": "Bearer " + token}, method="GET"
     )
@@ -79,22 +114,23 @@ def guarded_get(
         with response:
             body = response.read(MAX_BYTES + 1)
             if len(body) > MAX_BYTES:
-                raise ValueError("response size cap")
+                raise ProbeFailure("size")
             return response.code, body
 
 
 def sanitize(body: bytes, token: str) -> bytes:
-    # Replace the actual credential before encoding or parsing even malformed bodies.
+    # Replace the actual credential before encoding or parsing even malformed
+    # bodies.
     body = body.replace(token.encode(), b"[REDACTED]")
     try:
         document = json.loads(body)
     except (ValueError, UnicodeError):
         return body
 
-    def redact(value):
+    def redact(value: Any) -> Any:
         if isinstance(value, dict):
             return {
-                k: (
+                k.replace(token, "[REDACTED]"): (
                     "[REDACTED]"
                     if k.lower().replace("-", "_")
                     in {
@@ -111,6 +147,8 @@ def sanitize(body: bytes, token: str) -> bytes:
             }
         if isinstance(value, list):
             return [redact(v) for v in value]
+        if isinstance(value, str):
+            return value.replace(token, "[REDACTED]")
         return value
 
     cleaned = redact(document)
@@ -120,9 +158,16 @@ def sanitize(body: bytes, token: str) -> bytes:
 def preconditions(
     plan: dict[str, Any], now: datetime, register: list[dict[str, Any]]
 ) -> tuple[datetime, datetime]:
-    valid = {r["sha256"] for r in register if r["verification"] == "HASH_VERIFIED_ONLY"}
+    valid = {
+        r["sha256"]
+        for r in register
+        if r["verification"] == "HASH_VERIFIED_ONLY"
+    }
     session, contract = plan["session"], plan["contract"]
-    if session.get("verified") is not True or session["source_sha256"] not in valid:
+    if (
+        session.get("verified") is not True
+        or session["source_sha256"] not in valid
+    ):
         raise ValueError("verified dated session evidence required")
     opening, close = aware(session["open"]), aware(session["close"])
     ny = ZoneInfo("America/New_York")
@@ -133,7 +178,8 @@ def preconditions(
         or local_open.hour != 9
         or local_open.minute != 30
         or local_open.second
-        or (local_close.hour, local_close.minute, local_close.second) > (16, 0, 0)
+        or (local_close.hour, local_close.minute, local_close.second)
+        > (16, 0, 0)
         or local_open.microsecond
         or local_close.microsecond
         or local_open.weekday() >= 5
@@ -150,8 +196,13 @@ def preconditions(
             "explicit verified recent successful request evidence required"
         )
     observed = aware(contract["observed_at"])
-    if observed > now or observed.astimezone(ny).date() != now.astimezone(ny).date():
-        raise ValueError("request evidence must be from current NY session date")
+    if (
+        observed > now
+        or observed.astimezone(ny).date() != now.astimezone(ny).date()
+    ):
+        raise ValueError(
+            "request evidence must be from current NY session date"
+        )
     if now < opening or now + timedelta(seconds=MAX_SECONDS) > close:
         raise ValueError("full bounded capture window unavailable")
     return opening, close
@@ -185,7 +236,9 @@ def describe(observations: list[dict[str, Any]]) -> dict[str, Any]:
         if observation["url"] != BARS or "response" not in observation:
             continue
         response = observation["response"]
-        if not isinstance(response, dict) or not isinstance(response.get("Bars"), list):
+        if not isinstance(response, dict) or not isinstance(
+            response.get("Bars"), list
+        ):
             ambiguities.append(
                 {
                     "sequence": observation["sequence"],
@@ -196,7 +249,10 @@ def describe(observations: list[dict[str, Any]]) -> dict[str, Any]:
         for bar in response["Bars"]:
             if not isinstance(bar, dict):
                 ambiguities.append(
-                    {"sequence": observation["sequence"], "reason": "malformed bar"}
+                    {
+                        "sequence": observation["sequence"],
+                        "reason": "malformed bar",
+                    }
                 )
                 continue
             stamp = bar.get("TimeStamp")
@@ -206,7 +262,10 @@ def describe(observations: list[dict[str, Any]]) -> dict[str, Any]:
             if bar_status in ("Open", "Closed"):
                 if bar_status == "Open":
                     incomplete.append(
-                        {"sequence": observation["sequence"], "timestamp": stamp}
+                        {
+                            "sequence": observation["sequence"],
+                            "timestamp": stamp,
+                        }
                     )
             else:
                 ambiguities.append(
@@ -225,6 +284,8 @@ def describe(observations: list[dict[str, Any]]) -> dict[str, Any]:
                     }
                 )
             try:
+                if stamp is None:
+                    raise ValueError("timestamp missing")
                 when = aware(stamp)
                 delays.append(
                     (aware(observation["receipt_utc"]) - when).total_seconds()
@@ -237,7 +298,7 @@ def describe(observations: list[dict[str, Any]]) -> dict[str, Any]:
                         "reason": "timestamp timezone missing or invalid",
                     }
                 )
-            if stamp in seen and seen[stamp] != bar:
+            if stamp is not None and stamp in seen and seen[stamp] != bar:
                 revisions.append(
                     {"sequence": observation["sequence"], "timestamp": stamp}
                 )
@@ -252,14 +313,19 @@ def describe(observations: list[dict[str, Any]]) -> dict[str, Any]:
     parsed = sorted(set(parsed))
     for before, after in zip(parsed, parsed[1:]):
         if (after - before).total_seconds() > 60:
-            gaps.append({"before": before.isoformat(), "after": after.isoformat()})
+            gaps.append(
+                {"before": before.isoformat(), "after": after.isoformat()}
+            )
     return {
         "revisions": revisions,
         "ambiguities": ambiguities,
         "explicitly_open_bars": incomplete,
         "observed_timestamp_gaps": gaps,
         "receipt_minus_provider_timestamp_seconds": delays,
-        "delay_interpretation": "Descriptive label-to-receipt differences, not authenticated availability latency.",
+        "delay_interpretation": (
+            "Descriptive label-to-receipt differences, not authenticated"
+            " availability latency."
+        ),
         "completion_inferred_from_age": False,
         "historical_authentication": False,
     }
@@ -270,16 +336,18 @@ def run(
     token_path: Path,
     output: Path,
     *,
-    get: Callable = guarded_get,
-    utc: Callable = lambda: datetime.now(timezone.utc),
-    monotonic: Callable = time.monotonic,
-    sleep: Callable = time.sleep,
+    get: Callable[[str, str, float], tuple[int, bytes]] = guarded_get,
+    utc: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    monotonic: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> dict[str, Any]:
     plan = load_json(plan_path)
     register = sources(plan, plan_path.parent)
     output = new_output(output)
     write_json(output / "plan.json", {**plan, **FLAGS})
-    write_json(output / "source-verification.json", {**FLAGS, "sources": register})
+    write_json(
+        output / "source-verification.json", {**FLAGS, "sources": register}
+    )
     observations: list[dict[str, Any]] = []
     status, reason, bars = "PENDING", "unverified prerequisites", 0
     try:
@@ -289,12 +357,37 @@ def run(
             output,
             {
                 "status": status,
-                "reason": "unverified session/contract or full RTH window unavailable",
+                "reason": (
+                    "unverified session/contract or full RTH window"
+                    " unavailable"
+                ),
                 "token_read": False,
                 "bar_requests": 0,
             },
         )
+    token_read = False
     try:
+        absolute = token_path.absolute()
+        if (
+            safe_path(absolute) != absolute
+            or absolute.name != ".access_token"
+            or any(
+                part.lower()
+                in {
+                    "data",
+                    "logs",
+                    "models",
+                    ".git",
+                    ".venv",
+                    ".venv-research",
+                    "cache",
+                    "sealed_holdout",
+                }
+                for part in absolute.parts
+            )
+        ):
+            raise ValueError("credential path refused")
+        token_read = True
         # Existing plain token only; no live auth imports or shared writes.
         token = token_path.read_text().strip()
         if not token or any(c.isspace() for c in token):
@@ -305,7 +398,7 @@ def run(
             {
                 "status": "BLOCKED",
                 "reason": "existing credential unavailable or invalid",
-                "token_read": True,
+                "token_read": token_read,
                 "bar_requests": 0,
             },
         )
@@ -315,10 +408,12 @@ def run(
 
     def request(url: str) -> dict[str, Any]:
         request_mono = monotonic()
-        remaining = min(deadline - request_mono, (close - utc()).total_seconds())
+        remaining = min(
+            deadline - request_mono, (close - utc()).total_seconds()
+        )
         if remaining <= 0:
             raise TimeoutError("deadline")
-        record = {
+        record: dict[str, Any] = {
             **FLAGS,
             "sequence": len(observations),
             "method": "GET",
@@ -327,38 +422,63 @@ def run(
             "request_monotonic": request_mono,
             "request_elapsed_seconds": request_mono - start,
         }
+        raw: bytes | None = None
         try:
             code, raw = get(url, token, min(15.0, remaining))
-            body = sanitize(raw, token)
-            record.update(
-                http_status=code,
-                raw_response_base64=base64.b64encode(body).decode(),
-                sanitized_body_sha256=sha(body),
-                raw_redacted=(body != raw),
-            )
-            try:
-                record["response"] = json.loads(body)
-            except (ValueError, UnicodeError):
-                record["parse_error"] = True
-        except Exception:
-            record["error"] = "request failed; no refresh or retry"
+            receipt_utc, receipt_mono = utc(), monotonic()
+        except Exception as exc:
+            receipt_utc, receipt_mono = utc(), monotonic()
+            record["error_category"] = error_category(exc)
         record.update(
-            receipt_utc=utc().isoformat(),
-            receipt_monotonic=monotonic(),
-            receipt_elapsed_seconds=monotonic() - start,
+            receipt_utc=receipt_utc.isoformat(),
+            receipt_monotonic=receipt_mono,
+            receipt_elapsed_seconds=receipt_mono - start,
         )
+        if raw is not None:
+            record["http_status"] = code
+            try:
+                body = sanitize(raw, token)
+            except Exception:
+                record["error_category"] = "invalid-response"
+                record["body_omitted_reason"] = (
+                    "response could not be safely sanitized"
+                )
+            else:
+                try:
+                    record.update(
+                        raw_response_base64=base64.b64encode(body).decode(),
+                        sanitized_body_sha256=sha(body),
+                        raw_redacted=body != raw,
+                    )
+                    if code != 200:
+                        record["error_category"] = (
+                            "auth"
+                            if code in (401, 403)
+                            else (
+                                "throttled"
+                                if code == 429
+                                else (
+                                    "redirect"
+                                    if 300 <= code < 400
+                                    else "transport"
+                                )
+                            )
+                        )
+                    response = strict_json(body)
+                    if not isinstance(response, dict):
+                        raise ValueError("invalid response")
+                    record["response"] = response
+                except Exception:
+                    record.setdefault("error_category", "invalid-response")
         observations.append(record)
-        write_json(output / f"observation-{record['sequence']:04d}.json", record)
-        if (
-            "error" in record
-            or record.get("http_status") != 200
-            or record.get("parse_error")
-        ):
-            raise ValueError("request failed")
-        if not isinstance(record["response"], dict):
-            raise ValueError("invalid response object")
-        return record["response"]
+        write_json(
+            output / f"observation-{record['sequence']:04d}.json", record
+        )
+        if "error_category" in record:
+            raise ProbeFailure(record["error_category"])
+        return cast(dict[str, Any], record["response"])
 
+    failure: str | None = None
     try:
         metadata = request(METADATA)
         validate_metadata(metadata, utc())
@@ -393,10 +513,17 @@ def run(
             "OBSERVED_CURRENT_ONLY",
             "request/duration/session bound reached",
         )
-    except Exception:
+    except Exception as exc:
+        failure = (
+            error_category(exc)
+            if not isinstance(exc, (ValueError, KeyError, TypeError))
+            else "invalid-response"
+        )
+        if isinstance(exc, ProbeFailure):
+            failure = exc.category
         status, reason = (
             "STOPPED",
-            "request, metadata or response validation failed; no retry",
+            failure + "; stopped without retry",
         )
     return finish(
         output,
@@ -406,6 +533,7 @@ def run(
             "token_read": True,
             "bar_requests": bars,
             "elapsed_seconds": monotonic() - start,
+            "error_category": failure,
             "description": describe(observations),
         },
     )

@@ -1,4 +1,5 @@
-"""Commands: documentary assess, bounded current probe, offline synthetic timing."""
+"""Commands: documentary assess, bounded current probe, offline synthetic
+timing."""
 
 import argparse
 import json
@@ -6,7 +7,7 @@ from pathlib import Path
 from . import FLAGS
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     assess = sub.add_parser("assess")
@@ -23,31 +24,40 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "assess":
-            from .evidence import assess as run
+            from .evidence import assess as assess_run
 
-            report = run(args.documentary_root, args.source_pack, args.output_dir)
+            report = assess_run(
+                args.documentary_root, args.source_pack, args.output_dir
+            )
         elif args.command == "probe":
-            from .probe import run
+            from .probe import run as probe_run
 
-            report = run(args.plan, args.token_path, args.output_dir)
+            report = probe_run(args.plan, args.token_path, args.output_dir)
         else:
-            from .timing import run
+            from .timing import run as timing_run
 
-            report = run(args.output_dir, args.cache, args.decisions)
+            report = timing_run(args.output_dir, args.cache, args.decisions)
     except Exception:
-        # Do not print exception messages that could contain credentials or payloads.
+        # Do not print exception messages that could contain credentials or
+        # payloads.
         print(
             json.dumps(
                 {
                     **FLAGS,
                     "status": "REFUSED",
-                    "reason": "invalid input, destination or execution failure",
+                    "reason": (
+                        "invalid input, destination or execution failure"
+                    ),
                 }
             )
         )
         return 2
     print(json.dumps({**FLAGS, "status": report["status"]}))
-    return 0 if report["status"] in {"OBSERVED_CURRENT_ONLY", "TIMING_COMPLETED"} else 2
+    return (
+        0
+        if report["status"] in {"OBSERVED_CURRENT_ONLY", "TIMING_COMPLETED"}
+        else 2
+    )
 
 
 if __name__ == "__main__":

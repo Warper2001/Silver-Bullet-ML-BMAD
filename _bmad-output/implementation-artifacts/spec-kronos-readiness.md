@@ -59,3 +59,29 @@ No intent gaps; read-only market-data GET authorized. Parent independently gathe
 `/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m pytest tests/test_kronos* tests/unit/test_kronos_evaluation_preflight.py tests/unit/test_trading_model_readiness.py` must pass. Independently review code and execute CLI artifact verification.
 
 Planning correction: the engine uses sign(mean of three terminal closes minus observed close), not unanimity. Preserve the existing engine per user intent; the earlier descriptor is an agent transcription error. Preregistration appended correction before capture. No strategy parameter change.
+
+
+Review triage (2026-09-22; patches in separate fixes worktree while finite capture remains running):
+
+| Finding | Verdict and evidence | Route |
+|---|---|---|
+| Blind1 receipt timestamp after parsing | medium: request() timestamps after sanitize/hash/parse, adding local processing. Move sampling immediately after transport. Existing capture timing remains a receipt upper bound. | patch |
+| Blind2 malformed OHLC dictionaries continue | false as stated: this is a raw timing/completion observer, not price admission or scoring; missing/naive timestamps are explicitly reported ambiguous. Preserve allowed ambiguity; nonstandard JSON is separately fixed. | reject |
+| Blind3 JSON NaN truncates observation | medium: json.loads accepts NaN but allow_nan=False serialization raises after file open. Reject constants and pre-serialize. | patch |
+| Blind4 failed timing loses partial paths | medium: exception exits loop before paths serialized. Preserve returned/ForecastFailure paths with safe error code. | patch |
+| Blind5 frozen pilot dependency omitted | medium: pilot supplies checkpoint/seed constants but was not FROZEN. Pin pilot and fixture dependencies. | patch |
+| Blind6 token path can read sealed source | high: direct read_text bypasses safe_path. Guard before read with alias/path tests. | patch |
+| Blind7 generic request error hides failure cause | medium: timeout/redirect/size collapse into same string. Retain safe structured category. | patch |
+| Blind8 sources external to manifested output | medium: copies not in output; snapshots improve reproducibility when original paths disappear. Snapshot verified assessment sources. Probe source archive retained separately and bound by final delivery. | patch |
+| Blind9 every fixed report linked to every category | medium: identities are valid but supporting locations are unspecified. Add category-specific report conclusions/key citations. | patch |
+| Edge1 Unicode-escaped credential echo | high: decoded ordinary strings/keys bypass byte replacement. Recursively redact decoded token strings/keys. | patch |
+| Edge2 token sealed alias | high: same verified direct-read defect as Blind6. | patch |
+| Edge3 receipt after processing | medium: same verified defect as Blind1. | patch |
+| Gap1 mean-terminal rule tests only unanimous | medium: current positive stub tests cannot reject voting/first-seed drift. Add mixed/negative/tie cases. | patch |
+| Gap2 invalid timing outputs untested | medium: no malformed OHLC timing status/CLI test; add invalid output retention/non-success test. | patch |
+
+Additional verification: parent found typing/lint failures in new code and extreme finite standardized-power arithmetic overflow. Fix without changing project configuration. No strategy behavior, old preflight or replay changes authorized or needed.
+
+Follow-up review: receipt/redaction/token-path patches independently verified (19 focused tests). Reviewer found nested JSON processing could lose request metadata; patched to retain metadata with invalid-response status and safe body omission. New regression independently confirmed. All review issues requiring correction resolved; no deferred implementation findings. Probe evidence remains qualified for initial logger receipt timing and formatting-only provenance; these are retained evidence limitations, not retroactive authentication.
+
+Final fixes verification: 201 targeted Kronos/readiness tests passed; flake8 clean; mypy clean across all seven new modules. Original capture completed180 bar GETs plus metadata in895.533s, all HTTP200; no service actions. Parent will merge verified fixes, generate final snapshot assessment and reverify main.

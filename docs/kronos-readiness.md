@@ -5,8 +5,8 @@ This milestone produces documentary HOLD_EVALUATION, with actual power UNASSESSA
 Run from the readiness worktree. Every output directory must be fresh and outside data, logs, model, credential and environment paths. Sources must be documentary JSON/Markdown/text/HTML/PDF with no symlink or data-path aliases; no historical price input is accepted. The fixed preflight documentary reports are allowlisted by their original hashes; `--documentary-root` locates these in the main checkout.
 
 ```bash
-/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m research.kronos_readiness assess --documentary-root /root/Silver-Bullet-ML-BMAD --source-pack docs/reports/kronos-readiness/sources.json --output-dir docs/reports/kronos-readiness/assessment-001
-/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m research.kronos_readiness probe --plan docs/reports/kronos-readiness/probe-plan.json --token-path /root/Silver-Bullet-ML-BMAD/.access_token --output-dir docs/reports/kronos-readiness/probe-001
+/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m research.kronos_readiness assess --documentary-root /root/Silver-Bullet-ML-BMAD --source-pack docs/reports/kronos-readiness/sources-20260922/source-pack.json --output-dir docs/reports/kronos-readiness/assessment-001
+/root/Silver-Bullet-ML-BMAD/.venv/bin/python -m research.kronos_readiness probe --plan docs/reports/kronos-readiness/sources-20260922/probe-plan.json --token-path /root/Silver-Bullet-ML-BMAD/.access_token --output-dir docs/reports/kronos-readiness/probe-001
 /root/Silver-Bullet-ML-BMAD/.venv-research/bin/python -m research.kronos_readiness timing --cache /root/Silver-Bullet-ML-BMAD/.venv-research/kronos --decisions 3 --output-dir docs/reports/kronos-readiness/timing-001
 ```
 
@@ -14,7 +14,7 @@ Long runs should be launched with `nohup ... > <dedicated-report-log> 2>&1 &` an
 
 A source pack contains `sources`, an array of entries with `path`, `sha256`, `date`, `url`, and a narrowly scoped `claim`. Paths may be absolute or relative to the pack. Optional `category` matches one blocker key in the assessment. Hash verification establishes source identity, not historical admissibility or the truth of arbitrary claims. An empty pack is valid and leaves all gaps unresolved. Reports manifest every output; each observation is written exclusively once with read-only permissions and ordered sequence IDs. These permissions plus hashes detect ordinary changes; they are not a privileged-user tamper-proof store.
 
-A probe plan includes the same `sources` array and the following reviewer-confirmed claims:
+A probe plan includes the same `sources` array and the following documentary reviewer assessments:
 
 ```json
 {
@@ -35,9 +35,11 @@ A probe plan includes the same `sources` array and the following reviewer-confir
 }
 ```
 
-A reviewer must verify the dated session against official calendar evidence, including early closes and DST, and the explicit contract against a successful GET from the current NY date. `verified` records this human review; the software does not infer calendar truth from an archive hash. Both referenced hashes must pass source verification. Only MNQZ26 is allowed for this preregistered capture. If a full 900-second window is unavailable, the command records PENDING without reading the token. An early close must be supplied explicitly; aware timestamps convert to UTC through the NY calendar checks.
+A reviewer must verify the dated session against official calendar evidence, including early closes and DST, and the explicit contract against a successful GET from the current NY date. `verified` records this documentary reviewer assessment; the software does not infer calendar truth from an archive hash. Both referenced hashes must pass source verification. Only MNQZ26 is allowed for this preregistered capture. If a full 900-second window is unavailable, the command records PENDING without reading the token. An early close must be supplied explicitly; aware timestamps convert to UTC through the NY calendar checks.
 
 The probe reads the existing plain token once, never imports live auth, and never refreshes or writes shared state. It first requests SIM metadata and checks symbol, root, asset, exchange, currency and explicit future expiration. It then requests only latest-three minute bars, at least five seconds between starts, at most 180 bar requests and 900 seconds including metadata. Each HTTP call has a hard Linux main-thread alarm deadline of at most 15 seconds and the remaining capture/session budget. Redirects, proxies and other endpoints/methods are refused; bodies are capped at 1 MiB. Auth errors, throttle, timeout, malformed responses or metadata failures stop without retries. Non-success responses are recorded with secrets redacted. There is no background or ongoing collector launched by these modules.
+
+Receipt timestamps are captured immediately after transport returns, before response processing. Credential echoes are redacted in raw bytes and decoded JSON keys/strings. Nonstandard or nonfinite JSON numbers stop safely with sanitized raw evidence retained.
 
 Ordered raw response bytes (base64 after credential redaction), provider fields, request/receipt UTC and monotonic times are retained. Repeated timestamps are never discarded from observations; the descriptive report identifies revisions, absent status/timezone and observed timestamp gaps. Receipt minus timestamp is a descriptive difference, not completion or first-arrival latency. Bar age never proves completion. Current observations cannot authenticate historical files.
 

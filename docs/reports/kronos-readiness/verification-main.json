@@ -1,0 +1,29 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "verified_merge_commit": "cb0f5b1f1978c577034713446c6b6402f055f2c6",
+  "implementation_commit": "c8cac53fa768329e2778a91ad3698d20d28163d9",
+  "main_tests": {
+    "passed": 201,
+    "failed": 0,
+    "seconds": 21.82,
+    "command": ".venv/bin/python -m pytest tests/test_kronos* tests/unit/test_kronos_evaluation_preflight.py tests/unit/test_trading_model_readiness.py -q",
+    "log": "_bmad-output/kronos-readiness-main-verification-20260922.log",
+    "log_sha256": "b6da860d431a473dd00adea68b30239754bf7e1464bf5226509689b74c55afb3"
+  },
+  "flake8": "PASS",
+  "mypy": "PASS: 7 source files",
+  "artifact_hashes_verified": {
+    "assessment": 29,
+    "probe": 185,
+    "timing": 13
+  },
+  "independent_review": {
+    "initial_lenses": 3,
+    "accepted_findings_fixed": true,
+    "followup_confirmed": true,
+    "implementation_findings_deferred": 0
+  },
+  "services_restarted": false,
+  "existing_replay_and_preflight_unchanged": true
+}

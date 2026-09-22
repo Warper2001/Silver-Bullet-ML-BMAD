@@ -2,7 +2,7 @@
 title: Kronos readiness for TradeStation SIM evaluation
 type: feature
 created: 2026-09-22
-status: in-review
+status: done
 route: dispatch
 baseline_commit: e89a14e6d48715acd8098b7ba4bc612a3fdeeb65
 review_loop_iteration: 0
@@ -40,11 +40,11 @@ Freeze model/policy/three arms from the preregistration. A future candidate prot
 - Main `logs/mim_nb_live.log`: parent archives recent successful GET MNQZ26 evidence. Metadata endpoint `/v3/marketdata/symbols/MNQZ26`; bars `/v3/marketdata/barcharts/MNQZ26?interval=1&unit=Minute&barsback=3` at sim-api.tradestation.com only. Explicit unexpired candidate metadata required.
 
 ## Tasks & Acceptance
-- [ ] `research/kronos_readiness/{__init__,__main__,evidence,protocol,power,probe,timing}.py` -- implement documentary assess, finite probe and offline synthetic timing commands. Fresh destination, hash manifest, readable report and immutable append-only observations. Keep interfaces simple and document CLI usage. Parent supplies archived source pack: flexible evidence source entries each with path/hash/date/url/claim, never treated as automatically proving every gap. No price file inputs in assessment.
-- [ ] `tests/test_kronos_readiness*.py` -- mocked tests for matrix, guarded endpoints, token unchanged/redaction, power calculations/dependence and admission distinction.
-- [ ] `docs/kronos-readiness.md` -- commands, assumptions, exact evidence needed next and prospective collection specification without launching collector.
-- [ ] Parent: archive official fees/calendar/API sources and acquisition evidence, run actual finite probe during verified RTH or retain pending/blocked, run pinned synthetic timing, generate final manifested evidence and decision.
-- [ ] Parent: independently review/fix, merge and rerun tests without restarting services.
+- [x] `research/kronos_readiness/{__init__,__main__,evidence,protocol,power,probe,timing}.py` -- implement documentary assess, finite probe and offline synthetic timing commands. Fresh destination, hash manifest, readable report and immutable append-only observations. Keep interfaces simple and document CLI usage. Parent supplies archived source pack: flexible evidence source entries each with path/hash/date/url/claim, never treated as automatically proving every gap. No price file inputs in assessment.
+- [x] `tests/test_kronos_readiness*.py` -- mocked tests for matrix, guarded endpoints, token unchanged/redaction, power calculations/dependence and admission distinction.
+- [x] `docs/kronos-readiness.md` -- commands, assumptions, exact evidence needed next and prospective collection specification without launching collector.
+- [x] Parent: archive official fees/calendar/API sources and acquisition evidence, run actual finite probe during verified RTH or retain pending/blocked, run pinned synthetic timing, generate final manifested evidence and decision.
+- [x] Parent: independently review/fix, merge and rerun tests without restarting services.
 
 Acceptance: Given existing reports and missing historical evidence, when assessed, then HOLD_EVALUATION and actual power UNASSESSABLE identify each blocker and next evidence required. Given synthetic fixture and pinned assets, when timing runs, then startup and each three-seed decision duration are separate, with no adopted latency. Given verified session and recent explicit contract evidence, when probe runs, then metadata validation precedes up to 180 bar GETs within 900s, raw response order/provider fields and request/receipt UTC/monotonic times persist; all failure conditions stop safely. Given no independently justified dollar effect/variance, conditional normal planning uses n sessions and SE inflation >=1, alpha=.025 per test, marginal power=.90; detectable standardized effect=(z(.975)+z(.90))*inflation/sqrt(n), joint lower bound=.80, never actual admission. Dollar calculations require evidence independently supporting both mean effects and variances, and paired variance uses covariance, never treats arms/seeds as independent samples.
 
@@ -85,3 +85,5 @@ Additional verification: parent found typing/lint failures in new code and extre
 Follow-up review: receipt/redaction/token-path patches independently verified (19 focused tests). Reviewer found nested JSON processing could lose request metadata; patched to retain metadata with invalid-response status and safe body omission. New regression independently confirmed. All review issues requiring correction resolved; no deferred implementation findings. Probe evidence remains qualified for initial logger receipt timing and formatting-only provenance; these are retained evidence limitations, not retroactive authentication.
 
 Final fixes verification: 201 targeted Kronos/readiness tests passed; flake8 clean; mypy clean across all seven new modules. Original capture completed180 bar GETs plus metadata in895.533s, all HTTP200; no service actions. Parent will merge verified fixes, generate final snapshot assessment and reverify main.
+
+Completion: merged into main at cb0f5b1f1978c577034713446c6b6402f055f2c6 and reverified there:201 tests passed in21.82s, flake8/mypy clean,29 assessment +185 probe +13 timing artifact hashes verified. Frozen inputs and final package hashes match reviewed assessment. No service restart, orders, shared-auth writes or sealed-data access. Final verdict HOLD_EVALUATION, power UNASSESSABLE.

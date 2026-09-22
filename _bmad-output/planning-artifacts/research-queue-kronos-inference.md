@@ -3,6 +3,8 @@
 Date: 2026-09-22
 Status: INFERENCE_FEASIBLE / ECONOMIC_VALIDATION_PENDING
 
+Update 2026-09-22: outcome-blind evaluation preflight implemented and run. Status HOLD_EVALUATION, actual power UNASSESSABLE, strategy_test_permitted=false. Existing data provide at most 252 weekdays after the conservative pinned-revision boundary, before calendar/data/research-exposure exclusions; no untouched sessions are certified. Illustrative normal-theory sample-size curves are planning assumptions, not economic thresholds or Kronos performance estimates. See `docs/reports/kronos-evaluation-preflight/README.md` for the evidence, calculations and staged continuation path. No strategy returns were inspected.
+
 Intent: treat an existing pretrained model as another possible strategy in the trader pool, not a separate standard of evidence. No training is required for this initial candidate.
 
 Evidence: `docs/reports/kronos-inference-pilot/README.md` and its immutable raw run artifacts. Kronos-small generated valid MNQ-shaped forecasts locally in approximately 0.38 seconds per four-bar path using one CPU thread. This is technical feasibility only.

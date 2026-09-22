@@ -1,0 +1,235 @@
+{
+  "status": "HOLD_EVALUATION",
+  "power_verdict": "UNASSESSABLE",
+  "strategy_test_permitted": false,
+  "training_permitted": false,
+  "admitted_untouched_sessions": 0,
+  "actual_eligible_sessions": null,
+  "actual_strategy_power": null,
+  "evidence_hashes": {
+    "docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+    "docs/reports/kronos-inference-pilot/run-20260922-verified/report.json": "97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc"
+  },
+  "checkpoint_revision_metadata": {
+    "model_revision": {
+      "repo": "NeoQuasar/Kronos-small",
+      "sha": "901c26c1332695a2a8f243eb2f37243a37bea320",
+      "date": "2025-09-09T14:10:26+00:00"
+    },
+    "tokenizer_revision": {
+      "repo": "NeoQuasar/Kronos-Tokenizer-base",
+      "sha": "0e0117387f39004a9016484a186a908917e22426",
+      "date": "2025-09-09T14:10:02+00:00"
+    }
+  },
+  "data_sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+  "candidate_start_date": "2025-09-10",
+  "candidate_end_date": "2026-08-27",
+  "post_revision_weekday_ceiling": 252,
+  "data_gate_from_audit": "HOLD_DATA",
+  "data_gaps_from_audit": [
+    "SOURCE_PROVENANCE_NOT_ADMITTED",
+    "CAUSAL_FRONTMONTH_SELECTION_NOT_ADMITTED",
+    "BAR_LABEL_AND_DECISION_TIME_AVAILABILITY_UNVERIFIED",
+    "HISTORICAL_EXCHANGE_CALENDAR_UNVERIFIED",
+    "FILL_AND_COST_EVIDENCE_UNVERIFIED",
+    "UNTOUCHED_EVALUATION_INTERVAL_NOT_REGISTERED",
+    "PRETRAINING_EXPOSURE_NOT_AUDITED"
+  ],
+  "missing_economic_inputs": [
+    "ADMITTED_UNTOUCHED_EVALUATION_POPULATION",
+    "FROZEN_FORECAST_TO_POSITION_POLICY_AND_EXECUTION_COSTS",
+    "JUSTIFIED_TARGET_EFFECT",
+    "REGISTERED_DEPENDENCE_AND_MULTIPLICITY_MODEL"
+  ],
+  "planning_scenarios": [
+    {
+      "hypothetical_annual_net_sharpe": 0.5,
+      "se_inflation": 1.0,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 6233,
+      "required_252_day_years": 24.730228928079057,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.12613489819343054
+    },
+    {
+      "hypothetical_annual_net_sharpe": 0.5,
+      "se_inflation": 1.0,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 8890,
+      "required_252_day_years": 35.27567571890269,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.0517576473478733
+    },
+    {
+      "hypothetical_annual_net_sharpe": 0.5,
+      "se_inflation": 1.5,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 14023,
+      "required_252_day_years": 55.64301508817788,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.09484102105383657
+    },
+    {
+      "hypothetical_annual_net_sharpe": 0.5,
+      "se_inflation": 1.5,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 20002,
+      "required_252_day_years": 79.37027036753105,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.036349806722987654
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.0,
+      "se_inflation": 1.0,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 1559,
+      "required_252_day_years": 6.182557232019764,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.25951102284144445
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.0,
+      "se_inflation": 1.0,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 2223,
+      "required_252_day_years": 8.818918929725672,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.12965040808133055
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.0,
+      "se_inflation": 1.5,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 3506,
+      "required_252_day_years": 13.91075377204447,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.16399093225868405
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.0,
+      "se_inflation": 1.5,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 5001,
+      "required_252_day_years": 19.842567591882762,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.07195578956215526
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.5,
+      "se_inflation": 1.0,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 693,
+      "required_252_day_years": 2.747803214231006,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.44241322025012386
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.5,
+      "se_inflation": 1.0,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 988,
+      "required_252_day_years": 3.919519524322521,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.26498715398360784
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.5,
+      "se_inflation": 1.5,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 1559,
+      "required_252_day_years": 6.182557232019764,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.25951102284144445
+    },
+    {
+      "hypothetical_annual_net_sharpe": 1.5,
+      "se_inflation": 1.5,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 2223,
+      "required_252_day_years": 8.818918929725672,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.12965040808133055
+    },
+    {
+      "hypothetical_annual_net_sharpe": 2.0,
+      "se_inflation": 1.0,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 390,
+      "required_252_day_years": 1.545639308004941,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.6387600313123355
+    },
+    {
+      "hypothetical_annual_net_sharpe": 2.0,
+      "se_inflation": 1.0,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 556,
+      "required_252_day_years": 2.204729732431418,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.4490565879711639
+    },
+    {
+      "hypothetical_annual_net_sharpe": 2.0,
+      "se_inflation": 1.5,
+      "comparisons": 1,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 877,
+      "required_252_day_years": 3.4776884430111177,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.3777025588948357
+    },
+    {
+      "hypothetical_annual_net_sharpe": 2.0,
+      "se_inflation": 1.5,
+      "comparisons": 3,
+      "family_alpha": 0.05,
+      "target_power": 0.8,
+      "required_daily_observations": 1251,
+      "required_252_day_years": 4.9606418979706906,
+      "assumed_daily_observations": 252,
+      "hypothetical_power": 0.21339055402167711
+    }
+  ],
+  "qualifications": [
+    "Planning scenarios are unsealed assumptions, not adopted thresholds or Kronos estimates.",
+    "252 days/year is a scaling convention, not a historical exchange calendar.",
+    "Post-revision weekday ceiling includes holidays and unknown gaps; not effective N.",
+    "Revision dates come from public commit metadata, not verified training cutoffs.",
+    "Later dates reduce temporal pretraining concerns but do not erase local research exposure.",
+    "Zero admitted sessions means none certified here, not proof that none could qualify.",
+    "Three seeds and overlapping forecast bars do not multiply market evidence.",
+    "Normal known-variance calculations do not replace a dependence-aware strategy power gate.",
+    "No prices, forecasts, returns, PnL, credentials or sealed data were read."
+  ],
+  "script_sha256": "0510db2f6def160172053e4386c5a819f47299056aa5cfb2af7a23c568d9a064"
+}

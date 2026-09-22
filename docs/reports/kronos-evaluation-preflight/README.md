@@ -2,6 +2,8 @@
 
 The inference pilot passed. This follow-up asks whether the current evidence supports testing a trading edge. It does **not** compute any strategy returns or look at raw prices.
 
+Current evidence: [reviewed preflight report](run-20260922-reviewed/report.md), [machine-readable sensitivity](run-20260922-reviewed/report.json), and [completion hashes](run-20260922-reviewed/COMPLETE.json). The earlier `run-20260922` is retained as pre-review output, superseded by the reviewed run. Independent BMAD review identified five issues; all were addressed. Verification: 23 new tests, 72 combined targeted tests, mypy and flake8 pass. No review finding was deferred.
+
 ## What the next gate established
 
 The pinned model and tokenizer revisions both have public commit timestamps on September 9, 2025. The existing audited data end on August 28, 2026 at 11:19 New York time, a partial RTH day. Excluding that partial day and starting after the later revision date leaves **at most 252 weekdays**, September 10, 2025–August 27, 2026. This generous ceiling still includes exchange holidays and unverified gaps. It is neither 252 confirmed sessions nor 252 independent, untouched outcomes.

@@ -1,0 +1,244 @@
+{
+  "audit_sha256": "a33ca58708a8d3424387eba693a6e2ed07952f5c2d4ef6f2b9898b75c9f2be2e",
+  "compute": {
+    "devices": [],
+    "fp16_parameter_storage_gib": {
+      "102300000": 0.1905485987663269,
+      "24700000": 0.04600733518600464,
+      "4000000000": 7.450580596923828,
+      "4100000": 0.007636845111846924,
+      "8000000000": 14.901161193847656
+    },
+    "gpu_training_benchmark": "NOT_MEASURED",
+    "interpreter": "/root/Silver-Bullet-ML-BMAD/.venv-research/bin/python",
+    "nvidia_probe": "NVIDIA_TOOL_UNAVAILABLE",
+    "packages_available": {
+      "numpy": true,
+      "pandas": true,
+      "scipy": true,
+      "torch": false,
+      "transformers": false
+    },
+    "python": "3.12.3",
+    "qualification": "CSV audit timing is CPU preprocessing only; no training extrapolation.",
+    "reported_logical_cpus": 4,
+    "storage_qualification": "Weights only; excludes activations, gradients, optimizer, KV cache and all framework overhead. Not a VRAM requirement or fit prediction.",
+    "training_cost": null,
+    "training_gpu_hours": null
+  },
+  "created_at_utc": "2026-09-22T00:08:30.071528+00:00",
+  "data_gaps": [
+    "SOURCE_PROVENANCE_NOT_ADMITTED",
+    "CAUSAL_FRONTMONTH_SELECTION_NOT_ADMITTED",
+    "BAR_LABEL_AND_DECISION_TIME_AVAILABILITY_UNVERIFIED",
+    "HISTORICAL_EXCHANGE_CALENDAR_UNVERIFIED",
+    "FILL_AND_COST_EVIDENCE_UNVERIFIED",
+    "UNTOUCHED_EVALUATION_INTERVAL_NOT_REGISTERED",
+    "PRETRAINING_EXPOSURE_NOT_AUDITED"
+  ],
+  "data_gate": "HOLD_DATA",
+  "datasets": [
+    {
+      "bytes": 146975558,
+      "columns": [
+        "contract",
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "upvol",
+        "downvol"
+      ],
+      "contract_identity": "OBSERVED_NOT_AUTHENTICATED",
+      "contracts": [
+        "MNQH21",
+        "MNQH22",
+        "MNQH23",
+        "MNQH24",
+        "MNQH25",
+        "MNQH26",
+        "MNQM21",
+        "MNQM22",
+        "MNQM23",
+        "MNQM24",
+        "MNQM25",
+        "MNQM26",
+        "MNQU21",
+        "MNQU22",
+        "MNQU23",
+        "MNQU24",
+        "MNQU25",
+        "MNQU26",
+        "MNQZ21",
+        "MNQZ22",
+        "MNQZ23",
+        "MNQZ24",
+        "MNQZ25"
+      ],
+      "counts": {
+        "duplicate_weekday_contract_minutes": 0,
+        "invalid_rows": 0,
+        "nonincreasing_within_contract_rows": 0,
+        "rows": 2028965,
+        "valid_rows": 2028965,
+        "weekend_rows": 105161
+      },
+      "data_gate": "HOLD_DATA",
+      "dates_with_multiple_contracts": 43,
+      "first_valid_timestamp": "2020-12-18T00:01:00+00:00",
+      "grid_hypotheses": {
+        "end": {
+          "candidate_15min_contract_groups": 37508,
+          "dates_with_any_full_regular_grid": 1415,
+          "duplicate_contract_days_excluded_from_grid_counts": 0,
+          "full_regular_grid_contract_days": 1415,
+          "observed_weekday_rth_dates": 1466,
+          "qualification": "DESCRIPTIVE_ONLY_NOT_ADMITTED_OR_INDEPENDENT"
+        },
+        "start": {
+          "candidate_15min_contract_groups": 37508,
+          "dates_with_any_full_regular_grid": 1415,
+          "duplicate_contract_days_excluded_from_grid_counts": 0,
+          "full_regular_grid_contract_days": 1415,
+          "observed_weekday_rth_dates": 1468,
+          "qualification": "DESCRIPTIVE_ONLY_NOT_ADMITTED_OR_INDEPENDENT"
+        }
+      },
+      "last_valid_timestamp": "2026-08-28T15:19:00+00:00",
+      "measurement": {
+        "audit_seconds": 19.144629823975265,
+        "rows_per_second": 105980.89483344724
+      },
+      "observed_dates": 1774,
+      "observed_weekday_dates": 1481,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/mim_x/mnq_1min_by_contract.csv",
+      "sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+      "status": "AUDITED",
+      "structural_quality": "STRUCTURAL_CHECKS_ONLY"
+    },
+    {
+      "bytes": 22318944,
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "notional"
+      ],
+      "contract_identity": "ABSENT",
+      "contracts": [
+        "UNKNOWN"
+      ],
+      "counts": {
+        "duplicate_weekday_contract_minutes": 0,
+        "invalid_rows": 0,
+        "nonincreasing_within_contract_rows": 0,
+        "rows": 289230,
+        "valid_rows": 289230,
+        "weekend_rows": 15027
+      },
+      "data_gate": "HOLD_DATA",
+      "dates_with_multiple_contracts": 0,
+      "first_valid_timestamp": "2025-01-01T23:01:00+00:00",
+      "grid_hypotheses": {
+        "end": {
+          "candidate_15min_contract_groups": 5506,
+          "dates_with_any_full_regular_grid": 207,
+          "duplicate_contract_days_excluded_from_grid_counts": 0,
+          "full_regular_grid_contract_days": 207,
+          "observed_weekday_rth_dates": 256,
+          "qualification": "DESCRIPTIVE_ONLY_NOT_ADMITTED_OR_INDEPENDENT"
+        },
+        "start": {
+          "candidate_15min_contract_groups": 5507,
+          "dates_with_any_full_regular_grid": 207,
+          "duplicate_contract_days_excluded_from_grid_counts": 0,
+          "full_regular_grid_contract_days": 207,
+          "observed_weekday_rth_dates": 257,
+          "qualification": "DESCRIPTIVE_ONLY_NOT_ADMITTED_OR_INDEPENDENT"
+        }
+      },
+      "last_valid_timestamp": "2025-12-31T22:00:00+00:00",
+      "measurement": {
+        "audit_seconds": 2.1620664299698547,
+        "rows_per_second": 133774.7980315446
+      },
+      "observed_dates": 312,
+      "observed_weekday_dates": 260,
+      "path": "/root/Silver-Bullet-ML-BMAD/data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+      "sha256": "3f20ec70885cdee6b48e6c5c7ed3254dd4cc8ce7bd8533696c5e461c75fb7822",
+      "status": "AUDITED",
+      "structural_quality": "STRUCTURAL_CHECKS_ONLY"
+    },
+    {
+      "bytes": 21738798,
+      "columns": [
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "notional"
+      ],
+      "contract_identity": "ABSENT",
+      "contracts": [
+        "UNKNOWN"
+      ],
+      "counts": {
+        "duplicate_weekday_contract_minutes": 0,
+        "invalid_rows": 0,
+        "nonincreasing_within_contract_rows": 0,
+        "rows": 281645,
+        "valid_rows": 281645,
+        "weekend_rows": 14416
+      },
+      "data_gate": "HOLD_DATA",
+      "dates_with_multiple_contracts": 0,
+      "first_valid_timestamp": "2025-01-01T23:01:00+00:00",
+      "grid_hypotheses": {
+        "end": {
+          "candidate_15min_contract_groups": 5506,
+          "dates_with_any_full_regular_grid": 207,
+          "duplicate_contract_days_excluded_from_grid_counts": 0,
+          "full_regular_grid_contract_days": 207,
+          "observed_weekday_rth_dates": 256,
+          "qualification": "DESCRIPTIVE_ONLY_NOT_ADMITTED_OR_INDEPENDENT"
+        },
+        "start": {
+          "candidate_15min_contract_groups": 5507,
+          "dates_with_any_full_regular_grid": 207,
+          "duplicate_contract_days_excluded_from_grid_counts": 0,
+          "full_regular_grid_contract_days": 207,
+          "observed_weekday_rth_dates": 257,
+          "qualification": "DESCRIPTIVE_ONLY_NOT_ADMITTED_OR_INDEPENDENT"
+        }
+      },
+      "last_valid_timestamp": "2025-12-31T22:00:00+00:00",
+      "measurement": {
+        "audit_seconds": 2.272742642031517,
+        "rows_per_second": 123922.96197172963
+      },
+      "observed_dates": 312,
+      "observed_weekday_dates": 260,
+      "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/gapfade-splice-sensitivity/_bmad-output/diagnostics_gap_fade_splice_20260916/mnq_1min_2025_frontmonth.csv",
+      "sha256": "f1fe5b36abba90681d8b1439a3975f94e4b4d1040093c7c0368629a807d219d4",
+      "status": "AUDITED",
+      "structural_quality": "STRUCTURAL_CHECKS_ONLY"
+    }
+  ],
+  "power_gate": {
+    "reason": "No registered effect, eligible evaluation population, dependence model or multiplicity allocation.",
+    "status": "UNASSESSABLE",
+    "strategy_test_permitted": false
+  },
+  "preregistration_commit": "ff7fbeb74491704ea0a5c36e5ac1aff2d5cf633f",
+  "preregistration_sha256": "cf88f0870acb63999c6e025247daf4cce0ce3a51c82f13ec5453b536490ad4f0",
+  "schema_version": 1,
+  "source_revision": "eba41d90484ab8779ad0892ad0e6b58d5b072c48",
+  "strategy_testing_authorized": false
+}

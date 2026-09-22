@@ -1,0 +1,59 @@
+---
+title: Kronos prospective evaluation design
+type: feature
+created: 2026-09-22
+status: in-progress
+route: dispatch
+baseline_commit: 20a345d05a3b04e990422619be910dbd65cd9028
+context: []
+---
+<frozen-after-approval>
+## Intent
+Implement the user-approved Kronos evaluation-design milestone in this worktree. Produce a reproducible documentary decision comparing three, six and twelve months of future contemporaneous shadow forecasts with concealed outcomes. No forecasts, collection or real strategy scoring may run. The user explicitly requests implementation through merge and verification, so no repeated approval checkpoint is required.
+
+## Boundaries & Constraints
+Always keep strategy_test_permitted=false and trading_authorized=false in every generated JSON artifact and readable artifact. Preserve frozen replay/model/rules and published readiness artifacts. No market-data, sealed-data, credentials, network access in the command, service actions, paid purchases or changes to live code. Hash verification only proves identity, not evidence sufficiency. No useful dollar effect chosen to fit sample size, no another-strategy estimates.
+
+Use the next full RTH after generation as hypothetical start for delivered analysis; accept explicit --planning-start in the interface. Separate weekday/calendar ceilings from assumption-based rolls, holiday/early close treatment, warmup, incomplete/outage deductions. A source-supplied calendar must state coverage and provenance; unsupported calendar assumptions stay launch blockers. Reuse .power.standardized and dollar_scenario for two one-sided tests alpha .025, 90% marginal power. Show standardized sensitivities if independent economics, variance/covariance and dependence evidence absent.
+
+Specify separate calibration and untouched evaluation populations, with separate preregistration/power gate before performance calibration. Freeze version hashes at cutoff; only completed observations received then qualify, revisions affect later decisions. Track actual forecast start/completion and input availability; strict-after-availability minute-open fills, unchanged scheduled flatten/reset. Recovered observations newly received, clock ambiguity blocks causal eligibility. Preserve outages/missing flatten/unresolved exposure, never invent prices or select favorable sessions.
+
+Specify proposed endpoints, cadence, retrieval depth, budget, recovery, clock uncertainty, quote fields and checks; unsupported timing/coverage blocks launch. Isolate future auth from shared state. Integrity reports reveal no forecasts/positions/outcomes; log any exposure and quarantine affected population before further evaluation. Collection/shadow forecasting separately admitted.
+
+## I/O & Edge-Case Matrix
+|Scenario|Expected behavior|
+|---|---|
+|Missing independent economic/provenance/operational evidence|PARK_PENDING_EVIDENCE with exact required evidence|
+|Tampered hash, market/credential path, reused destination|Refuse without reading forbidden input or overwriting|
+|Warmup/roll/holiday/early close/gap|Deterministic conditional counts with explicit assumptions and no admission|
+|Revision at cutoff, clock overlap, recovery|Synthetic checks enforce received-by-cutoff and conservative ordering|
+|Exposure, missing flatten, incomplete session|Preserved and blocked, no silent deletion|
+|Conditional power success|Never authorizes scoring or trading|
+</frozen-after-approval>
+
+## Code Map
+- research/kronos_readiness/evidence.py: documentary validation, sources, new_output, finish, flags and frozen hashes; reuse without altering old output semantics.
+- research/kronos_readiness/power.py: existing standardized and paired normal power.
+- research/kronos_readiness/protocol.py: candidate() frozen model/rule metadata; extend for prospective artifact.
+- research/kronos_readiness/__main__.py: add lazy offline design branch.
+- docs/reports/kronos-readiness/: existing documentary reports/source archives; no raw probe or price reads.
+- research/kronos_replay/: frozen; do not edit.
+
+## Tasks & Acceptance
+- [ ] research/kronos_readiness/design.py (and small helper modules if useful): strict source-pack loader with pack schema, sha-bound documentary copies, calendar/scenario accounting, prospective protocol and decision report. A conservative PARK is correct while indispensable evidence unsupported. Document requirements instead of pretending unimplemented admission assessment exists.
+- [ ] research/kronos_readiness/__main__.py: add design --source-pack --planning-start --output-dir, no market or credential args.
+- [ ] tests/test_kronos_design.py: cover matrix, hand-calculated paired power, output manifest and offline/credential refusal. Use only synthetic inputs. Verify frozen mechanics remain unchanged.
+- [ ] docs/kronos-design.md: command/schema, interpretation, limitations, recovery and exposure protocol.
+- [ ] docs/reports/kronos-design/: documentary pack and fresh artifacts generated by primary agent after implementation. Primary agent owns source gathering and generation to avoid concurrent code changes.
+
+Given a verified documentary pack, when design executes, then it creates fresh manifested report, evidence, scenarios and protocol for all horizons, never admission. Given missing evidence, when report renders, then exact reconsideration evidence and assumed vs measured counts remain visible. Given valid hypothetical scenarios, when power exceeds targets, then permission flags remain false. Given a frozen input changes, when execution begins, then it refuses. Given no external access permitted, when tests execute, then no network or credential reads occur.
+
+## Implementation Notes
+Worktree /root/Silver-Bullet-ML-BMAD/.claude/worktrees/kronos-design. Use /root/Silver-Bullet-ML-BMAD/.venv/bin/python and existing tools; no installs. Primary agent handles prereg commit, evidence gathering, generated delivery and merge. Implementation agent writes code/tests/guide only and runs appropriate tests/lint/type checks. No git commits by implementation agent. No unknown user choices remain; evidence gaps are report findings. Changes reversible, no operational side effects.
+
+## Verification
+Run existing Kronos/readiness and new design tests, targeted flake8/mypy. Independent review and merge/reverify without restart.
+
+## Spec Change Log
+
+## Review Triage Log

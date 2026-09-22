@@ -26,6 +26,22 @@ from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
+DATA_ROOT = (
+    ROOT.parents[2]
+    if ROOT.parent.name == "worktrees" and ROOT.parent.parent.name == ".claude"
+    else ROOT
+)
+APPROVED_INPUTS = frozenset(
+    DATA_ROOT / name
+    for name in (
+        "data/mim_x/mnq_1min_by_contract.csv",
+        "data/processed/dollar_bars/1_minute/mnq_1min_2025.csv",
+        "_bmad-output/diagnostics_gap_fade_splice_20260916/"
+        "mnq_1min_2025_frontmonth.csv",
+        ".claude/worktrees/gapfade-splice-sensitivity/_bmad-output/"
+        "diagnostics_gap_fade_splice_20260916/mnq_1min_2025_frontmonth.csv",
+    )
+)
 REGISTRATION = "_bmad-output/preregistration_trading_model_readiness.md"
 REGISTRATION_COMMIT = "ff7fbeb74491704ea0a5c36e5ac1aff2d5cf633f"
 REGISTRATION_HASH = "cf88f0870acb63999c6e025247daf4cce0ce3a51c82f13ec5453b536490ad4f0"
@@ -70,7 +86,10 @@ def timestamp(value: str) -> datetime:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is None or parsed.second or parsed.microsecond:
             raise ValueError
-        return parsed.astimezone(timezone.utc)
+        normalized = parsed.astimezone(timezone.utc)
+        if normalized.second or normalized.microsecond:
+            raise ValueError
+        return normalized
     except (ValueError, AttributeError, OverflowError) as exc:
         raise AuditError("timestamp must be an aware whole ISO minute") from exc
 
@@ -139,7 +158,10 @@ def inspect_csv(path: Path) -> dict[str, Any]:
     counts: Counter[str] = Counter()
     contracts: set[str] = set()
     masks: dict[tuple[str, str], int] = defaultdict(int)
+    seen_masks: dict[tuple[str, str], int] = defaultdict(int)
     duplicate_days: set[tuple[str, str]] = set()
+    invalid_reasons: Counter[str] = Counter()
+    invalid_examples: list[dict[str, Any]] = []
     contracts_per_day: dict[str, set[str]] = defaultdict(set)
     last: dict[str, datetime] = {}
     first_stamp: datetime | None = None
@@ -147,7 +169,7 @@ def inspect_csv(path: Path) -> dict[str, Any]:
     error: str | None = None
     try:
         with path.open(newline="", encoding="utf-8-sig") as stream:
-            reader = csv.DictReader(stream)
+            reader = csv.DictReader(stream, strict=True)
             names = reader.fieldnames or []
             mapping = schema(names)
             result["columns"] = names
@@ -162,6 +184,32 @@ def inspect_csv(path: Path) -> dict[str, Any]:
                     ):
                         raise AuditError("row width differs from header")
                     stamp = timestamp(record[mapping["timestamp"]])
+                    contract = (
+                        record[mapping["contract"]].strip()
+                        if "contract" in mapping
+                        else "UNKNOWN"
+                    )
+                    if "contract" in mapping and not re.fullmatch(
+                        r"MNQ[HMUZ]\d{2}", contract
+                    ):
+                        raise AuditError("unrecognized MNQ quarterly contract")
+                    # Identity must be counted even when the prices are invalid.
+                    local = stamp.astimezone(NY)
+                    day = local.date().isoformat()
+                    contracts_per_day[day].add(contract)
+                    contracts.add(contract)
+                    key = (day, contract)
+                    bit = 1 << (local.hour * 60 + local.minute)
+                    if contract in last and stamp <= last[contract]:
+                        counts["nonincreasing_within_contract_rows"] += 1
+                    last[contract] = stamp
+                    if local.weekday() < 5:
+                        if seen_masks[key] & bit:
+                            counts["duplicate_weekday_contract_minutes"] += 1
+                            duplicate_days.add(key)
+                        seen_masks[key] |= bit
+                    else:
+                        counts["weekend_rows"] += 1
                     values = [float(record[mapping[field]]) for field in FIELDS[1:]]
                     opening, high, low, close, volume = values
                     if not all(math.isfinite(value) for value in values):
@@ -172,38 +220,24 @@ def inspect_csv(path: Path) -> dict[str, Any]:
                         opening, close, high
                     ):
                         raise AuditError("inconsistent OHLC")
-                    contract = (
-                        record[mapping["contract"]].strip()
-                        if "contract" in mapping
-                        else "UNKNOWN"
-                    )
-                    if "contract" in mapping and not re.fullmatch(
-                        r"MNQ[HMUZ]\d{2}", contract
-                    ):
-                        raise AuditError("unrecognized MNQ quarterly contract")
-                except (AuditError, ValueError, TypeError, OverflowError):
+                except (AuditError, ValueError, TypeError, OverflowError) as exc:
                     counts["invalid_rows"] += 1
+                    reason = (
+                        str(exc)
+                        if isinstance(exc, AuditError)
+                        else "invalid numeric or temporal value"
+                    )
+                    invalid_reasons[reason] += 1
+                    if len(invalid_examples) < 12:
+                        invalid_examples.append(
+                            {"line_end": reader.line_num, "reason": reason}
+                        )
                     continue
                 counts["valid_rows"] += 1
-                contracts.add(contract)
                 first_stamp = stamp if first_stamp is None else min(first_stamp, stamp)
                 last_stamp = stamp if last_stamp is None else max(last_stamp, stamp)
-                if contract in last and stamp <= last[contract]:
-                    counts["nonincreasing_within_contract_rows"] += 1
-                last[contract] = stamp
-                local = stamp.astimezone(NY)
-                day = local.date().isoformat()
-                contracts_per_day[day].add(contract)
-                minute = local.hour * 60 + local.minute
-                key = (day, contract)
-                bit = 1 << minute
                 if local.weekday() < 5:
-                    if masks[key] & bit:
-                        counts["duplicate_weekday_contract_minutes"] += 1
-                        duplicate_days.add(key)
                     masks[key] |= bit
-                else:
-                    counts["weekend_rows"] += 1
     except (AuditError, csv.Error, UnicodeError) as exc:
         error = str(exc)
     elapsed = time.perf_counter() - started
@@ -232,9 +266,14 @@ def inspect_csv(path: Path) -> dict[str, Any]:
         observed_weekday_dates=sum(
             datetime.fromisoformat(day).weekday() < 5 for day in contracts_per_day
         ),
-        dates_with_multiple_contracts=sum(
-            len(items) > 1 for items in contracts_per_day.values()
+        dates_with_multiple_contracts=(
+            sum(len(items) > 1 for items in contracts_per_day.values())
+            if result["contract_identity"] == "OBSERVED_NOT_AUTHENTICATED"
+            else None
         ),
+        invalid_row_reasons=dict(sorted(invalid_reasons.items())),
+        invalid_row_examples=invalid_examples,
+        invalid_row_examples_limit=12,
         contracts=sorted(contracts),
         grid_hypotheses=grid_summary(masks, duplicate_days),
         measurement={
@@ -315,13 +354,15 @@ def markdown(report: dict[str, Any]) -> str:
         "",
         "**HOLD — strategy testing is not authorized by this audit.**",
         "",
-        f"Source revision: `{report['source_revision']}`.",
+        f"Runner-supplied revision (not Git-verified): `{report['source_revision']}`.",
         f"Readiness preregistration: `{REGISTRATION_COMMIT}`.",
         "",
         "## Dataset observations",
         "",
     ]
     for item in report["datasets"]:
+        multiple = item.get("dates_with_multiple_contracts")
+        multiple_text = f"{multiple:,}" if multiple is not None else "UNASSESSABLE"
         lines.extend(
             [
                 f"### {Path(item['path']).name}",
@@ -338,7 +379,7 @@ def markdown(report: dict[str, Any]) -> str:
                     f"{item['counts']['invalid_rows']:,}.",
                     f"Observed weekday dates: {item['observed_weekday_dates']:,}; "
                     "dates with multiple contracts: "
-                    f"{item['dates_with_multiple_contracts']:,}.",
+                    f"{multiple_text}.",
                     f"Contract identity: {item['contract_identity']}; "
                     f"structural quality: {item['structural_quality']}.",
                     f"Range: {item['first_valid_timestamp']} "
@@ -357,6 +398,12 @@ def markdown(report: dict[str, Any]) -> str:
                     "dates with any full regular grid; "
                     f"{grid['candidate_15min_contract_groups']:,} "
                     "candidate contract-groups."
+                )
+            if item["invalid_row_reasons"]:
+                lines.extend(["", "Invalid row reasons:", ""])
+                lines.extend(
+                    f"- {reason}: {count}"
+                    for reason, count in item["invalid_row_reasons"].items()
                 )
         lines.extend(["", f"SHA-256: `{item['sha256']}`.", ""])
     lines.extend(
@@ -409,6 +456,8 @@ def run(inputs: Sequence[Path], output: Path, revision: str) -> dict[str, Any]:
     resolved = [safe_path(path) for path in inputs]
     if len(set(resolved)) != len(resolved):
         raise AuditError("duplicate input paths or aliases")
+    if any(path not in APPROVED_INPUTS for path in resolved):
+        raise AuditError("input is not in the registered development-data allowlist")
     destination = safe_path(output)
     prohibited = {"data", "logs", "models", ".git", ".venv", ".venv-research"}
     if any(part.lower() in prohibited for part in destination.parts):
@@ -423,6 +472,9 @@ def run(inputs: Sequence[Path], output: Path, revision: str) -> dict[str, Any]:
         "schema_version": 1,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_revision": revision,
+        "source_revision_verification": "RUNNER_SUPPLIED_NOT_GIT_VERIFIED",
+        "input_scope": "READINESS_REGISTRATION_ALLOWLIST",
+        "completion_marker": "COMPLETE.json",
         "audit_sha256": digest(Path(__file__)),
         "preregistration_commit": REGISTRATION_COMMIT,
         "preregistration_sha256": REGISTRATION_HASH,
@@ -440,12 +492,18 @@ def run(inputs: Sequence[Path], output: Path, revision: str) -> dict[str, Any]:
         "datasets": [inspect_csv(path) for path in resolved],
         "compute": compute_readiness(),
     }
-    # All input validation and measurement finish before any output is created.
+    # Render before creating outputs; only the final marker certifies completion.
+    report_json = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    report_markdown = markdown(report)
     destination.mkdir(parents=True, exist_ok=False)
-    (destination / "report.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    (destination / "report.json").write_text(report_json, encoding="utf-8")
+    (destination / "report.md").write_text(report_markdown, encoding="utf-8")
+    completion = {
+        name: digest(destination / name) for name in ("report.json", "report.md")
+    }
+    (destination / "COMPLETE.json").write_text(
+        json.dumps(completion, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    (destination / "report.md").write_text(markdown(report))
     return report
 
 

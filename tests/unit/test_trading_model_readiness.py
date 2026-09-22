@@ -10,6 +10,16 @@ import pytest
 from tools import trading_model_readiness as audit
 
 
+@pytest.fixture(autouse=True)
+def registered_synthetic_inputs(tmp_path, monkeypatch):
+    # Only tests replace the fixed production allowlist; no CLI bypass exists.
+    monkeypatch.setattr(
+        audit,
+        "APPROVED_INPUTS",
+        frozenset((tmp_path / "input.csv", tmp_path / "missing.csv")),
+    )
+
+
 def write_csv(
     path: Path, rows: list[list[str]], header: list[str] | None = None
 ) -> Path:
@@ -176,6 +186,11 @@ def test_report_never_admits_strategy_or_fabricates_training_time(
     assert result["compute"]["training_cost"] is None
     assert result["compute"]["nvidia_probe"] == "NVIDIA_TOOL_UNAVAILABLE"
     assert json.loads((output / "report.json").read_text()) == result
+    complete = json.loads((output / "COMPLETE.json").read_text())
+    assert complete == {
+        name: audit.digest(output / name) for name in ("report.json", "report.md")
+    }
+    assert result["source_revision_verification"] == "RUNNER_SUPPLIED_NOT_GIT_VERIFIED"
     assert "HOLD" in (output / "report.md").read_text()
 
 
@@ -219,3 +234,66 @@ def test_registration_tamper_is_refused_before_csv_read(tmp_path, monkeypatch):
     with pytest.raises(audit.AuditError, match="preregistration"):
         audit.run([tmp_path / "input.csv"], tmp_path / "report", "a" * 40)
     assert not (tmp_path / "report").exists()
+
+
+def test_unregistered_ledger_is_refused_before_any_content_read(tmp_path, monkeypatch):
+    monkeypatch.setattr(audit, "digest", lambda _: pytest.fail("read before allowlist"))
+    with pytest.raises(audit.AuditError, match="allowlist"):
+        audit.run(
+            [tmp_path / "data" / "live_trades.csv"], tmp_path / "report", "a" * 40
+        )
+
+
+def test_offset_seconds_cannot_manufacture_whole_minutes():
+    with pytest.raises(audit.AuditError):
+        audit.timestamp("2025-03-10T09:30:00-04:00:30")
+
+
+def test_unterminated_csv_quote_is_invalid(tmp_path):
+    source = tmp_path / "input.csv"
+    source.write_text(
+        'timestamp,open,high,low,close,volume\n2025-03-10T13:30:00Z,100,101,99,100,"5'
+    )
+    result = audit.inspect_csv(source)
+    assert result["status"] == "INVALID_SCHEMA"
+    assert result["structural_quality"] == "INVALID"
+
+
+def test_invalid_price_duplicate_still_excludes_contract_day(tmp_path):
+    rows = session()
+    duplicate = list(rows[10])
+    duplicate[1] = "nan"
+    result = audit.inspect_csv(write_csv(tmp_path / "input.csv", rows + [duplicate]))
+    assert result["counts"]["invalid_rows"] == 1
+    assert result["counts"]["duplicate_weekday_contract_minutes"] == 1
+    assert result["grid_hypotheses"]["start"]["candidate_15min_contract_groups"] == 0
+
+
+def test_invalid_reasons_and_line_examples_are_bounded(tmp_path):
+    rows = session()
+    for row in rows[:20]:
+        row[1] = "nan"
+    rows[20][0] = "not-a-time"
+    result = audit.inspect_csv(write_csv(tmp_path / "input.csv", rows))
+    assert result["invalid_row_reasons"]["non-finite numeric value"] == 20
+    assert len(result["invalid_row_reasons"]) == 2
+    assert len(result["invalid_row_examples"]) == 12
+    assert result["invalid_row_examples"][0] == {
+        "line_end": 2,
+        "reason": "non-finite numeric value",
+    }
+
+
+def test_interrupted_publication_has_no_completion_marker(tmp_path, monkeypatch):
+    source = write_csv(tmp_path / "input.csv", session())
+    original = Path.write_text
+
+    def fail_markdown(path, *args, **kwargs):
+        if path.name == "report.md":
+            raise OSError("simulated full disk")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_markdown)
+    with pytest.raises(OSError):
+        audit.run([source], tmp_path / "report", "a" * 40)
+    assert not (tmp_path / "report" / "COMPLETE.json").exists()

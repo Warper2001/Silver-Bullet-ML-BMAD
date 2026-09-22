@@ -1,0 +1,13 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "url": "https://www.cmegroup.com/trading-hours.html",
+  "retrieved_date": "2026-09-22",
+  "method": "web.run rendered primary page; direct urllib request returned HTTPError, recorded in archive.json",
+  "section": "2026 CME Globex Trading Schedule",
+  "verbatim_excerpt": [
+    "Labor Day | 6 - 8 September 2026",
+    "Thanksgiving | 26 - 28 November 2026"
+  ],
+  "limitations": "Selected excerpt only, not full raw HTTP response. Supports non-holiday inference for September 22 alongside the archived NYSE calendar. No historical or special/emergency-closure authentication."
+}

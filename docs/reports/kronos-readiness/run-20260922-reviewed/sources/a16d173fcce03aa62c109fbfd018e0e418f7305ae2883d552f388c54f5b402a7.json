@@ -1,0 +1,88 @@
+{
+  "cache": "/root/Silver-Bullet-ML-BMAD/.venv-research/kronos",
+  "context_end": "2026-03-09T09:45:00-04:00",
+  "context_sha256": "599ed3e429ca8b4d6571a6d1fa84dacc9841bbef3fabcd820aef453a4a8a5269",
+  "context_start": "2026-03-02T10:30:00-05:00",
+  "decision_checks": [
+    [
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      },
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      },
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      }
+    ],
+    [
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      },
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      },
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      }
+    ],
+    [
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      },
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      },
+      {
+        "all_finite": true,
+        "invalid_candles": 0
+      }
+    ]
+  ],
+  "device": "cpu",
+  "future": [
+    "2026-03-09T10:00:00-04:00",
+    "2026-03-09T10:15:00-04:00",
+    "2026-03-09T10:30:00-04:00",
+    "2026-03-09T10:45:00-04:00"
+  ],
+  "future_sha256": "7b2a5e5c50c303d9618290d42c02ab3bd0aa915eba8035eb7545f0b0b0892f19",
+  "interpretation": "Repeated fixed synthetic context, three sequential seeds per decision; no economic outcomes.",
+  "latency_adopted_seconds": null,
+  "scope": "SYNTHETIC_TIMING_ONLY",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "startup_seconds": 7.4640337390010245,
+  "status": "TIMING_COMPLETED",
+  "strategy_test_permitted": false,
+  "targets": [
+    1,
+    1,
+    1
+  ],
+  "three_seed_decision_seconds": [
+    1.5439106469857506,
+    1.4009445660049096,
+    1.350067071034573
+  ],
+  "trading_authorized": false,
+  "versions": {
+    "einops": "0.8.1",
+    "huggingface_hub": "0.33.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "safetensors": "0.6.2",
+    "torch": "2.14.0+cpu"
+  }
+}

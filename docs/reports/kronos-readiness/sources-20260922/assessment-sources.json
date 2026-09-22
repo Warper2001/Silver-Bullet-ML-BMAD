@@ -1,0 +1,157 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "sources": [
+    {
+      "path": "fees.html",
+      "sha256": "e344ffc5f0c5e479677adfe94a5c8b55ee5774e1d82ecca7fb9377cb7be696c1",
+      "date": "2026-09-22T14:12:54.729717+00:00",
+      "url": "https://www.tradestation.com/pricing/",
+      "claim": "Archived primary source; scope-specific interpretation required.",
+      "category": "costs"
+    },
+    {
+      "path": "exchange-fees.html",
+      "sha256": "4ea552aeeb3d20f2ea021e998149a75344f0d3b00d02be590745810adbcd8ee1",
+      "date": "2026-09-22T14:12:55.611051+00:00",
+      "url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+      "claim": "Archived primary source; scope-specific interpretation required.",
+      "category": "costs"
+    },
+    {
+      "path": "sim.html",
+      "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+      "date": "2026-09-22T14:12:56.061877+00:00",
+      "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+      "claim": "Archived primary source; scope-specific interpretation required.",
+      "category": "costs"
+    },
+    {
+      "path": "nyse-calendar.html",
+      "sha256": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
+      "date": "2026-09-22T14:12:56.330357+00:00",
+      "url": "https://www.nyse.com/markets/hours-calendars",
+      "claim": "Archived primary source; scope-specific interpretation required.",
+      "category": "calendar"
+    },
+    {
+      "path": "api-specification.html",
+      "sha256": "268b7b0b47c96d7b696b8c17b1f7d2d1fd1b8839f2aabba0b18958f983154c8a",
+      "date": "2026-09-22T14:12:56.862258+00:00",
+      "url": "https://api.tradestation.com/docs/specification/",
+      "claim": "Archived primary source; scope-specific interpretation required."
+    },
+    {
+      "path": "recent-request.txt",
+      "sha256": "fe0a364d5f9af6ecda6521daa66f93cac3aa7ac6c7e683084e7289e18afb4860",
+      "date": "2026-09-22T14:13:48.038650+00:00",
+      "url": "local:logs/mim_nb_live.log",
+      "claim": "Recent successful production request identifies MNQZ26 only; no historical roll or SIM entitlement inference.",
+      "category": "contract_selection"
+    },
+    {
+      "path": "session-evidence.json",
+      "sha256": "04df91a6dbcb6869652f452045e08aeb32a92a306df8469e3c5fcf23fe81f01f",
+      "date": "2026-09-22",
+      "url": "https://www.cmegroup.com/trading-hours.html",
+      "claim": "Dated single-day RTH inference from official calendars; not historical authentication.",
+      "category": "calendar"
+    },
+    {
+      "path": "fee-assessment.json",
+      "sha256": "47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16",
+      "date": "2026-09-22",
+      "url": "https://www.tradestation.com/pricing/",
+      "claim": "Separated published cost schedule; no account tier or cost adoption.",
+      "category": "costs"
+    },
+    {
+      "path": "cme-calendar-excerpt.json",
+      "sha256": "522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632",
+      "date": "2026-09-22",
+      "url": "https://www.cmegroup.com/trading-hours.html",
+      "claim": "Short dated primary CME holiday-table excerpt; September 22 lies outside listed holiday windows.",
+      "category": "calendar"
+    },
+    {
+      "path": "prior-preflight-readme.md",
+      "sha256": "e1e5eaa8cb57008a7f8c18d9e2f8e02e4afd430193808324fb3d1d671049f817",
+      "date": "2026-09-22",
+      "url": "local:docs/reports/kronos-evaluation-preflight/README.md",
+      "claim": "Prior assessment: exact acquisition writer/receipt not located and no admitted untouched sessions.",
+      "category": "historical_acquisition"
+    },
+    {
+      "path": "prior-preflight-report.json",
+      "sha256": "0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf",
+      "date": "2026-09-22",
+      "url": "local:docs/reports/kronos-evaluation-preflight/run-20260922-reviewed/report.json",
+      "claim": "HOLD_EVALUATION, zero admitted sessions, power unassessable; weekday ceiling is not eligible N.",
+      "category": "economic_power"
+    },
+    {
+      "path": "prior-audit-report.json",
+      "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+      "date": "2026-09-22",
+      "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+      "claim": "Prior structural audit: both minute-label hypotheses remain plausible; contract identity observed not authenticated and seven data gates unresolved.",
+      "category": "minute_convention"
+    },
+    {
+      "path": "research-source-manifest.json",
+      "sha256": "91f9d95ebfede340790d6e73e912d33ee330bc9d3b68777f1d13e69e6e13388f",
+      "date": "2026-09-22",
+      "url": "local:research/mim_comparison/evidence/source-manifest.json",
+      "claim": "Existing research source manifest binds previously researched development input identity; no price data read.",
+      "category": "research_exposure"
+    },
+    {
+      "path": "prior-acquisition-attribution.md",
+      "sha256": "d38d96c9e410c3b6fb00ea86a84946f80e29f37da8279e99181159b5beaece59",
+      "date": "2026-09-22",
+      "url": "local:_bmad-output/preregistration_mim_x2_powered.md",
+      "claim": "TradeStation acquisition attribution is not an original request/response receipt.",
+      "category": "historical_acquisition"
+    },
+    {
+      "path": "prior-inference-report.json",
+      "sha256": "97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc",
+      "date": "2026-09-22",
+      "url": "local:docs/reports/kronos-inference-pilot/run-20260922-verified/report.json",
+      "claim": "Pinned local feasibility demonstration on previously researched context; not economic evidence.",
+      "category": "research_exposure"
+    },
+    {
+      "path": "prior-audit-report.json",
+      "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+      "date": "2026-09-22",
+      "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+      "category": "completion_and_arrival",
+      "claim": "Reviewed historical audit leaves decision-time availability and minute labels unverified; no original receipts authenticate arrival or revision timing."
+    },
+    {
+      "path": "prior-audit-report.json",
+      "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+      "date": "2026-09-22",
+      "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+      "category": "contract_selection",
+      "claim": "Reviewed historical audit observes contract labels but does not authenticate causal front-month selection. Current explicit MNQZ26 identity does not cure this."
+    },
+    {
+      "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-timing-20260922/report.json",
+      "sha256": "a16d173fcce03aa62c109fbfd018e0e418f7305ae2883d552f388c54f5b402a7",
+      "date": "2026-09-22",
+      "url": "local:synthetic-timing",
+      "category": "completion_and_arrival",
+      "claim": "Pinned synthetic CPU timing only: startup 7.464s; three-seed decision times [1.5439106469857506, 1.4009445660049096, 1.350067071034573]. No adopted latency and no market outcome evidence."
+    },
+    {
+      "path": "probe-provenance-note.json",
+      "sha256": "b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133",
+      "date": "2026-09-22",
+      "url": "local:readiness-implementation-review",
+      "category": "completion_and_arrival",
+      "claim": "Initial receipt times include processing overhead and source hashes were finalized after formatting; no latency adopted. See archived note for exact limits."
+    }
+  ]
+}

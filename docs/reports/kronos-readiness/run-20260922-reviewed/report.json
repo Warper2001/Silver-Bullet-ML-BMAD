@@ -1,0 +1,649 @@
+{
+  "actual_eligible_sessions": null,
+  "admitted_sessions": 0,
+  "blockers": {
+    "calendar": "Dated exchange RTH sessions, holidays, early closes and DST with verified UTC boundaries for every evaluated session.",
+    "completion_and_arrival": "Historical bar completion, first availability and revisions; current probe is descriptive only.",
+    "contract_selection": "Causal per-session front-contract selection using contemporaneous volume, expiry and same-contract prior close.",
+    "costs": "Separate documented commission, exchange/regulatory costs, independently validated slippage and adopted latency protocol.",
+    "economic_power": "Independent useful dollar effects for K and K-M, variances and covariance, eligible N and dependence justification.",
+    "historical_acquisition": "Original dated request/response records, identities and hashes binding each historical file to its acquisition.",
+    "minute_convention": "Provider documentation and acquisition-linked evidence of open/end labels and timezone for historical minutes.",
+    "research_exposure": "Untouched population and auditable local research exposure plus model training-exposure limitations."
+  },
+  "current_observations_authenticate_history": false,
+  "evidence": {
+    "categories": {
+      "calendar": {
+        "citations": [
+          {
+            "finding": "HISTORICAL_EXCHANGE_CALENDAR_UNVERIFIED",
+            "json_pointer": "/data_gaps/3",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Dated exchange RTH sessions, holidays, early closes and DST with verified UTC boundaries for every evaluated session.",
+        "reviewer_assertions": [
+          {
+            "category": "calendar",
+            "claim": "Archived primary source; scope-specific interpretation required.",
+            "date": "2026-09-22T14:12:56.330357+00:00",
+            "path": "nyse-calendar.html",
+            "sha256": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
+            "snapshot": "sources/b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f.html",
+            "url": "https://www.nyse.com/markets/hours-calendars",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "calendar",
+            "claim": "Dated single-day RTH inference from official calendars; not historical authentication.",
+            "date": "2026-09-22",
+            "path": "session-evidence.json",
+            "sha256": "04df91a6dbcb6869652f452045e08aeb32a92a306df8469e3c5fcf23fe81f01f",
+            "snapshot": "sources/04df91a6dbcb6869652f452045e08aeb32a92a306df8469e3c5fcf23fe81f01f.json",
+            "url": "https://www.cmegroup.com/trading-hours.html",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "calendar",
+            "claim": "Short dated primary CME holiday-table excerpt; September 22 lies outside listed holiday windows.",
+            "date": "2026-09-22",
+            "path": "cme-calendar-excerpt.json",
+            "sha256": "522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632",
+            "snapshot": "sources/522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632.json",
+            "url": "https://www.cmegroup.com/trading-hours.html",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "completion_and_arrival": {
+        "citations": [
+          {
+            "finding": "BAR_LABEL_AND_DECISION_TIME_AVAILABILITY_UNVERIFIED",
+            "json_pointer": "/data_gaps/2",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Historical bar completion, first availability and revisions; current probe is descriptive only.",
+        "reviewer_assertions": [
+          {
+            "category": "completion_and_arrival",
+            "claim": "Reviewed historical audit leaves decision-time availability and minute labels unverified; no original receipts authenticate arrival or revision timing.",
+            "date": "2026-09-22",
+            "path": "prior-audit-report.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+            "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "completion_and_arrival",
+            "claim": "Pinned synthetic CPU timing only: startup 7.464s; three-seed decision times [1.5439106469857506, 1.4009445660049096, 1.350067071034573]. No adopted latency and no market outcome evidence.",
+            "date": "2026-09-22",
+            "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-timing-20260922/report.json",
+            "sha256": "a16d173fcce03aa62c109fbfd018e0e418f7305ae2883d552f388c54f5b402a7",
+            "snapshot": "sources/a16d173fcce03aa62c109fbfd018e0e418f7305ae2883d552f388c54f5b402a7.json",
+            "url": "local:synthetic-timing",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "completion_and_arrival",
+            "claim": "Initial receipt times include processing overhead and source hashes were finalized after formatting; no latency adopted. See archived note for exact limits.",
+            "date": "2026-09-22",
+            "path": "probe-provenance-note.json",
+            "sha256": "b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133",
+            "snapshot": "sources/b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133.json",
+            "url": "local:readiness-implementation-review",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "completion_and_arrival",
+            "claim": "Single bounded current SIM probe completed; raw observations preserve statuses/revisions and logger receipt upper bounds. No historical authentication.",
+            "date": "2026-09-22",
+            "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/kronos-readiness/docs/reports/kronos-readiness/sources-20260922/probe-summary.json",
+            "sha256": "6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311",
+            "snapshot": "sources/6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311.json",
+            "url": "local:.claude/worktrees/kronos-readiness/docs/reports/kronos-readiness/sources-20260922/probe-summary.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "completion_and_arrival",
+            "claim": "Original finite-probe report; no strategy scoring or latency adoption.",
+            "date": "2026-09-22",
+            "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922/report.json",
+            "sha256": "86d2e6355da0d0f3686deba029639c64aaf5a24d769b0f1ab9946cb64a79c4a7",
+            "snapshot": "sources/86d2e6355da0d0f3686deba029639c64aaf5a24d769b0f1ab9946cb64a79c4a7.json",
+            "url": "local:_bmad-output/kronos-readiness-probe-20260922/report.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "completion_and_arrival",
+            "claim": "Hash manifest for all185 original probe artifacts; verified before final assessment.",
+            "date": "2026-09-22",
+            "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922/COMPLETE.json",
+            "sha256": "51ef4b978908762d18277d9f3a59b2875d06232b8cd517abe46526a0b15ccc21",
+            "snapshot": "sources/51ef4b978908762d18277d9f3a59b2875d06232b8cd517abe46526a0b15ccc21.json",
+            "url": "local:_bmad-output/kronos-readiness-probe-20260922/COMPLETE.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "completion_and_arrival",
+            "claim": "Hash manifest for13 synthetic timing artifacts; verified before final assessment.",
+            "date": "2026-09-22",
+            "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-timing-20260922/COMPLETE.json",
+            "sha256": "61acee08b2901a2ca37208e089fb6fe8b4e2a88b990ad898c867bfa69e55e247",
+            "snapshot": "sources/61acee08b2901a2ca37208e089fb6fe8b4e2a88b990ad898c867bfa69e55e247.json",
+            "url": "local:_bmad-output/kronos-readiness-timing-20260922/COMPLETE.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "contract_selection": {
+        "citations": [
+          {
+            "finding": "CAUSAL_FRONTMONTH_SELECTION_NOT_ADMITTED",
+            "json_pointer": "/data_gaps/1",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Causal per-session front-contract selection using contemporaneous volume, expiry and same-contract prior close.",
+        "reviewer_assertions": [
+          {
+            "category": "contract_selection",
+            "claim": "Recent successful production request identifies MNQZ26 only; no historical roll or SIM entitlement inference.",
+            "date": "2026-09-22T14:13:48.038650+00:00",
+            "path": "recent-request.txt",
+            "sha256": "fe0a364d5f9af6ecda6521daa66f93cac3aa7ac6c7e683084e7289e18afb4860",
+            "snapshot": "sources/fe0a364d5f9af6ecda6521daa66f93cac3aa7ac6c7e683084e7289e18afb4860.txt",
+            "url": "local:logs/mim_nb_live.log",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "contract_selection",
+            "claim": "Reviewed historical audit observes contract labels but does not authenticate causal front-month selection. Current explicit MNQZ26 identity does not cure this.",
+            "date": "2026-09-22",
+            "path": "prior-audit-report.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+            "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "contract_selection",
+            "claim": "Current SIM metadata confirms MNQZ26 CME future expiry2026-12-18, tick.25 and point value2; no historical roll policy.",
+            "date": "2026-09-22",
+            "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922/observation-0000.json",
+            "sha256": "7559a6c68590a415426148619b0a83e85798dcf799ea0767392b5262da9bd43f",
+            "snapshot": "sources/7559a6c68590a415426148619b0a83e85798dcf799ea0767392b5262da9bd43f.json",
+            "url": "local:_bmad-output/kronos-readiness-probe-20260922/observation-0000.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "costs": {
+        "citations": [
+          {
+            "finding": "FILL_AND_COST_EVIDENCE_UNVERIFIED",
+            "json_pointer": "/data_gaps/4",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Separate documented commission, exchange/regulatory costs, independently validated slippage and adopted latency protocol.",
+        "reviewer_assertions": [
+          {
+            "category": "costs",
+            "claim": "Archived primary source; scope-specific interpretation required.",
+            "date": "2026-09-22T14:12:54.729717+00:00",
+            "path": "fees.html",
+            "sha256": "e344ffc5f0c5e479677adfe94a5c8b55ee5774e1d82ecca7fb9377cb7be696c1",
+            "snapshot": "sources/e344ffc5f0c5e479677adfe94a5c8b55ee5774e1d82ecca7fb9377cb7be696c1.html",
+            "url": "https://www.tradestation.com/pricing/",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "costs",
+            "claim": "Archived primary source; scope-specific interpretation required.",
+            "date": "2026-09-22T14:12:55.611051+00:00",
+            "path": "exchange-fees.html",
+            "sha256": "4ea552aeeb3d20f2ea021e998149a75344f0d3b00d02be590745810adbcd8ee1",
+            "snapshot": "sources/4ea552aeeb3d20f2ea021e998149a75344f0d3b00d02be590745810adbcd8ee1.html",
+            "url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "costs",
+            "claim": "Archived primary source; scope-specific interpretation required.",
+            "date": "2026-09-22T14:12:56.061877+00:00",
+            "path": "sim.html",
+            "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+            "snapshot": "sources/fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82.html",
+            "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "costs",
+            "claim": "Separated published cost schedule; no account tier or cost adoption.",
+            "date": "2026-09-22",
+            "path": "fee-assessment.json",
+            "sha256": "47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16",
+            "snapshot": "sources/47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16.json",
+            "url": "https://www.tradestation.com/pricing/",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "economic_power": {
+        "citations": [
+          {
+            "finding": "UNASSESSABLE",
+            "json_pointer": "/power_verdict",
+            "path": "sources/0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf.json",
+            "sha256": "0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Independent useful dollar effects for K and K-M, variances and covariance, eligible N and dependence justification.",
+        "reviewer_assertions": [
+          {
+            "category": "economic_power",
+            "claim": "HOLD_EVALUATION, zero admitted sessions, power unassessable; weekday ceiling is not eligible N.",
+            "date": "2026-09-22",
+            "path": "prior-preflight-report.json",
+            "sha256": "0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf",
+            "snapshot": "sources/0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf.json",
+            "url": "local:docs/reports/kronos-evaluation-preflight/run-20260922-reviewed/report.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "historical_acquisition": {
+        "citations": [
+          {
+            "finding": "SOURCE_PROVENANCE_NOT_ADMITTED",
+            "json_pointer": "/data_gaps/0",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Original dated request/response records, identities and hashes binding each historical file to its acquisition.",
+        "reviewer_assertions": [
+          {
+            "category": "historical_acquisition",
+            "claim": "Prior assessment: exact acquisition writer/receipt not located and no admitted untouched sessions.",
+            "date": "2026-09-22",
+            "path": "prior-preflight-readme.md",
+            "sha256": "e1e5eaa8cb57008a7f8c18d9e2f8e02e4afd430193808324fb3d1d671049f817",
+            "snapshot": "sources/e1e5eaa8cb57008a7f8c18d9e2f8e02e4afd430193808324fb3d1d671049f817.md",
+            "url": "local:docs/reports/kronos-evaluation-preflight/README.md",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "historical_acquisition",
+            "claim": "TradeStation acquisition attribution is not an original request/response receipt.",
+            "date": "2026-09-22",
+            "path": "prior-acquisition-attribution.md",
+            "sha256": "d38d96c9e410c3b6fb00ea86a84946f80e29f37da8279e99181159b5beaece59",
+            "snapshot": "sources/d38d96c9e410c3b6fb00ea86a84946f80e29f37da8279e99181159b5beaece59.md",
+            "url": "local:_bmad-output/preregistration_mim_x2_powered.md",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "minute_convention": {
+        "citations": [
+          {
+            "finding": "BAR_LABEL_AND_DECISION_TIME_AVAILABILITY_UNVERIFIED",
+            "json_pointer": "/data_gaps/2",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Provider documentation and acquisition-linked evidence of open/end labels and timezone for historical minutes.",
+        "reviewer_assertions": [
+          {
+            "category": "minute_convention",
+            "claim": "Prior structural audit: both minute-label hypotheses remain plausible; contract identity observed not authenticated and seven data gates unresolved.",
+            "date": "2026-09-22",
+            "path": "prior-audit-report.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+            "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      },
+      "research_exposure": {
+        "citations": [
+          {
+            "finding": "UNTOUCHED_EVALUATION_INTERVAL_NOT_REGISTERED",
+            "json_pointer": "/data_gaps/5",
+            "path": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+            "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2"
+          }
+        ],
+        "conclusion": "Verified documentary report explicitly identifies this unresolved gap.",
+        "limits_and_next_evidence": "Untouched population and auditable local research exposure plus model training-exposure limitations.",
+        "reviewer_assertions": [
+          {
+            "category": "research_exposure",
+            "claim": "Existing research source manifest binds previously researched development input identity; no price data read.",
+            "date": "2026-09-22",
+            "path": "research-source-manifest.json",
+            "sha256": "91f9d95ebfede340790d6e73e912d33ee330bc9d3b68777f1d13e69e6e13388f",
+            "snapshot": "sources/91f9d95ebfede340790d6e73e912d33ee330bc9d3b68777f1d13e69e6e13388f.json",
+            "url": "local:research/mim_comparison/evidence/source-manifest.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          },
+          {
+            "category": "research_exposure",
+            "claim": "Pinned local feasibility demonstration on previously researched context; not economic evidence.",
+            "date": "2026-09-22",
+            "path": "prior-inference-report.json",
+            "sha256": "97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc",
+            "snapshot": "sources/97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc.json",
+            "url": "local:docs/reports/kronos-inference-pilot/run-20260922-verified/report.json",
+            "verification": "HASH_VERIFIED_ONLY"
+          }
+        ],
+        "status": "UNRESOLVED"
+      }
+    },
+    "fixed_reports": [
+      {
+        "path": "docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+        "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+        "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "path": "docs/reports/kronos-inference-pilot/run-20260922-verified/report.json",
+        "sha256": "97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc",
+        "snapshot": "sources/97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "path": "docs/reports/kronos-evaluation-preflight/sources/model-commits.json",
+        "sha256": "594e9d18a9ff7cbbef11e928ac404c5d755b8702ea41231d4c48fed6a3ba1d94",
+        "snapshot": "sources/594e9d18a9ff7cbbef11e928ac404c5d755b8702ea41231d4c48fed6a3ba1d94.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "path": "docs/reports/kronos-evaluation-preflight/sources/tokenizer-commits.json",
+        "sha256": "b1d96c0f36e3db861578bf622d55b56cd725c7310de4fb71d9eb3027e4fca7c6",
+        "snapshot": "sources/b1d96c0f36e3db861578bf622d55b56cd725c7310de4fb71d9eb3027e4fca7c6.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "path": "docs/reports/kronos-evaluation-preflight/run-20260922-reviewed/report.json",
+        "sha256": "0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf",
+        "snapshot": "sources/0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      }
+    ],
+    "interpretation": "Hashes establish archived identity only, never historical admission.",
+    "sources": [
+      {
+        "category": "costs",
+        "claim": "Archived primary source; scope-specific interpretation required.",
+        "date": "2026-09-22T14:12:54.729717+00:00",
+        "path": "fees.html",
+        "sha256": "e344ffc5f0c5e479677adfe94a5c8b55ee5774e1d82ecca7fb9377cb7be696c1",
+        "snapshot": "sources/e344ffc5f0c5e479677adfe94a5c8b55ee5774e1d82ecca7fb9377cb7be696c1.html",
+        "url": "https://www.tradestation.com/pricing/",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "costs",
+        "claim": "Archived primary source; scope-specific interpretation required.",
+        "date": "2026-09-22T14:12:55.611051+00:00",
+        "path": "exchange-fees.html",
+        "sha256": "4ea552aeeb3d20f2ea021e998149a75344f0d3b00d02be590745810adbcd8ee1",
+        "snapshot": "sources/4ea552aeeb3d20f2ea021e998149a75344f0d3b00d02be590745810adbcd8ee1.html",
+        "url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "costs",
+        "claim": "Archived primary source; scope-specific interpretation required.",
+        "date": "2026-09-22T14:12:56.061877+00:00",
+        "path": "sim.html",
+        "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+        "snapshot": "sources/fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82.html",
+        "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "calendar",
+        "claim": "Archived primary source; scope-specific interpretation required.",
+        "date": "2026-09-22T14:12:56.330357+00:00",
+        "path": "nyse-calendar.html",
+        "sha256": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
+        "snapshot": "sources/b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f.html",
+        "url": "https://www.nyse.com/markets/hours-calendars",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "claim": "Archived primary source; scope-specific interpretation required.",
+        "date": "2026-09-22T14:12:56.862258+00:00",
+        "path": "api-specification.html",
+        "sha256": "268b7b0b47c96d7b696b8c17b1f7d2d1fd1b8839f2aabba0b18958f983154c8a",
+        "snapshot": "sources/268b7b0b47c96d7b696b8c17b1f7d2d1fd1b8839f2aabba0b18958f983154c8a.html",
+        "url": "https://api.tradestation.com/docs/specification/",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "contract_selection",
+        "claim": "Recent successful production request identifies MNQZ26 only; no historical roll or SIM entitlement inference.",
+        "date": "2026-09-22T14:13:48.038650+00:00",
+        "path": "recent-request.txt",
+        "sha256": "fe0a364d5f9af6ecda6521daa66f93cac3aa7ac6c7e683084e7289e18afb4860",
+        "snapshot": "sources/fe0a364d5f9af6ecda6521daa66f93cac3aa7ac6c7e683084e7289e18afb4860.txt",
+        "url": "local:logs/mim_nb_live.log",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "calendar",
+        "claim": "Dated single-day RTH inference from official calendars; not historical authentication.",
+        "date": "2026-09-22",
+        "path": "session-evidence.json",
+        "sha256": "04df91a6dbcb6869652f452045e08aeb32a92a306df8469e3c5fcf23fe81f01f",
+        "snapshot": "sources/04df91a6dbcb6869652f452045e08aeb32a92a306df8469e3c5fcf23fe81f01f.json",
+        "url": "https://www.cmegroup.com/trading-hours.html",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "costs",
+        "claim": "Separated published cost schedule; no account tier or cost adoption.",
+        "date": "2026-09-22",
+        "path": "fee-assessment.json",
+        "sha256": "47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16",
+        "snapshot": "sources/47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16.json",
+        "url": "https://www.tradestation.com/pricing/",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "calendar",
+        "claim": "Short dated primary CME holiday-table excerpt; September 22 lies outside listed holiday windows.",
+        "date": "2026-09-22",
+        "path": "cme-calendar-excerpt.json",
+        "sha256": "522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632",
+        "snapshot": "sources/522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632.json",
+        "url": "https://www.cmegroup.com/trading-hours.html",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "historical_acquisition",
+        "claim": "Prior assessment: exact acquisition writer/receipt not located and no admitted untouched sessions.",
+        "date": "2026-09-22",
+        "path": "prior-preflight-readme.md",
+        "sha256": "e1e5eaa8cb57008a7f8c18d9e2f8e02e4afd430193808324fb3d1d671049f817",
+        "snapshot": "sources/e1e5eaa8cb57008a7f8c18d9e2f8e02e4afd430193808324fb3d1d671049f817.md",
+        "url": "local:docs/reports/kronos-evaluation-preflight/README.md",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "economic_power",
+        "claim": "HOLD_EVALUATION, zero admitted sessions, power unassessable; weekday ceiling is not eligible N.",
+        "date": "2026-09-22",
+        "path": "prior-preflight-report.json",
+        "sha256": "0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf",
+        "snapshot": "sources/0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf.json",
+        "url": "local:docs/reports/kronos-evaluation-preflight/run-20260922-reviewed/report.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "minute_convention",
+        "claim": "Prior structural audit: both minute-label hypotheses remain plausible; contract identity observed not authenticated and seven data gates unresolved.",
+        "date": "2026-09-22",
+        "path": "prior-audit-report.json",
+        "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+        "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+        "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "research_exposure",
+        "claim": "Existing research source manifest binds previously researched development input identity; no price data read.",
+        "date": "2026-09-22",
+        "path": "research-source-manifest.json",
+        "sha256": "91f9d95ebfede340790d6e73e912d33ee330bc9d3b68777f1d13e69e6e13388f",
+        "snapshot": "sources/91f9d95ebfede340790d6e73e912d33ee330bc9d3b68777f1d13e69e6e13388f.json",
+        "url": "local:research/mim_comparison/evidence/source-manifest.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "historical_acquisition",
+        "claim": "TradeStation acquisition attribution is not an original request/response receipt.",
+        "date": "2026-09-22",
+        "path": "prior-acquisition-attribution.md",
+        "sha256": "d38d96c9e410c3b6fb00ea86a84946f80e29f37da8279e99181159b5beaece59",
+        "snapshot": "sources/d38d96c9e410c3b6fb00ea86a84946f80e29f37da8279e99181159b5beaece59.md",
+        "url": "local:_bmad-output/preregistration_mim_x2_powered.md",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "research_exposure",
+        "claim": "Pinned local feasibility demonstration on previously researched context; not economic evidence.",
+        "date": "2026-09-22",
+        "path": "prior-inference-report.json",
+        "sha256": "97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc",
+        "snapshot": "sources/97fd8cb6d7926beffef933889194b3dff16fbe56b02c855efbef0dddb3f4c7cc.json",
+        "url": "local:docs/reports/kronos-inference-pilot/run-20260922-verified/report.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Reviewed historical audit leaves decision-time availability and minute labels unverified; no original receipts authenticate arrival or revision timing.",
+        "date": "2026-09-22",
+        "path": "prior-audit-report.json",
+        "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+        "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+        "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "contract_selection",
+        "claim": "Reviewed historical audit observes contract labels but does not authenticate causal front-month selection. Current explicit MNQZ26 identity does not cure this.",
+        "date": "2026-09-22",
+        "path": "prior-audit-report.json",
+        "sha256": "ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2",
+        "snapshot": "sources/ec6a2a65db2ec6c95ec6b5fe3bfb39d12bf89c6a8b9160b865193612d0463ce2.json",
+        "url": "local:docs/reports/trading-model-feasibility/run-20260922-reviewed/report.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Pinned synthetic CPU timing only: startup 7.464s; three-seed decision times [1.5439106469857506, 1.4009445660049096, 1.350067071034573]. No adopted latency and no market outcome evidence.",
+        "date": "2026-09-22",
+        "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-timing-20260922/report.json",
+        "sha256": "a16d173fcce03aa62c109fbfd018e0e418f7305ae2883d552f388c54f5b402a7",
+        "snapshot": "sources/a16d173fcce03aa62c109fbfd018e0e418f7305ae2883d552f388c54f5b402a7.json",
+        "url": "local:synthetic-timing",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Initial receipt times include processing overhead and source hashes were finalized after formatting; no latency adopted. See archived note for exact limits.",
+        "date": "2026-09-22",
+        "path": "probe-provenance-note.json",
+        "sha256": "b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133",
+        "snapshot": "sources/b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133.json",
+        "url": "local:readiness-implementation-review",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Single bounded current SIM probe completed; raw observations preserve statuses/revisions and logger receipt upper bounds. No historical authentication.",
+        "date": "2026-09-22",
+        "path": "/root/Silver-Bullet-ML-BMAD/.claude/worktrees/kronos-readiness/docs/reports/kronos-readiness/sources-20260922/probe-summary.json",
+        "sha256": "6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311",
+        "snapshot": "sources/6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311.json",
+        "url": "local:.claude/worktrees/kronos-readiness/docs/reports/kronos-readiness/sources-20260922/probe-summary.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Original finite-probe report; no strategy scoring or latency adoption.",
+        "date": "2026-09-22",
+        "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922/report.json",
+        "sha256": "86d2e6355da0d0f3686deba029639c64aaf5a24d769b0f1ab9946cb64a79c4a7",
+        "snapshot": "sources/86d2e6355da0d0f3686deba029639c64aaf5a24d769b0f1ab9946cb64a79c4a7.json",
+        "url": "local:_bmad-output/kronos-readiness-probe-20260922/report.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "contract_selection",
+        "claim": "Current SIM metadata confirms MNQZ26 CME future expiry2026-12-18, tick.25 and point value2; no historical roll policy.",
+        "date": "2026-09-22",
+        "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922/observation-0000.json",
+        "sha256": "7559a6c68590a415426148619b0a83e85798dcf799ea0767392b5262da9bd43f",
+        "snapshot": "sources/7559a6c68590a415426148619b0a83e85798dcf799ea0767392b5262da9bd43f.json",
+        "url": "local:_bmad-output/kronos-readiness-probe-20260922/observation-0000.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Hash manifest for all185 original probe artifacts; verified before final assessment.",
+        "date": "2026-09-22",
+        "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922/COMPLETE.json",
+        "sha256": "51ef4b978908762d18277d9f3a59b2875d06232b8cd517abe46526a0b15ccc21",
+        "snapshot": "sources/51ef4b978908762d18277d9f3a59b2875d06232b8cd517abe46526a0b15ccc21.json",
+        "url": "local:_bmad-output/kronos-readiness-probe-20260922/COMPLETE.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      },
+      {
+        "category": "completion_and_arrival",
+        "claim": "Hash manifest for13 synthetic timing artifacts; verified before final assessment.",
+        "date": "2026-09-22",
+        "path": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-timing-20260922/COMPLETE.json",
+        "sha256": "61acee08b2901a2ca37208e089fb6fe8b4e2a88b990ad898c867bfa69e55e247",
+        "snapshot": "sources/61acee08b2901a2ca37208e089fb6fe8b4e2a88b990ad898c867bfa69e55e247.json",
+        "url": "local:_bmad-output/kronos-readiness-timing-20260922/COMPLETE.json",
+        "verification": "HASH_VERIFIED_ONLY"
+      }
+    ],
+    "strategy_test_permitted": false,
+    "trading_authorized": false
+  },
+  "power_verdict": "UNASSESSABLE",
+  "status": "HOLD_EVALUATION",
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

@@ -1,0 +1,73 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "sources": [
+    {
+      "id": "fees",
+      "path": "fees.html",
+      "sha256": "e344ffc5f0c5e479677adfe94a5c8b55ee5774e1d82ecca7fb9377cb7be696c1",
+      "url": "https://www.tradestation.com/pricing/",
+      "final_url": "https://www.tradestation.com/pricing/",
+      "retrieved_at": "2026-09-22T14:12:54.729717+00:00",
+      "status": 200
+    },
+    {
+      "id": "exchange-fees",
+      "path": "exchange-fees.html",
+      "sha256": "4ea552aeeb3d20f2ea021e998149a75344f0d3b00d02be590745810adbcd8ee1",
+      "url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+      "final_url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+      "retrieved_at": "2026-09-22T14:12:55.611051+00:00",
+      "status": 200
+    },
+    {
+      "id": "sim",
+      "path": "sim.html",
+      "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+      "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+      "final_url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+      "retrieved_at": "2026-09-22T14:12:56.061877+00:00",
+      "status": 200
+    },
+    {
+      "id": "nyse-calendar",
+      "path": "nyse-calendar.html",
+      "sha256": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
+      "url": "https://www.nyse.com/markets/hours-calendars",
+      "final_url": "https://www.nyse.com/trade/hours-calendars",
+      "retrieved_at": "2026-09-22T14:12:56.330357+00:00",
+      "status": 200
+    },
+    {
+      "id": "cme-calendar",
+      "url": "https://www.cmegroup.com/trading-hours.html",
+      "retrieved_at": "2026-09-22T14:12:56.681996+00:00",
+      "status": "UNAVAILABLE",
+      "error": "HTTPError"
+    },
+    {
+      "id": "mnq-spec",
+      "url": "https://www.cmegroup.com/markets/equities/nasdaq/micro-e-mini-nasdaq-100.contractSpecs.html",
+      "retrieved_at": "2026-09-22T14:12:56.818376+00:00",
+      "status": "UNAVAILABLE",
+      "error": "HTTPError"
+    },
+    {
+      "id": "api-specification",
+      "path": "api-specification.html",
+      "sha256": "268b7b0b47c96d7b696b8c17b1f7d2d1fd1b8839f2aabba0b18958f983154c8a",
+      "url": "https://api.tradestation.com/docs/specification/",
+      "final_url": "https://api.tradestation.com/docs/specification/",
+      "retrieved_at": "2026-09-22T14:12:56.862258+00:00",
+      "status": 200
+    },
+    {
+      "id": "recent-request",
+      "path": "recent-request.txt",
+      "sha256": "fe0a364d5f9af6ecda6521daa66f93cac3aa7ac6c7e683084e7289e18afb4860",
+      "retrieved_at": "2026-09-22T14:13:48.038650+00:00",
+      "source": "logs/mim_nb_live.log",
+      "claim": "Recent successful production request identifies MNQZ26 only; no historical roll or SIM entitlement inference."
+    }
+  ]
+}

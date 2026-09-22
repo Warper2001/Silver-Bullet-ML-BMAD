@@ -1,0 +1,33 @@
+{
+  "code_sha256": {
+    "research/kronos_readiness/__init__.py": "35b6d1ee4823190956db87334186ef1d46224560db46404623a94022b183ba68",
+    "research/kronos_readiness/__main__.py": "4b992601d455e7f9a152d7460f5bc157aa30dda3652c4898c1c795251aebb525",
+    "research/kronos_readiness/evidence.py": "af769698213ad6e9bc59c01796fd4890170297d17d01309b9e75a94fcfd6bff7",
+    "research/kronos_readiness/power.py": "3e72a4bc14013512c714896d3a3e3eae00c463591b0e31941e66be219429ab74",
+    "research/kronos_readiness/probe.py": "f16ef71f9c7525896141e88afab5ce5aa217c11b5578d2aa6d619e3f17e79e2d",
+    "research/kronos_readiness/protocol.py": "a46dbc23ea0f9f5f9dbe0cc08b2e7d835d7d3d8f0169dc89bcb23d3b71267b81",
+    "research/kronos_readiness/timing.py": "cb4c2df9bbc1c5140b656ca346092137d918beaec26d12f02faec1caab8e4108"
+  },
+  "frozen_inputs": {
+    "_bmad-output/preregistration_kronos_readiness_20260922.md": "d09ca2cc3a686f4ff28565455afe1ab3238123098d5f016fee9ecc5ff63e4fd5",
+    "research/kronos_replay/engine.py": "d7c925c05299593a3cd9450df67e1eccb3c0c873e059b693a160bda8cc40984a",
+    "research/kronos_replay/providers.py": "1862e3214632618dbef6fbcdbb2c0f45807db2bdbbeae5801f090b8b5eaa5f75"
+  },
+  "sha256": {
+    "decision-0-seed-0.csv": "4e5382de420bb3a7670b1c4acd0df12ebde6b18fa96ffff9ed8e58858628e06b",
+    "decision-0-seed-1.csv": "3e44638055b13a0236e8bf63eea01098b5155307e97ccce1c6499e09a4feedb3",
+    "decision-0-seed-2.csv": "e7d4da0ea9e6c5b8b7fd775202f15be0078292e331be01961b3ce016cf636b50",
+    "decision-1-seed-0.csv": "4e5382de420bb3a7670b1c4acd0df12ebde6b18fa96ffff9ed8e58858628e06b",
+    "decision-1-seed-1.csv": "3e44638055b13a0236e8bf63eea01098b5155307e97ccce1c6499e09a4feedb3",
+    "decision-1-seed-2.csv": "e7d4da0ea9e6c5b8b7fd775202f15be0078292e331be01961b3ce016cf636b50",
+    "decision-2-seed-0.csv": "4e5382de420bb3a7670b1c4acd0df12ebde6b18fa96ffff9ed8e58858628e06b",
+    "decision-2-seed-1.csv": "3e44638055b13a0236e8bf63eea01098b5155307e97ccce1c6499e09a4feedb3",
+    "decision-2-seed-2.csv": "e7d4da0ea9e6c5b8b7fd775202f15be0078292e331be01961b3ce016cf636b50",
+    "protocol.json": "086fc77e41c39de087f4ab112319d4eb472f041a3fc9b942607dd1e2014b2341",
+    "report.json": "a16d173fcce03aa62c109fbfd018e0e418f7305ae2883d552f388c54f5b402a7",
+    "report.md": "b5a4f8462eff802e897c20fec325a624339eb43c8b7757c179e8052be77f2380",
+    "synthetic-context.csv": "599ed3e429ca8b4d6571a6d1fa84dacc9841bbef3fabcd820aef453a4a8a5269"
+  },
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

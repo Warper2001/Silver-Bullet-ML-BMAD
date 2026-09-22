@@ -1,0 +1,47 @@
+{
+  "http_status": 200,
+  "method": "GET",
+  "raw_redacted": false,
+  "raw_response_base64": "eyJTeW1ib2xzIjpbeyJBc3NldFR5cGUiOiJGVVRVUkUiLCJDb3VudHJ5IjoiVW5pdGVkIFN0YXRlcyIsIkN1cnJlbmN5IjoiVVNEIiwiRGVzY3JpcHRpb24iOiJNaWNybyBFLW1pbmkgTmFzZGFxLTEwMCBEZWMgMjAyNiIsIkV4Y2hhbmdlIjoiQ01FIiwiRXhwaXJhdGlvbkRhdGUiOiIyMDI2LTEyLTE4VDAwOjAwOjAwWiIsIkZ1dHVyZVR5cGUiOiJFbGVjdHJvbmljIiwiU3ltYm9sIjoiTU5RWjI2IiwiUm9vdCI6Ik1OUSIsIlByaWNlRm9ybWF0Ijp7IkZvcm1hdCI6IkRlY2ltYWwiLCJEZWNpbWFscyI6IjIiLCJJbmNyZW1lbnRTdHlsZSI6IlNpbXBsZSIsIkluY3JlbWVudCI6IjAuMjUiLCJQb2ludFZhbHVlIjoiMiJ9LCJRdWFudGl0eUZvcm1hdCI6eyJGb3JtYXQiOiJEZWNpbWFsIiwiRGVjaW1hbHMiOiIwIiwiSW5jcmVtZW50U3R5bGUiOiJTaW1wbGUiLCJJbmNyZW1lbnQiOiIxIiwiTWluaW11bVRyYWRlUXVhbnRpdHkiOiIxIn19XSwiRXJyb3JzIjpbXX0K",
+  "receipt_elapsed_seconds": 0.23831738799344748,
+  "receipt_monotonic": 403788.531822918,
+  "receipt_utc": "2026-09-22T14:20:30.086309+00:00",
+  "request_elapsed_seconds": 2.0730076357722282e-06,
+  "request_monotonic": 403788.293507913,
+  "request_utc": "2026-09-22T14:20:29.848020+00:00",
+  "response": {
+    "Errors": [],
+    "Symbols": [
+      {
+        "AssetType": "FUTURE",
+        "Country": "United States",
+        "Currency": "USD",
+        "Description": "Micro E-mini Nasdaq-100 Dec 2026",
+        "Exchange": "CME",
+        "ExpirationDate": "2026-12-18T00:00:00Z",
+        "FutureType": "Electronic",
+        "PriceFormat": {
+          "Decimals": "2",
+          "Format": "Decimal",
+          "Increment": "0.25",
+          "IncrementStyle": "Simple",
+          "PointValue": "2"
+        },
+        "QuantityFormat": {
+          "Decimals": "0",
+          "Format": "Decimal",
+          "Increment": "1",
+          "IncrementStyle": "Simple",
+          "MinimumTradeQuantity": "1"
+        },
+        "Root": "MNQ",
+        "Symbol": "MNQZ26"
+      }
+    ]
+  },
+  "sanitized_body_sha256": "a2643bf77d1cc50b952980d4418a104875b8b3a5f6e0505d89e3ac60ede70e58",
+  "sequence": 0,
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "url": "https://sim-api.tradestation.com/v3/marketdata/symbols/MNQZ26"
+}

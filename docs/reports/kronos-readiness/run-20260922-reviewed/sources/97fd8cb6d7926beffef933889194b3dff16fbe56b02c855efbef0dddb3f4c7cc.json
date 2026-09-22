@@ -1,0 +1,92 @@
+{
+  "all_candles_valid": true,
+  "checkpoint_hashes": {
+    "Kronos-Tokenizer-base": {
+      "config.json": "2366e7ccfec76cbc19cf3c4c1b9c5d901be336ca1e83f2d2292c9bff381b77a2",
+      "model.safetensors": "59d85f6af76a2c3b8240ea06cb21db4213b4eeca053f246b23e29cf832fc6bee"
+    },
+    "Kronos-small": {
+      "config.json": "5e0f6a605d5f81b5c9b559fe5cf716a1acb041c744e6f41bd05b097b7a685396",
+      "model.safetensors": "b082dfcbd8e8c142a725c8bbb99781802f38fec81210e13479effb32b3c3e020"
+    }
+  },
+  "checkpoint_prepare_seconds": 0.16814040899043903,
+  "context_bars": 128,
+  "context_end": "2025-02-03T14:30:00-05:00",
+  "context_start": "2025-01-27T15:15:00-05:00",
+  "contract": "MNQH25",
+  "cutoff_utc": "2025-02-03T19:30:00Z",
+  "device": "cpu",
+  "economic_status": "UNTESTED_RESEARCH_CANDIDATE",
+  "elapsed_seconds": 6.5768173490068875,
+  "forecast_bars": 4,
+  "frequency": "15min",
+  "inference_seconds": [
+    0.4186394319985993,
+    0.38307645195163786,
+    0.36951778503134847
+  ],
+  "input_path": "/root/Silver-Bullet-ML-BMAD/data/mim_x/mnq_1min_by_contract.csv",
+  "input_sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+  "median_inference_seconds": 0.38307645195163786,
+  "model_load_seconds": 0.35416455898666754,
+  "model_parameters": 24741376,
+  "model_revision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+  "output_checks": [
+    {
+      "all_finite": true,
+      "invalid_candles": 0
+    },
+    {
+      "all_finite": true,
+      "invalid_candles": 0
+    },
+    {
+      "all_finite": true,
+      "invalid_candles": 0
+    }
+  ],
+  "process_peak_rss_mib": 563.6640625,
+  "qualifications": [
+    "Assumed end-labelled development bars and NY calendar features.",
+    "Synthetic amount proxy is not authenticated turnover.",
+    "No actual future prices, returns, forecast scores or strategy decisions.",
+    "Seed variation is not calibrated uncertainty.",
+    "Model pretraining exposure is not audited; this is not OOS evidence."
+  ],
+  "same_seed_repeat_equal": true,
+  "sampling": {
+    "sample_count": 1,
+    "temperature": 1.0,
+    "top_k": 0,
+    "top_p": 0.9
+  },
+  "script_sha256": "3b9f8b4771e4bb6f33337c794cd4379162278281e98a0e92e24c8d945785b4ac",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "source_hashes": {
+    "LICENSE": "acb2d194d378204e5f2be4dcd24d39ecac437903620c790c3315a96dab388fdc",
+    "model/__init__.py": "f8f856ca3fedadcaac97e196be23d1aeda1c3c9ffe8903d66d43ea3bcac6240c",
+    "model/kronos.py": "0a5f90282e2039c2de0771473419715c845def154896dbd0f5747837e6241032",
+    "model/module.py": "a07edbadc0e96804c8158c021bbc6063bb7cc43b34d7fc470d5c8ff2005a409f"
+  },
+  "source_revision": "67b630e67f6a18c9e9be918d9b4337c960db1e9a",
+  "status": "INFERENCE_COMPLETED",
+  "tokenizer_parameters": 3958042,
+  "tokenizer_revision": "0e0117387f39004a9016484a186a908917e22426",
+  "torch_threads": 1,
+  "trading_authorized": false,
+  "training_performed": false,
+  "versions": {
+    "einops": "0.8.1",
+    "huggingface_hub": "0.33.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "safetensors": "0.6.2",
+    "torch": "2.14.0+cpu"
+  },
+  "warmup_seconds": 0.44298931601224467
+}

@@ -1,0 +1,23 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "retrieved_at": "2026-09-22T14:15:00+00:00",
+  "sources": [
+    {
+      "url": "https://www.cmegroup.com/trading-hours.html",
+      "method": "web tool rendered primary page; direct archive HTTP403",
+      "finding": "CME Globex 2026 holiday table lists September 6\u20138 for Labor Day, next holiday November 26\u201328. September 22 is outside listed holiday periods. Do not apply the page\u2019s Japanese holidays for BrokerTec to MNQ."
+    },
+    {
+      "url": "https://www.nyse.com/markets/hours-calendars",
+      "artifact": "nyse-calendar.html",
+      "finding": "2026 September holiday is September 7; ordinary core session 09:30\u201316:00 Eastern. November 27 and December 24 close at 13:00 Eastern."
+    }
+  ],
+  "inference": "The candidate\u2019s RTH cash-equity research window on Tuesday 2026-09-22 is 09:30\u201316:00 America/New_York (13:30\u201320:00 UTC), with no scheduled holiday shortening. This single-day cash-session convention plus current MNQ metadata/feed is for the finite probe only; full MNQ historical session authentication remains unresolved.",
+  "session": {
+    "date": "2026-09-22",
+    "open": "2026-09-22T09:30:00-04:00",
+    "close": "2026-09-22T16:00:00-04:00"
+  }
+}

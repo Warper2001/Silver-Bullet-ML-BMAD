@@ -1,0 +1,184 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "status": "OBSERVED_CURRENT_ONLY",
+  "metadata_requests": 1,
+  "bar_requests": 180,
+  "http_statuses": [
+    200
+  ],
+  "start_utc": "2026-09-22T14:20:29.848020+00:00",
+  "last_receipt_utc": "2026-09-22T14:35:25.380190+00:00",
+  "elapsed_seconds": 895.5326161080156,
+  "minimum_bar_request_start_spacing_seconds": 5.000105928978883,
+  "provider_bar_status_observations": {
+    "Closed": 375,
+    "Open": 165
+  },
+  "provider_IsRealtime_values": {
+    "False": 540
+  },
+  "distinct_provider_timestamps": 18,
+  "observed_changes_including_open_updates": 181,
+  "changes_after_Previous_Closed": [
+    {
+      "sequence": 8,
+      "timestamp": "2026-09-22T14:21:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 20,
+      "timestamp": "2026-09-22T14:22:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 32,
+      "timestamp": "2026-09-22T14:23:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 44,
+      "timestamp": "2026-09-22T14:24:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 56,
+      "timestamp": "2026-09-22T14:25:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 68,
+      "timestamp": "2026-09-22T14:26:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 80,
+      "timestamp": "2026-09-22T14:27:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 92,
+      "timestamp": "2026-09-22T14:28:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 104,
+      "timestamp": "2026-09-22T14:29:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 116,
+      "timestamp": "2026-09-22T14:30:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 128,
+      "timestamp": "2026-09-22T14:31:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 135,
+      "timestamp": "2026-09-22T14:30:00Z",
+      "changed_fields": [
+        "Close",
+        "DownTicks",
+        "DownVolume",
+        "TotalTicks",
+        "TotalVolume"
+      ]
+    },
+    {
+      "sequence": 135,
+      "timestamp": "2026-09-22T14:31:00Z",
+      "changed_fields": [
+        "DownTicks",
+        "DownVolume",
+        "Open",
+        "TotalTicks",
+        "TotalVolume"
+      ]
+    },
+    {
+      "sequence": 140,
+      "timestamp": "2026-09-22T14:32:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 152,
+      "timestamp": "2026-09-22T14:33:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 164,
+      "timestamp": "2026-09-22T14:34:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    },
+    {
+      "sequence": 176,
+      "timestamp": "2026-09-22T14:35:00Z",
+      "changed_fields": [
+        "IsEndOfHistory"
+      ]
+    }
+  ],
+  "observed_timestamp_gaps": [],
+  "ambiguities": [],
+  "first_observed_closed_receipt_minus_label_seconds": {
+    "2026-09-22T14:19:00Z": 90.327251,
+    "2026-09-22T14:20:00Z": 30.327251,
+    "2026-09-22T14:21:00Z": 0.352858,
+    "2026-09-22T14:22:00Z": 0.348123,
+    "2026-09-22T14:23:00Z": 0.355335,
+    "2026-09-22T14:24:00Z": 0.370243,
+    "2026-09-22T14:25:00Z": 0.396718,
+    "2026-09-22T14:26:00Z": 0.364122,
+    "2026-09-22T14:27:00Z": 0.413784,
+    "2026-09-22T14:28:00Z": 0.378566,
+    "2026-09-22T14:29:00Z": 0.384861,
+    "2026-09-22T14:30:00Z": 0.369863,
+    "2026-09-22T14:31:00Z": 0.422147,
+    "2026-09-22T14:32:00Z": 0.376254,
+    "2026-09-22T14:33:00Z": 0.405603,
+    "2026-09-22T14:34:00Z": 0.393777,
+    "2026-09-22T14:35:00Z": 0.394809
+  },
+  "qualifications": [
+    "All descriptive delay values are logger receipt upper bounds including processing overhead; polling cadence and initial preload prevent identifying exact earliest availability.",
+    "IsRealtime is retained as supplied; its false value is not an independently established entitlement or delay diagnosis.",
+    "Current observations suggest end-labelled minute intervals because open bars carry the next minute label; this does not authenticate historical minute labels.",
+    "One preregistered finite probe only; no repeated capture, strategy outcomes, orders or collector."
+  ],
+  "raw_probe_directory": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-probe-20260922",
+  "raw_probe_manifest_sha256": "51ef4b978908762d18277d9f3a59b2875d06232b8cd517abe46526a0b15ccc21",
+  "synthetic_timing_directory": "/root/Silver-Bullet-ML-BMAD/_bmad-output/kronos-readiness-timing-20260922",
+  "synthetic_timing_manifest_sha256": "61acee08b2901a2ca37208e089fb6fe8b4e2a88b990ad898c867bfa69e55e247",
+  "closed_changes_beyond_IsEndOfHistory": 2
+}

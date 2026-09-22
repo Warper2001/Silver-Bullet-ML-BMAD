@@ -1,0 +1,1 @@
+2026-09-22 14:12:53,331 | INFO | HTTP Request: GET https://api.tradestation.com/v3/marketdata/barcharts/MNQZ26?interval=1&unit=Minute&barsback=60 "HTTP/1.1 200 OK"

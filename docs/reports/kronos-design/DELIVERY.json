@@ -1,15 +1,15 @@
 {
   "strategy_test_permitted": false,
   "trading_authorized": false,
-  "status": "REVIEWED_WORKTREE",
+  "status": "MERGED_AND_REVERIFIED",
   "baseline_commit": "20a345d05a3b04e990422619be910dbd65cd9028",
   "preregistration_commit": "c95d852b286fc5f8faad90a3c7c14e9154c64522",
   "decision": "PARK_PENDING_EVIDENCE",
   "sha256": {
-    "_bmad-output/implementation-artifacts/spec-kronos-evaluation-design.md": "7bdbb7468b9769a6a9c3d42c121da2e357fecbe0c2819c02218ac2734f2ab35e",
+    "_bmad-output/implementation-artifacts/spec-kronos-evaluation-design.md": "c571df966c305386f1a08e3844f0b252deb0642c9967946e89828e461c3fdd26",
     "_bmad-output/preregistration_kronos_design_20260922.md": "a60a7b528fc84e90d43162b1bbb325cf27fdfdbd74cfeed93657f59d30786cbb",
     "docs/kronos-design.md": "0cf2ea65f71278ffdc79d2b4d2fcc340d339e6c742ae0c1da24e0d3feecc0b21",
-    "docs/reports/kronos-design/README.md": "72309cdb3884e1b8fb665fc9bd2f3983ab0f9ff3fbc3f9b30943512215474f64",
+    "docs/reports/kronos-design/README.md": "107ab0db1c2ed33b5d96412d43e8e81ad0937900c702a15175bc7ed48e1e5f5f",
     "docs/reports/kronos-design/review-disposition.json": "a5c1d542e7266d8cdf99c113b43e4f027bd01df350602b71d092a23e8d3c9801",
     "docs/reports/kronos-design/run-20260923-reviewed/COMPLETE.json": "a22ef151196de45eb63a65b903d68acda2bf3a50c869206e4cdcd46c34799d4f",
     "docs/reports/kronos-design/run-20260923-reviewed/comparison.md": "424aebc2e8f2563d872a9f005a16696f415c0992d324d28979c2e07dd626cd53",
@@ -55,9 +55,11 @@
     "docs/reports/kronos-design/sources-20260922/inventory-index.json": "e3ce8b2ff7216493de7429da212bcd192161d27c0a06cd5786eeccedcf226099",
     "docs/reports/kronos-design/sources-20260922/nyse-calendar.html": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
     "docs/reports/kronos-design/sources-20260922/source-pack.json": "40820defe3aae66d9ed13aacd7a48bd0a325e9d75ed431cbdbb20ee43837f6c7",
+    "docs/reports/kronos-design/verification-main.json": "555957c20ff2c21c9fd4c86d94b4b5ed303f6e33de113cf6d39959d1a1e99ca6",
     "docs/reports/kronos-design/verification-worktree.json": "448d3efd3b2db79c53c2b427dde32ff2313fabac4d95d683daa2a1bed161cf49",
     "research/kronos_readiness/__main__.py": "fe99e5fb932acad5dda5e0c94d6615f9ee0465bf5b4c4da073bd996c353e4171",
     "research/kronos_readiness/design.py": "b4c8c44739e9706f87d6549b7a4e4b6e20d2a44022c4789d4b5031ad9c5b0a66",
     "tests/test_kronos_design.py": "96a2ec2cbef77f03d5fbc736a26b19f0cf915736fe2bf0610835d044fb0103d1"
-  }
+  },
+  "implementation_commit": "8657e3e8af54c9867502ff697eb7e446c023ccfb"
 }

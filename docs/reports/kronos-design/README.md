@@ -23,3 +23,5 @@ The protocol freezes input versions at each decision cutoff, records actual fore
 No collection, real-data forecasts, strategy outcomes, orders, service changes or paid purchases occurred. The design preregistration was committed before implementation; the frozen model, strategy, comparison arms, replay and earlier published readiness artifacts remain unchanged.
 
 Verification in the isolated worktree: **255 tests passed**, with targeted flake8 and mypy clean. All 13 findings from three independent reviewers were corrected and confirmed closed; none deferred. See [review disposition](review-disposition.json), [verification record](verification-worktree.json) and [delivery manifest](DELIVERY.json).
+
+Merged-main verification also passed **255 tests**, lint, and type checks. A fresh offline run reproduced all reviewed artifact content except its generation timestamp. See [main verification](verification-main.json). No service restart or other operational launch occurred.

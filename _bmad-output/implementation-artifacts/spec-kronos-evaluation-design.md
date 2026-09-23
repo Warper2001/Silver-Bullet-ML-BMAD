@@ -77,3 +77,5 @@ Run existing Kronos/readiness and new design tests, targeted flake8/mypy. Indepe
 ### Completion evidence
 
 All 13 findings corrected and confirmed closed by the original three reviewers. 255 Kronos/readiness tests pass; flake8 and mypy pass. Final generation uses the same hypothetical September 23 next full RTH after the UTC date rollover. Main merge and reverification are the delivery steps; no service restart. No code or research evidence findings deferred.
+
+Merged into main at 8657e3e8af54c9867502ff697eb7e446c023ccfb and reverified: 255 tests pass, lint/types clean, fresh offline artifacts match except generation timestamp, no frozen/live/prior-readiness changes, no service restart.

@@ -1,0 +1,16 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "scope": "current-probe-provenance-limitations",
+  "run": "_bmad-output/kronos-readiness-probe-20260922",
+  "initial_preregistration_commit": "27058e4244cb70ad504c2d90ec34ba06c8c18505",
+  "rule_correction_commit": "7392c52c42b546a128f3b5a558bdc30951d76901",
+  "baseline_commit": "e89a14e6d48715acd8098b7ba4bc612a3fdeeb65",
+  "limitations": [
+    "Initial probe receipt timestamps were sampled after local sanitization, hashing and parsing. They are logger receipt upper bounds, not exact transport completion times or adopted latency. The revised implementation timestamps immediately after transport and is tested with simulated processing delay.",
+    "A formatting-only black pass occurred shortly after initial probe launch. Finalization code hashes bind formatted on-disk source, not the exact pre-format source bytes loaded by Python. No executable changes were made to that original worktree during the remainder of capture; review fixes were developed in a separate worktree.",
+    "Both current provider fields and revisions are observations only. They cannot authenticate historical files, establish feed entitlement or justify economic scoring."
+  ],
+  "real_capture_repeated": false,
+  "reason_no_repeated_capture": "Preserve the preregistered single bounded probe budget. Exact transport timing remains evidence for a later separately preregistered milestone."
+}

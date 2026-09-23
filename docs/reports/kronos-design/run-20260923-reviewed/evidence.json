@@ -1,0 +1,237 @@
+{
+  "design_frozen_inputs": {
+    "_bmad-output/preregistration_kronos_design_20260922.md": "a60a7b528fc84e90d43162b1bbb325cf27fdfdbd74cfeed93657f59d30786cbb"
+  },
+  "pack": {
+    "calendar": {
+      "closed_dates": [
+        "2026-11-26",
+        "2026-12-25",
+        "2027-01-01",
+        "2027-01-18",
+        "2027-02-15",
+        "2027-03-26",
+        "2027-05-31",
+        "2027-06-18",
+        "2027-07-05",
+        "2027-09-06"
+      ],
+      "coverage_end": "2027-09-23",
+      "coverage_start": "2026-09-23",
+      "early_close_dates": [
+        "2026-11-27",
+        "2026-12-24"
+      ],
+      "source_ids": [
+        "calendar",
+        "calendar-official"
+      ]
+    },
+    "economic": null,
+    "scenarios": [
+      {
+        "calibration_sessions": 0,
+        "incomplete_dates": [],
+        "name": "proxy-no-roll-capacity-ceiling",
+        "outage_dates": [],
+        "roll_dates": []
+      },
+      {
+        "calibration_sessions": 0,
+        "incomplete_dates": [],
+        "name": "assumed-quarterly-resets",
+        "outage_dates": [],
+        "roll_dates": [
+          "2026-12-10",
+          "2027-03-11",
+          "2027-06-10",
+          "2027-09-09"
+        ]
+      },
+      {
+        "calibration_sessions": 20,
+        "incomplete_dates": [
+          "2026-10-20",
+          "2026-12-22",
+          "2027-02-22",
+          "2027-04-20",
+          "2027-06-22",
+          "2027-08-20"
+        ],
+        "name": "assumed-resets-losses-and-20-calibration",
+        "outage_dates": [
+          "2026-10-15",
+          "2026-11-16",
+          "2026-12-15",
+          "2027-01-15",
+          "2027-02-16",
+          "2027-03-15",
+          "2027-04-15",
+          "2027-05-17",
+          "2027-06-15",
+          "2027-07-15",
+          "2027-08-16",
+          "2027-09-15"
+        ],
+        "roll_dates": [
+          "2026-12-10",
+          "2027-03-11",
+          "2027-06-10",
+          "2027-09-09"
+        ]
+      }
+    ],
+    "schema_version": 1,
+    "sources": [
+      {
+        "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates.",
+        "date": "2026-09-22",
+        "id": "0-readme",
+        "path": "0-README.md",
+        "sha256": "cfea2c04ddb0b9e0569ce11345d3d90db7da77452f4e05898949e065ac420bd5",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/0-README.md"
+      },
+      {
+        "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates.",
+        "date": "2026-09-22",
+        "id": "1-provider-findings",
+        "path": "1-provider-findings.md",
+        "sha256": "428200199a4ef9bf7498211ac5bd15d8ed36ca26bd1c8430ca3f075e277709f5",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/1-provider-findings.md"
+      },
+      {
+        "claim": "Official SIM instant simulated fills cannot establish market slippage.",
+        "date": "2026-09-22",
+        "id": "10-sim",
+        "path": "10-sim.html",
+        "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+        "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/"
+      },
+      {
+        "claim": "Frozen strategy/model/comparison parameters and original unresolved protocol.",
+        "date": "2026-09-22",
+        "id": "11-candidate-protocol",
+        "path": "11-candidate-protocol.json",
+        "sha256": "622279727ba9cb9dcc107fe3c27e61575217130657837004a84c7e3ed56197f8",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/11-candidate-protocol.json"
+      },
+      {
+        "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates.",
+        "date": "2026-09-22",
+        "id": "12-report",
+        "path": "12-report.md",
+        "sha256": "5927cf92a3006831c9f05827131d97207d98a8db04aece205bb35ab28bbe7504",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/12-report.md"
+      },
+      {
+        "claim": "No admitted sessions or actual economic power; standardized conditional sensitivity only.",
+        "date": "2026-09-22",
+        "id": "13-power",
+        "path": "13-power.json",
+        "sha256": "de3d9a2e8248a1bac724724ec3f1d5881c2d4dc34c90ce307dee342ffd20a22f",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/13-power.json"
+      },
+      {
+        "claim": "Historical requests and raw archives both zero; original file provenance remains unresolved.",
+        "date": "2026-09-22",
+        "id": "2-acquisition-status",
+        "path": "2-acquisition-status.json",
+        "sha256": "8af1f2daf64e972d9cdd3f4fc8e54e603b848f7f156a441cc815e647677d6837",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/2-acquisition-status.json"
+      },
+      {
+        "claim": "Collection refused because cost, entitlement and gate evidence were absent.",
+        "date": "2026-09-22",
+        "id": "3-acquisition-gate-check",
+        "path": "3-acquisition-gate-check.json",
+        "sha256": "1cb7474176b98262424a629b02a33ca86a26fb2f76323f9f52e5143dd8ca9872",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/3-acquisition-gate-check.json"
+      },
+      {
+        "claim": "MNQM25 symbol metadata only; no bars or future contract selection evidence.",
+        "date": "2026-09-22",
+        "id": "4-symbol-verification",
+        "path": "4-symbol-verification.json",
+        "sha256": "cbcac5028abcdaed66a4134470139e7abd9192568a97906a3d0368d8649c8ea6",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/4-symbol-verification.json"
+      },
+      {
+        "claim": "Original documentary identity manifest; five selected acquisition records match hashes.",
+        "date": "2026-09-22",
+        "id": "5-evidence-inventory",
+        "path": "5-evidence-inventory.json",
+        "sha256": "4278bf32023c5d5e647206f990a9b20c433dc8277c4f6b8ba576e2960589bc78",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/5-evidence-inventory.json"
+      },
+      {
+        "claim": "Published cost components only; account-specific and executable slippage evidence absent.",
+        "date": "2026-09-22",
+        "id": "6-fee-assessment",
+        "path": "6-fee-assessment.json",
+        "sha256": "47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/6-fee-assessment.json"
+      },
+      {
+        "claim": "Finite current probe only: 180 requests, three bars, nominal five-second cadence, two Closed payload price-volume revisions.",
+        "date": "2026-09-22",
+        "id": "7-probe-summary",
+        "path": "7-probe-summary.json",
+        "sha256": "6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/7-probe-summary.json"
+      },
+      {
+        "claim": "Probe logger-time upper-bound and launch-source qualification; no latency adopted.",
+        "date": "2026-09-22",
+        "id": "8-probe-provenance-note",
+        "path": "8-probe-provenance-note.json",
+        "sha256": "b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/8-probe-provenance-note.json"
+      },
+      {
+        "claim": "Limited CME excerpt only, not complete prospective product calendar.",
+        "date": "2026-09-22",
+        "id": "9-cme-calendar-excerpt",
+        "path": "9-cme-calendar-excerpt.json",
+        "sha256": "522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/9-cme-calendar-excerpt.json"
+      },
+      {
+        "claim": "Single bounded inventory, requirement classification and exact reconsideration evidence; unrelated documentary accidental exposure disclosed.",
+        "date": "2026-09-22",
+        "id": "bounded-inventory",
+        "path": "bounded-inventory.md",
+        "sha256": "03297074c9a94a2e6fc86a14ce92881f007d138c9cb7ede2eddd7e2b6a9e3392",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/bounded-inventory.md"
+      },
+      {
+        "claim": "Cash-RTH proxy dates only, not authenticated MNQ sessions. Hypothetical next full session is 2026-09-23.",
+        "date": "2026-09-22",
+        "id": "calendar",
+        "path": "calendar-evidence.md",
+        "sha256": "9e3403ebb5a6e80b79b06c7d99ee645d6cce39bbf56d94a70b943da29086bcea",
+        "url": "https://www.nyse.com/trade/hours-calendars"
+      },
+      {
+        "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates.",
+        "date": "2026-09-22",
+        "id": "inventory-index",
+        "path": "inventory-index.json",
+        "sha256": "e3ce8b2ff7216493de7429da212bcd192161d27c0a06cd5786eeccedcf226099",
+        "url": "repository:docs/reports/kronos-design/sources-20260922/inventory-index.json"
+      },
+      {
+        "claim": "Original archived official NYSE HTML, reverified rendered page September22: calendar table 2026/2027 and early-close footnotes support cash-RTH proxy only, not MNQ schedule.",
+        "date": "2026-09-22",
+        "id": "calendar-official",
+        "path": "nyse-calendar.html",
+        "sha256": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
+        "url": "https://www.nyse.com/trade/hours-calendars"
+      }
+    ]
+  },
+  "pack_original_bytes_base64": "ewogICJzY2hlbWFfdmVyc2lvbiI6IDEsCiAgInNvdXJjZXMiOiBbCiAgICB7CiAgICAgICJpZCI6ICIwLXJlYWRtZSIsCiAgICAgICJwYXRoIjogIjAtUkVBRE1FLm1kIiwKICAgICAgInNoYTI1NiI6ICJjZmVhMmMwNGRkYjBiOWUwNTY5Y2UxMTM0NWQzZDkwZGI3ZGE3NzQ1MmY0ZTA1ODk4OTQ5ZTA2NWFjNDIwYmQ1IiwKICAgICAgImRhdGUiOiAiMjAyNi0wOS0yMiIsCiAgICAgICJ1cmwiOiAicmVwb3NpdG9yeTpkb2NzL3JlcG9ydHMva3Jvbm9zLWRlc2lnbi9zb3VyY2VzLTIwMjYwOTIyLzAtUkVBRE1FLm1kIiwKICAgICAgImNsYWltIjogIlByZXZpb3VzbHkgcHVibGlzaGVkIGRvY3VtZW50YXJ5IGNvbnRleHQgb25seTsgZG9lcyBub3QgYWRtaXQgZGF0YSBvciB0cmFuc2ZlciBzdHJhdGVneSBlc3RpbWF0ZXMuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogIjEtcHJvdmlkZXItZmluZGluZ3MiLAogICAgICAicGF0aCI6ICIxLXByb3ZpZGVyLWZpbmRpbmdzLm1kIiwKICAgICAgInNoYTI1NiI6ICI0MjgyMDAxOTlhNGVmOWJmNzQ5ODIxMWFjNWJkMTVkOGVkMzZjYTI2YmQxYzg0MzBjYTNmMDc1ZTI3NzcwOWY1IiwKICAgICAgImRhdGUiOiAiMjAyNi0wOS0yMiIsCiAgICAgICJ1cmwiOiAicmVwb3NpdG9yeTpkb2NzL3JlcG9ydHMva3Jvbm9zLWRlc2lnbi9zb3VyY2VzLTIwMjYwOTIyLzEtcHJvdmlkZXItZmluZGluZ3MubWQiLAogICAgICAiY2xhaW0iOiAiUHJldmlvdXNseSBwdWJsaXNoZWQgZG9jdW1lbnRhcnkgY29udGV4dCBvbmx5OyBkb2VzIG5vdCBhZG1pdCBkYXRhIG9yIHRyYW5zZmVyIHN0cmF0ZWd5IGVzdGltYXRlcy4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiMTAtc2ltIiwKICAgICAgInBhdGgiOiAiMTAtc2ltLmh0bWwiLAogICAgICAic2hhMjU2IjogImZkZTJjNmRkNmUwMGUyMDY0MzYwZDI0MGExMzE2NDlhZjk1NzMxOTZmMGQzNTA5ZDVkZDgxMGFkMzMxZjljODIiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJodHRwczovL2FwaS50cmFkZXN0YXRpb24uY29tL2RvY3MvZnVuZGFtZW50YWxzL3NpbS12cy1saXZlLyIsCiAgICAgICJjbGFpbSI6ICJPZmZpY2lhbCBTSU0gaW5zdGFudCBzaW11bGF0ZWQgZmlsbHMgY2Fubm90IGVzdGFibGlzaCBtYXJrZXQgc2xpcHBhZ2UuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogIjExLWNhbmRpZGF0ZS1wcm90b2NvbCIsCiAgICAgICJwYXRoIjogIjExLWNhbmRpZGF0ZS1wcm90b2NvbC5qc29uIiwKICAgICAgInNoYTI1NiI6ICI2MjIyNzk3MjdiYTljYjlkY2MxMDdmZTNjMjdlNjE1NzUyMTcxMzA2NTc4MzcwMDRhODRjN2UzZWQ1NjE5N2Y4IiwKICAgICAgImRhdGUiOiAiMjAyNi0wOS0yMiIsCiAgICAgICJ1cmwiOiAicmVwb3NpdG9yeTpkb2NzL3JlcG9ydHMva3Jvbm9zLWRlc2lnbi9zb3VyY2VzLTIwMjYwOTIyLzExLWNhbmRpZGF0ZS1wcm90b2NvbC5qc29uIiwKICAgICAgImNsYWltIjogIkZyb3plbiBzdHJhdGVneS9tb2RlbC9jb21wYXJpc29uIHBhcmFtZXRlcnMgYW5kIG9yaWdpbmFsIHVucmVzb2x2ZWQgcHJvdG9jb2wuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogIjEyLXJlcG9ydCIsCiAgICAgICJwYXRoIjogIjEyLXJlcG9ydC5tZCIsCiAgICAgICJzaGEyNTYiOiAiNTkyN2NmOTJhMzAwNjgzMWM5ZjA1ODI3MTMxZDk3MjA3ZDk4YThkYjA0YWVjZTIwNWJiMzVhYjI4YmJlNzUwNCIsCiAgICAgICJkYXRlIjogIjIwMjYtMDktMjIiLAogICAgICAidXJsIjogInJlcG9zaXRvcnk6ZG9jcy9yZXBvcnRzL2tyb25vcy1kZXNpZ24vc291cmNlcy0yMDI2MDkyMi8xMi1yZXBvcnQubWQiLAogICAgICAiY2xhaW0iOiAiUHJldmlvdXNseSBwdWJsaXNoZWQgZG9jdW1lbnRhcnkgY29udGV4dCBvbmx5OyBkb2VzIG5vdCBhZG1pdCBkYXRhIG9yIHRyYW5zZmVyIHN0cmF0ZWd5IGVzdGltYXRlcy4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiMTMtcG93ZXIiLAogICAgICAicGF0aCI6ICIxMy1wb3dlci5qc29uIiwKICAgICAgInNoYTI1NiI6ICJkZTNkOWEyZTgyNDhhMWJhYzcyNDcyNGVjM2YxZDU4ODFjMmQ0ZGMzNGM5MGNlMzA3ZGVlMzQyZmZkMjBhMjJmIiwKICAgICAgImRhdGUiOiAiMjAyNi0wOS0yMiIsCiAgICAgICJ1cmwiOiAicmVwb3NpdG9yeTpkb2NzL3JlcG9ydHMva3Jvbm9zLWRlc2lnbi9zb3VyY2VzLTIwMjYwOTIyLzEzLXBvd2VyLmpzb24iLAogICAgICAiY2xhaW0iOiAiTm8gYWRtaXR0ZWQgc2Vzc2lvbnMgb3IgYWN0dWFsIGVjb25vbWljIHBvd2VyOyBzdGFuZGFyZGl6ZWQgY29uZGl0aW9uYWwgc2Vuc2l0aXZpdHkgb25seS4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiMi1hY3F1aXNpdGlvbi1zdGF0dXMiLAogICAgICAicGF0aCI6ICIyLWFjcXVpc2l0aW9uLXN0YXR1cy5qc29uIiwKICAgICAgInNoYTI1NiI6ICI4YWYxZjJkYWY2NGU5NzJkOWNkZDNmNGZjOGU1NGU2MDNiODQ4ZjdmMTU2YTQ0MWNjODE1ZTY0NzY3N2Q2ODM3IiwKICAgICAgImRhdGUiOiAiMjAyNi0wOS0yMiIsCiAgICAgICJ1cmwiOiAicmVwb3NpdG9yeTpkb2NzL3JlcG9ydHMva3Jvbm9zLWRlc2lnbi9zb3VyY2VzLTIwMjYwOTIyLzItYWNxdWlzaXRpb24tc3RhdHVzLmpzb24iLAogICAgICAiY2xhaW0iOiAiSGlzdG9yaWNhbCByZXF1ZXN0cyBhbmQgcmF3IGFyY2hpdmVzIGJvdGggemVybzsgb3JpZ2luYWwgZmlsZSBwcm92ZW5hbmNlIHJlbWFpbnMgdW5yZXNvbHZlZC4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiMy1hY3F1aXNpdGlvbi1nYXRlLWNoZWNrIiwKICAgICAgInBhdGgiOiAiMy1hY3F1aXNpdGlvbi1nYXRlLWNoZWNrLmpzb24iLAogICAgICAic2hhMjU2IjogIjFjYjc0NzQxNzZiOTgyNjI0MjRhNjI5YjAyYTMzY2E4NmEyNmZiMmY3NjMyM2Y5ZjUyZTUxNDNkZDhjYTk4NzIiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvMy1hY3F1aXNpdGlvbi1nYXRlLWNoZWNrLmpzb24iLAogICAgICAiY2xhaW0iOiAiQ29sbGVjdGlvbiByZWZ1c2VkIGJlY2F1c2UgY29zdCwgZW50aXRsZW1lbnQgYW5kIGdhdGUgZXZpZGVuY2Ugd2VyZSBhYnNlbnQuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogIjQtc3ltYm9sLXZlcmlmaWNhdGlvbiIsCiAgICAgICJwYXRoIjogIjQtc3ltYm9sLXZlcmlmaWNhdGlvbi5qc29uIiwKICAgICAgInNoYTI1NiI6ICJjYmNhYzUwMjhhYmNkYWVkNjZhNDEzNDQ3MDEzOWU3YWJkOTE5MjU2OGE5NzkwNmEzZDAzNjhkODY0OWM4ZWE2IiwKICAgICAgImRhdGUiOiAiMjAyNi0wOS0yMiIsCiAgICAgICJ1cmwiOiAicmVwb3NpdG9yeTpkb2NzL3JlcG9ydHMva3Jvbm9zLWRlc2lnbi9zb3VyY2VzLTIwMjYwOTIyLzQtc3ltYm9sLXZlcmlmaWNhdGlvbi5qc29uIiwKICAgICAgImNsYWltIjogIk1OUU0yNSBzeW1ib2wgbWV0YWRhdGEgb25seTsgbm8gYmFycyBvciBmdXR1cmUgY29udHJhY3Qgc2VsZWN0aW9uIGV2aWRlbmNlLiIKICAgIH0sCiAgICB7CiAgICAgICJpZCI6ICI1LWV2aWRlbmNlLWludmVudG9yeSIsCiAgICAgICJwYXRoIjogIjUtZXZpZGVuY2UtaW52ZW50b3J5Lmpzb24iLAogICAgICAic2hhMjU2IjogIjQyNzhiZjMyMDIzYzVkNWU2NDcyMDZmOTkwYTliMjBjNDMzZGM4Mjc3YzRmNmI4YmE1NzZlMjk2MDU4OWJjNzgiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvNS1ldmlkZW5jZS1pbnZlbnRvcnkuanNvbiIsCiAgICAgICJjbGFpbSI6ICJPcmlnaW5hbCBkb2N1bWVudGFyeSBpZGVudGl0eSBtYW5pZmVzdDsgZml2ZSBzZWxlY3RlZCBhY3F1aXNpdGlvbiByZWNvcmRzIG1hdGNoIGhhc2hlcy4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiNi1mZWUtYXNzZXNzbWVudCIsCiAgICAgICJwYXRoIjogIjYtZmVlLWFzc2Vzc21lbnQuanNvbiIsCiAgICAgICJzaGEyNTYiOiAiNDdlMTM5YTdlMmJiZDc4YTFkODk1MGZhMTc1MTMzNjljMTBlY2E3MmZiM2UxMTM4NTcxOGE5MDU4ZWM5M2IxNiIsCiAgICAgICJkYXRlIjogIjIwMjYtMDktMjIiLAogICAgICAidXJsIjogInJlcG9zaXRvcnk6ZG9jcy9yZXBvcnRzL2tyb25vcy1kZXNpZ24vc291cmNlcy0yMDI2MDkyMi82LWZlZS1hc3Nlc3NtZW50Lmpzb24iLAogICAgICAiY2xhaW0iOiAiUHVibGlzaGVkIGNvc3QgY29tcG9uZW50cyBvbmx5OyBhY2NvdW50LXNwZWNpZmljIGFuZCBleGVjdXRhYmxlIHNsaXBwYWdlIGV2aWRlbmNlIGFic2VudC4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiNy1wcm9iZS1zdW1tYXJ5IiwKICAgICAgInBhdGgiOiAiNy1wcm9iZS1zdW1tYXJ5Lmpzb24iLAogICAgICAic2hhMjU2IjogIjZmMDIxN2E5YzhhYWNmZjBlNDY1NjUyN2YyZGQyNTg1ZjJjNWY5OWZlZWYwYTdiODRiMTBlNmQyNTVlZWEzMTEiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvNy1wcm9iZS1zdW1tYXJ5Lmpzb24iLAogICAgICAiY2xhaW0iOiAiRmluaXRlIGN1cnJlbnQgcHJvYmUgb25seTogMTgwIHJlcXVlc3RzLCB0aHJlZSBiYXJzLCBub21pbmFsIGZpdmUtc2Vjb25kIGNhZGVuY2UsIHR3byBDbG9zZWQgcGF5bG9hZCBwcmljZS12b2x1bWUgcmV2aXNpb25zLiIKICAgIH0sCiAgICB7CiAgICAgICJpZCI6ICI4LXByb2JlLXByb3ZlbmFuY2Utbm90ZSIsCiAgICAgICJwYXRoIjogIjgtcHJvYmUtcHJvdmVuYW5jZS1ub3RlLmpzb24iLAogICAgICAic2hhMjU2IjogImIyMTc3ZWQxYjYyMTYxMzc5MDk5OGM0YTIxMzNmOWIzMDZlMmI5MzExODcwYThmY2Q5YWUxMjYxNDA5YzUxMzMiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvOC1wcm9iZS1wcm92ZW5hbmNlLW5vdGUuanNvbiIsCiAgICAgICJjbGFpbSI6ICJQcm9iZSBsb2dnZXItdGltZSB1cHBlci1ib3VuZCBhbmQgbGF1bmNoLXNvdXJjZSBxdWFsaWZpY2F0aW9uOyBubyBsYXRlbmN5IGFkb3B0ZWQuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogIjktY21lLWNhbGVuZGFyLWV4Y2VycHQiLAogICAgICAicGF0aCI6ICI5LWNtZS1jYWxlbmRhci1leGNlcnB0Lmpzb24iLAogICAgICAic2hhMjU2IjogIjUyMmNhMmJjMGY1M2RiYWIwYTA3NjQwN2I2NjY4NjViYjc4Y2U5NzU0Y2QzYmQyYmZjODM5NjEwODYzYmY2MzIiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvOS1jbWUtY2FsZW5kYXItZXhjZXJwdC5qc29uIiwKICAgICAgImNsYWltIjogIkxpbWl0ZWQgQ01FIGV4Y2VycHQgb25seSwgbm90IGNvbXBsZXRlIHByb3NwZWN0aXZlIHByb2R1Y3QgY2FsZW5kYXIuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogImJvdW5kZWQtaW52ZW50b3J5IiwKICAgICAgInBhdGgiOiAiYm91bmRlZC1pbnZlbnRvcnkubWQiLAogICAgICAic2hhMjU2IjogIjAzMjk3MDc0YzlhOTRhMmU2ZmM4NmExNGNlOTI4ODFmMDA3ZDEzOGM5Y2I3ZWRlMmVkZGQ3ZTJiNmE5ZTMzOTIiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvYm91bmRlZC1pbnZlbnRvcnkubWQiLAogICAgICAiY2xhaW0iOiAiU2luZ2xlIGJvdW5kZWQgaW52ZW50b3J5LCByZXF1aXJlbWVudCBjbGFzc2lmaWNhdGlvbiBhbmQgZXhhY3QgcmVjb25zaWRlcmF0aW9uIGV2aWRlbmNlOyB1bnJlbGF0ZWQgZG9jdW1lbnRhcnkgYWNjaWRlbnRhbCBleHBvc3VyZSBkaXNjbG9zZWQuIgogICAgfSwKICAgIHsKICAgICAgImlkIjogImNhbGVuZGFyIiwKICAgICAgInBhdGgiOiAiY2FsZW5kYXItZXZpZGVuY2UubWQiLAogICAgICAic2hhMjU2IjogIjllMzQwM2ViYjVhNmU4MGI3OWIwNmM3ZDk5ZWU2NDVkNmNjZTM5YmJmNTZkOTRhNzBiOTQzZGEyOTA4NmJjZWEiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJodHRwczovL3d3dy5ueXNlLmNvbS90cmFkZS9ob3Vycy1jYWxlbmRhcnMiLAogICAgICAiY2xhaW0iOiAiQ2FzaC1SVEggcHJveHkgZGF0ZXMgb25seSwgbm90IGF1dGhlbnRpY2F0ZWQgTU5RIHNlc3Npb25zLiBIeXBvdGhldGljYWwgbmV4dCBmdWxsIHNlc3Npb24gaXMgMjAyNi0wOS0yMy4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiaW52ZW50b3J5LWluZGV4IiwKICAgICAgInBhdGgiOiAiaW52ZW50b3J5LWluZGV4Lmpzb24iLAogICAgICAic2hhMjU2IjogImUzY2U4YjJmZjcyMTY0OTNkZTc0MjlkYTIxMmJjZDE5MjE2MWQyN2MwYTA2Y2Q1Nzg2ZWVjY2VkY2YyMjYwOTkiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJyZXBvc2l0b3J5OmRvY3MvcmVwb3J0cy9rcm9ub3MtZGVzaWduL3NvdXJjZXMtMjAyNjA5MjIvaW52ZW50b3J5LWluZGV4Lmpzb24iLAogICAgICAiY2xhaW0iOiAiUHJldmlvdXNseSBwdWJsaXNoZWQgZG9jdW1lbnRhcnkgY29udGV4dCBvbmx5OyBkb2VzIG5vdCBhZG1pdCBkYXRhIG9yIHRyYW5zZmVyIHN0cmF0ZWd5IGVzdGltYXRlcy4iCiAgICB9LAogICAgewogICAgICAiaWQiOiAiY2FsZW5kYXItb2ZmaWNpYWwiLAogICAgICAicGF0aCI6ICJueXNlLWNhbGVuZGFyLmh0bWwiLAogICAgICAic2hhMjU2IjogImI3YzhjMmZhMTkyM2RlNzM1YTBiYzI5YTQ2OTdiOTQ5NTdhNmNjNmFkN2UyMTk3MzkyODJmZWE4NzFkMmRlNmYiLAogICAgICAiZGF0ZSI6ICIyMDI2LTA5LTIyIiwKICAgICAgInVybCI6ICJodHRwczovL3d3dy5ueXNlLmNvbS90cmFkZS9ob3Vycy1jYWxlbmRhcnMiLAogICAgICAiY2xhaW0iOiAiT3JpZ2luYWwgYXJjaGl2ZWQgb2ZmaWNpYWwgTllTRSBIVE1MLCByZXZlcmlmaWVkIHJlbmRlcmVkIHBhZ2UgU2VwdGVtYmVyMjI6IGNhbGVuZGFyIHRhYmxlIDIwMjYvMjAyNyBhbmQgZWFybHktY2xvc2UgZm9vdG5vdGVzIHN1cHBvcnQgY2FzaC1SVEggcHJveHkgb25seSwgbm90IE1OUSBzY2hlZHVsZS4iCiAgICB9CiAgXSwKICAiY2FsZW5kYXIiOiB7CiAgICAiY292ZXJhZ2Vfc3RhcnQiOiAiMjAyNi0wOS0yMyIsCiAgICAiY292ZXJhZ2VfZW5kIjogIjIwMjctMDktMjMiLAogICAgInNvdXJjZV9pZHMiOiBbCiAgICAgICJjYWxlbmRhciIsCiAgICAgICJjYWxlbmRhci1vZmZpY2lhbCIKICAgIF0sCiAgICAiY2xvc2VkX2RhdGVzIjogWwogICAgICAiMjAyNi0xMS0yNiIsCiAgICAgICIyMDI2LTEyLTI1IiwKICAgICAgIjIwMjctMDEtMDEiLAogICAgICAiMjAyNy0wMS0xOCIsCiAgICAgICIyMDI3LTAyLTE1IiwKICAgICAgIjIwMjctMDMtMjYiLAogICAgICAiMjAyNy0wNS0zMSIsCiAgICAgICIyMDI3LTA2LTE4IiwKICAgICAgIjIwMjctMDctMDUiLAogICAgICAiMjAyNy0wOS0wNiIKICAgIF0sCiAgICAiZWFybHlfY2xvc2VfZGF0ZXMiOiBbCiAgICAgICIyMDI2LTExLTI3IiwKICAgICAgIjIwMjYtMTItMjQiCiAgICBdCiAgfSwKICAic2NlbmFyaW9zIjogWwogICAgewogICAgICAibmFtZSI6ICJwcm94eS1uby1yb2xsLWNhcGFjaXR5LWNlaWxpbmciLAogICAgICAicm9sbF9kYXRlcyI6IFtdLAogICAgICAib3V0YWdlX2RhdGVzIjogW10sCiAgICAgICJpbmNvbXBsZXRlX2RhdGVzIjogW10sCiAgICAgICJjYWxpYnJhdGlvbl9zZXNzaW9ucyI6IDAKICAgIH0sCiAgICB7CiAgICAgICJuYW1lIjogImFzc3VtZWQtcXVhcnRlcmx5LXJlc2V0cyIsCiAgICAgICJyb2xsX2RhdGVzIjogWwogICAgICAgICIyMDI2LTEyLTEwIiwKICAgICAgICAiMjAyNy0wMy0xMSIsCiAgICAgICAgIjIwMjctMDYtMTAiLAogICAgICAgICIyMDI3LTA5LTA5IgogICAgICBdLAogICAgICAib3V0YWdlX2RhdGVzIjogW10sCiAgICAgICJpbmNvbXBsZXRlX2RhdGVzIjogW10sCiAgICAgICJjYWxpYnJhdGlvbl9zZXNzaW9ucyI6IDAKICAgIH0sCiAgICB7CiAgICAgICJuYW1lIjogImFzc3VtZWQtcmVzZXRzLWxvc3Nlcy1hbmQtMjAtY2FsaWJyYXRpb24iLAogICAgICAicm9sbF9kYXRlcyI6IFsKICAgICAgICAiMjAyNi0xMi0xMCIsCiAgICAgICAgIjIwMjctMDMtMTEiLAogICAgICAgICIyMDI3LTA2LTEwIiwKICAgICAgICAiMjAyNy0wOS0wOSIKICAgICAgXSwKICAgICAgIm91dGFnZV9kYXRlcyI6IFsKICAgICAgICAiMjAyNi0xMC0xNSIsCiAgICAgICAgIjIwMjYtMTEtMTYiLAogICAgICAgICIyMDI2LTEyLTE1IiwKICAgICAgICAiMjAyNy0wMS0xNSIsCiAgICAgICAgIjIwMjctMDItMTYiLAogICAgICAgICIyMDI3LTAzLTE1IiwKICAgICAgICAiMjAyNy0wNC0xNSIsCiAgICAgICAgIjIwMjctMDUtMTciLAogICAgICAgICIyMDI3LTA2LTE1IiwKICAgICAgICAiMjAyNy0wNy0xNSIsCiAgICAgICAgIjIwMjctMDgtMTYiLAogICAgICAgICIyMDI3LTA5LTE1IgogICAgICBdLAogICAgICAiaW5jb21wbGV0ZV9kYXRlcyI6IFsKICAgICAgICAiMjAyNi0xMC0yMCIsCiAgICAgICAgIjIwMjYtMTItMjIiLAogICAgICAgICIyMDI3LTAyLTIyIiwKICAgICAgICAiMjAyNy0wNC0yMCIsCiAgICAgICAgIjIwMjctMDYtMjIiLAogICAgICAgICIyMDI3LTA4LTIwIgogICAgICBdLAogICAgICAiY2FsaWJyYXRpb25fc2Vzc2lvbnMiOiAyMAogICAgfQogIF0sCiAgImVjb25vbWljIjogbnVsbCwKICAic3RyYXRlZ3lfdGVzdF9wZXJtaXR0ZWQiOiBmYWxzZSwKICAidHJhZGluZ19hdXRob3JpemVkIjogZmFsc2UKfQo=",
+  "pack_sha256": "40820defe3aae66d9ed13aacd7a48bd0a325e9d75ed431cbdbb20ee43837f6c7",
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "verification": "HASH_VERIFIED_ONLY_NOT_EVIDENCE_SUFFICIENCY"
+}

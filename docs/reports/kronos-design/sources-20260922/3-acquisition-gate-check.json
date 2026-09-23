@@ -1,0 +1,14 @@
+{
+  "blockers": [
+    "missing or invalid operator-reviewed credential_sha256",
+    "missing or unconfirmed incremental_cost_usd",
+    "missing or unconfirmed entitlement_verified",
+    "incremental_cost_usd must be numeric zero",
+    "missing evidence reference: endpoint",
+    "missing evidence reference: zero_cost",
+    "missing evidence reference: entitlement",
+    "missing evidence reference: approval"
+  ],
+  "decision": "HOLD_VALIDATION",
+  "status": "BLOCKED"
+}

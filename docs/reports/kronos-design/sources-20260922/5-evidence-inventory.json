@@ -1,0 +1,36 @@
+{
+  "authenticated_metadata_requests_sent": 1,
+  "baseline_commit": "f2528491bcc4bead748eb01b0caf5a909abf91ea",
+  "code_sha256": {
+    "src/research/yank_deployed_validation/acquire.py": "fef0c0d91fe5445c35f52e6df92d3cf46b597cf94e9f90ed32ff966d45b53e5e",
+    "tests/unit/yank_deployed_validation/test_acquire.py": "df70d4cf67cc5b6be261c4a978742f540f290dcdcd5f2500512dd105b74fea6f",
+    "tests/unit/yank_deployed_validation/test_startup_benchmark.py": "9752170d6ae15fac887d50e2645661d53af2165816e724918b6483a2e0e55f14"
+  },
+  "decision": "HOLD_VALIDATION",
+  "engineering_commit": "f0d741b1e280b70944c587f0ba809693510bc3f6",
+  "files": {
+    "README.md": "cfea2c04ddb0b9e0569ce11345d3d90db7da77452f4e05898949e065ac420bd5",
+    "acquisition-gate-check.json": "1cb7474176b98262424a629b02a33ca86a26fb2f76323f9f52e5143dd8ca9872",
+    "acquisition-gate.pending.json": "844169e325ab13578a686ac89993e3428e79ef10510737d686e6fe5399362216",
+    "acquisition-status.json": "8af1f2daf64e972d9cdd3f4fc8e54e603b848f7f156a441cc815e647677d6837",
+    "final-regressions.log": "01185dfe7b3f3b32f9accf09ed142fdaf0672edc925f70711778ccb86e2203d1",
+    "legacy-repeat-verification.json": "bf0829137c9a1457c447262fc5a8aeb1ce72ed56c8055505519ebb6e76f996ec",
+    "maintenance-proposal.json": "9f879c17b6411e5e9ea41cdf87715016cabc6bf6568584a8380859358203a52b",
+    "maintenance-proposal.md": "ba8ac2a958524e9f583c542aded28c233208cd32862f4744bbe065f654a40b98",
+    "preservation-baseline.json": "4fbc538a2cc890612e84faa1e13fffc9c9c776dbe2591103c4b376ee87c064d7",
+    "preservation-final.json": "d3d6cbd77619a2e50c5ed7af95be6eae6c90a8e84d167a103d4a62246608b353",
+    "preservation-prior.json": "aa0afff10edc63f5b33234cd310dc1dadee37a2a771738f6476b77e4f883cd79",
+    "provider-findings.md": "428200199a4ef9bf7498211ac5bd15d8ed36ca26bd1c8430ca3f075e277709f5",
+    "public-documentation-check.json": "41c876bb5d9f80904665f01bdf5feb46af46203d5a588a6d2586ad906bf893bd",
+    "review-triage.md": "161ea9666aaf202d627288f8d634047fb2e66aef04181e5fc17d980c0169c6f4",
+    "rollback-candidate.tar.gz": "e9a47733f0816e15b3923e0319378035d5e0b14da254f91fc9499c9363e957eb",
+    "rollback-verification.json": "c760698b7c5b8706368cc9f0e2d4b59a8d3f08d157c3b363bb3a20ccc173fcec",
+    "service-inspection.json": "3eace7a5c723c5c9c6b7bc1e1c9763d818031d1daffe870c2ff679eff7e2965f",
+    "startup-benchmark.json": "64a0329c1c95ef52b28e598f64857fdecd886ad29fd8634cb368bc45b09062df",
+    "startup-benchmark.log": "998faf1526a82833b0f01feab3f93e9dd2bcdb123e66e49c51160df2a58eff51",
+    "symbol-verification.json": "cbcac5028abcdaed66a4134470139e7abd9192568a97906a3d0368d8649c8ea6"
+  },
+  "historical_requests_sent": 0,
+  "service_changes_performed": false,
+  "symbol_raw_integrity_checked": true
+}

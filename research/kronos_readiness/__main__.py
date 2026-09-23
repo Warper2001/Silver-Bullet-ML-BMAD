@@ -19,7 +19,10 @@ def main(argv: list[str] | None = None) -> int:
     timing = sub.add_parser("timing")
     timing.add_argument("--cache", type=Path, required=True)
     timing.add_argument("--decisions", type=int, default=3)
-    for command in (assess, probe, timing):
+    design = sub.add_parser("design")
+    design.add_argument("--source-pack", type=Path, required=True)
+    design.add_argument("--planning-start", required=True)
+    for command in (assess, probe, timing, design):
         command.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
@@ -28,6 +31,12 @@ def main(argv: list[str] | None = None) -> int:
 
             report = assess_run(
                 args.documentary_root, args.source_pack, args.output_dir
+            )
+        elif args.command == "design":
+            from .design import run as design_run
+
+            report = design_run(
+                args.source_pack, args.output_dir, args.planning_start
             )
         elif args.command == "probe":
             from .probe import run as probe_run

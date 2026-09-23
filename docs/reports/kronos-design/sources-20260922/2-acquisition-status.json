@@ -1,0 +1,16 @@
+{
+  "decision": "HOLD_VALIDATION",
+  "status": "BLOCKED_COST_AND_ENTITLEMENT",
+  "authorized_incremental_spend_usd": 0,
+  "symbol_verified": true,
+  "expiration_verified": true,
+  "symbol_evidence": "symbol-verification.json",
+  "historical_entitlement_verified": false,
+  "zero_incremental_cost_verified": false,
+  "historical_availability_verified": false,
+  "historical_requests_sent": 0,
+  "metadata_requests_sent": 1,
+  "raw_archives_acquired": 0,
+  "no_subscription_changes": true,
+  "blocking_evidence_needed": "Account-specific existing-subscription record or provider confirmation for expired MNQ historical API data at no extra charge."
+}

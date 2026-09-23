@@ -1,0 +1,162 @@
+{
+  "availability_precedence": "Prospective availability uses actual input receipt/completion and actual forecast completion with conservative clock bounds. The nested candidate modeled-latency field is historical replay metadata only and cannot override this prospective rule.",
+  "calibration_timeline": "Zero reservation assumes separately powered independent calibration before the horizon; positive reservation is hypothetical allocation only, requiring its own preregistration and power gate.",
+  "causality": [
+    "At each cutoff hash exact versions and only use explicitly completed observations received by cutoff; revisions are new observations for later decisions only.",
+    "Record request start, response receipt, provider event/completion times, input availability, forecast actual start and completion with UTC and monotonic clocks and uncertainty bounds.",
+    "Fill only at first minute open strictly after conservative availability including actual forecast completion. Clock overlap blocks causal eligibility.",
+    "Preserve scheduled final-minute flatten and contract reset unchanged; delayed forecast cannot move flatten. Missing flatten, outages and unresolved exposure remain incomplete without invented prices.",
+    "Recovery retains original event time and new receipt time; it cannot backdate availability or reconstruct a missed contemporaneous forecast."
+  ],
+  "concealment": "Encrypted/access-separated forecast and outcome archive; operator integrity reports show only counts, hashes, receipt coverage, clocks and error categories, never forecasts, targets, positions or outcomes. Log every human/tool exposure and quarantine affected population before further evaluation.",
+  "cost_evidence": {
+    "clearing": {
+      "adopted_usd": null,
+      "status": "UNRESOLVED"
+    },
+    "commission": {
+      "adopted_usd": null,
+      "status": "UNRESOLVED"
+    },
+    "exchange": {
+      "adopted_usd": null,
+      "status": "UNRESOLVED"
+    },
+    "operating_costs": {
+      "adopted_usd": null,
+      "status": "UNRESOLVED"
+    },
+    "regulatory": {
+      "adopted_usd": null,
+      "status": "UNRESOLVED"
+    },
+    "slippage": {
+      "adopted_usd": null,
+      "status": "UNRESOLVED"
+    }
+  },
+  "decision": "No horizon selected for launch. Compare 3/6/12 months conditionally; two one-sided tests at alpha .025, marginal power .90, joint lower bound .80. Independent economic effects must precede sample-size selection; separate future dependence-aware gate required.",
+  "frozen_candidate": {
+    "aggregate_label_convention": "interval_close",
+    "arms": [
+      "kronos",
+      "momentum",
+      "flat"
+    ],
+    "availability_rule": "aggregate close plus modeled latency",
+    "bucket_minutes": 15,
+    "calendar_feature_timezone": "America/New_York",
+    "checkpoint_hashes": {
+      "Kronos-Tokenizer-base": {
+        "config.json": "2366e7ccfec76cbc19cf3c4c1b9c5d901be336ca1e83f2d2292c9bff381b77a2",
+        "model.safetensors": "59d85f6af76a2c3b8240ea06cb21db4213b4eeca053f246b23e29cf832fc6bee"
+      },
+      "Kronos-small": {
+        "config.json": "5e0f6a605d5f81b5c9b559fe5cf716a1acb041c744e6f41bd05b097b7a685396",
+        "model.safetensors": "b082dfcbd8e8c142a725c8bbb99781802f38fec81210e13479effb32b3c3e020"
+      }
+    },
+    "context_bars": 128,
+    "contract_reset_preconditions": "flat accounts, no pending order, no partial bucket; otherwise stop incomplete",
+    "contracts": 1,
+    "costs": {
+      "commission": null,
+      "exchange_regulatory": null,
+      "latency": null,
+      "slippage": null
+    },
+    "economic_requirements": [
+      "mean(K net)>0",
+      "mean(K-M net)>0"
+    ],
+    "engine_sha256": "d7c925c05299593a3cd9450df67e1eccb3c0c873e059b693a160bda8cc40984a",
+    "fill_rule": "first eligible minute open strictly after availability",
+    "flatten": "scheduled final minute open; no forecast crossing session close",
+    "flatten_details": "cancel pending orders at scheduled final minute open; missing minute stops incomplete without invented exit price",
+    "forecast_bars": 4,
+    "historical_availability_authenticated": false,
+    "horizon_bars": 4,
+    "input_label_convention": "interval_open",
+    "invalid_forecast": "flat target; preserve available malformed paths and error",
+    "kronos_rule": "sign(mean(three terminal forecast closes) - observed close)",
+    "model_revision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+    "momentum_rule": "sign(current close - close four completed bars earlier)",
+    "other_outcomes": [
+      "Sharpe",
+      "drawdown"
+    ],
+    "outcomes_per_session_one_contract": [
+      "K net",
+      "M net",
+      "K-M net"
+    ],
+    "point_value_usd": 2,
+    "prospective_collection": [
+      "Commit separate collection preregistration before launching any continuing collector.",
+      "Archive dated calendar, contract selection, request identities, ordered raw observations and arrival times.",
+      "Preserve completion flags, timezone, revisions and gaps without deduplication or inferred completion.",
+      "Keep observations segregated from research exposure; freeze eligible sessions and execution assumptions before scoring.",
+      "Run a dependence-aware power gate before any future strategy test."
+    ],
+    "repeat_target": "no trade",
+    "reversal": "close then open, two charged sides",
+    "sampling": {
+      "sample_count": 1,
+      "temperature": 1.0,
+      "top_k": 0,
+      "top_p": 0.9
+    },
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "source_hashes": {
+      "LICENSE": "acb2d194d378204e5f2be4dcd24d39ecac437903620c790c3315a96dab388fdc",
+      "model/__init__.py": "f8f856ca3fedadcaac97e196be23d1aeda1c3c9ffe8903d66d43ea3bcac6240c",
+      "model/kronos.py": "0a5f90282e2039c2de0771473419715c845def154896dbd0f5747837e6241032",
+      "model/module.py": "a07edbadc0e96804c8158c021bbc6063bb7cc43b34d7fc470d5c8ff2005a409f"
+    },
+    "source_revision": "67b630e67f6a18c9e9be918d9b4337c960db1e9a",
+    "status": "CANDIDATE_NOT_ADMITTED",
+    "strategy_test_permitted": false,
+    "tick_size": 0.25,
+    "tokenizer_revision": "0e0117387f39004a9016484a186a908917e22426",
+    "trading_authorized": false,
+    "warmup": "128 completed same-contract 15-minute bars; reset on contract change"
+  },
+  "populations": {
+    "calibration": "Separate preregistration and power gate before performance calibration; label all exposure. No calibration outcomes enter untouched evaluation.",
+    "evaluation": "Prospective contemporaneous forecasts only; freeze dates, economic effects, model/rules/costs and dependence plan before collection. No optional stopping or favorable-session selection."
+  },
+  "proposed_operations": {
+    "authentication": "Future dedicated research auth/cache outside shared trading state; never read or refresh shared credentials. This command accepts no auth and performs no network calls.",
+    "budget": "390-minute full session ceiling: 4680 bar + 23400 quote + 1 metadata requests = 28081, excluding bounded recovery; preregister provider-approved recovery quota before launch. Stop on 401/403/429; no catch-up bursts.",
+    "cadence": "Proposed bar polling every 5 seconds; one metadata request per session/roll; quote polling each second during RTH. Coverage and entitlements UNVALIDATED.",
+    "clock": "Measure UTC-to-monotonic mapping and independent clock error bound at startup and during session. Unknown bound or discontinuity blocks causal eligibility; no assumed zero production uncertainty.",
+    "endpoints": [
+      "GET /v3/marketdata/symbols/{explicit_contract}",
+      "GET /v3/marketdata/barcharts/{explicit_contract}",
+      "GET /v3/marketdata/quotes/{explicit_contract}"
+    ],
+    "quote_checks": "Validate identity, timestamps, spread/crossing, nonnegative sizes, stale and out-of-order quotes, gaps and receipt latency. Thresholds require independent protocol evidence; no quote slippage admitted here.",
+    "quote_fields": [
+      "contract",
+      "bid",
+      "ask",
+      "bid_size",
+      "ask_size",
+      "provider_event_time",
+      "receipt_utc",
+      "receipt_monotonic",
+      "sequence",
+      "request_id",
+      "raw_payload_hash"
+    ],
+    "recovery": "Append-only raw observations and revisions; sequence/checksum gaps and outages retained; backoff within reviewed budget; require known-flat state for reset, otherwise quarantine incomplete session.",
+    "retrieval_depth": "Proposed last 3 one-minute bars; separate bounded recovery up to 128 completed same-contract 15-minute bars. Validate provider limits and ability to reconstruct warmup without future knowledge."
+  },
+  "status": "PROPOSED_ONLY",
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

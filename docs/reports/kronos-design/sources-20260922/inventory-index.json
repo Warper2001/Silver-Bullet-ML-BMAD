@@ -1,0 +1,86 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "sources": [
+    {
+      "path": "0-README.md",
+      "sha256": "cfea2c04ddb0b9e0569ce11345d3d90db7da77452f4e05898949e065ac420bd5",
+      "original_path": "docs/reports/yank-pilot-acquisition/README.md"
+    },
+    {
+      "path": "1-provider-findings.md",
+      "sha256": "428200199a4ef9bf7498211ac5bd15d8ed36ca26bd1c8430ca3f075e277709f5",
+      "original_path": "docs/reports/yank-pilot-acquisition/provider-findings.md"
+    },
+    {
+      "path": "2-acquisition-status.json",
+      "sha256": "8af1f2daf64e972d9cdd3f4fc8e54e603b848f7f156a441cc815e647677d6837",
+      "original_path": "docs/reports/yank-pilot-acquisition/acquisition-status.json"
+    },
+    {
+      "path": "3-acquisition-gate-check.json",
+      "sha256": "1cb7474176b98262424a629b02a33ca86a26fb2f76323f9f52e5143dd8ca9872",
+      "original_path": "docs/reports/yank-pilot-acquisition/acquisition-gate-check.json"
+    },
+    {
+      "path": "4-symbol-verification.json",
+      "sha256": "cbcac5028abcdaed66a4134470139e7abd9192568a97906a3d0368d8649c8ea6",
+      "original_path": "docs/reports/yank-pilot-acquisition/symbol-verification.json"
+    },
+    {
+      "path": "5-evidence-inventory.json",
+      "sha256": "4278bf32023c5d5e647206f990a9b20c433dc8277c4f6b8ba576e2960589bc78",
+      "original_path": "docs/reports/yank-pilot-acquisition/evidence-inventory.json"
+    },
+    {
+      "path": "6-fee-assessment.json",
+      "sha256": "47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16",
+      "original_path": "docs/reports/kronos-readiness/sources-20260922/fee-assessment.json"
+    },
+    {
+      "path": "7-probe-summary.json",
+      "sha256": "6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311",
+      "original_path": "docs/reports/kronos-readiness/sources-20260922/probe-summary.json"
+    },
+    {
+      "path": "8-probe-provenance-note.json",
+      "sha256": "b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133",
+      "original_path": "docs/reports/kronos-readiness/sources-20260922/probe-provenance-note.json"
+    },
+    {
+      "path": "9-cme-calendar-excerpt.json",
+      "sha256": "522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632",
+      "original_path": "docs/reports/kronos-readiness/sources-20260922/cme-calendar-excerpt.json"
+    },
+    {
+      "path": "10-sim.html",
+      "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+      "original_path": "docs/reports/kronos-readiness/sources-20260922/sim.html"
+    },
+    {
+      "path": "11-candidate-protocol.json",
+      "sha256": "622279727ba9cb9dcc107fe3c27e61575217130657837004a84c7e3ed56197f8",
+      "original_path": "docs/reports/kronos-readiness/run-20260922-reviewed/candidate-protocol.json"
+    },
+    {
+      "path": "12-report.md",
+      "sha256": "5927cf92a3006831c9f05827131d97207d98a8db04aece205bb35ab28bbe7504",
+      "original_path": "docs/reports/kronos-readiness/run-20260922-reviewed/report.md"
+    },
+    {
+      "path": "13-power.json",
+      "sha256": "de3d9a2e8248a1bac724724ec3f1d5881c2d4dc34c90ce307dee342ffd20a22f",
+      "original_path": "docs/reports/kronos-readiness/run-20260922-reviewed/power.json"
+    },
+    {
+      "path": "calendar-evidence.md",
+      "sha256": "9e3403ebb5a6e80b79b06c7d99ee645d6cce39bbf56d94a70b943da29086bcea",
+      "original_path": "official rendered pages via web tool"
+    }
+  ],
+  "bounded_inventory_complete": true,
+  "exposure": {
+    "event": "Inventory agent encountered previously published unrelated MIM-X2 outcome appendix in prior-acquisition-attribution.md",
+    "disposition": "No values used or copied. No Kronos evaluation outcomes accessed; future untouched population remains uncollected. Exclude appendix from this source pack."
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "retrieved_at": "2026-09-22T14:15:00+00:00",
+  "commission": {
+    "artifact": "fees.html",
+    "url": "https://www.tradestation.com/pricing/",
+    "unit": "USD per contract per side",
+    "micro_tiers": [
+      {
+        "monthly_contracts": "0\u2013500",
+        "commission": 0.5,
+        "clearing": 0.1
+      },
+      {
+        "monthly_contracts": "501\u20131000",
+        "commission": 0.4,
+        "clearing": 0.1
+      },
+      {
+        "monthly_contracts": "1001\u201310000",
+        "commission": 0.3,
+        "clearing": 0.1
+      },
+      {
+        "monthly_contracts": ">10000",
+        "commission": 0.25,
+        "clearing": 0
+      }
+    ]
+  },
+  "exchange_regulatory": {
+    "artifact": "exchange-fees.html",
+    "url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+    "MNQ_nonmember_per_side": 0.35,
+    "NFA_nonmember_per_contract": 0.01,
+    "NFA_side_convention": "confirm against account schedule before adoption"
+  },
+  "account_tier": "UNRESOLVED: no account-specific commission schedule or membership confirmation read",
+  "adopted_costs": null,
+  "slippage": "UNRESOLVED; SIM instant fills do not measure market execution. Require independent executable quote/fill evidence.",
+  "latency": "UNRESOLVED; observed feed delay and synthetic timing are measurements only, not an adopted fill assumption.",
+  "sim_source": {
+    "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+    "artifact": "sim.html"
+  }
+}

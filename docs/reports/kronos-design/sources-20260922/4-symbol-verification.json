@@ -1,0 +1,44 @@
+{
+  "purpose": "Authorized read-only symbol verification; no bar acquisition",
+  "request": {
+    "method": "GET",
+    "url": "https://api.tradestation.com/v3/marketdata/symbols/MNQM25",
+    "started_at": "2026-09-10T01:01:01.046044+00:00"
+  },
+  "response_metadata": {
+    "received_at": "2026-09-10T01:01:01.359374+00:00",
+    "http_status": 200,
+    "raw_sha256": "5cdba3d536f339e2a6614f3509c7276f3635a3c25fa2e382ab4eda06b9a38e33"
+  },
+  "raw_response_base64": "eyJTeW1ib2xzIjpbeyJBc3NldFR5cGUiOiJGVVRVUkUiLCJDb3VudHJ5IjoiVW5pdGVkIFN0YXRlcyIsIkN1cnJlbmN5IjoiVVNEIiwiRGVzY3JpcHRpb24iOiJNaWNybyBFLW1pbmkgTmFzZGFxLTEwMCBKdW4gMjAyNSIsIkV4Y2hhbmdlIjoiQ01FIiwiRXhwaXJhdGlvbkRhdGUiOiIyMDI1LTA2LTIwVDAwOjAwOjAwWiIsIkZ1dHVyZVR5cGUiOiJFbGVjdHJvbmljIiwiU3ltYm9sIjoiTU5RTTI1IiwiUm9vdCI6Ik1OUSIsIlByaWNlRm9ybWF0Ijp7IkZvcm1hdCI6IkRlY2ltYWwiLCJEZWNpbWFscyI6IjIiLCJJbmNyZW1lbnRTdHlsZSI6IlNpbXBsZSIsIkluY3JlbWVudCI6IjAuMjUiLCJQb2ludFZhbHVlIjoiMiJ9LCJRdWFudGl0eUZvcm1hdCI6eyJGb3JtYXQiOiJEZWNpbWFsIiwiRGVjaW1hbHMiOiIwIiwiSW5jcmVtZW50U3R5bGUiOiJTaW1wbGUiLCJJbmNyZW1lbnQiOiIxIiwiTWluaW11bVRyYWRlUXVhbnRpdHkiOiIxIn19XSwiRXJyb3JzIjpbXX0K",
+  "response": {
+    "Symbols": [
+      {
+        "AssetType": "FUTURE",
+        "Country": "United States",
+        "Currency": "USD",
+        "Description": "Micro E-mini Nasdaq-100 Jun 2025",
+        "Exchange": "CME",
+        "ExpirationDate": "2025-06-20T00:00:00Z",
+        "FutureType": "Electronic",
+        "Symbol": "MNQM25",
+        "Root": "MNQ",
+        "PriceFormat": {
+          "Format": "Decimal",
+          "Decimals": "2",
+          "IncrementStyle": "Simple",
+          "Increment": "0.25",
+          "PointValue": "2"
+        },
+        "QuantityFormat": {
+          "Format": "Decimal",
+          "Decimals": "0",
+          "IncrementStyle": "Simple",
+          "Increment": "1",
+          "MinimumTradeQuantity": "1"
+        }
+      }
+    ],
+    "Errors": []
+  }
+}

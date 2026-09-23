@@ -1,0 +1,21 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "status": "PASSED",
+  "scope": "isolated worktree",
+  "pytest_stdout": "........................................................................ [ 28%]\n........................................................................ [ 56%]\n........................................................................ [ 84%]\n.......................................                                  [100%]\n255 passed in 20.21s\n",
+  "pytest_files": [
+    "tests/test_kronos_design.py",
+    "tests/test_kronos_readiness.py",
+    "tests/test_kronos_inference_pilot.py",
+    "tests/test_kronos_replay.py",
+    "tests/test_kronos_replay_adapter.py",
+    "tests/test_kronos_inference_runtime.py",
+    "tests/unit/test_trading_model_readiness.py",
+    "tests/unit/test_kronos_evaluation_preflight.py"
+  ],
+  "flake8": "passed: design.py, __main__.py, test_kronos_design.py",
+  "mypy": "passed --follow-imports=silent: design.py, __main__.py",
+  "artifact_checks": "24 artifact hashes; source snapshots/pack bytes; code/frozen hashes; next RTH; false flags; session and warmup accounting verified",
+  "preservation": "No diff in src/, strategy_config.yaml, research/kronos_replay/, or published docs/reports/kronos-readiness/ relative to baseline"
+}

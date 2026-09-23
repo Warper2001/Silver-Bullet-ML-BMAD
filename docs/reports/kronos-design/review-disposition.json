@@ -1,0 +1,105 @@
+{
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "status": "ALL_FINDINGS_CLOSED",
+  "review_layers": [
+    "blind-hunter",
+    "edge-case-hunter",
+    "verification-gap"
+  ],
+  "findings": [
+    {
+      "id": "B1",
+      "verdict": "medium",
+      "evidence": "Hard-link aliases were accepted by lexical/resolved-path checks. Reject multiply linked documentary inputs before payload reads.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B2",
+      "verdict": "medium",
+      "evidence": "The loader accepted nonregular and unbounded files. Require regular bounded documents and bounded reads.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B3",
+      "verdict": "medium",
+      "evidence": "Boolean economics passed Python numeric operations. Require finite int/float values excluding bool.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B4",
+      "verdict": "medium",
+      "evidence": "Synthetic causal checker accepted arbitrary later fills. Enforce first synthetic minute boundary and document uninterrupted schedule assumption.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B5",
+      "verdict": "medium",
+      "evidence": "Synthetic checker had no flatten boundary. Add completion/fill flatten checks and retained refusal reasons.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B6",
+      "verdict": "low",
+      "evidence": "Warmup losses were aggregated despite per-session reset records. Add disjoint initial/contract/gap breakdown.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B7",
+      "verdict": "medium",
+      "evidence": "Calibration allocation had no chronological partition in the ledger. Assign hypothetical population roles and report transition dates without admitting calibration.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B8",
+      "verdict": "medium",
+      "evidence": "Calendar dates were bound only to an authored summary. Add original official NYSE HTML snapshot and bind source IDs; preserve proxy-only limitation.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B9",
+      "verdict": "medium",
+      "evidence": "Design report.md inherited generic sample-size table and no horizon link. Direct it to the actual comparison, preserving existing readiness behavior.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "B10",
+      "verdict": "medium",
+      "evidence": "Frozen historical candidate modeled-latency metadata conflicted with prospective actual-availability instructions. State explicit prospective precedence.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "E1",
+      "verdict": "medium",
+      "evidence": "Guide said market paths refused, but market/market_data components were accepted. Add lexical guards before documentary read.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "E2",
+      "verdict": "medium",
+      "evidence": "Same-zone DST folds compare wall times in Python. Normalize to UTC before causal arithmetic/comparisons.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    },
+    {
+      "id": "V1",
+      "verdict": "medium",
+      "evidence": "Calendar-aware next-session logic lacked a regression test. Exercise holiday and early-close skipping through run and assert both dates.",
+      "route": "patch",
+      "disposition": "fixed_and_verified"
+    }
+  ],
+  "deferred": [],
+  "followup_review": "All three original reviewers confirmed closure; no remaining concrete issues or deferrals."
+}

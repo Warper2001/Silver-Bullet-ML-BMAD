@@ -1,0 +1,166 @@
+{
+  "actual_power": "UNASSESSABLE",
+  "actual_sessions": null,
+  "dollar_effects_adopted": false,
+  "limitations": [
+    "N is assumed, not an admitted population.",
+    "Seeds, arms and overlapping forecasts do not increase N.",
+    "Normal known-variance approximation; dependence inflation is hypothetical.",
+    "Useful dollar effects and independent variances/covariance remain absent."
+  ],
+  "sampling_unit": "one eligible session",
+  "scenarios": [
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.7248249120111911,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.0,
+      "sessions": 20,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 1.0872373680167866,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.5,
+      "sessions": 20,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 1.4496498240223823,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 2.0,
+      "sessions": 20,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.418477858065008,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.0,
+      "sessions": 60,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.627716787097512,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.5,
+      "sessions": 60,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.836955716130016,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 2.0,
+      "sessions": 60,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.2959085312141887,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.0,
+      "sessions": 120,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.44386279682128305,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.5,
+      "sessions": 120,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.5918170624283774,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 2.0,
+      "sessions": 120,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.2041962861064936,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.0,
+      "sessions": 252,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.3062944291597404,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.5,
+      "sessions": 252,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.4083925722129872,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 2.0,
+      "sessions": 252,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.14438857859901003,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.0,
+      "sessions": 504,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.21658286789851505,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 1.5,
+      "sessions": 504,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    },
+    {
+      "alpha_per_test": 0.025,
+      "detectable_standardized_effect": 0.28877715719802005,
+      "joint_target_lower_bound": 0.8,
+      "marginal_target_power": 0.9,
+      "se_inflation": 2.0,
+      "sessions": 504,
+      "strategy_test_permitted": false,
+      "trading_authorized": false
+    }
+  ],
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "0-readme",
+      "path": "0-README.md",
+      "sha256": "cfea2c04ddb0b9e0569ce11345d3d90db7da77452f4e05898949e065ac420bd5",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/0-README.md",
+      "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates."
+    },
+    {
+      "id": "1-provider-findings",
+      "path": "1-provider-findings.md",
+      "sha256": "428200199a4ef9bf7498211ac5bd15d8ed36ca26bd1c8430ca3f075e277709f5",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/1-provider-findings.md",
+      "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates."
+    },
+    {
+      "id": "10-sim",
+      "path": "10-sim.html",
+      "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+      "date": "2026-09-22",
+      "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+      "claim": "Official SIM instant simulated fills cannot establish market slippage."
+    },
+    {
+      "id": "11-candidate-protocol",
+      "path": "11-candidate-protocol.json",
+      "sha256": "622279727ba9cb9dcc107fe3c27e61575217130657837004a84c7e3ed56197f8",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/11-candidate-protocol.json",
+      "claim": "Frozen strategy/model/comparison parameters and original unresolved protocol."
+    },
+    {
+      "id": "12-report",
+      "path": "12-report.md",
+      "sha256": "5927cf92a3006831c9f05827131d97207d98a8db04aece205bb35ab28bbe7504",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/12-report.md",
+      "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates."
+    },
+    {
+      "id": "13-power",
+      "path": "13-power.json",
+      "sha256": "de3d9a2e8248a1bac724724ec3f1d5881c2d4dc34c90ce307dee342ffd20a22f",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/13-power.json",
+      "claim": "No admitted sessions or actual economic power; standardized conditional sensitivity only."
+    },
+    {
+      "id": "2-acquisition-status",
+      "path": "2-acquisition-status.json",
+      "sha256": "8af1f2daf64e972d9cdd3f4fc8e54e603b848f7f156a441cc815e647677d6837",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/2-acquisition-status.json",
+      "claim": "Historical requests and raw archives both zero; original file provenance remains unresolved."
+    },
+    {
+      "id": "3-acquisition-gate-check",
+      "path": "3-acquisition-gate-check.json",
+      "sha256": "1cb7474176b98262424a629b02a33ca86a26fb2f76323f9f52e5143dd8ca9872",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/3-acquisition-gate-check.json",
+      "claim": "Collection refused because cost, entitlement and gate evidence were absent."
+    },
+    {
+      "id": "4-symbol-verification",
+      "path": "4-symbol-verification.json",
+      "sha256": "cbcac5028abcdaed66a4134470139e7abd9192568a97906a3d0368d8649c8ea6",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/4-symbol-verification.json",
+      "claim": "MNQM25 symbol metadata only; no bars or future contract selection evidence."
+    },
+    {
+      "id": "5-evidence-inventory",
+      "path": "5-evidence-inventory.json",
+      "sha256": "4278bf32023c5d5e647206f990a9b20c433dc8277c4f6b8ba576e2960589bc78",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/5-evidence-inventory.json",
+      "claim": "Original documentary identity manifest; five selected acquisition records match hashes."
+    },
+    {
+      "id": "6-fee-assessment",
+      "path": "6-fee-assessment.json",
+      "sha256": "47e139a7e2bbd78a1d8950fa17513369c10eca72fb3e11385718a9058ec93b16",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/6-fee-assessment.json",
+      "claim": "Published cost components only; account-specific and executable slippage evidence absent."
+    },
+    {
+      "id": "7-probe-summary",
+      "path": "7-probe-summary.json",
+      "sha256": "6f0217a9c8aacff0e4656527f2dd2585f2c5f99feef0a7b84b10e6d255eea311",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/7-probe-summary.json",
+      "claim": "Finite current probe only: 180 requests, three bars, nominal five-second cadence, two Closed payload price-volume revisions."
+    },
+    {
+      "id": "8-probe-provenance-note",
+      "path": "8-probe-provenance-note.json",
+      "sha256": "b2177ed1b621613790998c4a2133f9b306e2b9311870a8fcd9ae1261409c5133",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/8-probe-provenance-note.json",
+      "claim": "Probe logger-time upper-bound and launch-source qualification; no latency adopted."
+    },
+    {
+      "id": "9-cme-calendar-excerpt",
+      "path": "9-cme-calendar-excerpt.json",
+      "sha256": "522ca2bc0f53dbab0a076407b666865bb78ce9754cd3bd2bfc839610863bf632",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/9-cme-calendar-excerpt.json",
+      "claim": "Limited CME excerpt only, not complete prospective product calendar."
+    },
+    {
+      "id": "bounded-inventory",
+      "path": "bounded-inventory.md",
+      "sha256": "03297074c9a94a2e6fc86a14ce92881f007d138c9cb7ede2eddd7e2b6a9e3392",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/bounded-inventory.md",
+      "claim": "Single bounded inventory, requirement classification and exact reconsideration evidence; unrelated documentary accidental exposure disclosed."
+    },
+    {
+      "id": "calendar",
+      "path": "calendar-evidence.md",
+      "sha256": "9e3403ebb5a6e80b79b06c7d99ee645d6cce39bbf56d94a70b943da29086bcea",
+      "date": "2026-09-22",
+      "url": "https://www.nyse.com/trade/hours-calendars",
+      "claim": "Cash-RTH proxy dates only, not authenticated MNQ sessions. Hypothetical next full session is 2026-09-23."
+    },
+    {
+      "id": "inventory-index",
+      "path": "inventory-index.json",
+      "sha256": "e3ce8b2ff7216493de7429da212bcd192161d27c0a06cd5786eeccedcf226099",
+      "date": "2026-09-22",
+      "url": "repository:docs/reports/kronos-design/sources-20260922/inventory-index.json",
+      "claim": "Previously published documentary context only; does not admit data or transfer strategy estimates."
+    },
+    {
+      "id": "calendar-official",
+      "path": "nyse-calendar.html",
+      "sha256": "b7c8c2fa1923de735a0bc29a4697b94957a6cc6ad7e219739282fea871d2de6f",
+      "date": "2026-09-22",
+      "url": "https://www.nyse.com/trade/hours-calendars",
+      "claim": "Original archived official NYSE HTML, reverified rendered page September22: calendar table 2026/2027 and early-close footnotes support cash-RTH proxy only, not MNQ schedule."
+    }
+  ],
+  "calendar": {
+    "coverage_start": "2026-09-23",
+    "coverage_end": "2027-09-23",
+    "source_ids": [
+      "calendar",
+      "calendar-official"
+    ],
+    "closed_dates": [
+      "2026-11-26",
+      "2026-12-25",
+      "2027-01-01",
+      "2027-01-18",
+      "2027-02-15",
+      "2027-03-26",
+      "2027-05-31",
+      "2027-06-18",
+      "2027-07-05",
+      "2027-09-06"
+    ],
+    "early_close_dates": [
+      "2026-11-27",
+      "2026-12-24"
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "proxy-no-roll-capacity-ceiling",
+      "roll_dates": [],
+      "outage_dates": [],
+      "incomplete_dates": [],
+      "calibration_sessions": 0
+    },
+    {
+      "name": "assumed-quarterly-resets",
+      "roll_dates": [
+        "2026-12-10",
+        "2027-03-11",
+        "2027-06-10",
+        "2027-09-09"
+      ],
+      "outage_dates": [],
+      "incomplete_dates": [],
+      "calibration_sessions": 0
+    },
+    {
+      "name": "assumed-resets-losses-and-20-calibration",
+      "roll_dates": [
+        "2026-12-10",
+        "2027-03-11",
+        "2027-06-10",
+        "2027-09-09"
+      ],
+      "outage_dates": [
+        "2026-10-15",
+        "2026-11-16",
+        "2026-12-15",
+        "2027-01-15",
+        "2027-02-16",
+        "2027-03-15",
+        "2027-04-15",
+        "2027-05-17",
+        "2027-06-15",
+        "2027-07-15",
+        "2027-08-16",
+        "2027-09-15"
+      ],
+      "incomplete_dates": [
+        "2026-10-20",
+        "2026-12-22",
+        "2027-02-22",
+        "2027-04-20",
+        "2027-06-22",
+        "2027-08-20"
+      ],
+      "calibration_sessions": 20
+    }
+  ],
+  "economic": null,
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

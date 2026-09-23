@@ -1,0 +1,89 @@
+{
+  "aggregate_label_convention": "interval_close",
+  "arms": [
+    "kronos",
+    "momentum",
+    "flat"
+  ],
+  "availability_rule": "aggregate close plus modeled latency",
+  "bucket_minutes": 15,
+  "calendar_feature_timezone": "America/New_York",
+  "checkpoint_hashes": {
+    "Kronos-Tokenizer-base": {
+      "config.json": "2366e7ccfec76cbc19cf3c4c1b9c5d901be336ca1e83f2d2292c9bff381b77a2",
+      "model.safetensors": "59d85f6af76a2c3b8240ea06cb21db4213b4eeca053f246b23e29cf832fc6bee"
+    },
+    "Kronos-small": {
+      "config.json": "5e0f6a605d5f81b5c9b559fe5cf716a1acb041c744e6f41bd05b097b7a685396",
+      "model.safetensors": "b082dfcbd8e8c142a725c8bbb99781802f38fec81210e13479effb32b3c3e020"
+    }
+  },
+  "context_bars": 128,
+  "contract_reset_preconditions": "flat accounts, no pending order, no partial bucket; otherwise stop incomplete",
+  "contracts": 1,
+  "costs": {
+    "commission": null,
+    "exchange_regulatory": null,
+    "latency": null,
+    "slippage": null
+  },
+  "economic_requirements": [
+    "mean(K net)>0",
+    "mean(K-M net)>0"
+  ],
+  "engine_sha256": "d7c925c05299593a3cd9450df67e1eccb3c0c873e059b693a160bda8cc40984a",
+  "fill_rule": "first eligible minute open strictly after availability",
+  "flatten": "scheduled final minute open; no forecast crossing session close",
+  "flatten_details": "cancel pending orders at scheduled final minute open; missing minute stops incomplete without invented exit price",
+  "forecast_bars": 4,
+  "historical_availability_authenticated": false,
+  "horizon_bars": 4,
+  "input_label_convention": "interval_open",
+  "invalid_forecast": "flat target; preserve available malformed paths and error",
+  "kronos_rule": "sign(mean(three terminal forecast closes) - observed close)",
+  "model_revision": "901c26c1332695a2a8f243eb2f37243a37bea320",
+  "momentum_rule": "sign(current close - close four completed bars earlier)",
+  "other_outcomes": [
+    "Sharpe",
+    "drawdown"
+  ],
+  "outcomes_per_session_one_contract": [
+    "K net",
+    "M net",
+    "K-M net"
+  ],
+  "point_value_usd": 2,
+  "prospective_collection": [
+    "Commit separate collection preregistration before launching any continuing collector.",
+    "Archive dated calendar, contract selection, request identities, ordered raw observations and arrival times.",
+    "Preserve completion flags, timezone, revisions and gaps without deduplication or inferred completion.",
+    "Keep observations segregated from research exposure; freeze eligible sessions and execution assumptions before scoring.",
+    "Run a dependence-aware power gate before any future strategy test."
+  ],
+  "repeat_target": "no trade",
+  "reversal": "close then open, two charged sides",
+  "sampling": {
+    "sample_count": 1,
+    "temperature": 1.0,
+    "top_k": 0,
+    "top_p": 0.9
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "source_hashes": {
+    "LICENSE": "acb2d194d378204e5f2be4dcd24d39ecac437903620c790c3315a96dab388fdc",
+    "model/__init__.py": "f8f856ca3fedadcaac97e196be23d1aeda1c3c9ffe8903d66d43ea3bcac6240c",
+    "model/kronos.py": "0a5f90282e2039c2de0771473419715c845def154896dbd0f5747837e6241032",
+    "model/module.py": "a07edbadc0e96804c8158c021bbc6063bb7cc43b34d7fc470d5c8ff2005a409f"
+  },
+  "source_revision": "67b630e67f6a18c9e9be918d9b4337c960db1e9a",
+  "status": "CANDIDATE_NOT_ADMITTED",
+  "strategy_test_permitted": false,
+  "tick_size": 0.25,
+  "tokenizer_revision": "0e0117387f39004a9016484a186a908917e22426",
+  "trading_authorized": false,
+  "warmup": "128 completed same-contract 15-minute bars; reset on contract change"
+}

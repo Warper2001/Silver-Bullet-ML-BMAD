@@ -1,0 +1,49 @@
+{
+  "code_sha256": {
+    "research/kronos_readiness/__init__.py": "35b6d1ee4823190956db87334186ef1d46224560db46404623a94022b183ba68",
+    "research/kronos_readiness/__main__.py": "fe99e5fb932acad5dda5e0c94d6615f9ee0465bf5b4c4da073bd996c353e4171",
+    "research/kronos_readiness/design.py": "b4c8c44739e9706f87d6549b7a4e4b6e20d2a44022c4789d4b5031ad9c5b0a66",
+    "research/kronos_readiness/evidence.py": "36b5603a90ccb2ab7d32ff61fd4d6d266b318fd659aac6983fbf6a8c85effa98",
+    "research/kronos_readiness/power.py": "927020f3e2f0141d22e33c4ddcb9ac772048640474b8c69123e54ad69c17b3c6",
+    "research/kronos_readiness/probe.py": "aafc63dad2b93fb53b699b2a679c03b6360090156ba3f52e75e8d69645ee491a",
+    "research/kronos_readiness/protocol.py": "6077efaedcfe5e5e012864f0a26d60d007c541a24e89cdd593f97fa97e68ab99",
+    "research/kronos_readiness/timing.py": "1acb7cd9ae9c50a966bb5707a3ed4cb45c35ee78dabaf9972499b255531e24e9"
+  },
+  "frozen_inputs": {
+    "_bmad-output/preregistration_kronos_readiness_20260922.md": "d09ca2cc3a686f4ff28565455afe1ab3238123098d5f016fee9ecc5ff63e4fd5",
+    "research/kronos_replay/engine.py": "d7c925c05299593a3cd9450df67e1eccb3c0c873e059b693a160bda8cc40984a",
+    "research/kronos_replay/fixtures.py": "84792196707d18684c72d86160daf7bc2551e5fe5edba9a257e79c62c4df82a1",
+    "research/kronos_replay/providers.py": "1862e3214632618dbef6fbcdbb2c0f45807db2bdbbeae5801f090b8b5eaa5f75",
+    "tools/kronos_evaluation_preflight.py": "5277633eb204ad577b1183e6778a2ab7eb95929a7348c20b9bae2931d578a3d2",
+    "tools/kronos_inference_pilot.py": "32a67a4a9176ab1e3c845160e1f4507633d9cc7579a24f3479d7641c645221ae",
+    "tools/trading_model_readiness.py": "e089614457ff21cd9566b8ea8151cacd6b28f301ab8a6da8b81a70adcea564e2"
+  },
+  "sha256": {
+    "comparison.md": "424aebc2e8f2563d872a9f005a16696f415c0992d324d28979c2e07dd626cd53",
+    "evidence.json": "9ff2731d51ce0132ead1a045448423c82fffd5109d4940d036eeff8cded6fe77",
+    "protocol.json": "7428ea9ea6c929a94354c2664335ec14bd141b09ee69c4b2a70744a1cfe8ae96",
+    "report.json": "8cfcc6dabfff71e614dd648cfcf25ca15af620e382ee62ffd7b5b5dc2b880993",
+    "report.md": "321c05b84167c8d3d80cc7b9003ccf59f54d42eeeb0c05b3861657f4d75c99ca",
+    "scenarios.json": "1dac7b691a58b40cd0477e8e069c6a5a7ba1291addf1ca8b5296d1a6e399b55d",
+    "source-0-readme.json": "f83c9165c39ff7a37769ab94ea9703c41e3aa1d9f22c8513088fab00ae10e6fe",
+    "source-1-provider-findings.json": "d31b88d45138337962d37fcb0ad3ea86c4609e100a5a1bc6e72bb0a76645f93f",
+    "source-10-sim.json": "f9c6c30959331418c3d6579206ba80d432c711f2022d7f7b6bf17f22dae0b534",
+    "source-11-candidate-protocol.json": "6b1375378e8c9a81789e6365c7fa4afa365781e5f55122d497339ee27b565863",
+    "source-12-report.json": "ea6c504c1cc96d9887ddafcbff0c66e9ce439ac158fd37c1a17ff01b30391416",
+    "source-13-power.json": "307f0d24df311cb2ae658ed62517d112a28baed7511ac2d8e7db42b35602bb56",
+    "source-2-acquisition-status.json": "f03e12afbfe895cc241f72539e92af2932a013a776b489936a6cdbd34ea70d65",
+    "source-3-acquisition-gate-check.json": "85be6b6307eb06e2e99354d36e5bd91e2a4e33800abf3d7085e2aca53982cf7b",
+    "source-4-symbol-verification.json": "f80cf70b8275fd025da66869abfdc3a060551067b03cc3bac1deedd0d46bde45",
+    "source-5-evidence-inventory.json": "c82951a61bbdbbdbdb03b3ad59ec4325ec4701e33bd396622c47c8d8edf4b807",
+    "source-6-fee-assessment.json": "9338efb80545418b12fc49477c03be4dd0994f6cad0c31171babfe0d357be125",
+    "source-7-probe-summary.json": "764290cb50e52ffa3ca4228688486cd03759898c88b8cd16ba345ebba8b9637a",
+    "source-8-probe-provenance-note.json": "5e930a6ba9dbbc5343596214d56e36390862825e9d644ae9dc428cb5916d17af",
+    "source-9-cme-calendar-excerpt.json": "b0cbc0da2e1020e87e532e88702cf4406684a0478a8f6ad21934a807eae480b7",
+    "source-bounded-inventory.json": "b682f68c9eca75d9958c5ea84be13f90d04e48e0253708fb6c57512174131640",
+    "source-calendar-official.json": "80d5d99693395b99b2d6035aa4a162891db5f6cf5ca95e81f4020ee9800d9581",
+    "source-calendar.json": "a540e41e1ca8a676efb7776a80111821a9bac5e082750f63351aac78c5de13a9",
+    "source-inventory-index.json": "7a127c31319bcf121125d7d78aa204dea79c237816f9b7a66c1d38df964e977f"
+  },
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

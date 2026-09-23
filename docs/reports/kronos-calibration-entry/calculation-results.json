@@ -1,0 +1,194 @@
+{
+  "dependence_examples": [
+    {
+      "asymptotic_variance_inflation": 1.0,
+      "exact_se_inflation_vs_iid": 1.0,
+      "n": 20,
+      "rho": 0.0,
+      "variance_mean": 0.05
+    },
+    {
+      "asymptotic_variance_inflation": 3.0,
+      "exact_se_inflation_vs_iid": 1.6733201100610915,
+      "n": 20,
+      "rho": 0.5,
+      "variance_mean": 0.14000000953674316
+    },
+    {
+      "asymptotic_variance_inflation": 19.000000000000004,
+      "exact_se_inflation_vs_iid": 3.33079418327148,
+      "n": 20,
+      "rho": 0.9,
+      "variance_mean": 0.5547094945657562
+    }
+  ],
+  "horizons": [
+    {
+      "conditional_evaluation_sessions": 59,
+      "months": 3,
+      "scenario": "proxy-no-roll-capacity-ceiling",
+      "standardized_mde": {
+        "1.0": 0.42200937939292743,
+        "1.5": 0.6330140690893911,
+        "2.0": 0.8440187587858549
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 119,
+      "months": 6,
+      "scenario": "proxy-no-roll-capacity-ceiling",
+      "standardized_mde": {
+        "1.0": 0.29714924328561787,
+        "1.5": 0.44572386492842675,
+        "2.0": 0.5942984865712357
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 246,
+      "months": 12,
+      "scenario": "proxy-no-roll-capacity-ceiling",
+      "standardized_mde": {
+        "1.0": 0.2066714829766673,
+        "1.5": 0.3100072244650009,
+        "2.0": 0.4133429659533346
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 54,
+      "months": 3,
+      "scenario": "assumed-quarterly-resets",
+      "standardized_mde": {
+        "1.0": 0.4411143939446962,
+        "1.5": 0.6616715909170443,
+        "2.0": 0.8822287878893924
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 109,
+      "months": 6,
+      "scenario": "assumed-quarterly-resets",
+      "standardized_mde": {
+        "1.0": 0.3104808797824182,
+        "1.5": 0.46572131967362723,
+        "2.0": 0.6209617595648363
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 226,
+      "months": 12,
+      "scenario": "assumed-quarterly-resets",
+      "standardized_mde": {
+        "1.0": 0.21562240698905796,
+        "1.5": 0.32343361048358693,
+        "2.0": 0.4312448139781159
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 15,
+      "months": 3,
+      "scenario": "assumed-resets-losses-and-20-calibration",
+      "standardized_mde": {
+        "1.0": 0.836955716130016,
+        "1.5": 1.255433574195024,
+        "2.0": 1.673911432260032
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 46,
+      "months": 6,
+      "scenario": "assumed-resets-losses-and-20-calibration",
+      "standardized_mde": {
+        "1.0": 0.4779353936109989,
+        "1.5": 0.7169030904164982,
+        "2.0": 0.9558707872219978
+      }
+    },
+    {
+      "conditional_evaluation_sessions": 119,
+      "months": 12,
+      "scenario": "assumed-resets-losses-and-20-calibration",
+      "standardized_mde": {
+        "1.0": 0.29714924328561787,
+        "1.5": 0.44572386492842675,
+        "2.0": 0.5942984865712357
+      }
+    }
+  ],
+  "permutation_counterexamples": {
+    "K_equals_M_actual_variance": 0,
+    "K_equals_negative_M_actual_variance": 4,
+    "independent_mismatch_variance": 2,
+    "nonidentity_pairing_with_fixed_points": [
+      0,
+      2,
+      1,
+      3
+    ]
+  },
+  "precision_examples": [
+    {
+      "degrees_of_freedom": 1,
+      "synthetic_iid_normal_calibration_n": 2,
+      "variance_ci_upper_lower_ratio_95pct": 5115.61365636381,
+      "variance_ucl_factor_95pct": 254.31444455055902
+    },
+    {
+      "degrees_of_freedom": 4,
+      "synthetic_iid_normal_calibration_n": 5,
+      "variance_ci_upper_lower_ratio_95pct": 23.00342672432986,
+      "variance_ucl_factor_95pct": 5.62807152656426
+    },
+    {
+      "degrees_of_freedom": 19,
+      "synthetic_iid_normal_calibration_n": 20,
+      "variance_ci_upper_lower_ratio_95pct": 3.688571949332644,
+      "variance_ucl_factor_95pct": 1.8780246580755744
+    },
+    {
+      "degrees_of_freedom": 59,
+      "synthetic_iid_normal_calibration_n": 60,
+      "variance_ci_upper_lower_ratio_95pct": 2.070437626548142,
+      "variance_ucl_factor_95pct": 1.3935041256717755
+    }
+  ],
+  "rare_tail_counterexample": {
+    "ncal": 20,
+    "probability_tail": 0.001,
+    "probability_zero_observed_variance_from_all_zero_pilot": 0.9801888648295347,
+    "tail_value": 1000.0,
+    "true_variance": 999.0000000000001
+  },
+  "schedule_illustration": {
+    "fee_per_side_current": 0.96,
+    "round_trip_current": 1.92,
+    "round_trip_from_2027_07_other_rates_held_fixed": 1.94,
+    "round_trip_one_tick_each_side": 2.92
+  },
+  "scope": "SYNTHETIC_AND_CONDITIONAL_PLANNING_ONLY",
+  "strategy_test_permitted": false,
+  "synthetic_pair": {
+    "cauchy_upper_variance": 32400.0,
+    "covariance": 4000.0,
+    "iid_plugin_required_n": 221,
+    "iid_ucl_required_n": 415,
+    "illustrative_distance_not_economic_target": 20,
+    "ncal": 20,
+    "one_sided_gamma": 0.05,
+    "sd_difference": 91.6515138991168,
+    "sd_ucl": 125.6001876106673,
+    "ucl_and_assumed_1_5_se_inflation_required_n": 933,
+    "variance_difference": 8400.0,
+    "variance_k": 10000.0,
+    "variance_m": 6400.0,
+    "variance_ucl": 15775.407127834824
+  },
+  "trading_authorized": false,
+  "uncertainty_accounting_example": {
+    "assumed_joint_nuisance_region_coverage": 0.95,
+    "conditional_joint_power_lower_bound": 0.8,
+    "two_separate_95pct_bounds_joint_coverage_lower_bound": 0.9,
+    "two_separate_bounds_assurance_lower_bound": 0.7200000000000001,
+    "unconditional_assurance_lower_bound": 0.76
+  },
+  "zsum": 3.2415155500846544
+}

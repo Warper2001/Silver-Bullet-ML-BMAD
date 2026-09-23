@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "decision": "PARK_PENDING_EVIDENCE",
+  "decision_date_utc": "2026-09-23",
+  "baseline_commit": "c4e81e01474ff6f85ec8f7e7f60498efbe19809d",
+  "strategy_test_permitted": false,
+  "trading_authorized": false,
+  "collection_authorized": false,
+  "preregistration_continuation_recommended": false,
+  "actual_power": "UNASSESSABLE",
+  "admitted_sessions": 0,
+  "reason": "No route has both a justified admission gate and supported indispensable economic and joint nuisance inputs. Precision objectives do not waive the existing pre-test power requirement.",
+  "routes": [
+    {
+      "id": "independent_evidence",
+      "admission_gate_met": false,
+      "evidence_status": "No applicable independent evidence identified in bounded search",
+      "reconsider_when": "Exact-strategy or justified conservative transport evidence supports economic alternatives, costs, joint covariance/dependence uncertainty and exposure controls."
+    },
+    {
+      "id": "outcome_blind_nuisance",
+      "admission_gate_met": false,
+      "evidence_status": "XSMOM source inspected only; transfer invalid without strategy-specific justification",
+      "reconsider_when": "Reviewed blinded estimator or bound has supported joint-risk/dependence validity and a separately admitted documentary/data protocol."
+    },
+    {
+      "id": "precision_calibration",
+      "admission_gate_met": false,
+      "evidence_status": "Methodological support only; policy admission and distributional applicability unresolved",
+      "reconsider_when": "Explicit policy-compatible admission argument plus supported precision model, objective, economic inputs, population and resource plan; performance calibration still requires its power gate."
+    }
+  ],
+  "evidence_status": {
+    "public_fee_schedule": "Supported as public illustration, not account-specific evidence",
+    "contract_unit_conversion": "Supported by CME FAQ web retrieval; direct capture unavailable",
+    "account_fee_applicability": "UNRESOLVED",
+    "execution_slippage_and_latency": "UNRESOLVED",
+    "useful_economic_effects": "UNRESOLVED",
+    "planning_alternatives": "UNRESOLVED",
+    "paired_variance_and_serial_dependence": "UNRESOLVED",
+    "nuisance_uncertainty_envelope": "UNRESOLVED",
+    "independent_pilot_literature": "METHODOLOGY_ONLY",
+    "horizon_capacities": "CONDITIONAL_NOT_ADMITTED",
+    "calendar_contract_and_operational_controls": "UNRESOLVED_INHERITED",
+    "calculations": "SYNTHETIC_ONLY",
+    "review": "SAME_AGENT_SELF_REVIEW"
+  },
+  "unresolved_inputs": [
+    {
+      "id": "capital",
+      "value": null,
+      "needed": "Allocated capital and opportunity-cost basis for K and momentum deployments",
+      "owner": "operator"
+    },
+    {
+      "id": "time_value",
+      "value": null,
+      "needed": "Operator hourly value and expected preparation/maintenance/analysis hours",
+      "owner": "operator"
+    },
+    {
+      "id": "minimum_useful_profit",
+      "value": null,
+      "needed": "Absolute and incremental minimum useful profit over an independently chosen operating period",
+      "owner": "operator"
+    },
+    {
+      "id": "account_schedule",
+      "value": null,
+      "needed": "Credential-free fee agreement/provider confirmation of platform, tier, membership and data entitlements",
+      "owner": "operator/provider"
+    },
+    {
+      "id": "execution_costs",
+      "value": null,
+      "needed": "Applicable independent fill, spread, slippage and timing evidence",
+      "owner": "research/provider"
+    },
+    {
+      "id": "nuisance_evidence",
+      "value": null,
+      "needed": "Applicable paired moments, cross-lag dependence, joint uncertainty and future transport justification",
+      "owner": "research"
+    },
+    {
+      "id": "planning_alternatives",
+      "value": null,
+      "needed": "Independent plausible effects, separate from useful boundaries and not selected to fit N",
+      "owner": "operator/research"
+    },
+    {
+      "id": "precision_admission",
+      "value": null,
+      "needed": "Policy-compatible gate and justified precision model/objective if route C is proposed",
+      "owner": "methodology/operator"
+    },
+    {
+      "id": "future_resources",
+      "value": null,
+      "needed": "Maximum elapsed horizon, cash, operator hours, compute/storage and phase delays",
+      "owner": "operator"
+    },
+    {
+      "id": "population_operations",
+      "value": null,
+      "needed": "Calendar, causal contracts, arrival/completion, incomplete exposure handling and contamination audit",
+      "owner": "research/provider"
+    }
+  ],
+  "resource_assumptions": {
+    "account_basis": "TradeStation direct-account economics; SIM provides no realized income",
+    "active_work_limit_minutes": 120,
+    "planned_phase_minutes": {
+      "economics": 20,
+      "methodology": 50,
+      "calculations": 25,
+      "review_delivery": 25
+    },
+    "allocation_interpretation": "Approximate ceilings; investigation can finish early when indispensable gaps are established",
+    "purchase_budget_usd": 0,
+    "purchases_made": false,
+    "market_collection_permitted": false,
+    "investigation_status": "COMPLETE_WITH_UNRESOLVED_ESSENTIALS",
+    "effort_limit_reached": false,
+    "future_calibration_budget": null,
+    "future_preparation_delay": null,
+    "future_analysis_freeze_delay": null,
+    "future_evaluation_horizon": null,
+    "conditional_horizons_months": [
+      3,
+      6,
+      12
+    ],
+    "conditional_twenty_session_reservation_is_powered": false,
+    "timing_note": "First recorded clock 00:19:49 UTC after initial inspection; finalization time below. Active work estimated under 30 minutes including initial inspection and merge verification; not a precise time sheet."
+  },
+  "access_attestation": {
+    "basis": "Executed tool/command history and scoped diff, not OS-wide monitoring",
+    "market_data_read": false,
+    "sealed_holdout_read": false,
+    "credentials_read": false,
+    "local_forecasts_read": false,
+    "strategy_outcomes_read": false,
+    "xsmom_gate_executed": false,
+    "public_literature_read": true,
+    "public_documents_downloaded": true,
+    "services_changed": false,
+    "dependencies_installed": false
+  },
+  "reproduction_environment": {
+    "python": "3.12.3",
+    "scipy": "1.17.1"
+  },
+  "packet_finalized_utc": "2026-09-23T00:29:46.260236+00:00",
+  "artifacts": {
+    "report": "README.md",
+    "economic_worksheet": "economics.md",
+    "route_comparison": "routes.md",
+    "calculations": "calculation-results.json",
+    "calculation_method": "calculations.md",
+    "sources": "source-notes.md",
+    "review": "review.md",
+    "manifest": "COMPLETE.json"
+  }
+}

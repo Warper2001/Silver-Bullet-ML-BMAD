@@ -1,0 +1,83 @@
+{
+  "baseline_commit": "c4e81e01474ff6f85ec8f7e7f60498efbe19809d",
+  "inputs": [
+    {
+      "path": "AGENTS.md",
+      "snapshot": "inputs/00-AGENTS.md",
+      "sha256": "93b62e4e03c4a8b3d69f5eaeaac61c517776822104b11ce5aabd15e05e18fd5b",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/kronos-design.md",
+      "snapshot": "inputs/01-kronos-design.md",
+      "sha256": "0cf2ea65f71278ffdc79d2b4d2fcc340d339e6c742ae0c1da24e0d3feecc0b21",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/kronos-readiness.md",
+      "snapshot": "inputs/02-kronos-readiness.md",
+      "sha256": "3a0d0105618555cd92bd60bf3f08de1e40132292deadac2a954e22361403fee0",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/kronos-replay.md",
+      "snapshot": "inputs/03-kronos-replay.md",
+      "sha256": "9b91e13a7afc53d6d1bb60d21bf6dee64a4dace74b6a8f575567321e3b11f7d0",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/run-20260923-reviewed/comparison.md",
+      "snapshot": "inputs/04-comparison.md",
+      "sha256": "424aebc2e8f2563d872a9f005a16696f415c0992d324d28979c2e07dd626cd53",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/run-20260923-reviewed/report.md",
+      "snapshot": "inputs/05-report.md",
+      "sha256": "321c05b84167c8d3d80cc7b9003ccf59f54d42eeeb0c05b3861657f4d75c99ca",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/run-20260923-reviewed/scenarios.json",
+      "snapshot": "inputs/06-scenarios.json",
+      "sha256": "1dac7b691a58b40cd0477e8e069c6a5a7ba1291addf1ca8b5296d1a6e399b55d",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/run-20260923-reviewed/COMPLETE.json",
+      "snapshot": "inputs/07-COMPLETE.json",
+      "sha256": "a22ef151196de45eb63a65b903d68acda2bf3a50c869206e4cdcd46c34799d4f",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/sources-20260922/11-candidate-protocol.json",
+      "snapshot": "inputs/08-11-candidate-protocol.json",
+      "sha256": "622279727ba9cb9dcc107fe3c27e61575217130657837004a84c7e3ed56197f8",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/sources-20260922/13-power.json",
+      "snapshot": "inputs/09-13-power.json",
+      "sha256": "de3d9a2e8248a1bac724724ec3f1d5881c2d4dc34c90ce307dee342ffd20a22f",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "docs/reports/kronos-design/sources-20260922/1-provider-findings.md",
+      "snapshot": "inputs/10-1-provider-findings.md",
+      "sha256": "428200199a4ef9bf7498211ac5bd15d8ed36ca26bd1c8430ca3f075e277709f5",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "_bmad-output/preregistration_kronos_readiness_20260922.md",
+      "snapshot": "inputs/11-preregistration_kronos_readiness_20260922.md",
+      "sha256": "d09ca2cc3a686f4ff28565455afe1ab3238123098d5f016fee9ecc5ff63e4fd5",
+      "role": "documentary or code inspection only; no execution"
+    },
+    {
+      "path": "tools/xsmom1_power_gate.py",
+      "snapshot": "inputs/12-xsmom1_power_gate.py",
+      "sha256": "fa242de36ddbe9a7c889ba93ec7eb6b23e6ea858eef167438640fe5515ac59f2",
+      "role": "documentary or code inspection only; no execution"
+    }
+  ]
+}

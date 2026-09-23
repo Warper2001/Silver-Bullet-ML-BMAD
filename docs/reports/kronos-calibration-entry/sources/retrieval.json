@@ -1,0 +1,87 @@
+[
+  {
+    "id": "ts-pricing",
+    "url": "https://www.tradestation.com/pricing/",
+    "accessed_utc": "2026-09-23T00:21:03.804876+00:00",
+    "status": 200,
+    "file": "ts-pricing.html",
+    "sha256": "8364de6198714b1a0cbf8d60a2929b3929d2d22e4ec5c8057f904152d7c2d40e",
+    "bytes": 405116
+  },
+  {
+    "id": "ts-exchange",
+    "url": "https://www.tradestation.com/pricing/exchange-execution-and-clearing-fees/",
+    "accessed_utc": "2026-09-23T00:21:03.806223+00:00",
+    "status": 200,
+    "file": "ts-exchange.html",
+    "sha256": "96eee1bc66bbb92abc3e684400cc38b10dbd614e4f2d5143b3659b753c065af7",
+    "bytes": 194855
+  },
+  {
+    "id": "ts-data",
+    "url": "https://www.tradestation.com/pricing/market-data-pricing/",
+    "accessed_utc": "2026-09-23T00:21:03.806734+00:00",
+    "status": 200,
+    "file": "ts-data.html",
+    "sha256": "3513c251f7c120e8445f00471ff9636cfe9583689d8cf05db8066ab7cfba8f37",
+    "bytes": 149934
+  },
+  {
+    "id": "nfa",
+    "url": "https://www.nfa.futures.org/faqs/members/nfa-assessment-fees.html",
+    "accessed_utc": "2026-09-23T00:21:03.807226+00:00",
+    "status": 200,
+    "file": "nfa.html",
+    "sha256": "6e4bae08f76f99732ba65918e0df6f1143770c32aa1aeaec37f398c99896b76f",
+    "bytes": 156617
+  },
+  {
+    "id": "pilot",
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4876429/",
+    "accessed_utc": "2026-09-23T00:21:03.813592+00:00",
+    "status": 200,
+    "file": "pilot.html",
+    "sha256": "087aa3c106c4857b335449646e52bf7c84e3debc7af2578f91a92dbca8dedd8a",
+    "bytes": 206881
+  },
+  {
+    "id": "newey-west",
+    "url": "https://www.nber.org/papers/t0055",
+    "accessed_utc": "2026-09-23T00:21:03.816616+00:00",
+    "status": 200,
+    "file": "newey-west.html",
+    "sha256": "1055bd357b73a6be08cf6512d8fa4c8de8a36d3cc1123d835aac8f744046ebc0",
+    "bytes": 87945
+  },
+  {
+    "id": "kronos-paper",
+    "url": "https://arxiv.org/html/2508.02739v1",
+    "accessed_utc": "2026-09-23T00:21:04.341757+00:00",
+    "status": 200,
+    "file": "kronos-paper.html",
+    "sha256": "e357ce7407a9bc128a5751998c856bca34fd5d48df50c013b010a846d6690b86",
+    "bytes": 1245853
+  },
+  {
+    "id": "cme",
+    "url": "https://www.cmegroup.com/markets/equities/nasdaq/micro-e-mini-nasdaq-100.contractSpecs.html",
+    "accessed_utc": "2026-09-23T00:21:04.348151+00:00",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "id": "ts-sim",
+    "url": "https://api.tradestation.com/docs/fundamentals/sim-vs-live/",
+    "accessed_utc": "2026-09-23T00:21:04.450969+00:00",
+    "status": 200,
+    "file": "ts-sim.html",
+    "sha256": "fde2c6dd6e00e2064360d240a131649af9573196f0d3509d5dd810ad331f9c82",
+    "bytes": 31299
+  },
+  {
+    "id": "cme-faq",
+    "url": "https://www.cmegroup.com/articles/faqs/micro-e-mini-equity-index-futures-frequently-asked-questions.html",
+    "accessed_utc": "2026-09-23T00:22:11.791048+00:00",
+    "error": "HTTP Error 403: Forbidden",
+    "fallback": "Web tool retrieved FAQ; paraphrase in source-notes.md"
+  }
+]

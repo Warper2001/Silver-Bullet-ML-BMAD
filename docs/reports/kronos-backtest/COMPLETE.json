@@ -1,0 +1,16 @@
+{
+  "kind": "BLOCKED_DOCUMENTARY_PACKET",
+  "sha256": {
+    "README.md": "0fd0ae1671c1bc076715704e88efec3155dc74cb7e339938a5f29f6c6f84c330",
+    "decision.json": "d67d393582a7ead93b1d2b05cb117f82e451d58e655c2b64546a645892bd6a77",
+    "evidence.md": "2a647c7eb141e363946b5cf01d9d4fd4c116746bb1758b6133f2e3fbaee2272b",
+    "input-register.json": "be0812d43017fe4284e4a16eb1e50a9f311547784246ff9ce34ee9db2838181b",
+    "prospective-shadow.md": "e2b631845b7607774b4c2872ec941a5a0c242ed1a9a77eeb245e6736640d863d",
+    "regression-results.txt": "954d5432f5322bc2f92cfc0b84bc40049a6e6bbfd5fb39768945352810685c0f",
+    "review.md": "c87f74c9cad39bde85f11f9934f3fcb58c68ceca0876624ff4d663258e4373cb",
+    "verification.md": "6defb045e1ccfd80102aee8834eb50cee1782defd26e1d75f013fcaef2a29fe7",
+    "verify.py": "f0a84ac4cfee4d36c3aac059a4cb95efd0af52b1374c67f6c00866ad9942ce4c"
+  },
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

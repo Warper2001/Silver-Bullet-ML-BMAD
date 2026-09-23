@@ -1,0 +1,76 @@
+{
+  "access_attestation": {
+    "basis": "Executed commands and agent reports; not an OS-wide audit",
+    "credentials_opened": false,
+    "historical_inference_or_scoring": false,
+    "historical_inputs_opened": false,
+    "incidental_disclosure": "Documentary auditor encountered an unrelated published YANK outcome sentence in docs/reports/yank-provenance-closure/README.md; no values transferred to this decision.",
+    "market_data_downloaded": false,
+    "purchases_made": false,
+    "sealed_holdout_opened": false,
+    "services_changed": false
+  },
+  "actual_power": "UNASSESSABLE",
+  "admitted_sessions": 0,
+  "baseline_commit": "ba787ee2c159ab677da62f418a4560d75d5eb4e6",
+  "collection_authorized": false,
+  "date_utc": "2026-09-23",
+  "decision": "BACKTEST_BLOCKED",
+  "eligible_sessions": null,
+  "historical_inference_run": false,
+  "historical_scoring_run": false,
+  "measured_results": null,
+  "operator_constraints": {
+    "active_hours_ceiling": 8,
+    "capital_usd": 30000,
+    "loss_budget_is_strategy_stop": false,
+    "loss_from_start_assessment_usd": 5000,
+    "market_data_downloads_allowed": false,
+    "objective": "Any positive net profit and improvement on four-bar momentum",
+    "purchase_budget_usd": 0,
+    "service_changes_allowed": false,
+    "trading_allowed": false
+  },
+  "packet_finalized_utc": "2026-09-23T01:50:50.245101+00:00",
+  "recommendation": "PARK_PENDING_EVIDENCE",
+  "requirements": {
+    "execution_assumptions": {
+      "evidence": "evidence.md",
+      "status": "NOT_MET"
+    },
+    "historical_population": {
+      "evidence": "evidence.md",
+      "status": "NOT_MET"
+    },
+    "statistical_admission": {
+      "evidence": "evidence.md",
+      "status": "NOT_MET"
+    }
+  },
+  "resource_accounting": {
+    "active_time_convention": "Task elapsed time includes agent waits and regression execution; concurrent agents are not added twice. Even charging each of the three participating agents the full estimated one-hour envelope is three hours, below eight.",
+    "eight_hour_limit_exhausted": false,
+    "future_collection_budget_authorized": false,
+    "scope": "Documentary investigation, packet implementation, synthetic tests, review and merge verification",
+    "stopped_at_indispensable_evidence_gap": true,
+    "time_record": "Worktree .git filesystem timestamp: 2026-09-23T01:43:21Z; packet finalization timestamp below. Initial documentary inspection before worktree creation was not timed. Estimated total active effort under 30 minutes through finalization; reserve up to 30 further minutes for merge verification. This is an estimate supported by timestamps, not a precise timesheet."
+  },
+  "schema_version": 1,
+  "statistical_design": {
+    "arms": [
+      "kronos",
+      "momentum",
+      "flat"
+    ],
+    "comparisons": [
+      "E[K_net] > 0",
+      "E[K_net-M_net] > 0"
+    ],
+    "joint_nuisance_evidence": null,
+    "marginal_power_each": 0.9,
+    "one_sided_alpha_each": 0.025,
+    "planning_effects": null
+  },
+  "strategy_test_permitted": false,
+  "trading_authorized": false
+}

@@ -1,0 +1,25 @@
+{
+  "scope": "Documentary/code identities only; never follow market paths inside these files",
+  "sha256": {
+    "AGENTS.md": "93b62e4e03c4a8b3d69f5eaeaac61c517776822104b11ce5aabd15e05e18fd5b",
+    "docs/kronos-prospective-collection.md": "c47adbd03b3c9b6ebbf12f40dc1c6ee09e7ea4532a3dddde7fc544ace16e2949",
+    "docs/kronos-replay.md": "9b91e13a7afc53d6d1bb60d21bf6dee64a4dace74b6a8f575567321e3b11f7d0",
+    "docs/reports/kronos-calibration-entry/README.md": "e27f99e71820eb3e38cb6ec93ed1798a9c951710f8e28ec0fe0542efa89e048f",
+    "docs/reports/kronos-calibration-entry/decision.json": "8325f38f9d4a8bbdf7cd298d54c64890da538bbed0bf58e62aa87ef90c2b0883",
+    "docs/reports/kronos-calibration-entry/economics.md": "ed084915642f64f01fbe39bd9f51d4445e58a31a89f2316b52f46b1faab9ae11",
+    "docs/reports/kronos-calibration-entry/inputs/08-11-candidate-protocol.json": "622279727ba9cb9dcc107fe3c27e61575217130657837004a84c7e3ed56197f8",
+    "docs/reports/kronos-calibration-entry/routes.md": "1e63f63d1c7611a197f2461a24fd8747293ffd7a901f826cff51c673831da351",
+    "docs/reports/kronos-design/run-20260923-reviewed/report.md": "321c05b84167c8d3d80cc7b9003ccf59f54d42eeeb0c05b3861657f4d75c99ca",
+    "docs/reports/kronos-design/sources-20260922/bounded-inventory.md": "03297074c9a94a2e6fc86a14ce92881f007d138c9cb7ede2eddd7e2b6a9e3392",
+    "docs/reports/kronos-evaluation-preflight/README.md": "e1e5eaa8cb57008a7f8c18d9e2f8e02e4afd430193808324fb3d1d671049f817",
+    "docs/reports/kronos-evaluation-preflight/run-20260922-reviewed/report.json": "0de7d8192620fdfea7f52054a587aefa93eb6b5223bd3df2ec6f75f07fac93cf",
+    "docs/reports/kronos-readiness/run-20260922-reviewed/report.md": "5927cf92a3006831c9f05827131d97207d98a8db04aece205bb35ab28bbe7504",
+    "research/kronos_readiness/design.py": "b4c8c44739e9706f87d6549b7a4e4b6e20d2a44022c4789d4b5031ad9c5b0a66",
+    "research/kronos_readiness/power.py": "927020f3e2f0141d22e33c4ddcb9ac772048640474b8c69123e54ad69c17b3c6",
+    "research/kronos_replay/__main__.py": "cde077df6ecf596c2c602227e9b96b8582ecb3c704ac35d327d5234ec40b6a53",
+    "research/kronos_replay/engine.py": "d7c925c05299593a3cd9450df67e1eccb3c0c873e059b693a160bda8cc40984a",
+    "research/kronos_replay/providers.py": "1862e3214632618dbef6fbcdbb2c0f45807db2bdbbeae5801f090b8b5eaa5f75",
+    "research/mim_comparison/evidence/reference-audit.md": "1301bd3fca03ad7c8d5dd494abe01138251f61b595e57afda589ec8495bfb7e2",
+    "research/mim_comparison/evidence/source-manifest.json": "91f9d95ebfede340790d6e73e912d33ee330bc9d3b68777f1d13e69e6e13388f"
+  }
+}

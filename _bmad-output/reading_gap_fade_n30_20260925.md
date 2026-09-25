@@ -59,3 +59,10 @@ unit convention, not a threshold, but it is new and flagged here for Alex's conf
 It does not claim an edge, change any other parameter, move GAP-1 off TS SIM, or alter the N=60
 rule. It also does not touch the ProjectX promotion gate
 (`project_gap_fade_projectx_promotion`), which remains a separate decision.
+
+## Amendment 2026-09-25 — §4 convention CONFIRMED by Alex
+
+Alex confirmed the per-contract convention in §4 on 2026-09-25. Every later GAP-1 reading (N=60,
+N≈88) computes PF on `pnl / metadata.contracts`. The code that consumes GAP-1 P&L now does the same
+(`e149622`): `tools/portfolio_decay_shadow.py` and `gap_velocity_prospective_tracker.py`, which feeds
+GAP-V2.

@@ -164,3 +164,21 @@ refusal-to-analyse notice on reaching it. It must be updated to reflect §4: ann
 rather than treating it as the end. This is a reporting change only — the ledger, the
 natural key, and the observation-only discipline (no subgroup statistics; GAP-V §A3.2) are
 unchanged.
+
+---
+
+## Amendment 2026-09-25 — P&L unit is per contract (measurement only)
+
+**Why:** GAP-1 scaled from 1ct to 2ct on 2026-09-25, when its sealed N=30 rule fired SCALE
+(`reading_gap_fade_n30_20260925.md`). This seal's primary test, Spearman ρ(`gap_pct`, net P&L per trade),
+was written when every GAP-1 trade was 1ct. Raw dollars from 2ct trades would out-rank 1ct trades with
+the same points and bias ρ.
+
+**Change:** "net P&L per trade" means **per-contract** net P&L, `pnl / metadata.contracts` with a
+default of 1. The tracker records it that way from `e149622` on.
+
+- Every ledger row accrued before the scale-up is 1ct, so no existing value changes.
+- No threshold, look, α, N or stopping date changes.
+- The ledger was **not** inspected to make this amendment. §6 no-peeking is intact: only code and
+  synthetic test data were used.
+- The convention was confirmed by Alex on 2026-09-25.

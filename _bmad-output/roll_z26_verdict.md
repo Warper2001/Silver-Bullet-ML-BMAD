@@ -57,3 +57,24 @@ the live ledger. Verify the contract and the TS SIM mirror before calling V5 pas
 
 - `2026-09-23 11:23:54,979 | INFO     | 🔔 TIER 2 LIMIT PLACED: SHORT limit=$30984.00 | TP $30878.00 SL $31010.50`
 
+
+### V5 — verified 2026-09-25: PASS
+
+- **ProjectX (broker record, read-only `Order/search` and `Trade/search`, account 26556101):**
+  - All three orders of the first post-switch trade are on **`CON.F.US.MNQ.Z26`**, size 2.
+  - Entry #3557851253 is a sell limit at 30984, filled 30984.00 at 13:25:09 UTC.
+  - Stop #3558275296 at 31010.50 filled at 31010.75 (1 tick of slippage) at 13:30:00. Broker P&L is −$107.00
+    gross, or −$109.44 after 2 × $1.22 fees. YANK's ledger (`trades.db`, `realtime`) shows −$110.00, which
+    matches the net figure to within $0.56.
+  - Target #3558275288 was cancelled after the stop.
+- **TS SIM mirror:**
+  - Every leg was accepted: ts #972220421 (entry), #972231536 (target) and #972231537 (stop).
+  - Each is 1ct by design (`SIM_INVVOL=1`, the inverse-vol paper track).
+  - The mirror takes its symbol from the ProjectX payload's `contractId` (`ts_sim_mirror._contract_to_ts_symbol`),
+    so it is **MNQZ26**. MNQU26 had expired on 2026-09-18.
+  - The mirror equity log shows the position was held. Equity first moved 5s after the ProjectX fill and
+    settled at 13:30:17 at −$52.80, a 1ct MNQ-sized loss.
+  - The TS order symbol was not read back from TradeStation, to avoid opening a new auth session next to
+    the live bots' shared token. That is the one indirect link.
+- **Latency (known):** the bot logged the entry fill at 13:26:08 and the close at 13:31:11, about 60s after
+  the broker, consistent with its 1-minute polling.

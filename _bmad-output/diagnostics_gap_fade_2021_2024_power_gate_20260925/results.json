@@ -1,0 +1,133 @@
+{
+  "inputs": {
+    "target_sha256": "f1fc5a57d6d0a258bb5cebfd04b6b2e2c6672e9ebe3e40800645465534aec7ab",
+    "by_contract_sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+    "dev_sha256": "e8ef00365bdfda166c417ba1150ce58f371419180a4676eaafdfb35509e65e39",
+    "script_sha256": "5435099ff9a0155757035350234dc46bf67e0873653d2f5b7b6abfa5611bb707",
+    "cost_per_trade_usd": 5.45,
+    "cost_basis": {
+      "fees_rt": 1.22,
+      "mean_slippage_delta_usd": -4.23,
+      "n_fills": 26
+    },
+    "dev_n": 115,
+    "live_n": 31
+  },
+  "target_counts": {
+    "sessions_front": 1032,
+    "ambiguous_contract_days": 0,
+    "skipped_no_same_contract_prior": [],
+    "qualifying_all": 344,
+    "qualifying_seen_by_gapv": 37,
+    "N_unseen": 307,
+    "unseen_inside": 130,
+    "unseen_outside": 177,
+    "unseen_roll_boundary_sessions": 0,
+    "by_year_side": {
+      "long": {
+        "2021": 31,
+        "2022": 65,
+        "2023": 27,
+        "2024": 21
+      },
+      "short": {
+        "2021": 42,
+        "2022": 49,
+        "2023": 34,
+        "2024": 38
+      }
+    },
+    "inside_share_by_year": {
+      "2021": 0.411,
+      "2022": 0.482,
+      "2023": 0.41,
+      "2024": 0.339
+    }
+  },
+  "primary": {
+    "cost_measured": {
+      "dev_net_mean": 66.56,
+      "dev_net_sd": 376.93,
+      "anchors": {
+        "ceiling_dev": {
+          "d": 0.1766,
+          "power_deff1": 0.9263,
+          "power_deff1.5": 0.814
+        },
+        "0.75x": {
+          "d": 0.1324,
+          "power_deff1": 0.75005,
+          "power_deff1.5": 0.59715
+        },
+        "0.5x": {
+          "d": 0.0883,
+          "power_deff1": 0.46515,
+          "power_deff1.5": 0.34875
+        },
+        "0.25x": {
+          "d": 0.0441,
+          "power_deff1": 0.19415,
+          "power_deff1.5": 0.15555
+        },
+        "live_ledger": {
+          "d": 0.1131,
+          "power_deff1": 0.6376,
+          "power_deff1.5": 0.48595
+        }
+      }
+    },
+    "cost_10": {
+      "dev_net_mean": 62.01,
+      "dev_net_sd": 376.93,
+      "anchors": {
+        "ceiling_dev": {
+          "d": 0.1645,
+          "power_deff1": 0.89435,
+          "power_deff1.5": 0.7642
+        },
+        "0.75x": {
+          "d": 0.1234,
+          "power_deff1": 0.6951,
+          "power_deff1.5": 0.5529
+        },
+        "0.5x": {
+          "d": 0.0823,
+          "power_deff1": 0.42115,
+          "power_deff1.5": 0.3226
+        },
+        "0.25x": {
+          "d": 0.0411,
+          "power_deff1": 0.178,
+          "power_deff1.5": 0.14785
+        },
+        "live_ledger": {
+          "d": 0.101,
+          "power_deff1": 0.55295,
+          "power_deff1.5": 0.4268
+        }
+      }
+    }
+  },
+  "secondary": {
+    "n_inside": 130,
+    "n_outside": 177,
+    "contrasts": {
+      "1.0x_ceiling": {
+        "delta_d": 0.1766,
+        "power": 0.4572
+      },
+      "1.5x_ceiling": {
+        "delta_d": 0.2649,
+        "power": 0.7429
+      },
+      "2.0x_ceiling": {
+        "delta_d": 0.3532,
+        "power": 0.918
+      }
+    }
+  },
+  "verdict": {
+    "primary": "POWERED",
+    "secondary_V_IN": "UNDERPOWERED"
+  }
+}

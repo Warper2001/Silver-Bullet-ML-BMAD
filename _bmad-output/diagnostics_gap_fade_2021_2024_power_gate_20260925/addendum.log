@@ -1,0 +1,42 @@
+{
+ "n_excl_roll_week": 278,
+ "n_roll_week_excluded": 29,
+ "n_inside": 117,
+ "n_outside": 161,
+ "primary": {
+  "ceiling_dev": {
+   "d": 0.1766,
+   "power_deff1": 0.90385,
+   "power_deff1.5": 0.77645
+  },
+  "0.75x": {
+   "d": 0.1324,
+   "power_deff1": 0.7158,
+   "power_deff1.5": 0.5637
+  },
+  "0.5x": {
+   "d": 0.0883,
+   "power_deff1": 0.4354,
+   "power_deff1.5": 0.3317
+  },
+  "0.25x": {
+   "d": 0.0441,
+   "power_deff1": 0.18335,
+   "power_deff1.5": 0.14865
+  },
+  "live_ledger": {
+   "d": 0.1131,
+   "power_deff1": 0.5937,
+   "power_deff1.5": 0.4608
+  }
+ },
+ "secondary": {
+  "1.0x_ceiling": 0.4176,
+  "1.5x_ceiling": 0.70425,
+  "2.0x_ceiling": 0.8987
+ },
+ "verdict": {
+  "primary": "POWERED",
+  "secondary_V_IN": "UNDERPOWERED"
+ }
+}

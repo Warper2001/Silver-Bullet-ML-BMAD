@@ -45,25 +45,27 @@ def _patch_sleep(monkeypatch):
 
 def test_realized_pnl_long_tp(monkeypatch):
     _patch_sleep(monkeypatch)
-    t = make_trader({"1": {"status": "FLL", "exec_price": 29205.5, "exec_qty": 1},
-                     "2": {"status": "FLL", "exec_price": 29388.0, "exec_qty": 1}})
+    c = g.CONTRACTS
+    t = make_trader({"1": {"status": "FLL", "exec_price": 29205.5, "exec_qty": c},
+                     "2": {"status": "FLL", "exec_price": 29388.0, "exec_qty": c}})
     run(t._log_realized_fills({"date_et": "2026-07-08", "dir": "L", "outcome": "fill",
-                               "direction": 1, "modeled_pnl": 366.0,
+                               "direction": 1, "modeled_pnl": 366.0 * c,
                                "entry_id": "1", "exit_role": "tp", "exit_id": "2"}))
     row = t._fills_log.rows[0]
-    assert row["realized_pnl_usd"] == pytest.approx(365.0)   # (29388.0-29205.5)*2
-    assert row["delta_usd"] == pytest.approx(-1.0)
+    assert row["realized_pnl_usd"] == pytest.approx(365.0 * c)   # (29388.0-29205.5)*2 per ct
+    assert row["delta_usd"] == pytest.approx(-1.0 * c)
     assert row["exit_role"] == "tp"
 
 
 def test_realized_pnl_short_direction(monkeypatch):
     _patch_sleep(monkeypatch)
-    t = make_trader({"1": {"status": "FLL", "exec_price": 30000.0, "exec_qty": 1},
-                     "2": {"status": "FLL", "exec_price": 29900.0, "exec_qty": 1}})
+    c = g.CONTRACTS
+    t = make_trader({"1": {"status": "FLL", "exec_price": 30000.0, "exec_qty": c},
+                     "2": {"status": "FLL", "exec_price": 29900.0, "exec_qty": c}})
     run(t._log_realized_fills({"date_et": "2026-07-09", "dir": "S", "outcome": "stop",
-                               "direction": -1, "modeled_pnl": 190.0,
+                               "direction": -1, "modeled_pnl": 190.0 * c,
                                "entry_id": "1", "exit_role": "sl", "exit_id": "2"}))
-    assert t._fills_log.rows[0]["realized_pnl_usd"] == pytest.approx(200.0)
+    assert t._fills_log.rows[0]["realized_pnl_usd"] == pytest.approx(200.0 * c)
 
 
 def test_incomplete_broker_data_records_blanks(monkeypatch):

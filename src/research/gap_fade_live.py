@@ -12,7 +12,8 @@ Strategy (FROZEN — no parameter changes without a new pre-registration):
   - Stop (SL): entry ± 2.0 × gap_abs beyond open
   - Time-stop: close at the open of the first bar at/after 13:00 ET
   - Exclude Fridays (weekday == 4)
-  - 1 MNQ contract, $2/point, max 1 trade/day
+  - 2 MNQ contracts since 2026-09-25 (sealed N=30 rule fired SCALE: PF 1.216 at trade 30,
+    _bmad-output/reading_gap_fade_n30_20260925.md); 1ct before. $2/point, max 1 trade/day
 
 Execution modes (set via env var GAP_FADE_TS_SIM):
   GAP_FADE_TS_SIM=0 (default) — internal simulation only. Fills simulated
@@ -68,7 +69,7 @@ TIME_STOP_HOUR = 13      # close at the open of the first bar at/after 13:00 ET
 EXCLUDE_DOW    = {4}     # 4 = Friday (0=Mon … 4=Fri)
 MIN_RTH_BARS   = 300     # minimum prior-session RTH bars to trust prior close
 MNQ_PV         = 2.0     # $2.00 per point per MNQ contract
-CONTRACTS      = 1
+CONTRACTS      = 2       # sealed N=30 SCALE, reading_gap_fade_n30_20260925.md
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
@@ -292,8 +293,8 @@ class TSSimClient:
                     if entry_id is None: entry_id = oid
                     elif tp_id is None:  tp_id  = oid
                     else:                sl_id  = oid
-            logger.info("TS SIM entry | %s 1ct %s | entry #%s TP #%s SL #%s",
-                        entry_action, self._symbol, entry_id, tp_id, sl_id)
+            logger.info("TS SIM entry | %s %dct %s | entry #%s TP #%s SL #%s",
+                        entry_action, CONTRACTS, self._symbol, entry_id, tp_id, sl_id)
             return entry_id, tp_id, sl_id
         except Exception as exc:
             logger.warning("TS SIM entry bracket error: %s", exc)

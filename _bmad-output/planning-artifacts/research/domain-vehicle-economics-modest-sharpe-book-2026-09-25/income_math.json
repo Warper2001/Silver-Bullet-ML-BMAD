@@ -1,0 +1,134 @@
+[
+ {
+  "SR": 0.3,
+  "vol": 0.08,
+  "excess_ret": 0.024,
+  "usd_yr_25k": 600,
+  "usd_yr_50k": 1200,
+  "p_losing_year": 0.382,
+  "median_maxdd_10y": 0.178,
+  "p90_maxdd_10y": 0.293,
+  "capital_for_240k_yr": 10000000
+ },
+ {
+  "SR": 0.3,
+  "vol": 0.1,
+  "excess_ret": 0.03,
+  "usd_yr_25k": 750,
+  "usd_yr_50k": 1500,
+  "p_losing_year": 0.382,
+  "median_maxdd_10y": 0.221,
+  "p90_maxdd_10y": 0.357,
+  "capital_for_240k_yr": 8000000
+ },
+ {
+  "SR": 0.3,
+  "vol": 0.12,
+  "excess_ret": 0.036,
+  "usd_yr_25k": 900,
+  "usd_yr_50k": 1800,
+  "p_losing_year": 0.382,
+  "median_maxdd_10y": 0.262,
+  "p90_maxdd_10y": 0.415,
+  "capital_for_240k_yr": 6666667
+ },
+ {
+  "SR": 0.5,
+  "vol": 0.08,
+  "excess_ret": 0.04,
+  "usd_yr_25k": 1000,
+  "usd_yr_50k": 2000,
+  "p_losing_year": 0.309,
+  "median_maxdd_10y": 0.152,
+  "p90_maxdd_10y": 0.246,
+  "capital_for_240k_yr": 6000000
+ },
+ {
+  "SR": 0.5,
+  "vol": 0.1,
+  "excess_ret": 0.05,
+  "usd_yr_25k": 1250,
+  "usd_yr_50k": 2500,
+  "p_losing_year": 0.309,
+  "median_maxdd_10y": 0.187,
+  "p90_maxdd_10y": 0.298,
+  "capital_for_240k_yr": 4800000
+ },
+ {
+  "SR": 0.5,
+  "vol": 0.12,
+  "excess_ret": 0.06,
+  "usd_yr_25k": 1500,
+  "usd_yr_50k": 3000,
+  "p_losing_year": 0.309,
+  "median_maxdd_10y": 0.223,
+  "p90_maxdd_10y": 0.352,
+  "capital_for_240k_yr": 4000000
+ },
+ {
+  "SR": 0.7,
+  "vol": 0.08,
+  "excess_ret": 0.056,
+  "usd_yr_25k": 1400,
+  "usd_yr_50k": 2800,
+  "p_losing_year": 0.242,
+  "median_maxdd_10y": 0.131,
+  "p90_maxdd_10y": 0.207,
+  "capital_for_240k_yr": 4285714
+ },
+ {
+  "SR": 0.7,
+  "vol": 0.1,
+  "excess_ret": 0.07,
+  "usd_yr_25k": 1750,
+  "usd_yr_50k": 3500,
+  "p_losing_year": 0.242,
+  "median_maxdd_10y": 0.163,
+  "p90_maxdd_10y": 0.255,
+  "capital_for_240k_yr": 3428571
+ },
+ {
+  "SR": 0.7,
+  "vol": 0.12,
+  "excess_ret": 0.084,
+  "usd_yr_25k": 2100,
+  "usd_yr_50k": 4200,
+  "p_losing_year": 0.242,
+  "median_maxdd_10y": 0.194,
+  "p90_maxdd_10y": 0.302,
+  "capital_for_240k_yr": 2857143
+ },
+ {
+  "SR": 1.0,
+  "vol": 0.08,
+  "excess_ret": 0.08,
+  "usd_yr_25k": 2000,
+  "usd_yr_50k": 4000,
+  "p_losing_year": 0.159,
+  "median_maxdd_10y": 0.109,
+  "p90_maxdd_10y": 0.169,
+  "capital_for_240k_yr": 3000000
+ },
+ {
+  "SR": 1.0,
+  "vol": 0.1,
+  "excess_ret": 0.1,
+  "usd_yr_25k": 2500,
+  "usd_yr_50k": 5000,
+  "p_losing_year": 0.159,
+  "median_maxdd_10y": 0.136,
+  "p90_maxdd_10y": 0.209,
+  "capital_for_240k_yr": 2400000
+ },
+ {
+  "SR": 1.0,
+  "vol": 0.12,
+  "excess_ret": 0.12,
+  "usd_yr_25k": 3000,
+  "usd_yr_50k": 6000,
+  "p_losing_year": 0.159,
+  "median_maxdd_10y": 0.161,
+  "p90_maxdd_10y": 0.245,
+  "capital_for_240k_yr": 2000000
+ }
+]

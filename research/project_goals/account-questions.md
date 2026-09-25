@@ -32,3 +32,18 @@ Sources checked by lead September 19, 2026:
 Append responses with date, responder, exact applicable account IDs, source artifact hash, effective date, expiry/recheck date and reviewer. Preserve prior versions. Do not silently replace a published scenario with an asserted actual charge.
 
 Published Combine consistency as checked September 19: target is `max(original profit target, largest profit day / 0.55)`, with at least two trading days. This replaces older public 50% references; confirm applicability to the actual account before treating a modeled transition as passage. [Current Combine consistency](https://help.topstep.com/en/articles/8284208-consistency-at-topstep), [Combine parameters](https://help.topstep.com/en/articles/8284197-trading-combine-parameters).
+
+## TradeStation personal equities account (added 2026-09-25, ETFTM-1 vehicle recon)
+
+Source: `_bmad-output/planning-artifacts/research/domain-vehicle-economics-modest-sharpe-book-2026-09-25/research.md`. Ask TradeStation Client Experience in writing. These answers must exist before any ETFTM-1 paper or live execution (A5).
+
+| # | Question | Why it matters | Status |
+|---|---|---|---|
+| TS-1 | Can IRA accounts place orders through the v3 API? What `AccountType` do they show? | The IRA is the best vehicle on taxes, but the API spec lists only Cash, Margin, Futures and DVP | Open |
+| TS-2 | Does the $0.003/share Tier-1 clearing fee apply to every equity order, or only direct-routed ones? | Cost model | Open |
+| TS-3 | Are fractional-share orders supported through the API? | Whole-share rounding at $25–50K | Open |
+| TS-4 | What counts as "minimum activity" for the $10/month inactivity fee? | A monthly rebalance may or may not qualify | Open |
+| TS-5 | Does any terms-of-service clause restrict automated or API trading in personal accounts? | Allowed use of automation | Open |
+| TS-6 | What is the order cutoff for `CLO` (market or limit on close) ETF orders, and how are they routed? | Whether live fills match the backtest | Open |
+| TS-7 | When does TradeStation apply FINRA's 2026 intraday-margin framework? | Margin-account rules | Open |
+| TS-8 | Is interest paid on cash in IRAs, or on balances under $100K? The pricing page says no. | Cash drag; plan to hold a T-bill ETF instead | Open (confirm) |

@@ -42,3 +42,11 @@ The $20K/month aspiration needs about $3.4–4.8M at these Sharpes.
 | 5 | **Go / no-go on A,** given that realized trend performance over the last decade is weak and the likely outcome is UNDERPOWERED or FAIL? | Go: A0 and A1 are cheap, and a clean null closes the question for good |
 
 Also needed before A5 (paper trading), but not before A0–A4: written answers from TradeStation to TS-1 through TS-8 (`research/project_goals/account-questions.md`).
+
+## Alex's answers (2026-09-25)
+
+1. **Account:** IRA if TradeStation confirms API trading in IRAs (TS-1), otherwise taxable cash. **Long/flat, gross exposure ≤ 1.0.**
+2. **Sizing capital:** **$50K**, with $25K as a sensitivity.
+3. **Claim:** **timing skill**, tested with the pooled per-asset-intercept test.
+4. **Income:** acknowledged, implicitly, by choosing Go on the question that stated "a foundation and research-process project, not an income route".
+5. **Go** on A: proceed to A0 (data), then A1 (power gate).

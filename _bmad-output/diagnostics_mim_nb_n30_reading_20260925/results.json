@@ -1,0 +1,128 @@
+{
+  "n_rows": 31,
+  "trade30_day": "2026-09-22",
+  "rt_cost_observed_usd": 1.22,
+  "fee_source_fills": 14,
+  "pf_path": [
+    {
+      "n": 28,
+      "day": "2026-09-16",
+      "pf_gross": 0.848,
+      "pf_fee": 0.842,
+      "net_gross": -753.0
+    },
+    {
+      "n": 29,
+      "day": "2026-09-21",
+      "pf_gross": 0.996,
+      "pf_fee": 0.989,
+      "net_gross": -20.0
+    },
+    {
+      "n": 30,
+      "day": "2026-09-22",
+      "pf_gross": 1.024,
+      "pf_fee": 1.016,
+      "net_gross": 116.5
+    },
+    {
+      "n": 31,
+      "day": "2026-09-23",
+      "pf_gross": 1.054,
+      "pf_fee": 1.047,
+      "net_gross": 270.0
+    }
+  ],
+  "d1_fired_any_n_ge_30": [],
+  "splits": {
+    "D1_at_30_gross": {
+      "n": 30,
+      "net": 116.5,
+      "pf": 1.024
+    },
+    "D1_at_30_fee_adjusted": {
+      "n": 30,
+      "net": 79.9,
+      "pf": 1.016
+    },
+    "D1_all_gross": {
+      "n": 31,
+      "net": 270.0,
+      "pf": 1.054
+    },
+    "D1_all_fee_adjusted": {
+      "n": 31,
+      "net": 232.18,
+      "pf": 1.047
+    },
+    "excluding_0729_0804_run_at30": {
+      "n": 26,
+      "net": -2163.0,
+      "pf": 0.564
+    },
+    "the_0729_0804_run_alone": {
+      "n": 4,
+      "net": 2279.5,
+      "pf": Infinity
+    },
+    "excluding_0915_autoroll_at30": {
+      "n": 29,
+      "net": 471.5,
+      "pf": 1.102
+    },
+    "current_acct_26556101_mim_only_all": {
+      "n": 13,
+      "net": -418.5,
+      "pf": 0.792
+    },
+    "live_250pt_config_since_0625_all": {
+      "n": 28,
+      "net": 482.5,
+      "pf": 1.122
+    },
+    "trades_29_to_last": {
+      "n": 3,
+      "net": 1023.0,
+      "pf": Infinity
+    }
+  },
+  "D3_monitor_window": {
+    "n": 17,
+    "net": 174.5,
+    "pf": 1.082
+  },
+  "equity": {
+    "equity": 49823.6,
+    "floor": 48298.96,
+    "hwm": 50298.96,
+    "ts_utc": "2026-09-25T13:14:23.179338+00:00"
+  },
+  "equity_minus_48400": 1423.6,
+  "buffer_to_floor": 1524.64,
+  "last_rows": [
+    {
+      "day": "2026-09-16",
+      "dir": -1,
+      "reason": "EOD",
+      "pnl": -245.5
+    },
+    {
+      "day": "2026-09-21",
+      "dir": 1,
+      "reason": "EOD",
+      "pnl": 733.0
+    },
+    {
+      "day": "2026-09-22",
+      "dir": 1,
+      "reason": "EOD",
+      "pnl": 136.5
+    },
+    {
+      "day": "2026-09-23",
+      "dir": -1,
+      "reason": "EOD",
+      "pnl": 153.5
+    }
+  ]
+}

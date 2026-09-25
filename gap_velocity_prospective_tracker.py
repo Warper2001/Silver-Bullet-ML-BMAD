@@ -98,7 +98,11 @@ def fetch_candidates(db: Path) -> list[dict]:
                 "entry_price": ep,
                 "exit_price": xp,
                 "exit_reason": er,
-                "pnl_usd": pnl,
+                # Per-contract P&L (GAP-V2 amendment 2026-09-25). GAP-1 scaled 1ct -> 2ct on
+                # 2026-09-25; raw 2ct dollars would out-rank equal-point 1ct trades and bias
+                # the sealed Spearman rho(gap_pct, pnl_usd). Rows before the scale-up are 1ct,
+                # so their values are unchanged.
+                "pnl_usd": (pnl / max(int(m.get("contracts") or 1), 1)) if pnl is not None else pnl,
             })
         return out
     finally:

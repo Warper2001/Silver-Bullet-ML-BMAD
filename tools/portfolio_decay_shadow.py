@@ -14,6 +14,7 @@ Run: .venv/bin/python tools/portfolio_decay_shadow.py
 from __future__ import annotations
 
 import csv
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -72,10 +73,18 @@ def next_gate(n_trades: int, gates: list[tuple[int, float]]) -> tuple[int, float
 
 def load_realtime_trades(con: sqlite3.Connection, trader_id: str) -> pd.DataFrame:
     df = pd.read_sql(
-        "SELECT timestamp, pnl FROM trades WHERE write_mode='realtime' AND trader_id=?",
+        "SELECT timestamp, pnl, metadata FROM trades WHERE write_mode='realtime' AND trader_id=?",
         con,
         params=(trader_id,),
     )
+    # PF on per-contract P&L: GAP-1 scaled 1ct -> 2ct on 2026-09-25, and its sealed
+    # thresholds are defined on 1ct P&L (reading_gap_fade_n30_20260925.md §4, confirmed by
+    # Alex 2026-09-25). Rows without metadata.contracts count as 1ct.
+    contracts = [
+        max(int((json.loads(m) if m else {}).get("contracts") or 1), 1) for m in df["metadata"]
+    ]
+    df["pnl"] = df["pnl"] / pd.Series(contracts, index=df.index, dtype=float)
+    df = df.drop(columns=["metadata"])
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
     return df.sort_values("timestamp")
 

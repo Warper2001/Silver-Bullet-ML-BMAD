@@ -620,6 +620,12 @@ class GapFadeTrader:
     async def stop(self):
         logger.info("GAP-1 trader stopping")
         self.running = False
+        # Wake run() out of its idle wait. It used to sleep up to 300s outside RTH
+        # before re-checking `running`, past systemd's 90s stop timeout, so every
+        # stop ended in SIGKILL (3/3 journaled stops, 2026-09-25).
+        stop_event = getattr(self, "_stop_event", None)
+        if stop_event is not None:
+            stop_event.set()
         if self.http:
             await self.http.aclose()
 
@@ -1047,6 +1053,7 @@ class GapFadeTrader:
         what kept this one down.
         """
         self.running = True
+        self._stop_event = asyncio.Event()
         consecutive_failures = 0
         clean_exit = True
         logger.info("Poll loop starting — 60s during RTH, 300s outside")
@@ -1072,7 +1079,14 @@ class GapFadeTrader:
                 and (now_et.hour > 9 or (now_et.hour == 9 and now_et.minute >= 25))
                 and now_et.hour < 16
             )
-            await asyncio.sleep(60 if (in_active_window or self._trade_open) else 300)
+            # Idle between ticks, but return at once on stop(). A tick in progress is
+            # never interrupted; only this wait is cut short.
+            sleeper = asyncio.ensure_future(
+                asyncio.sleep(60 if (in_active_window or self._trade_open) else 300))
+            waker = asyncio.ensure_future(self._stop_event.wait())
+            _, pending = await asyncio.wait({sleeper, waker}, return_when=asyncio.FIRST_COMPLETED)
+            for fut in pending:
+                fut.cancel()
 
         return clean_exit
 

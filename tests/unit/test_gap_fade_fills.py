@@ -92,3 +92,27 @@ def test_fetch_failure_never_raises(monkeypatch):
                                "direction": 1, "modeled_pnl": 0.0,
                                "entry_id": "1", "exit_role": "tp", "exit_id": "2"}))
     assert t._fills_log.rows == []   # swallowed, logged, no crash
+
+
+def test_stop_wakes_idle_wait_promptly():
+    """stop() must end run()'s idle wait at once, not after the 300s outside-RTH sleep
+    (systemd kills after 90s; every journaled stop before this fix ended in SIGKILL)."""
+    t = object.__new__(g.GapFadeTrader)
+    t.running = False
+    t.http = None
+    t._trade_open = False
+    ticks = []
+
+    async def fake_tick():
+        ticks.append(1)
+
+    t._process_tick = fake_tick
+
+    async def scenario():
+        task = asyncio.ensure_future(t.run())
+        await asyncio.sleep(0.05)                 # first tick done, now in the idle wait
+        await t.stop()
+        return await asyncio.wait_for(task, timeout=2.0)
+
+    assert run(scenario()) is True               # orderly stop, well inside 2s
+    assert ticks == [1]

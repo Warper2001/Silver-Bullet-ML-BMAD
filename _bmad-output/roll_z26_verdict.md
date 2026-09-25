@@ -47,3 +47,13 @@ The spread is larger than the 0.5% gap threshold. Mixing the two contracts would
 | V5 | **Pending:** YANK's first order after the switch must be accepted on `CON.F.US.MNQ.Z26` and mirrored on TS SIM as MNQZ26. |
 
 **A false alarm during verification.** The switch script's log excerpt printed five `Traceback` lines. Its timestamp filter compared strings, so it also matched untimestamped lines from anywhere in the 2.5M-line log. The most recent traceback in the log dates from 2026-09-04, so none came from this restart.
+
+## V5 — YANK's first order on MNQZ26 (recorded automatically 2026-09-23 11:30:00 UTC)
+
+Detected by `tools/yank_v5_z26_watch.py`, which reads only YANK's own log and
+the live ledger. Verify the contract and the TS SIM mirror before calling V5 passed.
+
+**Log evidence:**
+
+- `2026-09-23 11:23:54,979 | INFO     | 🔔 TIER 2 LIMIT PLACED: SHORT limit=$30984.00 | TP $30878.00 SL $31010.50`
+

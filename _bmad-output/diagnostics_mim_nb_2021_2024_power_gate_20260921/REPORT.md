@@ -50,3 +50,39 @@ It needs a pre-registration first (sealed engine sha `210518d6…`, target file 
 size-calibrated test computed on the target's own trades, and descriptive PF / ex-top-5-days reported but not gating), citing this artifact and its commit.
 My view: it is a low-odds, one-way test that spends the last unseen historical window, and its answer would not change any live decision, which is driven by the
 $618 buffer and the floor rules, not by an edge estimate. I would not spend it unless you want the pre-2025 baseline for its own sake.
+
+## Amendment 2026-09-25 — the premise was wrong: 2021-2024 was already exposed for MIM-NB
+
+This report treated MNQ 2021-2024 as the last window MIM-NB had never seen. It was not.
+On **2026-09-10**, `research/mim_comparison` (commit `7ffb675`, run
+`runs/20260910T210224-historical-f3950efb68/report.md`) replayed the deployed MIM-NB rule
+("arm A", a reimplementation, since exact operational parity was unavailable) over
+`data/mim_x/mnq_1min_by_contract.csv`: 1,323 sessions, 2021-01 → 2026-08. Its outcomes are known,
+so **no confirmatory one-shot test on this window is possible**, and none will be pre-registered.
+
+**What that exposed history shows** (arm A, primary timing = one full minute later, $2.24 per round trip):
+
+| | Value |
+|---|---|
+| Mean net per session, 2021–2026 | **+$16.55** |
+| Total | $21,890 |
+| Max daily drawdown | $2,437 |
+| Net without the largest 5% of sessions | **−$17,663** |
+
+Mean net per session by year:
+
+| 2021 | 2022 | 2023 | 2024 | 2025 | 2026 (partial) |
+|---|---|---|---|---|---|
+| +4.8 | +33.8 | +13.6 | +10.2 | +20.3 | +16.0 |
+
+- **Positive in every year and at every cost tested**, up to $6.24/RT.
+- **The whole edge sits in the best 5% of sessions.** The other 95% lose, consistent with the known
+  "edge is a few fat-tail days".
+
+**Why it is not confirmatory:**
+1. The outcomes are already exposed.
+2. The published design was chosen on SPY 2007–2024, which overlaps 2021–24.
+3. It is a reimplementation, and it uses the same expiry-rolling contract data found in the
+   2026-09-25 GAP-1 gate.
+
+Descriptive only.

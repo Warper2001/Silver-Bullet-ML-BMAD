@@ -1,0 +1,110 @@
+{
+  "prereg": "preregistration_gap1_confirm_2021_2024.md @ 9351402",
+  "script_sha256": "463455b3fcdc6adc82e3b0ca0ac5a16b5778019adee11a947cde844b608b3087",
+  "target_sha256": "f1fc5a57d6d0a258bb5cebfd04b6b2e2c6672e9ebe3e40800645465534aec7ab",
+  "by_contract_sha256": "ff76aefca405dd94359b15223c57710f4e7f01f245880426a60d0f934c6f5bea",
+  "cost_per_trade": 5.45,
+  "reproduction_gate": {
+    "N": 115,
+    "PF": 1.646,
+    "net_usd": 8281,
+    "trade_for_trade_equal": true,
+    "passed": true
+  },
+  "setup_gate": {
+    "n_307_replayed": 307,
+    "n_primary": 278,
+    "dates_equal_307": true,
+    "dates_equal_278": true,
+    "skipped_no_same_contract_prior": []
+  },
+  "primary": {
+    "N": 278,
+    "mean_net": 10.39,
+    "sd_net": 251.48,
+    "t": 0.689,
+    "p_one_sided": 0.24570879573766624,
+    "boot95_mean_net": [
+      -18.63,
+      40.05
+    ],
+    "gross_PF": 1.165,
+    "net_PF": 1.106,
+    "WR": 56.1,
+    "gross_total": 4404.0,
+    "net_total": 2888.9,
+    "top3_share_of_gross": 0.539,
+    "month_clustered": {
+      "clusters": 42,
+      "t": 0.762,
+      "p_one_sided": 0.22511798898865054
+    }
+  },
+  "VERDICT": "INCONCLUSIVE",
+  "sensitivity_all_307": {
+    "N": 307,
+    "mean_net": 5.97,
+    "sd_net": 252.97,
+    "t": 0.413,
+    "p_one_sided": 0.3398840768409989,
+    "boot95_mean_net": [
+      -22.19,
+      34.26
+    ],
+    "gross_PF": 1.116,
+    "net_PF": 1.059,
+    "WR": 54.4,
+    "gross_total": 3504.5,
+    "net_total": 1831.35,
+    "top3_share_of_gross": 0.719,
+    "month_clustered": {
+      "clusters": 42,
+      "t": 0.484,
+      "p_one_sided": 0.315549943433234
+    }
+  },
+  "by_year": {
+    "2021": {
+      "N": 67,
+      "net": -1330.65,
+      "mean_net": -19.86,
+      "gross_PF": 0.869
+    },
+    "2022": {
+      "N": 101,
+      "net": 1369.05,
+      "mean_net": 13.55,
+      "gross_PF": 1.177
+    },
+    "2023": {
+      "N": 55,
+      "net": 1753.75,
+      "mean_net": 31.89,
+      "gross_PF": 1.613
+    },
+    "2024": {
+      "N": 55,
+      "net": 1096.75,
+      "mean_net": 19.94,
+      "gross_PF": 1.277
+    }
+  },
+  "by_side": {
+    "long": {
+      "N": 131,
+      "net": -426.45,
+      "gross_PF": 1.02
+    },
+    "short": {
+      "N": 147,
+      "net": 3315.35,
+      "gross_PF": 1.337
+    }
+  },
+  "by_outcome": {
+    "time": 168,
+    "fill": 98,
+    "stop": 12
+  },
+  "same_bar_target_and_stop": 0
+}

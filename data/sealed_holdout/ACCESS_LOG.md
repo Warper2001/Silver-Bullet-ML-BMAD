@@ -155,3 +155,24 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | 2026-09-15 03:06 UTC | da82cfc9fab8aa40b4b3d9072d0e8716a3068cfe | backtest script | `run --preregistration da82cfc9fab8aa40b4b3d9072d0e8716a3068cfe --mode corrected --ml-threshold 0.50 --out-dir /root/Silver-Bullet-ML-BMAD/.claude/worktrees/yank-revalidation-prereg/_bmad-output/revalidation_yank_frontmonth_20260915` | Front-month bars, ML arm: 2026 N=23, PF 1.698, +$2,573.50. **Verdict (with no-ML row): INCONCLUSIVE → ML disabled (ml_threshold 0.0)**, since N_ml 23 < 25 under 138cab1's inherited rule; this supersedes 138cab1's KEEP. All 8 S2 sessions were interleaved and dropped, so Δ was unmeasurable and S3 left unshifted (a pre-declared contingency). See `_bmad-output/results_yank_frontmonth_revalidation.md`. No live change made. |
 | 2026-09-15 03:06 UTC | da82cfc9fab8aa40b4b3d9072d0e8716a3068cfe | backtest script | `run --preregistration da82cfc9fab8aa40b4b3d9072d0e8716a3068cfe --mode corrected --ml-threshold 0.00 --out-dir /root/Silver-Bullet-ML-BMAD/.claude/worktrees/yank-revalidation-prereg/_bmad-output/revalidation_yank_frontmonth_20260915` | Front-month bars, no-ML arm: 2026 N=30, PF 1.389, +$2,565.00. Both arms net positive, so no halt review under section 4. Edge existence UNDERPOWERED (clustered 95% CI of the mean includes 0 in both arms). |
 | 2026-09-16 17:56 UTC | 151f1d05499da6f951d0743399c74f9caf76ee32 | rescore_gate0.py (sealed prereg `_bmad-output/preregistration_gap_fade_gate0_rescore.md`) | Re-measure the sealed GAP-1 Gate-0 figure (N=117, WR 62.4%, PF 1.761, Net $9,878, 2025-01-06 → 2026-06-11) on corrected bars: 2025 front-month rebuild, front-month MNQH26 from raw for 2026-01-01 → 03-11, MNQM26 CSV rows from the 2026-03-12 roll, and every prior RTH close taken from the session's own contract. Reads the holdout period via the dual-presence rows of `mnq_1min_2026_ytd.csv`. No parameter, seal or live setting changes. | **Corrected Gate-0: N=115, WR 61.7%, PF 1.646, Net $8,281** vs sealed N=117, WR 62.4%, PF 1.761, $9,878 — **−$1,597 (−16.2%)**. Biggest item: the sealed 2026-03-01→03-11 pre-roll window contributed +$1,888 from 4 trades priced on the deferred MNQM26 while MNQH26 was front; on corrected bars that window produces no trades. 2026 Jan–Feb improves +$783 on real front-month bars; the post-holdout tail is unchanged. Edge survives: PF 1.646 still clears the original 1.40 'strong' figure (rule not re-applied, per prereg §3). Results: `_bmad-output/diagnostics_gap_fade_gate0_rescore_20260916/results.md`. |
+
+---
+
+# ETFTM-1 ETF daily holdout (established 2026-09-25)
+
+**Cutoff date:** 2021-10-01
+**Data file:** `etf_daily_holdout_20211001_plus.csv`: 38,781 rows, 32 ETFs, 2021-10-01 → 2026-09-25, plus the daily risk-free rate
+**SHA-256:** `4bd78ef0a0480a48f4842adc87c68c0e0d9f794f78ae30d84ba5f72162c62d6d`
+**Permissions:** 444
+**Built by:** `tools/build_etf_panel.py` (commit ad0e796). Manifest: `_bmad-output/etftm1_manifest_20260925.json`.
+**Plan:** `/root/.claude/plans/do-d-then-a-imperative-eagle.md` (A0.5).
+
+**Same protocol as above.** Read only after the committed ETFTM-1 pre-registration, and only if its Gate 0 passes. Record the pre-registration SHA and the result here.
+
+**Disclosures at establishment:**
+- The raw files in `data/etf_daily/raw/` also contain 2021-10-01 onward. Only the builder reads them; analysis code must read `data/etf_daily/panel_dev.csv`.
+- The builder's data-quality audit ran over all rows, including the holdout period. It computed only data-quality statistics: source agreement, gaps, and moves over 25%. It flagged one holdout-period fact, a greater-than-25% SLV move on 2026-01-30. No signal or strategy statistic was computed on any period.
+
+| Date | Pre-reg SHA | Accessor | Purpose | Result |
+|---|---|---|---|---|
+| — | — | — | (no access yet) | — |

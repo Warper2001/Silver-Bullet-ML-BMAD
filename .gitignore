@@ -255,3 +255,6 @@ docs/reports/yank-execution-pilot/final-run2/reconciliation.jsonl
 
 # Live prospective event accrual; keep on disk, never restore from Git.
 data/evfade_fomc/
+
+# ETFTM-1 vendor daily data (TradeStation + Yahoo) — local only, never committed
+data/etf_daily/

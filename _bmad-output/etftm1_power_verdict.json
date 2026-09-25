@@ -1,0 +1,89 @@
+{
+ "seal": "3845bf6",
+ "script_sha256": "a63021f463d72b95e682376e36524e0b395064a3ea001463c4672f7863c05864",
+ "inputs_sha256": {
+  "data/etf_daily/panel_dev.csv": "e09c8e9d1426b6da2c5eec51540bb01587166c55a45e848f635ea40661079cd5",
+  "data/etf_daily/rf_dev.csv": "cd11e53bb7628f88fbbc073bfe8184bcf9ab006376dca449b14259c5059a71cc"
+ },
+ "sample": {
+  "months": 332,
+  "first_month": "1994-01",
+  "last_month": "2021-08",
+  "assets": [
+   "DBA",
+   "DBC",
+   "EEM",
+   "EFA",
+   "EMB",
+   "EWJ",
+   "FXE",
+   "FXY",
+   "GLD",
+   "HYG",
+   "IEF",
+   "IWM",
+   "LQD",
+   "MDY",
+   "QQQ",
+   "SHY",
+   "SLV",
+   "SPY",
+   "TIP",
+   "TLT",
+   "UUP",
+   "VNQ",
+   "XLB",
+   "XLE",
+   "XLF",
+   "XLI",
+   "XLK",
+   "XLP",
+   "XLU",
+   "XLV",
+   "XLY"
+  ],
+  "eligible_obs": 7000,
+  "assets_per_month_median": 26.0,
+  "assets_per_month_min": 1
+ },
+ "T_months": 332,
+ "T_years": 27.67,
+ "n_shift_pairings": 307,
+ "n_boot_draws": 10000,
+ "boot_discarded": 53,
+ "se_mean_p_shift": 0.03321302564569293,
+ "se_mean_p_boot": 0.03183181072486752,
+ "se_used": 0.03321302564569293,
+ "sd_p": 0.5213224973988734,
+ "iid_se_equivalent": 0.028611289071482304,
+ "se_inflation_vs_iid": 1.1608363944285651,
+ "mde_ir_80pct": 0.5488685948518257,
+ "power_dev": {
+  "optimistic_MOP_decayed": 0.9471061976146621,
+  "central_DBMF_decade": 0.5486076245276507,
+  "pessimistic_SGCTA_decade": 0.09211874666521186
+ },
+ "holdout_mde_ir_80pct": 1.2911057007184001,
+ "power_holdout_alone": {
+  "optimistic_MOP_decayed": 0.3981665106755772,
+  "central_DBMF_decade": 0.18572510644130324,
+  "pessimistic_SGCTA_decade": 0.06550103526479968
+ },
+ "effective_breadth_outcomes": 4.090848831286843,
+ "effective_breadth_signals": 5.780483419489452,
+ "years_needed_portfolio_80pct": {
+  "0.3": 68.7,
+  "0.4": 38.7,
+  "0.5": 24.7,
+  "0.6": 17.2,
+  "0.7": 12.6,
+  "0.8": 9.7,
+  "1.0": 6.2
+ },
+ "anchors": {
+  "optimistic_MOP_decayed": 0.72,
+  "central_DBMF_decade": 0.39,
+  "pessimistic_SGCTA_decade": 0.07
+ },
+ "verdict": "MARGINALLY_POWERED"
+}

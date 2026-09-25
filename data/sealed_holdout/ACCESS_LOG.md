@@ -176,3 +176,5 @@ Do not run `backtest_tier2_1year_validation.py` with `mnq_1min_2026_ytd.csv` aga
 | Date | Pre-reg SHA | Accessor | Purpose | Result |
 |---|---|---|---|---|
 | — | — | — | (no access yet) | — |
+
+*Correction, 2026-09-25:* the ETFTM-1 universe, and so the holdout file, holds **31** ETFs, not 32 as written above. The 4+3+9+3+4+4+3+1 breakdown is in `tools/etftm1_universe.py`. PDBC and USO were fetched for probing only and are not in the panel.
